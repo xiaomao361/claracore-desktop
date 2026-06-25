@@ -1,0 +1,14 @@
+{
+  "name": "claracore-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ClaraCore desktop manager for the local personal cognitive core",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "check": "node --check electron/main.js && node --check electron/preload.js && node --check app.js"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7"
+  }
+}

@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ClaraCore Desktop</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">C</div>
+        <div>
+          <strong>ClaraCore</strong>
+          <span>Desktop v0.1</span>
+        </div>
+      </div>
+      <nav aria-label="Primary">
+        <button class="nav-item active" data-view="home" data-i18n="nav.home">Home</button>
+        <button class="nav-item" data-view="memory" data-i18n="nav.memory">Memory</button>
+        <button class="nav-item" data-view="shared-line" data-i18n="nav.sharedLine">Shared Line</button>
+        <button class="nav-item" data-view="innerlife" data-i18n="nav.innerLife">InnerLife</button>
+        <button class="nav-item" data-view="data" data-i18n="nav.data">Data</button>
+        <button class="nav-item" data-view="connections" data-i18n="nav.connections">Connections</button>
+        <button class="nav-item" data-view="settings" data-i18n="nav.settings">Settings</button>
+      </nav>
+      <div class="sidebar-footer">
+        <span class="mini-label" data-i18n="footer.label">Local ownership</span>
+        <strong data-i18n="footer.value">Portable core</strong>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div>
+          <h1 id="viewTitle">Core status</h1>
+          <p id="viewSubtitle">Local control center for ClaraCore services and data.</p>
+        </div>
+        <div class="status-rail" aria-label="Summary">
+          <span><b class="dot ok-dot"></b><span data-i18n="status.coreReady">Core ready</span></span>
+          <span><b class="screen-dot"></b><span data-i18n="status.localMode">Local mode</span></span>
+          <span><b class="stack-dot"></b><span data-i18n="status.dataSafe">Data safe</span></span>
+        </div>
+        <div class="topbar-actions">
+          <div class="language-switch" role="group" aria-label="Language">
+            <button class="language-option active" data-language="en">EN</button>
+            <button class="language-option" data-language="zh">中文</button>
+          </div>
+          <button id="refreshButton" class="secondary" data-i18n="actions.refresh">Refresh</button>
+          <button id="primaryAction" class="primary" data-i18n="actions.openGateway">Open Gateway</button>
+        </div>
+      </header>
+
+      <section id="homeView" class="view active-view">
+        <section id="moduleGrid" class="module-grid" aria-live="polite"></section>
+
+        <section class="system-grid">
+          <article class="panel compact-panel">
+            <div class="panel-heading">
+              <h2 data-i18n="home.model.title">Model & Provider</h2>
+              <button class="icon-button" aria-label="Model settings" data-i18n-aria-label="home.model.settings">Settings</button>
+            </div>
+            <div class="kv-row"><span data-i18n="home.model.provider">Provider</span><strong data-i18n="home.model.localProvider">Local provider</strong></div>
+            <div class="kv-row"><span data-i18n="home.model.model">Model</span><strong data-i18n="home.model.configuredOutside">Configured outside app</strong></div>
+            <div class="kv-row"><span data-i18n="home.model.mode">Mode</span><strong id="runtimeMode">Checking...</strong></div>
+            <button class="link-button" data-view-target="settings" data-i18n="home.model.edit">Edit settings</button>
+          </article>
+
+          <article class="panel compact-panel">
+            <h2 data-i18n="home.dataLocation.title">Data Location</h2>
+            <div class="kv-row"><span data-i18n="home.dataLocation.root">Root</span><strong id="dataLocation">Checking...</strong></div>
+            <div class="kv-row"><span>Memoria</span><strong id="memoryStoreShort">Checking...</strong></div>
+            <div class="kv-row"><span data-i18n="common.status">Status</span><strong id="dataHint">Data stays on this machine.</strong></div>
+            <button class="link-button" data-view-target="data" data-i18n="home.dataLocation.openControls">Open data controls</button>
+          </article>
+
+          <article class="panel compact-panel">
+            <h2 data-i18n="home.importExport.title">Import / Export</h2>
+            <div class="kv-row"><span data-i18n="home.importExport.lastImport">Last import</span><strong data-i18n="common.notTracked">Not tracked yet</strong></div>
+            <div class="kv-row"><span data-i18n="home.importExport.lastExport">Last export</span><strong data-i18n="common.notTracked">Not tracked yet</strong></div>
+            <div class="split-actions">
+              <button class="secondary" data-view-target="data" data-i18n="actions.import">Import</button>
+              <button class="secondary" data-view-target="data" data-i18n="actions.export">Export</button>
+            </div>
+          </article>
+        </section>
+
+        <section class="lower-grid">
+          <article class="panel">
+            <div class="panel-heading">
+              <h2 data-i18n="home.events.title">Recent system events</h2>
+              <span class="quiet" data-i18n="home.events.localOnly">Local only</span>
+            </div>
+            <ol id="eventList" class="event-list"></ol>
+          </article>
+
+          <article class="panel">
+            <div class="panel-heading">
+              <h2 data-i18n="home.agentConnection.title">Agent connection</h2>
+              <span class="quiet">Gateway</span>
+            </div>
+            <div class="snippet">
+              <span>CLARACORE_ROOT</span>
+              <code id="rootPath">Checking...</code>
+            </div>
+            <div class="shortcut-row">
+              <button id="openDevelopmentPlan" class="secondary" data-i18n="home.agentConnection.developmentPlan">Development plan</button>
+              <button id="openDesignPlan" class="secondary" data-i18n="home.agentConnection.designPlan">Design plan</button>
+            </div>
+          </article>
+
+          <article class="panel reminder">
+            <div>
+              <h2 data-i18n="home.backup.title">Backup reminder</h2>
+              <p data-i18n="home.backup.body">Export memory and shared-line data before large local changes.</p>
+            </div>
+            <button class="secondary" data-view-target="data" data-i18n="home.backup.review">Review data</button>
+          </article>
+        </section>
+      </section>
+
+      <section id="memoryView" class="view">
+        <div class="screen-grid">
+          <article class="panel main-panel">
+            <h2 data-i18n="memory.title">Memory</h2>
+            <p data-i18n="memory.body">Memoria keeps long-term factual records separate from chat flow.</p>
+            <div class="data-row">
+              <span data-i18n="memory.store">Store</span>
+              <strong id="memoryStore">Checking...</strong>
+            </div>
+            <div class="data-row">
+              <span data-i18n="memory.policy">Policy</span>
+              <strong data-i18n="memory.factsFirst">Facts first</strong>
+            </div>
+          </article>
+          <article class="panel">
+            <h2 data-i18n="memory.preview">Preview</h2>
+            <ul class="plain-list">
+              <li data-i18n="memory.preview1">Recent facts stay reviewable.</li>
+              <li data-i18n="memory.preview2">Private data remains under the local ClaraCore folder.</li>
+              <li data-i18n="memory.preview3">Search and cleanup controls will land behind confirmation.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="sharedLineView" class="view">
+        <div class="screen-grid">
+          <article class="panel main-panel">
+            <h2 data-i18n="sharedLine.title">Shared Line</h2>
+            <p data-i18n="sharedLine.body">Continuity shows the current shared position so agents can resume with less drift.</p>
+            <div class="timeline">
+              <div><span></span><strong data-i18n="sharedLine.current">Current position</strong><p data-i18n="sharedLine.currentBody">Ready to read from Continuity.</p></div>
+              <div><span></span><strong data-i18n="sharedLine.resume">Resume packet</strong><p data-i18n="sharedLine.resumeBody">Prepared for connected agents.</p></div>
+              <div><span></span><strong data-i18n="sharedLine.review">Review point</strong><p data-i18n="sharedLine.reviewBody">Confirm before overwriting context.</p></div>
+            </div>
+          </article>
+          <article class="panel">
+            <h2 data-i18n="sharedLine.controls">Controls</h2>
+            <button class="secondary full" data-i18n="sharedLine.open">Open shared line</button>
+            <button class="secondary full" data-i18n="sharedLine.export">Export packet</button>
+          </article>
+        </div>
+      </section>
+
+      <section id="innerlifeView" class="view">
+        <div class="screen-grid">
+          <article class="panel main-panel">
+            <h2>InnerLife</h2>
+            <p data-i18n="innerLife.body">Optional background reflection is available, but it should stay calm and explicit.</p>
+            <div class="state-card paused">
+              <strong data-i18n="innerLife.paused">Paused by default</strong>
+              <p data-i18n="innerLife.pausedBody">This is a normal state, not a failure.</p>
+            </div>
+          </article>
+          <article class="panel">
+            <h2 data-i18n="nav.settings">Settings</h2>
+            <label class="toggle-row"><input type="checkbox" /> <span data-i18n="innerLife.allowQuiet">Allow quiet background review</span></label>
+            <label class="toggle-row"><input type="checkbox" /> <span data-i18n="innerLife.shareReviewed">Share only reviewed output</span></label>
+          </article>
+        </div>
+      </section>
+
+      <section id="dataView" class="view">
+        <div class="screen-grid">
+          <article class="panel main-panel">
+            <h2 data-i18n="data.title">Data import and export</h2>
+            <p data-i18n="data.body">Import and restore are separated so destructive actions stay clear.</p>
+            <div class="action-row"><span data-i18n="data.exportBackup">Export backup</span><button class="secondary" data-i18n="actions.export">Export</button></div>
+            <div class="action-row"><span data-i18n="data.importRecords">Import records</span><button class="secondary" data-i18n="actions.import">Import</button></div>
+            <div class="action-row danger"><span data-i18n="data.restoreBackup">Restore from backup</span><button class="secondary" data-i18n="actions.restore">Restore</button></div>
+          </article>
+          <article class="panel">
+            <h2 data-i18n="data.location">Location</h2>
+            <div class="snippet"><span data-i18n="data.dataRoot">Data root</span><code id="dataRootPath">Checking...</code></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="connectionsView" class="view">
+        <div class="screen-grid">
+          <article class="panel main-panel">
+            <h2 data-i18n="connections.title">Connections</h2>
+            <p data-i18n="connections.body">External agents connect through the local gateway instead of owning the data layer.</p>
+            <div class="snippet">
+              <span data-i18n="connections.mcpCommand">MCP command</span>
+              <code id="mcpCommand">Checking...</code>
+            </div>
+            <div class="snippet large">
+              <span data-i18n="connections.mcpConfig">MCP config</span>
+              <pre><code id="mcpConfig">Checking...</code></pre>
+            </div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading">
+              <h2 data-i18n="connections.shortcuts">Shortcuts</h2>
+              <span id="copyNotice" class="quiet" aria-live="polite"></span>
+            </div>
+            <button class="secondary full" data-copy="mcp-command" data-i18n="connections.copyMcpCommand">Copy MCP command</button>
+            <button class="secondary full" data-copy="mcp-config" data-i18n="connections.copyMcpConfig">Copy MCP config</button>
+            <button id="openGatewayFolder" class="secondary full" data-i18n="connections.openGatewayFolder">Open gateway folder</button>
+            <h2 class="section-title" data-i18n="connections.httpEndpoints">HTTP endpoints</h2>
+            <div id="httpEndpointList" class="endpoint-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="settingsView" class="view">
+        <div class="screen-grid">
+          <article class="panel main-panel">
+            <h2 data-i18n="settings.title">Model settings</h2>
+            <p data-i18n="settings.body">Provider and model choices should be understandable without reading configuration files.</p>
+            <label class="field"><span data-i18n="home.model.provider">Provider</span> <select><option data-i18n="home.model.localProvider">Local provider</option><option data-i18n="settings.openaiCompatible">OpenAI compatible</option></select></label>
+            <label class="field"><span data-i18n="settings.defaultModel">Default model</span> <input data-i18n-value="home.model.configuredOutside" value="configured outside app" /></label>
+          </article>
+          <article class="panel">
+            <h2 data-i18n="settings.advanced">Advanced</h2>
+            <details>
+              <summary data-i18n="settings.showServiceDetails">Show service details</summary>
+              <p data-i18n="settings.serviceDetailsBody">Paths and process controls will stay behind disclosure controls.</p>
+            </details>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="resource-monitor" aria-label="System resources">
+      <span><strong>ClaraCore</strong> <span id="monitorVersion">v0.1.0</span></span>
+      <span><span data-i18n="monitor.uptime">Uptime</span>: <strong id="monitorUptime">--:--:--</strong></span>
+      <span><span data-i18n="monitor.cpu">CPU</span>: <strong id="monitorCpu">--</strong><b class="monitor-dot"></b></span>
+      <span><span data-i18n="monitor.ram">RAM</span>: <strong id="monitorRam">--</strong></span>
+      <span><span data-i18n="monitor.disk">Disk</span>: <strong id="monitorDisk">--</strong><b class="monitor-dot"></b></span>
+      <span><span data-i18n="monitor.localTime">Local time</span>: <strong id="monitorTime">--</strong></span>
+    </footer>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
