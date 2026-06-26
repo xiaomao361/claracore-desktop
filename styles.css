@@ -629,6 +629,207 @@ p {
   overflow-wrap: anywhere;
 }
 
+.home-dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.95fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.home-cognitive-panel {
+  grid-column: 1 / -1;
+}
+
+.home-cognitive-panel .panel-heading,
+.home-agent-panel .panel-heading,
+.home-trace-panel .panel-heading {
+  align-items: start;
+}
+
+.cognitive-system-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.cognitive-system-card,
+.home-agent-card,
+.home-trace-row {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fafaf7;
+}
+
+.cognitive-system-card {
+  padding: 12px;
+}
+
+.cognitive-system-card.ok {
+  border-left: 3px solid var(--green);
+}
+
+.cognitive-system-card.warn {
+  border-left: 3px solid var(--amber);
+}
+
+.cognitive-system-card.error {
+  border-left: 3px solid var(--red);
+}
+
+.cognitive-system-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.cognitive-system-title strong {
+  min-width: 0;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.cognitive-system-title .badge {
+  justify-self: auto;
+}
+
+.cognitive-system-rows .kv-row {
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.8fr);
+  padding: 4px 0;
+}
+
+.home-agent-list,
+.home-trace-list {
+  display: grid;
+  gap: 10px;
+}
+
+.home-agent-card {
+  padding: 12px;
+}
+
+.home-agent-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.home-agent-head strong {
+  font-size: 15px;
+}
+
+.home-agent-head span {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.home-agent-card p {
+  min-height: 38px;
+  margin-bottom: 9px;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.home-agent-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin-bottom: 9px;
+}
+
+.home-agent-stats div {
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.home-agent-stats span,
+.home-agent-meta span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.home-agent-stats strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.home-agent-meta {
+  display: grid;
+  gap: 7px;
+}
+
+.home-agent-meta div {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.4fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.home-agent-meta strong {
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 520;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.home-trace-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  padding: 10px;
+}
+
+.home-trace-row.ok {
+  border-left: 3px solid var(--green);
+}
+
+.home-trace-row.error {
+  border-left: 3px solid var(--red);
+}
+
+.home-trace-row strong,
+.home-trace-row span,
+.home-trace-row code {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.home-trace-row strong {
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.home-trace-row span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.home-trace-row code {
+  color: #4f5752;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .snippet code {
   display: block;
   color: #4f5752;
@@ -2759,9 +2960,18 @@ summary {
 }
 
 @media (max-width: 1120px) {
+  .home-dashboard-grid,
   .module-grid,
   .lower-grid,
   .system-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-cognitive-panel {
+    grid-column: 1 / -1;
+  }
+
+  .cognitive-system-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -2803,8 +3013,11 @@ summary {
   .status-strip,
   .memoria-status-strip,
   .shared-line-status-strip,
+  .home-dashboard-grid,
+  .cognitive-system-grid,
   .shared-line-layout,
   .screen-grid,
+  .system-grid,
   .lower-grid {
     grid-template-columns: 1fr;
   }

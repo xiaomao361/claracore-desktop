@@ -59,6 +59,40 @@
       <section id="homeView" class="view active-view">
         <section id="moduleGrid" class="module-grid" aria-live="polite"></section>
 
+        <section class="home-dashboard-grid" aria-label="Home overview">
+          <article class="panel home-cognitive-panel">
+            <div class="panel-heading">
+              <div>
+                <h2 data-i18n="home.cognitive.title">Cognitive Snapshot</h2>
+                <p class="quiet" data-i18n="home.cognitive.body">Cross-system health and current cognitive load.</p>
+              </div>
+              <span id="homeCognitiveUpdated" class="quiet">Checking...</span>
+            </div>
+            <div id="homeCognitiveSystems" class="cognitive-system-grid"></div>
+          </article>
+
+          <article class="panel home-agent-panel">
+            <div class="panel-heading">
+              <div>
+                <h2 data-i18n="home.agentView.title">Agent View</h2>
+                <p class="quiet" data-i18n="home.agentView.body">Current line, Memory, InnerLife, and recent Gateway activity.</p>
+              </div>
+            </div>
+            <div id="homeAgentViewList" class="home-agent-list"></div>
+          </article>
+
+          <article class="panel home-trace-panel">
+            <div class="panel-heading">
+              <div>
+                <h2 data-i18n="home.trace.title">Gateway Trace</h2>
+                <p class="quiet" data-i18n="home.trace.body">Recent MCP calls through the Desktop-owned Gateway.</p>
+              </div>
+              <button class="link-button" data-view-target="connections" data-i18n="home.trace.openConnections">Open connections</button>
+            </div>
+            <div id="homeTraceList" class="home-trace-list"></div>
+          </article>
+        </section>
+
         <section class="system-grid">
           <article class="panel compact-panel">
             <div class="panel-heading">

@@ -21,8 +21,9 @@ Included:
 - ClaraCore root detection
 - Product-owned SQLite data root under Desktop user data
 - Home, Memoria, Shared Line, InnerLife, Models, Data, Connections, Settings, and Logs pages
+- Home dashboard with Gateway, Memoria, Shared Line, InnerLife, agent-view, and Gateway trace summaries
 - MCP connection command and copyable config
-- Desktop-owned Gateway stdio entry for Memoria MCP tools
+- Desktop-owned Gateway stdio entry for Gateway context, Memoria, Shared Line, and InnerLife MCP tools
 - Memoria CLI for store, recall, get, update, tag, delete, restore, archive, import/export, records, and maintenance audit/run
 - View-focused Memoria UI for search, graph, labels, all memories, restricted memories, archive/delete review, and manual delete/restore
 - Lazy-loaded Memoria list tabs and cached canvas graph with primary/restricted layers
@@ -45,8 +46,7 @@ Included:
 
 Not included yet:
 
-- Starting or stopping Gateway from Desktop
-- Replacing the existing manually started local gateway
+- HTTP management console for the Desktop-owned Gateway
 - Packaged macOS release artifact
 - Windows package
 - Old Memoria REST API compatibility
@@ -86,13 +86,23 @@ Start the desktop app:
 npm run start
 ```
 
+## Current Gateway Direction
+
+The Desktop-owned Gateway is the primary agent contract. It is a stdio MCP
+server launched by the agent client through the generated MCP config, not a
+separate always-on background daemon.
+
+The old ClaraCore Gateway web console remains a reference for useful overview
+ideas, but its service Web UI launcher/supervisor model is not the Desktop
+product target. Product-visible summaries now belong on the Desktop Home page,
+and repeatable operations should be exposed through the Desktop-owned Gateway.
+
 ## v0.2 Direction
 
 The next version should move from display to real local control:
 
 - Package a macOS app.
-- Let Desktop start, stop, and restart the Gateway it owns.
-- Detect and avoid interfering with a Gateway started outside Desktop.
+- Keep the Desktop-owned Gateway as the primary agent MCP contract.
 - Use or import existing ClaraCore data safely.
 - Show real service health, not just module file presence.
 - Provide agent-ready MCP config for the Desktop-managed Gateway.

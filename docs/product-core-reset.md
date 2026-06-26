@@ -165,6 +165,32 @@ Rules:
 
 Agent Setup remains important, but it should eventually describe the Desktop-owned product Gateway, not the old local checkout path.
 
+### Checkpoint: 2026-06-26 Gateway/Home Dashboard
+
+The Desktop-owned Gateway is now treated as implemented for the product-core
+reset phase.
+
+Current state:
+
+- Gateway is a Desktop-owned stdio MCP server under `core/gateway/`.
+- Agent Setup generates the Desktop Gateway MCP command and config.
+- Gateway exposes product-owned context, Memoria, Shared Line, InnerLife, and
+  trace tools against the Desktop SQLite database.
+- Gateway traces are stored in the product database and shown in Desktop.
+- The Home page now includes a compact cognitive snapshot modeled on the old
+  Gateway overview: Gateway, Memoria, Shared Line, InnerLife, agent view, and
+  recent Gateway trace.
+- Memoria maintenance status is surfaced with the concrete issue when repair is
+  needed, rather than a bare warning.
+
+Boundary:
+
+- The old Gateway web console remains a reference only.
+- The old service Web UI launcher/supervisor should not be copied into Desktop;
+  normal workflows are owned by Desktop pages and Gateway MCP tools.
+- Gateway should be described as available in Desktop status surfaces unless a
+  real startup/configuration error is detected.
+
 ## Configuration Strategy
 
 Configuration should be product-owned and visible inside Desktop.

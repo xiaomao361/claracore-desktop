@@ -317,7 +317,8 @@ function productModules(input = {}) {
       label: "Gateway",
       descriptionKey: "module.gateway.description",
       required: true,
-      state: "planned"
+      present: true,
+      state: "ready"
     },
     {
       id: "memoria",
@@ -424,7 +425,7 @@ function buildHealthChecks(app, paths, configuration, databaseSummary, canWriteR
       id: "gateway",
       level: "ok",
       labelKey: "health.gateway",
-      detail: app?.isPackaged ? "packaged --gateway" : "development stdio gateway"
+      detail: app?.isPackaged ? "packaged stdio gateway" : "development stdio gateway"
     },
     {
       id: "embedding",

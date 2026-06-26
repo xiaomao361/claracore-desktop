@@ -38,6 +38,10 @@ const openGatewayFolder = document.querySelector("#openGatewayFolder");
 const eventList = document.querySelector("#eventList");
 const healthSummary = document.querySelector("#healthSummary");
 const healthList = document.querySelector("#healthList");
+const homeCognitiveUpdated = document.querySelector("#homeCognitiveUpdated");
+const homeCognitiveSystems = document.querySelector("#homeCognitiveSystems");
+const homeAgentViewList = document.querySelector("#homeAgentViewList");
+const homeTraceList = document.querySelector("#homeTraceList");
 const viewTitle = document.querySelector("#viewTitle");
 const viewSubtitle = document.querySelector("#viewSubtitle");
 const monitorVersion = document.querySelector("#monitorVersion");
@@ -234,6 +238,49 @@ const translations = {
     "home.importExport.title": "Import / Export",
     "home.importExport.lastImport": "Last import",
     "home.importExport.lastExport": "Last export",
+    "home.cognitive.title": "Cognitive Snapshot",
+    "home.cognitive.body": "Cross-system health and current cognitive load.",
+    "home.cognitive.updated": "Updated now",
+    "home.cognitive.gateway": "Gateway",
+    "home.cognitive.memoria": "Memoria",
+    "home.cognitive.sharedLine": "Shared Line",
+    "home.cognitive.innerLife": "InnerLife",
+    "home.cognitive.totalMemories": "Total memories",
+    "home.cognitive.activeMemories": "Active memories",
+    "home.cognitive.labels": "Labels",
+    "home.cognitive.vectors": "Vectors",
+    "home.cognitive.totalLines": "Total lines",
+    "home.cognitive.activeLines": "Active lines",
+    "home.cognitive.handoffs": "Handoffs",
+    "home.cognitive.agents": "Agents",
+    "home.cognitive.pendingShares": "Pending shares",
+    "home.cognitive.activeEvents": "Active events",
+    "home.cognitive.sessions": "Sessions",
+    "home.cognitive.daemon": "Daemon",
+    "home.cognitive.surface": "Surface",
+    "home.cognitive.mcpTools": "MCP tools",
+    "home.cognitive.lifecycle": "Lifecycle",
+    "home.cognitive.next": "Next",
+    "home.cognitive.gatewayReady": "available",
+    "home.cognitive.gatewayToolsReady": "ready",
+    "home.cognitive.gatewayLifecycleReady": "Desktop-owned",
+    "home.cognitive.gatewayNext": "agent-ready",
+    "home.cognitive.maintenance": "Maintenance",
+    "home.cognitive.issue": "Issue",
+    "home.agentView.title": "Agent View",
+    "home.agentView.body": "Current line, Memory, InnerLife, and recent Gateway activity.",
+    "home.agentView.noActiveLine": "No active line",
+    "home.agentView.noCurrentPosition": "No current position saved yet.",
+    "home.agentView.recalledMemories": "Relevant memories",
+    "home.agentView.pendingThoughts": "Pending shares",
+    "home.agentView.gatewayDecisions": "Gateway calls",
+    "home.agentView.currentScene": "Current scene",
+    "home.agentView.recentFocus": "Recent focus",
+    "home.agentView.none": "None",
+    "home.trace.title": "Gateway Trace",
+    "home.trace.body": "Recent MCP calls through the Desktop-owned Gateway.",
+    "home.trace.openConnections": "Open connections",
+    "home.trace.empty": "No Gateway calls yet.",
     "home.events.title": "Recent system events",
     "home.events.localOnly": "Local only",
     "health.title": "First-run check",
@@ -852,6 +899,49 @@ const translations = {
     "home.importExport.title": "导入 / 导出",
     "home.importExport.lastImport": "上次导入",
     "home.importExport.lastExport": "上次导出",
+    "home.cognitive.title": "认知快照",
+    "home.cognitive.body": "跨系统健康状态和当前认知负载。",
+    "home.cognitive.updated": "刚刚更新",
+    "home.cognitive.gateway": "Gateway",
+    "home.cognitive.memoria": "Memoria",
+    "home.cognitive.sharedLine": "共同线",
+    "home.cognitive.innerLife": "InnerLife",
+    "home.cognitive.totalMemories": "记忆总数",
+    "home.cognitive.activeMemories": "活跃记忆",
+    "home.cognitive.labels": "标签",
+    "home.cognitive.vectors": "向量",
+    "home.cognitive.totalLines": "线总数",
+    "home.cognitive.activeLines": "活跃线",
+    "home.cognitive.handoffs": "交接",
+    "home.cognitive.agents": "Agent",
+    "home.cognitive.pendingShares": "待分享",
+    "home.cognitive.activeEvents": "活跃事件",
+    "home.cognitive.sessions": "会话",
+    "home.cognitive.daemon": "后台循环",
+    "home.cognitive.surface": "入口",
+    "home.cognitive.mcpTools": "MCP 工具",
+    "home.cognitive.lifecycle": "生命周期",
+    "home.cognitive.next": "下一步",
+    "home.cognitive.gatewayReady": "可用",
+    "home.cognitive.gatewayToolsReady": "可用",
+    "home.cognitive.gatewayLifecycleReady": "Desktop 自有",
+    "home.cognitive.gatewayNext": "Agent 可接入",
+    "home.cognitive.maintenance": "维护",
+    "home.cognitive.issue": "问题",
+    "home.agentView.title": "Agent 视图",
+    "home.agentView.body": "当前线、Memory、InnerLife 和最近 Gateway 活动。",
+    "home.agentView.noActiveLine": "没有活跃线",
+    "home.agentView.noCurrentPosition": "还没有保存当前位置。",
+    "home.agentView.recalledMemories": "相关记忆",
+    "home.agentView.pendingThoughts": "待分享",
+    "home.agentView.gatewayDecisions": "Gateway 调用",
+    "home.agentView.currentScene": "当前场景",
+    "home.agentView.recentFocus": "最近焦点",
+    "home.agentView.none": "无",
+    "home.trace.title": "Gateway 轨迹",
+    "home.trace.body": "Desktop 自有 Gateway 最近的 MCP 调用。",
+    "home.trace.openConnections": "打开连接",
+    "home.trace.empty": "还没有 Gateway 调用。",
     "home.events.title": "近期系统事件",
     "home.events.localOnly": "仅本机",
     "health.title": "首次运行检查",
@@ -1497,6 +1587,17 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function safeJsonObject(value, fallback = {}) {
+  if (value && typeof value === "object" && !Array.isArray(value)) return value;
+  if (value === undefined || value === null || String(value).trim() === "") return fallback;
+  try {
+    const parsed = JSON.parse(String(value));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : fallback;
+  } catch (_error) {
+    return fallback;
+  }
+}
+
 function formatMode(mode) {
   if (mode === "custom-product-data") return t("runtime.customProductData");
   if (mode === "isolated-product-dev") return t("runtime.isolatedProductDev");
@@ -1706,6 +1807,224 @@ function renderEvents() {
       `
     )
     .join("");
+}
+
+function homeSystemSnapshots() {
+  const stats = snapshot?.memoryStats || {};
+  const maintenance = snapshot?.memoryMaintenance || {};
+  const firstMemoryIssue = (maintenance.issues || [])[0];
+  const sharedLine = snapshot?.sharedLine || {};
+  const lines = sharedLine.lines || [];
+  const activeLines = lines.filter((line) => line.status !== "archived");
+  const handoffs = sharedLine.handoffs || [];
+  const innerLife = snapshot?.innerLife || {};
+  const counts = innerLife.counts || {};
+  const daemon = innerLife.daemon || {};
+  const agentIds = new Set(
+    [
+      ...lines.map((line) => safeJsonObject(line.metadata, {}).agentId || line.agentId),
+      ...(innerLife.sessions || []).map(itemAgentId),
+      ...(innerLife.digestRuns || []).map(itemAgentId),
+      ...(innerLife.inbox || []).map(itemAgentId),
+      ...(innerLife.pendingShares || []).map(itemAgentId),
+      ...(innerLife.recentShares || []).map(itemAgentId)
+    ].filter(Boolean)
+  );
+  return [
+    {
+      id: "gateway",
+      title: t("home.cognitive.gateway"),
+      health: "ok",
+      rows: [
+        [t("home.cognitive.surface"), "stdio MCP"],
+        [t("home.cognitive.mcpTools"), t("home.cognitive.gatewayToolsReady")],
+        [t("home.cognitive.lifecycle"), t("home.cognitive.gatewayLifecycleReady")],
+        [t("home.cognitive.next"), t("home.cognitive.gatewayNext")]
+      ]
+    },
+    {
+      id: "memoria",
+      title: t("home.cognitive.memoria"),
+      health: maintenance.status === "ok" ? "ok" : "warn",
+      rows: [
+        [t("home.cognitive.totalMemories"), stats.totalCount ?? 0],
+        [t("home.cognitive.activeMemories"), stats.activeCount ?? 0],
+        [t("home.cognitive.labels"), Array.isArray(stats.labels) ? stats.labels.length : 0],
+        [t("home.cognitive.vectors"), `${stats.embeddedCount ?? 0}/${stats.pendingEmbeddingCount ?? 0}`],
+        maintenance.status === "ok"
+          ? [t("home.cognitive.maintenance"), t("common.ok")]
+          : [t("home.cognitive.issue"), `${firstMemoryIssue?.code || maintenance.status} ${firstMemoryIssue?.count ?? ""}`.trim()]
+      ]
+    },
+    {
+      id: "shared-line",
+      title: t("home.cognitive.sharedLine"),
+      health: sharedLine.currentPosition?.summary ? "ok" : "warn",
+      rows: [
+        [t("home.cognitive.totalLines"), lines.length],
+        [t("home.cognitive.activeLines"), activeLines.length],
+        [t("home.cognitive.handoffs"), handoffs.length],
+        [t("home.cognitive.agents"), agentIds.size]
+      ]
+    },
+    {
+      id: "innerlife",
+      title: t("home.cognitive.innerLife"),
+      health: daemon.status === "error" ? "error" : daemon.enabled ? "ok" : "warn",
+      rows: [
+        [t("home.cognitive.pendingShares"), counts.pending_shares_count ?? 0],
+        [t("home.cognitive.activeEvents"), counts.events_count ?? 0],
+        [t("home.cognitive.sessions"), counts.active_sessions_count ?? 0],
+        [t("home.cognitive.daemon"), daemon.enabled ? daemon.status || t("common.ready") : t("common.paused")]
+      ]
+    }
+  ];
+}
+
+function homeAgentIds() {
+  const sharedLine = snapshot?.sharedLine || {};
+  const innerLife = snapshot?.innerLife || {};
+  const ids = [
+    ...(sharedLine.lines || []).map((line) => safeJsonObject(line.metadata, {}).agentId || line.agentId),
+    ...(innerLife.sessions || []).map(itemAgentId),
+    ...(innerLife.digestRuns || []).map(itemAgentId),
+    ...(innerLife.inbox || []).map(itemAgentId),
+    ...(innerLife.pendingShares || []).map(itemAgentId),
+    ...(innerLife.recentShares || []).map(itemAgentId),
+    ...(snapshot?.gatewayTraces || []).map((trace) => trace.agentId)
+  ].filter(Boolean);
+  const unique = [...new Set(ids)];
+  const priority = ["clara", "lara"].filter((agentId) => unique.includes(agentId));
+  const rest = unique.filter((agentId) => !priority.includes(agentId));
+  if (unique.length) return [...priority, ...rest].slice(0, 2);
+  return ["codex"];
+}
+
+function compactHomeText(value, max = 118) {
+  const text = String(value || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/[•·]/g, " ")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)[0] || "";
+  const compact = text.replace(/\s+/g, " ").trim();
+  return compact.length > max ? `${compact.slice(0, max - 1)}…` : compact;
+}
+
+function memoryMatchesAgent(memory, agentId) {
+  const labels = Array.isArray(memory.labels) ? memory.labels : [];
+  return labels.some((label) => label === `agent:${agentId}` || label === `agent-id:${agentId}` || label.endsWith(`:${agentId}`));
+}
+
+function latestAgentText(items, agentId, fields) {
+  const match = (items || []).find((item) => itemAgentId(item) === agentId);
+  if (!match) return "";
+  for (const field of fields) {
+    if (match[field]) return String(match[field]);
+  }
+  return "";
+}
+
+function homeAgentView(agentId) {
+  const sharedLine = snapshot?.sharedLine || {};
+  const lines = sharedLine.lines || [];
+  const current = lines.find((line) => {
+    const metadata = safeJsonObject(line.metadata, {});
+    return (metadata.agentId || line.agentId) === agentId && line.status !== "archived";
+  }) || (sharedLine.line?.status !== "archived" ? sharedLine.line : null);
+  const innerLife = snapshot?.innerLife || {};
+  const sessions = filterByAgent(innerLife.sessions || [], agentId);
+  const activeSession = sessions.find((session) => session.status === "active") || sessions[0];
+  const pendingShares = filterByAgent(innerLife.pendingShares || [], agentId);
+  const traces = (snapshot?.gatewayTraces || []).filter((trace) => trace.agentId === agentId);
+  const matchedMemories = (snapshot?.memories || []).filter((memory) => memoryMatchesAgent(memory, agentId));
+  const recentFocus =
+    latestAgentText(pendingShares, agentId, ["summary", "content", "body", "thought", "output"]) ||
+    latestAgentText(filterByAgent(innerLife.inbox || [], agentId), agentId, ["body", "summary", "content"]);
+  return {
+    agentId,
+    displayName: agentId,
+    lineTitle: current?.title || t("home.agentView.noActiveLine"),
+    lineBody: compactHomeText(current?.summary || sharedLine.currentPosition?.summary) || t("home.agentView.noCurrentPosition"),
+    recalledMemories: matchedMemories.length,
+    pendingThoughts: pendingShares.length,
+    gatewayDecisions: traces.length,
+    currentScene: activeSession ? activeSession.host || activeSession.externalSessionId || activeSession.id : t("home.agentView.none"),
+    recentFocus: recentFocus || t("home.agentView.none")
+  };
+}
+
+function renderHomeDashboard() {
+  if (!snapshot) return;
+  homeCognitiveUpdated.textContent = t("home.cognitive.updated");
+  homeCognitiveSystems.innerHTML = homeSystemSnapshots()
+    .map(
+      (system) => `
+        <article class="cognitive-system-card ${escapeHtml(system.health)}">
+          <div class="cognitive-system-title">
+            <strong>${escapeHtml(system.title)}</strong>
+            <span class="badge ${escapeHtml(system.health === "error" ? "missing" : system.health === "warn" || system.health === "planned" ? "planned" : "ok")}">${escapeHtml(system.health === "planned" ? t("common.planned") : system.health)}</span>
+          </div>
+          <div class="cognitive-system-rows">
+            ${system.rows
+              .map(
+                ([label, value]) => `
+                  <div class="kv-row">
+                    <span>${escapeHtml(label)}</span>
+                    <strong>${escapeHtml(value)}</strong>
+                  </div>
+                `
+              )
+              .join("")}
+          </div>
+        </article>
+      `
+    )
+    .join("");
+
+  homeAgentViewList.innerHTML = homeAgentIds()
+    .map(homeAgentView)
+    .map(
+      (agent) => `
+        <article class="home-agent-card">
+          <div class="home-agent-head">
+            <strong>${escapeHtml(agent.displayName)}</strong>
+            <span>${escapeHtml(agent.lineTitle)}</span>
+          </div>
+          <p>${escapeHtml(agent.lineBody)}</p>
+          <div class="home-agent-stats">
+            <div><span>${escapeHtml(t("home.agentView.recalledMemories"))}</span><strong>${escapeHtml(agent.recalledMemories)}</strong></div>
+            <div><span>${escapeHtml(t("home.agentView.pendingThoughts"))}</span><strong>${escapeHtml(agent.pendingThoughts)}</strong></div>
+            <div><span>${escapeHtml(t("home.agentView.gatewayDecisions"))}</span><strong>${escapeHtml(agent.gatewayDecisions)}</strong></div>
+          </div>
+          <div class="home-agent-meta">
+            <div><span>${escapeHtml(t("home.agentView.currentScene"))}</span><strong>${escapeHtml(agent.currentScene)}</strong></div>
+            <div><span>${escapeHtml(t("home.agentView.recentFocus"))}</span><strong>${escapeHtml(agent.recentFocus)}</strong></div>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+
+  const traces = snapshot.gatewayTraces || [];
+  if (!traces.length) {
+    homeTraceList.innerHTML = `<div class="endpoint-empty">${t("home.trace.empty")}</div>`;
+  } else {
+    homeTraceList.innerHTML = traces
+      .slice(0, 5)
+      .map(
+        (trace) => `
+          <article class="home-trace-row ${escapeHtml(trace.status || "")}">
+            <div>
+              <strong>${escapeHtml(trace.toolName || "unknown")}</strong>
+              <span>${escapeHtml(trace.error || trace.responseSummary || "")}</span>
+            </div>
+            <code>${escapeHtml(trace.status || "ok")} · ${escapeHtml(String(trace.durationMs ?? 0))}ms</code>
+          </article>
+        `
+      )
+      .join("");
+  }
 }
 
 function renderHealth() {
@@ -3126,6 +3445,7 @@ function renderSnapshot() {
   memoryStore.textContent = snapshot.data.databasePath;
   memoryStoreShort.textContent = snapshot.data.databasePresent ? t("common.found") : t("common.notCreated");
   renderModules(snapshot.modules);
+  renderHomeDashboard();
   renderHealth();
   renderEvents();
   renderConnections();
