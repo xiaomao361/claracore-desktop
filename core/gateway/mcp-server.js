@@ -120,7 +120,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_list",
+      name: "memoria_list",
       title: "List Memories",
       description: "List recent ClaraCore Desktop memory records.",
       inputSchema: {
@@ -136,7 +136,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_search",
+      name: "memoria_search",
       title: "Search Memories",
       description: "Search ClaraCore Desktop memory records with keyword and vector search when available.",
       inputSchema: {
@@ -156,7 +156,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_create",
+      name: "memoria_create",
       title: "Create Memory",
       description: "Create a ClaraCore Desktop memory record. Use factual, reviewable content.",
       inputSchema: {
@@ -191,7 +191,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_update",
+      name: "memoria_update",
       title: "Update Memory",
       description: "Update an existing ClaraCore Desktop memory record.",
       inputSchema: {
@@ -229,7 +229,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_restricted_list",
+      name: "memoria_restricted_list",
       title: "List Restricted Memories",
       description: "List restricted ClaraCore Desktop memory records through an explicit restricted-content tool.",
       inputSchema: {
@@ -245,7 +245,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_restrict",
+      name: "memoria_restrict",
       title: "Restrict Memory",
       description: "Move an active ClaraCore Desktop memory record out of normal list/search results.",
       inputSchema: {
@@ -260,7 +260,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_unrestrict",
+      name: "memoria_unrestrict",
       title: "Unrestrict Memory",
       description: "Restore a restricted ClaraCore Desktop memory record to normal list/search results.",
       inputSchema: {
@@ -275,7 +275,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_delete",
+      name: "memoria_delete",
       title: "Delete Memory",
       description: "Soft-delete a ClaraCore Desktop memory record.",
       inputSchema: {
@@ -290,7 +290,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_restore",
+      name: "memoria_restore",
       title: "Restore Memory",
       description: "Restore a soft-deleted ClaraCore Desktop memory record.",
       inputSchema: {
@@ -305,7 +305,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_archive",
+      name: "memoria_archive",
       title: "Archive Memory",
       description: "Archive an active ClaraCore Desktop memory record so it leaves normal list/search results without being deleted.",
       inputSchema: {
@@ -320,7 +320,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_archived_list",
+      name: "memoria_archived_list",
       title: "List Archived Memories",
       description: "List archived ClaraCore Desktop memory records.",
       inputSchema: {
@@ -336,7 +336,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_restore_archived",
+      name: "memoria_restore_archived",
       title: "Restore Archived Memory",
       description: "Restore an archived ClaraCore Desktop memory record to active status.",
       inputSchema: {
@@ -351,7 +351,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_archive_suggestions",
+      name: "memoria_archive_suggestions",
       title: "Memory Archive Suggestions",
       description: "List dormant active non-restricted Memory records that are candidates for archive.",
       inputSchema: {
@@ -372,7 +372,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_archive_dormant",
+      name: "memoria_archive_dormant",
       title: "Archive Dormant Memories",
       description: "Archive dormant active non-restricted Memory records from the suggestion list.",
       inputSchema: {
@@ -396,7 +396,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_stats",
+      name: "memoria_stats",
       title: "Memory Stats",
       description: "Read ClaraCore Desktop memory counts, embedding status counts, and active label counts.",
       inputSchema: {
@@ -406,7 +406,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_graph",
+      name: "memoria_graph",
       title: "Memory Graph",
       description: "Read a bounded ClaraCore Desktop Memory graph of memories, labels, and Shared Line fact references.",
       inputSchema: {
@@ -422,7 +422,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_maintenance_check",
+      name: "memoria_maintenance_check",
       title: "Memory Maintenance Check",
       description: "Check ClaraCore Desktop Memory maintenance issues such as missing embeddings, failed embeddings, orphan labels, and alias labels.",
       inputSchema: {
@@ -432,7 +432,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_maintenance_run",
+      name: "memoria_maintenance_run",
       title: "Run Memory Maintenance",
       description: "Repair ClaraCore Desktop Memory maintenance issues without touching old service data.",
       inputSchema: {
@@ -446,7 +446,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_export",
+      name: "memoria_export",
       title: "Export Memory JSON",
       description: "Export ClaraCore Desktop Memory data to a portable JSON file without creating a full database backup.",
       inputSchema: {
@@ -460,7 +460,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_import",
+      name: "memoria_import",
       title: "Import Memory JSON",
       description: "Import a ClaraCore Desktop Memory JSON file by adding missing records and skipping existing IDs.",
       inputSchema: {
@@ -475,7 +475,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_merge_suggestions",
+      name: "memoria_merge_suggestions",
       title: "Memory Merge Suggestions",
       description: "List conservative merge suggestions for active non-restricted ClaraCore Desktop Memory records.",
       inputSchema: {
@@ -491,7 +491,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_merge",
+      name: "memoria_merge",
       title: "Merge Memories",
       description: "Merge a source Memory into a target Memory, keep the target, and soft-delete the source.",
       inputSchema: {
@@ -509,7 +509,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_label_alias_list",
+      name: "memoria_label_alias_list",
       title: "List Memory Label Aliases",
       description: "List ClaraCore Desktop Memory label aliases.",
       inputSchema: {
@@ -519,7 +519,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_label_alias_create",
+      name: "memoria_label_alias_create",
       title: "Create Memory Label Alias",
       description: "Create or update a Memory label alias and merge existing alias labels into the canonical label.",
       inputSchema: {
@@ -533,7 +533,7 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_label_alias_delete",
+      name: "memoria_label_alias_delete",
       title: "Delete Memory Label Alias",
       description: "Delete a Memory label alias without deleting existing Memory labels.",
       inputSchema: {
@@ -546,13 +546,14 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_record_create",
+      name: "memoria_record_create",
       title: "Create Structured Memory Record",
       description: "Create a typed ClaraCore Desktop structured memory record such as a fitness, metric, or recurring log entry.",
       inputSchema: {
         type: "object",
         required: ["recordType"],
         properties: {
+          userId: { type: "string" },
           recordType: { type: "string" },
           title: { type: "string" },
           value: {
@@ -560,7 +561,13 @@ function toolDefinitions() {
             additionalProperties: true
           },
           occurredAt: { type: "string" },
+          timezone: { type: "string" },
+          schemaVersion: { type: "number" },
+          note: { type: "string" },
           source: { type: "string" },
+          sourceAgent: { type: "string" },
+          sourceRunId: { type: "string" },
+          dedupeKey: { type: "string" },
           metadata: {
             type: "object",
             additionalProperties: true
@@ -570,24 +577,48 @@ function toolDefinitions() {
       }
     },
     {
-      name: "memory_record_list",
+      name: "memoria_record_list",
       title: "List Structured Memory Records",
       description: "List typed ClaraCore Desktop structured memory records.",
       inputSchema: {
         type: "object",
         properties: {
+          userId: { type: "string" },
           recordType: { type: "string" },
+          localDate: { type: "string" },
+          start: { type: "string" },
+          end: { type: "string" },
           limit: {
             type: "number",
             minimum: 1,
             maximum: 100
+          },
+          offset: {
+            type: "number",
+            minimum: 0
           }
         },
         additionalProperties: false
       }
     },
     {
-      name: "memory_record_stats",
+      name: "memoria_record_summary",
+      title: "Structured Memory Record Summary",
+      description: "Summarize fitness structured memory records by user, date, or time range.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          userId: { type: "string" },
+          recordType: { type: "string" },
+          localDate: { type: "string" },
+          start: { type: "string" },
+          end: { type: "string" }
+        },
+        additionalProperties: false
+      }
+    },
+    {
+      name: "memoria_record_stats",
       title: "Structured Memory Record Stats",
       description: "Read structured Memory record counts by type.",
       inputSchema: {
@@ -982,121 +1013,124 @@ async function callToolBody(name, args = {}, paths, database) {
       traces: await database.listGatewayTraces(args)
     });
   }
-  if (name === "memory_list") {
+  if (name === "memoria_list") {
     return textResult({
       results: await database.listMemories(args.limit || 20)
     });
   }
-  if (name === "memory_search") {
+  if (name === "memoria_search") {
     return textResult(await database.searchMemories(args.query || "", args.limit || 50));
   }
-  if (name === "memory_create") {
+  if (name === "memoria_create") {
     const memory = await database.createMemory(args);
     await database.processPendingEmbeddings(1);
     return textResult({
       memory
     });
   }
-  if (name === "memory_update") {
+  if (name === "memoria_update") {
     const memory = await database.updateMemory(args.id, args);
     await database.processPendingEmbeddings(1);
     return textResult({
       memory
     });
   }
-  if (name === "memory_restricted_list") {
+  if (name === "memoria_restricted_list") {
     return textResult({
       results: await database.listRestrictedMemories(args.limit || 20)
     });
   }
-  if (name === "memory_restrict") {
+  if (name === "memoria_restrict") {
     return textResult({
       memory: await database.setMemorySensitivity(args.id, "restricted")
     });
   }
-  if (name === "memory_unrestrict") {
+  if (name === "memoria_unrestrict") {
     return textResult({
       memory: await database.setMemorySensitivity(args.id, "normal")
     });
   }
-  if (name === "memory_delete") {
+  if (name === "memoria_delete") {
     return textResult(await database.deleteMemory(args.id));
   }
-  if (name === "memory_restore") {
+  if (name === "memoria_restore") {
     return textResult({
       memory: await database.restoreMemory(args.id)
     });
   }
-  if (name === "memory_archive") {
+  if (name === "memoria_archive") {
     return textResult({
       memory: await database.archiveMemory(args.id)
     });
   }
-  if (name === "memory_archived_list") {
+  if (name === "memoria_archived_list") {
     return textResult({
       results: await database.listArchivedMemories(args.limit || 20)
     });
   }
-  if (name === "memory_restore_archived") {
+  if (name === "memoria_restore_archived") {
     return textResult({
       memory: await database.restoreArchivedMemory(args.id)
     });
   }
-  if (name === "memory_archive_suggestions") {
+  if (name === "memoria_archive_suggestions") {
     return textResult(await database.getMemoryArchiveSuggestions(args));
   }
-  if (name === "memory_archive_dormant") {
+  if (name === "memoria_archive_dormant") {
     return textResult(await database.archiveDormantMemories(args));
   }
-  if (name === "memory_stats") {
+  if (name === "memoria_stats") {
     return textResult(await database.getMemoryStats());
   }
-  if (name === "memory_graph") {
+  if (name === "memoria_graph") {
     return textResult(await database.getMemoryGraph(args));
   }
-  if (name === "memory_maintenance_check") {
+  if (name === "memoria_maintenance_check") {
     return textResult(await database.getMemoryMaintenanceReport());
   }
-  if (name === "memory_maintenance_run") {
+  if (name === "memoria_maintenance_run") {
     return textResult(await database.runMemoryMaintenance(args));
   }
-  if (name === "memory_export") {
+  if (name === "memoria_export") {
     return textResult(await exportProductMemoryArchive(runtimeAppForGateway(), args));
   }
-  if (name === "memory_import") {
+  if (name === "memoria_import") {
     return textResult(await importProductMemoryArchive(runtimeAppForGateway(), args));
   }
-  if (name === "memory_merge_suggestions") {
+  if (name === "memoria_merge_suggestions") {
     return textResult(await database.getMemoryMergeSuggestions(args));
   }
-  if (name === "memory_merge") {
+  if (name === "memoria_merge") {
     return textResult(await database.mergeMemories(args));
   }
-  if (name === "memory_label_alias_list") {
+  if (name === "memoria_label_alias_list") {
     return textResult({
       aliases: await database.listMemoryLabelAliases()
     });
   }
-  if (name === "memory_label_alias_create") {
+  if (name === "memoria_label_alias_create") {
     return textResult(await database.createMemoryLabelAlias(args));
   }
-  if (name === "memory_label_alias_delete") {
+  if (name === "memoria_label_alias_delete") {
     return textResult(await database.deleteMemoryLabelAlias(args.alias));
   }
-  if (name === "memory_record_create") {
+  if (name === "memoria_record_create") {
     const record = await database.createMemoryRecord(args);
     return textResult({
       record,
       stats: await database.getMemoryRecordStats()
     });
   }
-  if (name === "memory_record_list") {
+  if (name === "memoria_record_list") {
     return textResult({
       records: await database.listMemoryRecords(args),
       stats: await database.getMemoryRecordStats()
     });
   }
-  if (name === "memory_record_stats") {
+  if (name === "memoria_record_summary") {
+    return textResult(await database.summarizeMemoryRecords(args));
+  }
+  if (name === "memoria_record_stats") {
     return textResult(await database.getMemoryRecordStats());
   }
   if (name === "shared_line_get") {

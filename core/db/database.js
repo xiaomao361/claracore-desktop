@@ -157,6 +157,74 @@ function normalizeSensitivity(value) {
   return String(value || "").trim().toLowerCase() === "restricted" ? "restricted" : "normal";
 }
 
+function requiredText(value, field) {
+  const text = String(value || "").trim();
+  if (!text) throw new Error(`${field} is required.`);
+  return text;
+}
+
+function parseAwareDate(value, field) {
+  const raw = requiredText(value, field);
+  if (!/(Z|[+-]\d{2}:\d{2})$/u.test(raw)) {
+    throw new Error(`${field} must include a timezone offset.`);
+  }
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) throw new Error(`${field} must be a valid ISO 8601 datetime.`);
+  return date;
+}
+
+function localDateForTimezone(date, timezone) {
+  const zone = requiredText(timezone || "Asia/Shanghai", "timezone");
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: zone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function normalizeMemoryRecordValue(recordType, schemaVersion, value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Record value must be a JSON object.");
+  if (recordType !== "fitness") return { ...value };
+  if (schemaVersion !== 1) throw new Error("Fitness records only support schema version 1.");
+  const validators = {
+    activity: (item) => {
+      if (typeof item !== "string" || !item.trim()) throw new Error("activity must be a non-empty string.");
+      return item.trim();
+    },
+    steps: (item) => {
+      if (!Number.isInteger(item) || item < 0) throw new Error("steps must be a non-negative integer.");
+      return item;
+    },
+    duration_minutes: (item) => {
+      if (typeof item !== "number" || Number.isNaN(item) || item < 0) throw new Error("duration_minutes must be a non-negative number.");
+      return item;
+    },
+    distance_km: (item) => {
+      if (typeof item !== "number" || Number.isNaN(item) || item < 0) throw new Error("distance_km must be a non-negative number.");
+      return item;
+    },
+    repetitions: (item) => {
+      if (!Number.isInteger(item) || item < 0) throw new Error("repetitions must be a non-negative integer.");
+      return item;
+    },
+    sets: (item) => {
+      if (!Number.isInteger(item) || item < 0) throw new Error("sets must be a non-negative integer.");
+      return item;
+    },
+    completed: (item) => {
+      if (typeof item !== "boolean") throw new Error("completed must be a boolean.");
+      return item;
+    }
+  };
+  const unknown = Object.keys(value).filter((key) => !validators[key]);
+  if (unknown.length) throw new Error(`Unknown fitness fields: ${unknown.join(", ")}.`);
+  if (Object.keys(value).length === 0) throw new Error("Fitness record value must contain at least one field.");
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, validators[key](item)]));
+}
+
 function likePattern(value) {
   return `%${String(value || "").trim().replaceAll("%", "\\%").replaceAll("_", "\\_")}%`;
 }
@@ -291,6 +359,7 @@ class ProductDatabase {
     await fs.mkdir(path.dirname(this.dbPath), { recursive: true });
     const schema = await fs.readFile(this.schemaPath, "utf8");
     await this.exec(schema);
+    await this.migrateAdditiveSchema();
     await this.seedDefaults();
     return this.getSummary();
   }
@@ -349,6 +418,38 @@ class ProductDatabase {
       INSERT INTO secret_refs (key, provider, status)
       VALUES ('innerlife.llm.api_key', 'none', 'not-configured')
       ON CONFLICT(key) DO NOTHING;
+    `);
+  }
+
+  async migrateAdditiveSchema() {
+    const columns = new Set((await this.query("PRAGMA table_info(memory_records);")).map((row) => row.name));
+    const additions = [
+      ["user_id", "ALTER TABLE memory_records ADD COLUMN user_id TEXT NOT NULL DEFAULT 'local-user';"],
+      ["local_date", "ALTER TABLE memory_records ADD COLUMN local_date TEXT NOT NULL DEFAULT '';"],
+      ["timezone", "ALTER TABLE memory_records ADD COLUMN timezone TEXT NOT NULL DEFAULT 'Asia/Shanghai';"],
+      ["schema_version", "ALTER TABLE memory_records ADD COLUMN schema_version INTEGER NOT NULL DEFAULT 1;"],
+      ["note", "ALTER TABLE memory_records ADD COLUMN note TEXT;"],
+      ["source_agent", "ALTER TABLE memory_records ADD COLUMN source_agent TEXT;"],
+      ["source_run_id", "ALTER TABLE memory_records ADD COLUMN source_run_id TEXT;"],
+      ["dedupe_key", "ALTER TABLE memory_records ADD COLUMN dedupe_key TEXT;"]
+    ];
+    for (const [column, sql] of additions) {
+      if (!columns.has(column)) await this.exec(sql);
+    }
+    await this.exec(`
+      UPDATE memory_records
+      SET local_date = substr(occurred_at, 1, 10)
+      WHERE local_date = '';
+
+      CREATE INDEX IF NOT EXISTS idx_memory_records_user_type_time
+      ON memory_records(user_id, record_type, occurred_at DESC);
+
+      CREATE INDEX IF NOT EXISTS idx_memory_records_user_local_date
+      ON memory_records(user_id, local_date);
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_memory_records_dedupe
+      ON memory_records(user_id, record_type, dedupe_key)
+      WHERE dedupe_key IS NOT NULL;
     `);
   }
 
@@ -1239,43 +1340,92 @@ class ProductDatabase {
   }
 
   async createMemoryRecord(input = {}) {
-    const recordType = String(input.recordType || input.type || "").trim().toLowerCase();
-    if (!recordType) throw new Error("Memory record type is required.");
+    const recordType = requiredText(input.recordType || input.type, "recordType").toLowerCase();
+    const userId = requiredText(input.userId || input.user_id || input.metadata?.userId || "local-user", "userId");
     const title = String(input.title || recordType).trim() || recordType;
-    const value = input.value && typeof input.value === "object" && !Array.isArray(input.value) ? input.value : {};
-    const occurredAt = String(input.occurredAt || "").trim() || new Date().toISOString();
+    const schemaVersion = Number.parseInt(String(input.schemaVersion || input.schema_version || 1), 10) || 1;
+    const value = normalizeMemoryRecordValue(recordType, schemaVersion, input.value || input.data || {});
+    const occurredDate = parseAwareDate(input.occurredAt || input.occurred_at || new Date().toISOString(), "occurredAt");
+    const occurredAt = occurredDate.toISOString();
+    const timezone = requiredText(input.timezone || input.timezoneName || input.metadata?.timezone || "Asia/Shanghai", "timezone");
+    const localDate = localDateForTimezone(occurredDate, timezone);
     const source = String(input.source || "manual_desktop").trim() || "manual_desktop";
+    const note = String(input.note || "").trim() || null;
+    const sourceAgent = String(input.sourceAgent || input.source_agent || input.metadata?.sourceAgent || "").trim() || null;
+    const sourceRunId = String(input.sourceRunId || input.source_run_id || input.metadata?.sourceRunId || "").trim() || null;
+    const dedupeKey = String(input.dedupeKey || input.dedupe_key || input.metadata?.dedupeKey || "").trim() || null;
+    if (dedupeKey) {
+      const existingRows = await this.query(`
+        SELECT id
+        FROM memory_records
+        WHERE user_id = ${sqlString(userId)}
+          AND record_type = ${sqlString(recordType)}
+          AND dedupe_key = ${sqlString(dedupeKey)}
+        LIMIT 1;
+      `);
+      if (existingRows[0]?.id) {
+        return {
+          ...(await this.getMemoryRecord(existingRows[0].id)),
+          writeStatus: "exists"
+        };
+      }
+    }
     const id = newId("mem_record");
     await this.exec(`
-      INSERT INTO memory_records (id, record_type, title, value_json, occurred_at, source, status, metadata_json)
+      INSERT INTO memory_records (
+        id, user_id, record_type, title, value_json, occurred_at, local_date,
+        timezone, schema_version, note, source, source_agent, source_run_id,
+        dedupe_key, status, metadata_json
+      )
       VALUES (
         ${sqlString(id)},
+        ${sqlString(userId)},
         ${sqlString(recordType)},
         ${sqlString(title)},
         ${jsonSql(value)},
         ${sqlString(occurredAt)},
+        ${sqlString(localDate)},
+        ${sqlString(timezone)},
+        ${schemaVersion},
+        ${note === null ? "NULL" : sqlString(note)},
         ${sqlString(source)},
+        ${sourceAgent === null ? "NULL" : sqlString(sourceAgent)},
+        ${sourceRunId === null ? "NULL" : sqlString(sourceRunId)},
+        ${dedupeKey === null ? "NULL" : sqlString(dedupeKey)},
         'active',
         ${jsonSql(input.metadata || {})}
       );
     `);
-    return this.getMemoryRecord(id);
+    return {
+      ...(await this.getMemoryRecord(id)),
+      writeStatus: "created"
+    };
   }
 
   async getMemoryRecord(id) {
     const rows = await this.query(`
-      SELECT id, record_type, title, value_json, occurred_at, source, status, memory_id, created_at, updated_at, metadata_json
+      SELECT id, user_id, record_type, title, value_json, occurred_at, local_date, timezone,
+             schema_version, note, source, source_agent, source_run_id, dedupe_key,
+             status, memory_id, created_at, updated_at, metadata_json
       FROM memory_records
       WHERE id = ${sqlString(id)}
       LIMIT 1;
     `);
     return rows.map((row) => ({
       id: row.id,
+      userId: row.user_id || "local-user",
       recordType: row.record_type,
       title: row.title || "",
       value: parseJson(row.value_json, {}),
       occurredAt: row.occurred_at,
+      localDate: row.local_date || "",
+      timezone: row.timezone || "Asia/Shanghai",
+      schemaVersion: row.schema_version || 1,
+      note: row.note || "",
       source: row.source || "",
+      sourceAgent: row.source_agent || "",
+      sourceRunId: row.source_run_id || "",
+      dedupeKey: row.dedupe_key || "",
       status: row.status,
       memoryId: row.memory_id || null,
       createdAt: row.created_at,
@@ -1286,23 +1436,39 @@ class ProductDatabase {
 
   async listMemoryRecords(input = {}) {
     const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(input.limit || 20), 10) || 20));
+    const safeOffset = Math.max(0, Number.parseInt(String(input.offset || 0), 10) || 0);
+    const userId = String(input.userId || input.user_id || "").trim();
     const recordType = String(input.recordType || input.type || "").trim().toLowerCase();
     const filters = ["status = 'active'"];
+    if (userId) filters.push(`user_id = ${sqlString(userId)}`);
     if (recordType) filters.push(`record_type = ${sqlString(recordType)}`);
+    if (input.localDate || input.local_date) filters.push(`local_date = ${sqlString(input.localDate || input.local_date)}`);
+    if (input.start) filters.push(`occurred_at >= ${sqlString(parseAwareDate(input.start, "start").toISOString())}`);
+    if (input.end) filters.push(`occurred_at < ${sqlString(parseAwareDate(input.end, "end").toISOString())}`);
     const rows = await this.query(`
-      SELECT id, record_type, title, value_json, occurred_at, source, status, memory_id, created_at, updated_at, metadata_json
+      SELECT id, user_id, record_type, title, value_json, occurred_at, local_date, timezone,
+             schema_version, note, source, source_agent, source_run_id, dedupe_key,
+             status, memory_id, created_at, updated_at, metadata_json
       FROM memory_records
       WHERE ${filters.join(" AND ")}
       ORDER BY occurred_at DESC, created_at DESC
-      LIMIT ${safeLimit};
+      LIMIT ${safeLimit} OFFSET ${safeOffset};
     `);
     return rows.map((row) => ({
       id: row.id,
+      userId: row.user_id || "local-user",
       recordType: row.record_type,
       title: row.title || "",
       value: parseJson(row.value_json, {}),
       occurredAt: row.occurred_at,
+      localDate: row.local_date || "",
+      timezone: row.timezone || "Asia/Shanghai",
+      schemaVersion: row.schema_version || 1,
+      note: row.note || "",
       source: row.source || "",
+      sourceAgent: row.source_agent || "",
+      sourceRunId: row.source_run_id || "",
+      dedupeKey: row.dedupe_key || "",
       status: row.status,
       memoryId: row.memory_id || null,
       createdAt: row.created_at,
@@ -1327,6 +1493,38 @@ class ProductDatabase {
         count: row.count || 0,
         latestAt: row.latest_at || null
       }))
+    };
+  }
+
+  async summarizeMemoryRecords(input = {}) {
+    const recordType = String(input.recordType || input.type || "fitness").trim().toLowerCase();
+    if (recordType !== "fitness") throw new Error("Memory record summary currently supports fitness only.");
+    const records = await this.listMemoryRecords({ ...input, recordType, limit: 100 });
+    const totals = {
+      steps: 0,
+      duration_minutes: 0,
+      distance_km: 0,
+      repetitions: 0,
+      sets: 0
+    };
+    for (const record of records) {
+      for (const field of Object.keys(totals)) {
+        totals[field] += record.value[field] || 0;
+      }
+    }
+    return {
+      userId: input.userId || input.user_id || "",
+      recordType,
+      start: input.start || null,
+      end: input.end || null,
+      localDate: input.localDate || input.local_date || null,
+      recordCount: records.length,
+      activeDays: new Set(records.map((record) => record.localDate).filter(Boolean)).size,
+      totalSteps: totals.steps,
+      totalDurationMinutes: totals.duration_minutes,
+      totalDistanceKm: totals.distance_km,
+      totalRepetitions: totals.repetitions,
+      totalSets: totals.sets
     };
   }
 

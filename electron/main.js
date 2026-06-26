@@ -217,14 +217,16 @@ async function getRuntimeSnapshot() {
 
 function createTrayIcon() {
   const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-      <path d="M9 16c0-4.1 3.1-7.3 7.3-7.3 2.5 0 4.7 1.1 6 3" fill="none" stroke="#111111" stroke-width="3.2" stroke-linecap="round"/>
-      <path d="M22.3 20.3c-1.3 1.8-3.5 3-6 3C12.1 23.3 9 20.1 9 16" fill="none" stroke="#111111" stroke-width="3.2" stroke-linecap="round"/>
-      <circle cx="24.5" cy="16" r="2.7" fill="#111111"/>
+    <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">
+      <circle cx="22" cy="22" r="18" fill="#202421"/>
+      <path d="M28.8 14.8A10 10 0 1 0 28.8 29.2" fill="none" stroke="#ffffff" stroke-width="4.2" stroke-linecap="round"/>
+      <circle cx="31.8" cy="22" r="3.2" fill="#ffffff"/>
     </svg>
   `;
-  const image = nativeImage.createFromDataURL(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
-  image.setTemplateImage(process.platform === "darwin");
+  const image = nativeImage
+    .createFromDataURL(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`)
+    .resize({ width: 20, height: 20 });
+  image.setTemplateImage(false);
   return image;
 }
 
@@ -250,7 +252,7 @@ function updateTrayMenu(language = trayLanguage) {
   const labels = trayLabels[trayLanguage];
   tray.setToolTip(labels.tooltip);
   if (process.platform === "darwin" && typeof tray.setTitle === "function") {
-    tray.setTitle("ClaraCore");
+    tray.setTitle("◉");
   }
   tray.setContextMenu(
     Menu.buildFromTemplate([

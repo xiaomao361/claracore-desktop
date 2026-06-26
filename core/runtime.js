@@ -518,7 +518,9 @@ async function exportProductMemoryArchive(app, input = {}) {
     ORDER BY m.created_at ASC;
   `);
   const recordRows = await database.query(`
-    SELECT id, record_type, title, value_json, occurred_at, source, status, memory_id, created_at, updated_at, metadata_json
+    SELECT id, user_id, record_type, title, value_json, occurred_at, local_date, timezone,
+           schema_version, note, source, source_agent, source_run_id, dedupe_key,
+           status, memory_id, created_at, updated_at, metadata_json
     FROM memory_records
     ORDER BY occurred_at ASC, created_at ASC;
   `);
@@ -551,11 +553,19 @@ async function exportProductMemoryArchive(app, input = {}) {
     labelAliases: aliases,
     records: recordRows.map((row) => ({
       id: row.id,
+      userId: row.user_id || "local-user",
       recordType: row.record_type,
       title: row.title || "",
       value: JSON.parse(row.value_json || "{}"),
       occurredAt: row.occurred_at,
+      localDate: row.local_date || "",
+      timezone: row.timezone || "Asia/Shanghai",
+      schemaVersion: row.schema_version || 1,
+      note: row.note || "",
       source: row.source || "",
+      sourceAgent: row.source_agent || "",
+      sourceRunId: row.source_run_id || "",
+      dedupeKey: row.dedupe_key || "",
       status: normalizeArchiveStatus(row.status),
       memoryId: row.memory_id || null,
       createdAt: row.created_at || createdAt,
@@ -691,20 +701,38 @@ async function importProductMemoryArchive(app, input = {}) {
       summary.records.skipped += 1;
       continue;
     }
+    const metadata = record?.metadata && typeof record.metadata === "object" ? record.metadata : {};
+    const userId = safeArchiveString(record?.userId || record?.user_id || metadata.userId, "local-user");
+    const occurredAt = safeArchiveString(record?.occurredAt || record?.occurred_at, importedAt);
+    const timezone = safeArchiveString(record?.timezone || metadata.timezone, "Asia/Shanghai");
+    const localDate = safeArchiveString(record?.localDate || record?.local_date, occurredAt.slice(0, 10));
+    const schemaVersion = Number.parseInt(String(record?.schemaVersion || record?.schema_version || 1), 10) || 1;
     await database.exec(`
-      INSERT INTO memory_records (id, record_type, title, value_json, occurred_at, source, status, memory_id, created_at, updated_at, metadata_json)
+      INSERT INTO memory_records (
+        id, user_id, record_type, title, value_json, occurred_at, local_date,
+        timezone, schema_version, note, source, source_agent, source_run_id,
+        dedupe_key, status, memory_id, created_at, updated_at, metadata_json
+      )
       VALUES (
         ${sqlString(id)},
+        ${sqlString(userId)},
         ${sqlString(recordType)},
         ${sqlString(safeArchiveString(record?.title, recordType) || recordType)},
         ${sqlString(JSON.stringify(record?.value && typeof record.value === "object" ? record.value : {}))},
-        ${sqlString(record?.occurredAt || importedAt)},
+        ${sqlString(occurredAt)},
+        ${sqlString(localDate)},
+        ${sqlString(timezone)},
+        ${schemaVersion},
+        ${record?.note ? sqlString(record.note) : "NULL"},
         ${sqlString(record?.source || sourceId)},
+        ${record?.sourceAgent || record?.source_agent ? sqlString(record.sourceAgent || record.source_agent) : "NULL"},
+        ${record?.sourceRunId || record?.source_run_id ? sqlString(record.sourceRunId || record.source_run_id) : "NULL"},
+        ${record?.dedupeKey || record?.dedupe_key ? sqlString(record.dedupeKey || record.dedupe_key) : "NULL"},
         ${sqlString(normalizeArchiveStatus(record?.status))},
         ${record?.memoryId ? sqlString(record.memoryId) : "NULL"},
         ${sqlString(record?.createdAt || importedAt)},
         ${sqlString(record?.updatedAt || record?.createdAt || importedAt)},
-        ${sqlString(JSON.stringify(record?.metadata && typeof record.metadata === "object" ? record.metadata : {}))}
+        ${sqlString(JSON.stringify(metadata))}
       );
     `);
     summary.records.imported += 1;

@@ -43,26 +43,26 @@ async function main() {
     if (!docsText.includes(dataRoot)) throw new Error("Packaged Gateway docs do not include active data root.");
 
     const created = parseTextResult(
-      await client.callTool("memory_create", {
+      await client.callTool("memoria_create", {
         title: "Packaged Gateway phase4 smoke",
         body: "The packaged app executable should work as the Desktop-owned Gateway.",
         labels: ["packaged", "gateway", "phase4"]
       })
     ).memory;
-    if (!created?.id) throw new Error("Packaged Gateway memory_create did not return a Memory id.");
+    if (!created?.id) throw new Error("Packaged Gateway memoria_create did not return a Memory id.");
 
     const aliasResult = parseTextResult(
-      await client.callTool("memory_label_alias_create", {
+      await client.callTool("memoria_label_alias_create", {
         alias: "pkg",
         canonicalLabel: "packaged"
       })
     );
     if (!aliasResult.aliases.some((item) => item.alias === "pkg" && item.canonicalLabel === "packaged")) {
-      throw new Error(`Packaged Gateway memory_label_alias_create did not save alias: ${JSON.stringify(aliasResult)}`);
+      throw new Error(`Packaged Gateway memoria_label_alias_create did not save alias: ${JSON.stringify(aliasResult)}`);
     }
 
     const restricted = parseTextResult(
-      await client.callTool("memory_create", {
+      await client.callTool("memoria_create", {
         title: "Packaged restricted Gateway smoke",
         body: "Packaged restricted Memory should use explicit restricted tools.",
         labels: ["packaged", "restricted"],
@@ -72,73 +72,73 @@ async function main() {
     if (restricted.sensitivity !== "restricted") {
       throw new Error("Packaged Gateway did not save restricted Memory sensitivity.");
     }
-    const restrictedList = parseTextResult(await client.callTool("memory_restricted_list", { limit: 10 }));
+    const restrictedList = parseTextResult(await client.callTool("memoria_restricted_list", { limit: 10 }));
     if (!restrictedList.results.some((memory) => memory.id === restricted.id)) {
-      throw new Error("Packaged Gateway memory_restricted_list did not include restricted Memory.");
+      throw new Error("Packaged Gateway memoria_restricted_list did not include restricted Memory.");
     }
 
     const search = parseTextResult(
-      await client.callTool("memory_search", {
+      await client.callTool("memoria_search", {
         query: "Desktop-owned Gateway",
         limit: 10
       })
     );
     if (!search.results.some((memory) => memory.id === created.id)) {
-      throw new Error("Packaged Gateway memory_search did not find the created Memory.");
+      throw new Error("Packaged Gateway memoria_search did not find the created Memory.");
     }
-    const graph = parseTextResult(await client.callTool("memory_graph", { limit: 20 }));
+    const graph = parseTextResult(await client.callTool("memoria_graph", { limit: 20 }));
     if (!graph.nodes.some((node) => node.kind === "memory" && node.refId === created.id)) {
-      throw new Error(`Packaged Gateway memory_graph did not include created Memory: ${JSON.stringify(graph)}`);
+      throw new Error(`Packaged Gateway memoria_graph did not include created Memory: ${JSON.stringify(graph)}`);
     }
-    const maintenanceCheck = parseTextResult(await client.callTool("memory_maintenance_check"));
+    const maintenanceCheck = parseTextResult(await client.callTool("memoria_maintenance_check"));
     if (!["ok", "needs_repair"].includes(maintenanceCheck.status) || !maintenanceCheck.counts) {
-      throw new Error(`Packaged Gateway memory_maintenance_check returned invalid report: ${JSON.stringify(maintenanceCheck)}`);
+      throw new Error(`Packaged Gateway memoria_maintenance_check returned invalid report: ${JSON.stringify(maintenanceCheck)}`);
     }
-    const exportedArchive = parseTextResult(await client.callTool("memory_export"));
+    const exportedArchive = parseTextResult(await client.callTool("memoria_export"));
     if (!exportedArchive.path || exportedArchive.counts.memories < 1) {
-      throw new Error(`Packaged Gateway memory_export did not create archive: ${JSON.stringify(exportedArchive)}`);
+      throw new Error(`Packaged Gateway memoria_export did not create archive: ${JSON.stringify(exportedArchive)}`);
     }
     await fs.access(exportedArchive.path);
     const mergeTarget = parseTextResult(
-      await client.callTool("memory_create", {
+      await client.callTool("memoria_create", {
         title: "Packaged Gateway duplicate merge",
         body: "Packaged Gateway should expose Memory merge suggestions.",
         labels: ["packaged", "merge"]
       })
     ).memory;
     const mergeSource = parseTextResult(
-      await client.callTool("memory_create", {
+      await client.callTool("memoria_create", {
         title: "Packaged Gateway duplicate merge",
         body: "Packaged Gateway should expose Memory merge suggestions. Source detail.",
         labels: ["packaged", "merge", "source"]
       })
     ).memory;
-    const mergeSuggestions = parseTextResult(await client.callTool("memory_merge_suggestions", { limit: 10 }));
+    const mergeSuggestions = parseTextResult(await client.callTool("memoria_merge_suggestions", { limit: 10 }));
     const mergeSuggestion = mergeSuggestions.suggestions.find((item) => {
       const ids = [item.target.id, item.source.id];
       return ids.includes(mergeTarget.id) && ids.includes(mergeSource.id);
     });
     if (!mergeSuggestion) {
-      throw new Error(`Packaged Gateway memory_merge_suggestions did not find duplicate pair: ${JSON.stringify(mergeSuggestions)}`);
+      throw new Error(`Packaged Gateway memoria_merge_suggestions did not find duplicate pair: ${JSON.stringify(mergeSuggestions)}`);
     }
     const archiveCandidate = parseTextResult(
-      await client.callTool("memory_create", {
+      await client.callTool("memoria_create", {
         title: "Packaged Gateway archive candidate",
         body: "Packaged Gateway should archive Memory records.",
         labels: ["packaged", "archive"]
       })
     ).memory;
-    const archived = parseTextResult(await client.callTool("memory_archive", { id: archiveCandidate.id })).memory;
+    const archived = parseTextResult(await client.callTool("memoria_archive", { id: archiveCandidate.id })).memory;
     if (archived.status !== "archived") {
-      throw new Error(`Packaged Gateway memory_archive did not archive Memory: ${JSON.stringify(archived)}`);
+      throw new Error(`Packaged Gateway memoria_archive did not archive Memory: ${JSON.stringify(archived)}`);
     }
-    const archivedList = parseTextResult(await client.callTool("memory_archived_list", { limit: 10 }));
+    const archivedList = parseTextResult(await client.callTool("memoria_archived_list", { limit: 10 }));
     if (!archivedList.results.some((memory) => memory.id === archiveCandidate.id)) {
-      throw new Error(`Packaged Gateway memory_archived_list did not include archived Memory: ${JSON.stringify(archivedList)}`);
+      throw new Error(`Packaged Gateway memoria_archived_list did not include archived Memory: ${JSON.stringify(archivedList)}`);
     }
-    const restoredArchive = parseTextResult(await client.callTool("memory_restore_archived", { id: archiveCandidate.id })).memory;
+    const restoredArchive = parseTextResult(await client.callTool("memoria_restore_archived", { id: archiveCandidate.id })).memory;
     if (restoredArchive.status !== "active") {
-      throw new Error(`Packaged Gateway memory_restore_archived did not restore Memory: ${JSON.stringify(restoredArchive)}`);
+      throw new Error(`Packaged Gateway memoria_restore_archived did not restore Memory: ${JSON.stringify(restoredArchive)}`);
     }
 
     const sharedLine = parseTextResult(
