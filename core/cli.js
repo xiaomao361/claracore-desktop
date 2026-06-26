@@ -81,7 +81,16 @@ function usage() {
       "import --file-path <path> [--allow-external-path]",
       "record add --type <type> --data <json> [--title <text>] [--occurred-at <iso>] [--user-id <id>] [--timezone <tz>] [--dedupe-key <key>] [--note <text>]",
       "record query [--user-id <id>] [--type <type>] [--local-date YYYY-MM-DD] [--start <iso>] [--end <iso>] [--limit N] [--offset N]",
-      "record summary [--user-id <id>] [--type fitness] [--local-date YYYY-MM-DD] [--start <iso>] [--end <iso>]"
+      "record summary [--user-id <id>] [--type fitness] [--local-date YYYY-MM-DD] [--start <iso>] [--end <iso>]",
+      "shared-line get [--line-id <id>]",
+      "shared-line list [--limit N]",
+      "shared-line create --title <text> [--no-activate]",
+      "shared-line activate --line-id <id>",
+      "shared-line rename --line-id <id> --title <text>",
+      "shared-line archive --line-id <id>",
+      "shared-line restore --line-id <id> [--activate]",
+      "shared-line update --summary <text> [--line-id <id>] [--status draft|confirmed] [--facts-used a,b] [--confirm-overwrite]",
+      "shared-line handoff [--line-id <id>] [--objective <text>] [--completed a,b] [--open-items a,b] [--next-step <text>]"
     ]
   };
 }
@@ -214,6 +223,56 @@ async function runMemoryCommand(app, command, subcommand, options) {
       };
     }
     throw new Error("record requires add, query, or summary.");
+  }
+  if (command === "shared-line") {
+    if (subcommand === "get") {
+      return { sharedLine: await runtime.getProductSharedLine(app, { lineId: options["line-id"] || options.lineId }) };
+    }
+    if (subcommand === "list") {
+      const { database } = await runtime.ensureProductCore(app);
+      return {
+        lines: await database.listContinuityLines(Number.parseInt(String(options.limit || 20), 10) || 20)
+      };
+    }
+    if (subcommand === "create") {
+      return runtime.createProductSharedLine(app, {
+        title: requireOption(options, "title"),
+        makeActive: !Boolean(options["no-activate"])
+      });
+    }
+    if (subcommand === "activate") {
+      return runtime.activateProductSharedLine(app, requireOption(options, "line-id"));
+    }
+    if (subcommand === "rename") {
+      return runtime.renameProductSharedLine(app, requireOption(options, "line-id"), requireOption(options, "title"));
+    }
+    if (subcommand === "archive") {
+      return runtime.archiveProductSharedLine(app, requireOption(options, "line-id"));
+    }
+    if (subcommand === "restore") {
+      return runtime.restoreProductSharedLine(app, requireOption(options, "line-id"), Boolean(options.activate));
+    }
+    if (subcommand === "update") {
+      return {
+        sharedLine: await runtime.saveProductSharedLine(app, {
+          lineId: options["line-id"] || options.lineId,
+          summary: requireOption(options, "summary"),
+          interpretationStatus: options.status || options["interpretation-status"] || "draft",
+          factsUsed: splitLabels(options["facts-used"] || options.factsUsed),
+          confirmOverwrite: Boolean(options["confirm-overwrite"])
+        })
+      };
+    }
+    if (subcommand === "handoff") {
+      return runtime.createProductSharedLineHandoff(app, {
+        lineId: options["line-id"] || options.lineId,
+        objective: options.objective || "",
+        completed: splitLabels(options.completed),
+        openItems: splitLabels(options["open-items"] || options.openItems),
+        nextStep: options["next-step"] || options.nextStep || ""
+      });
+    }
+    throw new Error("shared-line requires get, list, create, activate, rename, archive, restore, update, or handoff.");
   }
   throw new Error(`Unknown command: ${command || ""}`);
 }

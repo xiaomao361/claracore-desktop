@@ -63,6 +63,41 @@ function normalizeInterpretationStatus(status) {
   return String(status || "").trim() === "confirmed" ? "confirmed" : "draft";
 }
 
+function normalizeLegacyContinuityInterpretationStatus(row) {
+  if (Number(row?.user_confirmed || 0) === 1) return "confirmed";
+  const status = String(pickFirst(row, ["interpretation_status", "interpretationStatus", "status"], "draft") || "draft")
+    .trim()
+    .toLowerCase();
+  return ["confirmed", "user_confirmed"].includes(status) ? "confirmed" : "draft";
+}
+
+function buildLegacyContinuityMetadata(row = {}) {
+  return {
+    source: "old-continuity",
+    threadId: String(pickFirst(row, ["thread_id", "source_thread_id"], "") || ""),
+    agentId: String(pickFirst(row, ["agent_id"], "") || ""),
+    visibility: String(pickFirst(row, ["visibility"], "") || ""),
+    mode: String(pickFirst(row, ["mode"], "") || ""),
+    nextStep: String(pickFirst(row, ["next_step", "nextStep"], "") || ""),
+    stateSummary: String(pickFirst(row, ["state_summary", "stateSummary"], "") || ""),
+    sourceSession: String(pickFirst(row, ["source_session", "sourceSession"], "") || ""),
+    notes: String(pickFirst(row, ["notes"], "") || ""),
+    tags: safeJsonArray(pickFirst(row, ["tags"], "[]")),
+    currentInterpretation: String(pickFirst(row, ["current_interpretation", "currentInterpretation"], "") || ""),
+    interpretationStatusRaw: String(pickFirst(row, ["interpretation_status", "interpretationStatus"], "") || ""),
+    userConfirmed: Number(row?.user_confirmed || 0) === 1,
+    positionHistory: safeJsonArray(pickFirst(row, ["emotional_arc", "position_history", "positionHistory"], "[]")),
+    affectiveTrace: safeJsonArray(pickFirst(row, ["affective_trace", "affectiveTrace"], "[]")),
+    realityLine: String(pickFirst(row, ["reality_line", "realityLine"], "") || ""),
+    entryPosture: String(pickFirst(row, ["entry_posture", "entryPosture"], "") || ""),
+    confirmedGround: String(pickFirst(row, ["confirmed_ground", "confirmedGround"], "") || ""),
+    provisionalRead: String(pickFirst(row, ["provisional_read", "provisionalRead"], "") || ""),
+    boundaryNotes: String(pickFirst(row, ["boundary_notes", "boundaryNotes"], "") || ""),
+    misreadRisks: String(pickFirst(row, ["misread_risks", "misreadRisks"], "") || ""),
+    archivedArcIds: safeJsonArray(pickFirst(row, ["archived_arc_ids", "archivedArcIds"], "[]"))
+  };
+}
+
 function safeJsonArray(value) {
   if (Array.isArray(value)) return value.map((item) => String(item || "").trim()).filter(Boolean);
   if (value === undefined || value === null || String(value).trim() === "") return [];
@@ -211,7 +246,8 @@ function productModules() {
       label: "Continuity",
       descriptionKey: "module.continuity.description",
       required: true,
-      state: "planned"
+      present: true,
+      state: "ready"
     },
     {
       id: "innerlife",
@@ -1132,7 +1168,10 @@ async function readOldContinuityRows(dbPath) {
     tables: [...tables],
     lines: await readTable("continuity_lines"),
     positions: await readTable("current_positions"),
-    handoffs: await readTable("continuity_handoffs")
+    handoffs: await readTable("continuity_handoffs"),
+    sessionThreads: await readTable("session_threads"),
+    legacyHandoffs: await readTable("handoffs"),
+    stateSnapshots: await readTable("state_snapshots")
   };
 }
 
@@ -1175,8 +1214,9 @@ async function importOldContinuityIntoProduct(app, input = {}) {
     return fallbackLineId;
   };
 
-  for (const row of old.lines) {
-    const oldId = String(pickFirst(row, ["id", "line_id", "lineId"], "") || "").trim();
+  const oldLineRows = old.lines.length ? old.lines : old.sessionThreads;
+  for (const row of oldLineRows) {
+    const oldId = String(pickFirst(row, ["id", "line_id", "lineId", "thread_id"], "") || "").trim();
     if (!oldId) {
       summary.lines.skipped += 1;
       continue;
@@ -1188,10 +1228,10 @@ async function importOldContinuityIntoProduct(app, input = {}) {
       summary.lines.skipped += 1;
       continue;
     }
-    const title = String(pickFirst(row, ["title", "name", "label"], "Imported Shared Line") || "Imported Shared Line").trim();
+    const title = String(pickFirst(row, ["title", "name", "label", "topic"], "Imported Shared Line") || "Imported Shared Line").trim();
     const status = normalizeContinuityStatus(pickFirst(row, ["status"], "active"));
     const createdAt = String(pickFirst(row, ["created_at", "createdAt", "created"], importedAt) || importedAt);
-    const updatedAt = String(pickFirst(row, ["updated_at", "updatedAt", "modified_at"], createdAt) || createdAt);
+    const updatedAt = String(pickFirst(row, ["updated_at", "updatedAt", "modified_at", "last_active_at"], createdAt) || createdAt);
     await database.exec(`
       INSERT INTO continuity_lines (id, title, status, created_at, updated_at)
       VALUES (${sqlString(id)}, ${sqlString(title)}, ${sqlString(status)}, ${sqlString(createdAt)}, ${sqlString(updatedAt)});
@@ -1201,16 +1241,19 @@ async function importOldContinuityIntoProduct(app, input = {}) {
   }
 
   const resolveImportedLineId = async (row) => {
-    const oldLineId = String(pickFirst(row, ["line_id", "lineId", "continuity_line_id", "thread_id"], "") || "").trim();
+    const oldLineId = String(pickFirst(row, ["line_id", "lineId", "continuity_line_id", "thread_id", "source_thread_id"], "") || "").trim();
     if (oldLineId && lineIdMap.has(oldLineId)) return lineIdMap.get(oldLineId);
     if (lineIdMap.size === 1) return [...lineIdMap.values()][0];
     if (importedLineIds.length === 1) return importedLineIds[0];
     return ensureFallbackLine();
   };
 
-  for (const row of old.positions) {
-    const oldId = String(pickFirst(row, ["id", "position_id", "positionId"], "") || "").trim();
-    const summaryText = String(pickFirst(row, ["summary", "body", "content", "text"], "") || "").trim();
+  const oldPositionRows = old.positions.length ? old.positions : old.sessionThreads;
+  for (const row of oldPositionRows) {
+    const oldId = String(pickFirst(row, ["id", "position_id", "positionId", "thread_id"], "") || "").trim();
+    const summaryText = String(
+      pickFirst(row, ["summary", "body", "content", "text", "last_position", "state_summary", "current_interpretation", "reality_line"], "") || ""
+    ).trim();
     if (!oldId || !summaryText) {
       summary.positions.skipped += 1;
       continue;
@@ -1222,14 +1265,15 @@ async function importOldContinuityIntoProduct(app, input = {}) {
       summary.positions.skipped += 1;
       continue;
     }
-    const status = normalizeInterpretationStatus(pickFirst(row, ["interpretation_status", "interpretationStatus", "status"], "draft"));
+    const status = normalizeLegacyContinuityInterpretationStatus(row);
     const factsUsed = safeJsonArray(pickFirst(row, ["facts_used_json", "factsUsed", "facts_used"], "[]"));
-    const updatedAt = String(pickFirst(row, ["updated_at", "updatedAt", "created_at", "createdAt"], importedAt) || importedAt);
+    const metadata = old.positions.length ? {} : buildLegacyContinuityMetadata(row);
+    const updatedAt = String(pickFirst(row, ["updated_at", "updatedAt", "last_active_at", "created_at", "createdAt"], importedAt) || importedAt);
     const historyId = stableImportId("old_continuity_history", oldId);
     const snapshotId = stableImportId("old_continuity_snapshot", oldId);
     await database.exec(`
-      INSERT INTO current_positions (id, line_id, summary, interpretation_status, facts_used_json, updated_at)
-      VALUES (${sqlString(positionId)}, ${sqlString(lineId)}, ${sqlString(summaryText)}, ${sqlString(status)}, ${sqlString(JSON.stringify(factsUsed))}, ${sqlString(updatedAt)});
+      INSERT INTO current_positions (id, line_id, summary, interpretation_status, facts_used_json, metadata_json, updated_at)
+      VALUES (${sqlString(positionId)}, ${sqlString(lineId)}, ${sqlString(summaryText)}, ${sqlString(status)}, ${sqlString(JSON.stringify(factsUsed))}, ${sqlString(JSON.stringify(metadata))}, ${sqlString(updatedAt)});
       INSERT INTO continuity_position_history (id, line_id, position_id, summary, interpretation_status, facts_used_json, source, created_at)
       VALUES (${sqlString(historyId)}, ${sqlString(lineId)}, ${sqlString(positionId)}, ${sqlString(summaryText)}, ${sqlString(status)}, ${sqlString(JSON.stringify(factsUsed))}, 'old-continuity-import', ${sqlString(updatedAt)})
       ON CONFLICT(id) DO NOTHING;
@@ -1243,7 +1287,7 @@ async function importOldContinuityIntoProduct(app, input = {}) {
     summary.positions.imported += 1;
   }
 
-  for (const row of old.handoffs) {
+  for (const row of [...old.handoffs, ...old.legacyHandoffs]) {
     const oldId = String(pickFirst(row, ["id", "handoff_id", "handoffId"], "") || "").trim();
     const objective = String(pickFirst(row, ["objective", "title", "summary", "body"], "") || "").trim();
     if (!oldId || !objective) {
@@ -1268,6 +1312,29 @@ async function importOldContinuityIntoProduct(app, input = {}) {
     summary.handoffs.imported += 1;
   }
 
+  for (const row of old.stateSnapshots) {
+    const oldId = String(pickFirst(row, ["id", "snapshot_id", "snapshotId"], "") || "").trim();
+    const summaryText = String(pickFirst(row, ["summary", "state_summary", "body", "content", "text"], "") || "").trim();
+    if (!oldId || !summaryText) {
+      summary.positions.skipped += 1;
+      continue;
+    }
+    const lineId = await resolveImportedLineId(row);
+    const positionId = stableImportId("old_continuity_snapshot_position", oldId);
+    const snapshotId = stableImportId("old_continuity_state_snapshot", oldId);
+    const existing = await database.query(`SELECT id FROM continuity_snapshots WHERE id = ${sqlString(snapshotId)} LIMIT 1;`);
+    if (existing.length) {
+      summary.positions.skipped += 1;
+      continue;
+    }
+    const createdAt = String(pickFirst(row, ["created_at", "createdAt", "updated_at", "updatedAt"], importedAt) || importedAt);
+    await database.exec(`
+      INSERT INTO continuity_snapshots (id, line_id, position_id, summary, interpretation_status, facts_used_json, reason, created_at)
+      VALUES (${sqlString(snapshotId)}, ${sqlString(lineId)}, ${sqlString(positionId)}, ${sqlString(summaryText)}, 'draft', '[]', 'old-state-snapshot-import', ${sqlString(createdAt)});
+    `);
+    summary.positions.imported += 1;
+  }
+
   const statAfter = await fs.stat(dbPath);
   summary.sourceMtimeUnchanged = statAfter.mtimeMs === statBefore.mtimeMs;
   summary.sourceSizeUnchanged = statAfter.size === statBefore.size;
@@ -1285,6 +1352,9 @@ async function importOldContinuityIntoProduct(app, input = {}) {
   const sharedLine = activeImportedLines[0]?.id
     ? await database.getResumePacket({ lineId: activeImportedLines[0].id })
     : await database.getResumePacket();
+  if (activeImportedLines[0]?.id) {
+    await database.setActiveContinuityLine(activeImportedLines[0].id);
+  }
   return {
     ...summary,
     sharedLine

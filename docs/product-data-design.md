@@ -481,6 +481,42 @@ Still next:
 - Link current positions to Memory IDs.
 - Add resume modes, privacy flags, merge/delete/compact, and agent state.
 
+## Phase 3 Continuity Parity Checkpoint
+
+Status: complete for the current Desktop-native Continuity review surface and old Continuity copy-import baseline.
+
+Date: 2026-06-26.
+
+Implemented:
+
+- Desktop can import old Continuity `session_threads`, `handoffs`, and `state_snapshots` by copy into the Desktop-owned product database.
+- Import creates a product backup first and does not mutate the old Continuity service database.
+- Imported `session_threads` become Desktop `continuity_lines`.
+- Imported thread state is written into `current_positions`, `continuity_position_history`, and `continuity_snapshots`.
+- Imported legacy fields are preserved in `current_positions.metadata_json` for review and future testing.
+- Imported handoffs are written into `continuity_handoffs`.
+- Shared Line UI follows the same product direction as Memoria: humans mainly review and inspect; agents create/update/archive/restore through CLI and Gateway MCP.
+- Shared Line UI now exposes line browsing, current position, legacy metadata, history, snapshots, handoffs, and resume packet review in one Desktop surface.
+- Line cards include agent, mode, visibility, interpretation status, confirmation, current position, and next step where available.
+- The line list can be filtered by agent.
+- Clicking a line selects it for right-side detail review and does not activate it or reorder the list.
+- The current position, next step, history, snapshots, handoff next step, position trace, and affective trace are rendered as readable rows instead of raw long text blocks.
+- The right-side detail panel groups imported fields into basic info, progress, boundary, and trace sections.
+
+Validated:
+
+- Old Continuity import was run against the local old Continuity database and produced Desktop-owned imported lines, positions/history, snapshots, and handoffs.
+- Product database contains imported Continuity data plus the default Desktop line.
+- Imported old thread metadata was backfilled into `current_positions.metadata_json`.
+- `npm run check` passes after the UI and documentation updates.
+- Smoke tests were intentionally not run for this checkpoint.
+
+Still next:
+
+- Decide whether any legacy Continuity fields should become first-class columns instead of metadata-only fields.
+- Add richer agent identity display if multiple agent naming schemes appear in imported data.
+- Keep human editing minimal unless a real correction workflow appears.
+
 ## Phase 4 Checkpoint
 
 Status: complete for the current Desktop-owned Gateway baseline.

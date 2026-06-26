@@ -118,6 +118,7 @@ CREATE TABLE IF NOT EXISTS current_positions (
   summary TEXT NOT NULL,
   interpretation_status TEXT NOT NULL DEFAULT 'draft',
   facts_used_json TEXT NOT NULL DEFAULT '[]',
+  metadata_json TEXT NOT NULL DEFAULT '{}',
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (line_id) REFERENCES continuity_lines(id) ON DELETE CASCADE
 );

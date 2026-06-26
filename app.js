@@ -116,17 +116,33 @@ const memoryTabPanels = Array.from(document.querySelectorAll("[data-memory-panel
 const sharedLineSummary = document.querySelector("#sharedLineSummary");
 const sharedLineUpdated = document.querySelector("#sharedLineUpdated");
 const sharedLineList = document.querySelector("#sharedLineList");
+const sharedLineAgentFilter = document.querySelector("#sharedLineAgentFilter");
+const sharedLineActiveTitle = document.querySelector("#sharedLineActiveTitle");
+const sharedLineLineCount = document.querySelector("#sharedLineLineCount");
+const sharedLineHistoryCount = document.querySelector("#sharedLineHistoryCount");
+const sharedLineSnapshotCount = document.querySelector("#sharedLineSnapshotCount");
+const sharedLineHandoffCount = document.querySelector("#sharedLineHandoffCount");
 const sharedLineTitleInput = document.querySelector("#sharedLineTitleInput");
 const createSharedLine = document.querySelector("#createSharedLine");
 const sharedLineInput = document.querySelector("#sharedLineInput");
+const sharedLineStatusInput = document.querySelector("#sharedLineStatusInput");
+const sharedLineFactsInput = document.querySelector("#sharedLineFactsInput");
+const sharedLineDetailStatus = document.querySelector("#sharedLineDetailStatus");
 const sharedLineNotice = document.querySelector("#sharedLineNotice");
 const saveSharedLine = document.querySelector("#saveSharedLine");
+const sharedLineMetadataPanel = document.querySelector("#sharedLineMetadataPanel");
 const sharedLineResume = document.querySelector("#sharedLineResume");
 const sharedLineHistoryList = document.querySelector("#sharedLineHistoryList");
 const sharedLineSnapshotList = document.querySelector("#sharedLineSnapshotList");
 const createSharedLineHandoff = document.querySelector("#createSharedLineHandoff");
+const sharedLineHandoffObjective = document.querySelector("#sharedLineHandoffObjective");
+const sharedLineHandoffCompleted = document.querySelector("#sharedLineHandoffCompleted");
+const sharedLineHandoffOpenItems = document.querySelector("#sharedLineHandoffOpenItems");
+const sharedLineHandoffNextStep = document.querySelector("#sharedLineHandoffNextStep");
 const sharedLineHandoffList = document.querySelector("#sharedLineHandoffList");
 const copySharedLineResume = document.querySelector("#copySharedLineResume");
+const sharedLineTabs = Array.from(document.querySelectorAll("[data-shared-line-tab]"));
+const sharedLineTabPanels = Array.from(document.querySelectorAll("[data-shared-line-panel]"));
 
 const translations = {
   en: {
@@ -376,7 +392,40 @@ const translations = {
     "logs.empty": "No log lines yet.",
     "sharedLine.title": "Shared Line",
     "sharedLine.body": "Continuity shows the current shared position so agents can resume with less drift.",
+    "sharedLine.agentSurface": "Agent surface",
+    "sharedLine.activeLine": "Active line",
+    "sharedLine.boundary": "Boundary",
+    "sharedLine.currentPositionOnly": "Current position only",
+    "sharedLine.stats.lines": "Lines",
+    "sharedLine.stats.history": "History",
+    "sharedLine.stats.snapshots": "Snapshots",
+    "sharedLine.stats.handoffs": "Handoffs",
+    "sharedLine.filter.agent": "Agent",
+    "sharedLine.filter.allAgents": "All agents",
+    "sharedLine.tab.lines": "Lines",
+    "sharedLine.tab.history": "History",
+    "sharedLine.tab.snapshots": "Snapshots",
+    "sharedLine.tab.handoffs": "Handoffs",
+    "sharedLine.detail.title": "Line detail",
+    "sharedLine.group.basic": "Basic",
+    "sharedLine.group.progress": "Progress",
+    "sharedLine.group.boundary": "Interpretation & boundary",
+    "sharedLine.group.trace": "Trace",
     "sharedLine.current": "Current position",
+    "sharedLine.meta.agent": "Agent",
+    "sharedLine.meta.visibility": "Visibility",
+    "sharedLine.meta.mode": "Mode",
+    "sharedLine.meta.nextStep": "Next step",
+    "sharedLine.meta.stateSummary": "State summary",
+    "sharedLine.meta.currentInterpretation": "Current interpretation",
+    "sharedLine.meta.realityLine": "Shared reality line",
+    "sharedLine.meta.entryPosture": "Entry posture",
+    "sharedLine.meta.confirmedGround": "Confirmed ground",
+    "sharedLine.meta.provisionalRead": "Provisional read",
+    "sharedLine.meta.boundaryNotes": "Boundary notes",
+    "sharedLine.meta.misreadRisks": "Misread risks",
+    "sharedLine.meta.positionHistory": "Position history",
+    "sharedLine.meta.affectiveTrace": "Affective trace",
     "sharedLine.lines": "Lines",
     "sharedLine.linesEmpty": "No Shared Lines yet.",
     "sharedLine.createLine": "Create line",
@@ -397,12 +446,17 @@ const translations = {
     "sharedLine.reviewBody": "Confirm before overwriting context.",
     "sharedLine.controls": "Controls",
     "sharedLine.form.summary": "Update current position",
+    "sharedLine.form.status": "Interpretation status",
+    "sharedLine.form.factsUsed": "Facts used",
+    "sharedLine.form.factsPlaceholder": "memory_id, note, source",
     "sharedLine.form.titlePlaceholder": "New line title",
     "sharedLine.form.placeholder": "Write the current shared position...",
     "sharedLine.form.save": "Save position",
     "sharedLine.form.saved": "Shared position saved",
     "sharedLine.form.saveFailed": "Could not save shared position",
     "sharedLine.form.confirmOverwrite": "This will overwrite a confirmed Shared Line. Continue?",
+    "sharedLine.status.draft": "Draft",
+    "sharedLine.status.confirmed": "Confirmed",
     "sharedLine.history": "Recent history",
     "sharedLine.historyEmpty": "No saved history yet.",
     "sharedLine.snapshots": "Recent snapshots",
@@ -410,6 +464,13 @@ const translations = {
     "sharedLine.handoffs": "Recent handoffs",
     "sharedLine.handoffsEmpty": "No handoffs yet.",
     "sharedLine.createHandoff": "Create handoff",
+    "sharedLine.handoff.objective": "Objective",
+    "sharedLine.handoff.objectivePlaceholder": "Continue from the current Shared Line.",
+    "sharedLine.handoff.completed": "Completed",
+    "sharedLine.handoff.openItems": "Open items",
+    "sharedLine.handoff.nextStep": "Next step",
+    "sharedLine.handoff.nextStepPlaceholder": "What should the next agent do first?",
+    "sharedLine.handoff.listPlaceholder": "item one, item two",
     "sharedLine.handoffCreated": "Handoff created",
     "sharedLine.handoffFailed": "Could not create handoff",
     "sharedLine.copyResume": "Copy resume packet",
@@ -889,21 +950,54 @@ const translations = {
     "logs.noGatewayTraces": "还没有 Gateway 轨迹。",
     "logs.empty": "还没有日志行。",
     "sharedLine.title": "共同线",
-    "sharedLine.body": "Continuity 显示当前共同位置，让智能体接续时更少偏移。",
+    "sharedLine.body": "共同线只保存当前可接续的位置，让智能体回来时少偏移。",
+    "sharedLine.agentSurface": "智能体入口",
+    "sharedLine.activeLine": "当前线",
+    "sharedLine.boundary": "边界",
+    "sharedLine.currentPositionOnly": "只管当前位置",
+    "sharedLine.stats.lines": "线",
+    "sharedLine.stats.history": "历史",
+    "sharedLine.stats.snapshots": "快照",
+    "sharedLine.stats.handoffs": "交接",
+    "sharedLine.filter.agent": "Agent",
+    "sharedLine.filter.allAgents": "全部 Agent",
+    "sharedLine.tab.lines": "线",
+    "sharedLine.tab.history": "历史",
+    "sharedLine.tab.snapshots": "快照",
+    "sharedLine.tab.handoffs": "交接",
+    "sharedLine.detail.title": "线详情",
+    "sharedLine.group.basic": "基础信息",
+    "sharedLine.group.progress": "当前进展",
+    "sharedLine.group.boundary": "解释与边界",
+    "sharedLine.group.trace": "轨迹",
     "sharedLine.current": "当前位置",
+    "sharedLine.meta.agent": "Agent",
+    "sharedLine.meta.visibility": "可见性",
+    "sharedLine.meta.mode": "模式",
+    "sharedLine.meta.nextStep": "下一步",
+    "sharedLine.meta.stateSummary": "状态摘要",
+    "sharedLine.meta.currentInterpretation": "当前解释",
+    "sharedLine.meta.realityLine": "共同现实线",
+    "sharedLine.meta.entryPosture": "进入姿态",
+    "sharedLine.meta.confirmedGround": "已确认地面",
+    "sharedLine.meta.provisionalRead": "临时解读",
+    "sharedLine.meta.boundaryNotes": "边界标注",
+    "sharedLine.meta.misreadRisks": "易误读风险",
+    "sharedLine.meta.positionHistory": "位置轨迹",
+    "sharedLine.meta.affectiveTrace": "情绪轨迹",
     "sharedLine.lines": "线",
-    "sharedLine.linesEmpty": "还没有 Shared Line。",
+    "sharedLine.linesEmpty": "还没有共同线。",
     "sharedLine.createLine": "创建线",
     "sharedLine.renameLine": "重命名线",
-    "sharedLine.lineCreated": "Shared Line 已创建",
-    "sharedLine.lineActivated": "Shared Line 已切换",
-    "sharedLine.lineRenamed": "Shared Line 已重命名",
-    "sharedLine.lineArchived": "Shared Line 已归档",
-    "sharedLine.lineRestored": "Shared Line 已恢复",
-    "sharedLine.renamePrompt": "重命名 Shared Line",
-    "sharedLine.archiveConfirm": "归档这条 Shared Line？",
-    "sharedLine.lineFailed": "Shared Line 操作失败",
-    "sharedLine.currentBody": "可以从 Continuity 读取。",
+    "sharedLine.lineCreated": "共同线已创建",
+    "sharedLine.lineActivated": "共同线已切换",
+    "sharedLine.lineRenamed": "共同线已重命名",
+    "sharedLine.lineArchived": "共同线已归档",
+    "sharedLine.lineRestored": "共同线已恢复",
+    "sharedLine.renamePrompt": "重命名共同线",
+    "sharedLine.archiveConfirm": "归档这条共同线？",
+    "sharedLine.lineFailed": "共同线操作失败",
+    "sharedLine.currentBody": "可以从共同线读取。",
     "sharedLine.currentEmpty": "还没有保存当前位置。",
     "sharedLine.resume": "接续包",
     "sharedLine.resumeBody": "可提供给已连接的智能体。",
@@ -911,12 +1005,17 @@ const translations = {
     "sharedLine.reviewBody": "覆盖上下文前先确认。",
     "sharedLine.controls": "控制",
     "sharedLine.form.summary": "更新当前位置",
+    "sharedLine.form.status": "判断状态",
+    "sharedLine.form.factsUsed": "引用事实",
+    "sharedLine.form.factsPlaceholder": "memory_id, 备注, 来源",
     "sharedLine.form.titlePlaceholder": "新线标题",
     "sharedLine.form.placeholder": "写下当前共同位置...",
     "sharedLine.form.save": "保存位置",
     "sharedLine.form.saved": "共同线已保存",
     "sharedLine.form.saveFailed": "共同线保存失败",
-    "sharedLine.form.confirmOverwrite": "这会覆盖已确认的 Shared Line，继续吗？",
+    "sharedLine.form.confirmOverwrite": "这会覆盖已确认的共同线，继续吗？",
+    "sharedLine.status.draft": "草稿",
+    "sharedLine.status.confirmed": "已确认",
     "sharedLine.history": "最近历史",
     "sharedLine.historyEmpty": "还没有保存历史。",
     "sharedLine.snapshots": "最近快照",
@@ -924,6 +1023,13 @@ const translations = {
     "sharedLine.handoffs": "最近交接",
     "sharedLine.handoffsEmpty": "还没有交接记录。",
     "sharedLine.createHandoff": "创建交接",
+    "sharedLine.handoff.objective": "目标",
+    "sharedLine.handoff.objectivePlaceholder": "从当前共同线继续。",
+    "sharedLine.handoff.completed": "已完成",
+    "sharedLine.handoff.openItems": "待处理",
+    "sharedLine.handoff.nextStep": "下一步",
+    "sharedLine.handoff.nextStepPlaceholder": "下一个智能体先做什么？",
+    "sharedLine.handoff.listPlaceholder": "事项一, 事项二",
     "sharedLine.handoffCreated": "交接已创建",
     "sharedLine.handoffFailed": "交接创建失败",
     "sharedLine.copyResume": "复制接续包",
@@ -981,13 +1087,13 @@ const translations = {
     "innerLife.reject": "拒绝",
     "innerLife.approvedOutput": "已批准输出",
     "innerLife.applyMemory": "保存为 Memory",
-    "innerLife.applySharedLine": "用于 Shared Line",
+    "innerLife.applySharedLine": "用于共同线",
     "innerLife.markUsed": "已使用",
     "innerLife.markDeferred": "延后",
     "innerLife.markDiscarded": "放弃",
     "innerLife.marked": "分享状态已更新",
     "innerLife.appliedMemory": "已保存为 Memory",
-    "innerLife.appliedSharedLine": "Shared Line 已更新",
+    "innerLife.appliedSharedLine": "共同线已更新",
     "innerLife.applyFailed": "InnerLife 输出应用失败",
     "data.title": "数据导入与导出",
     "data.body": "导入和恢复分开，危险操作要清楚。",
@@ -1242,6 +1348,8 @@ const memoryPaging = {
 };
 let editingMemoryId = null;
 let renamingSharedLineId = null;
+let activeSharedLineAgentFilter = "";
+let selectedSharedLineId = "";
 let pendingRestoreBackupId = null;
 let runtimeRefreshTimer = null;
 
@@ -1640,6 +1748,152 @@ function renderSettings() {
   innerLifeSource.value = innerlife.source;
 }
 
+function splitListInput(value) {
+  return String(value || "")
+    .split(/\n|,/u)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function formatSharedLineMetaValue(value) {
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "";
+    return value
+      .map((item) => {
+        if (item && typeof item === "object") return JSON.stringify(item);
+        return String(item || "");
+      })
+      .filter(Boolean)
+      .join("\n");
+  }
+  if (value && typeof value === "object") return JSON.stringify(value, null, 2);
+  return String(value || "").trim();
+}
+
+function splitReadableText(value) {
+  const text = String(value || "").trim();
+  if (!text) return [];
+  const normalized = text
+    .replace(/\r/g, "")
+    .split(/\n+|(?<=[。！？!?；;])\s*/u)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (normalized.length > 1) return normalized.slice(0, 12);
+  return text
+    .split(/(?<=，|,)\s*/u)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
+function renderReadableText(value, icon = "•") {
+  const parts = splitReadableText(value);
+  if (parts.length === 0) return "";
+  return parts.map((part) => `<span class="readable-line"><i>${escapeHtml(icon)}</i>${escapeHtml(part)}</span>`).join("");
+}
+
+function renderTraceValue(value) {
+  const items = Array.isArray(value) ? value : [];
+  if (items.length === 0) return "";
+  return items
+    .slice()
+    .reverse()
+    .slice(0, 8)
+    .map((item) => {
+      if (item && typeof item === "object") {
+        const title = item.position || item.tone || item.valence || item.note || JSON.stringify(item);
+        const meta = [item.time || item.archived_at || "", item.stability || "", item.needs_review ? "review" : ""]
+          .filter(Boolean)
+          .join(" · ");
+        return `
+          <span class="trace-line">
+            <i>${item.valence === "negative" ? "!" : item.valence === "mixed" ? "~" : "•"}</i>
+            <b>${escapeHtml(title)}</b>
+            ${meta ? `<small>${escapeHtml(meta)}</small>` : ""}
+          </span>
+        `;
+      }
+      return `<span class="trace-line"><i>•</i><span>${renderReadableText(item, "·") || escapeHtml(item)}</span></span>`;
+    })
+    .join("");
+}
+
+function renderSharedLineMetadata(metadata = {}) {
+  const groups = [
+    {
+      title: "sharedLine.group.basic",
+      rows: [
+        ["sharedLine.meta.agent", metadata.agentId],
+        ["sharedLine.meta.visibility", metadata.visibility],
+        ["sharedLine.meta.mode", metadata.mode]
+      ]
+    },
+    {
+      title: "sharedLine.group.progress",
+      rows: [
+        ["sharedLine.meta.nextStep", metadata.nextStep],
+        ["sharedLine.meta.stateSummary", metadata.stateSummary],
+        ["sharedLine.meta.currentInterpretation", metadata.currentInterpretation],
+        ["sharedLine.meta.realityLine", metadata.realityLine]
+      ]
+    },
+    {
+      title: "sharedLine.group.boundary",
+      rows: [
+        ["sharedLine.meta.entryPosture", metadata.entryPosture],
+        ["sharedLine.meta.confirmedGround", metadata.confirmedGround],
+        ["sharedLine.meta.provisionalRead", metadata.provisionalRead],
+        ["sharedLine.meta.boundaryNotes", metadata.boundaryNotes],
+        ["sharedLine.meta.misreadRisks", metadata.misreadRisks]
+      ]
+    },
+    {
+      title: "sharedLine.group.trace",
+      rows: [
+        ["sharedLine.meta.positionHistory", metadata.positionHistory],
+        ["sharedLine.meta.affectiveTrace", metadata.affectiveTrace]
+      ]
+    }
+  ]
+    .map((group) => ({
+      ...group,
+      rows: group.rows.map(([labelKey, value]) => [labelKey, formatSharedLineMetaValue(value)]).filter(([, value]) => value)
+    }))
+    .filter((group) => group.rows.length);
+
+  if (groups.length === 0) {
+    sharedLineMetadataPanel.innerHTML = "";
+    return;
+  }
+  sharedLineMetadataPanel.innerHTML = groups
+    .map(
+      (group) => `
+        <section class="shared-line-detail-group">
+          <h3>${escapeHtml(t(group.title))}</h3>
+          ${group.rows
+            .map(
+              ([labelKey, value]) => {
+                const rawKey = labelKey.endsWith("positionHistory")
+                  ? "positionHistory"
+                  : labelKey.endsWith("affectiveTrace")
+                    ? "affectiveTrace"
+                    : "";
+                const htmlValue = rawKey ? renderTraceValue(metadata[rawKey]) || escapeHtml(value) : renderReadableText(value, "·") || escapeHtml(value);
+                return `
+                <div class="shared-line-detail-row">
+                  <span>${escapeHtml(t(labelKey))}</span>
+                  <p>${htmlValue}</p>
+                </div>
+              `;
+              }
+            )
+            .join("")}
+        </section>
+      `
+    )
+    .join("");
+}
+
 function renderMemoryList() {
   renderMemoryResults(snapshot?.memories || []);
 }
@@ -1649,54 +1903,80 @@ function renderSharedLine() {
   const current = sharedLine?.currentPosition || {};
   const summary = current.summary || "";
   const lines = sharedLine?.lines || [];
+  const history = sharedLine?.history || [];
+  const snapshots = sharedLine?.snapshots || [];
+  const handoffs = sharedLine?.handoffs || [];
+  const activeLine = lines.find((line) => line.active) || {};
+  selectedSharedLineId = sharedLine?.lineId || selectedSharedLineId || activeLine.id || "";
+  sharedLineActiveTitle.textContent = sharedLine?.lineTitle || activeLine.title || t("sharedLine.title");
+  sharedLineDetailStatus.textContent = current.interpretationStatus || activeLine.status || "active";
+  sharedLineDetailStatus.className = `badge ${current.interpretationStatus === "confirmed" ? "ok" : "planned"}`;
+  sharedLineLineCount.textContent = lines.filter((line) => line.status !== "archived").length;
+  sharedLineHistoryCount.textContent = history.length;
+  sharedLineSnapshotCount.textContent = snapshots.length;
+  sharedLineHandoffCount.textContent = handoffs.length;
+  const agentOptions = [...new Set(lines.map((line) => line.metadata?.agentId || "").filter(Boolean))].sort();
+  if (activeSharedLineAgentFilter && !agentOptions.includes(activeSharedLineAgentFilter)) {
+    activeSharedLineAgentFilter = "";
+  }
+  sharedLineAgentFilter.innerHTML = [
+    `<option value="">${escapeHtml(t("sharedLine.filter.allAgents"))}</option>`,
+    ...agentOptions.map((agentId) => `<option value="${escapeHtml(agentId)}">${escapeHtml(agentId)}</option>`)
+  ].join("");
+  sharedLineAgentFilter.value = activeSharedLineAgentFilter;
+  const visibleLines = activeSharedLineAgentFilter
+    ? lines.filter((line) => (line.metadata?.agentId || "") === activeSharedLineAgentFilter)
+    : lines;
   if (renamingSharedLineId && !lines.some((line) => line.id === renamingSharedLineId && line.status !== "archived")) {
     renamingSharedLineId = null;
     sharedLineTitleInput.value = "";
   }
   createSharedLine.textContent = renamingSharedLineId ? t("sharedLine.renameLine") : t("sharedLine.createLine");
-  if (lines.length === 0) {
+  if (visibleLines.length === 0) {
     sharedLineList.innerHTML = `<div class="endpoint-empty">${t("sharedLine.linesEmpty")}</div>`;
   } else {
-    sharedLineList.innerHTML = lines
+    sharedLineList.innerHTML = visibleLines
       .map(
         (line) => {
           const isArchived = line.status === "archived";
-          const canArchive = !line.active && line.id !== "line_default" && !isArchived;
+          const metadata = line.metadata || {};
+          const metaChips = [
+            metadata.agentId ? [t("sharedLine.meta.agent"), metadata.agentId] : null,
+            metadata.mode ? [t("sharedLine.meta.mode"), metadata.mode] : null,
+            metadata.visibility ? [t("sharedLine.meta.visibility"), metadata.visibility] : null,
+            line.interpretationStatus ? [t("sharedLine.form.status"), line.interpretationStatus] : null,
+            metadata.userConfirmed ? ["", t("sharedLine.status.confirmed")] : null
+          ].filter(Boolean);
+          const selected = line.id === selectedSharedLineId;
           return `
-          <article class="shared-line-history-item ${line.active ? "active-line" : ""}">
-            <div>
+          <article class="shared-line-card ${selected ? "active-line" : ""}" data-shared-line-action="select" data-shared-line-id="${escapeHtml(line.id)}" tabindex="0" role="button">
+            <div class="shared-line-card-head">
               <strong>${escapeHtml(line.title || line.id)}</strong>
-              <span>${line.active ? "active" : escapeHtml(line.status || "")}</span>
+              <span class="status-chip ${selected ? "status-active" : ""}">${selected ? "selected" : escapeHtml(line.status || "")}</span>
             </div>
-            <p>${escapeHtml(line.summary || t("sharedLine.currentEmpty"))}</p>
-            <div class="memory-actions">
-              ${
-                !line.active && !isArchived
-                  ? `<button class="secondary" data-shared-line-action="activate" data-shared-line-id="${escapeHtml(line.id)}">${t("actions.open")}</button>`
-                  : ""
-              }
-              ${
-                isArchived
-                  ? `<button class="secondary" data-shared-line-action="restore" data-shared-line-id="${escapeHtml(line.id)}">${t("actions.restore")}</button>`
-                  : `<button class="secondary" data-shared-line-action="rename" data-shared-line-title="${escapeHtml(line.title || "")}" data-shared-line-id="${escapeHtml(line.id)}">${t("actions.edit")}</button>`
-              }
-              ${
-                canArchive
-                  ? `<button class="secondary danger-button" data-shared-line-action="archive" data-shared-line-id="${escapeHtml(line.id)}">${t("actions.archive")}</button>`
-                  : ""
-              }
-            </div>
+            ${
+              metaChips.length
+                ? `<div class="shared-line-chip-row">${metaChips
+                    .map(([label, value]) => `<span>${escapeHtml(label ? `${label}: ${value}` : value)}</span>`)
+                    .join("")}</div>`
+                : ""
+            }
+            <p><b>${escapeHtml(t("sharedLine.current"))}</b>${renderReadableText(line.summary || t("sharedLine.currentEmpty"), "•")}</p>
+            ${metadata.nextStep ? `<p><b>${escapeHtml(t("sharedLine.meta.nextStep"))}</b>${renderReadableText(metadata.nextStep, "→")}</p>` : ""}
+            <div class="shared-line-card-actions"><span>${selected ? escapeHtml(t("common.ready")) : escapeHtml(t("actions.open"))}</span></div>
           </article>
         `;
         }
       )
       .join("");
   }
-  sharedLineSummary.textContent = summary || t("sharedLine.currentEmpty");
+  sharedLineSummary.innerHTML = renderReadableText(summary || t("sharedLine.currentEmpty"), "•");
   sharedLineUpdated.textContent = current.updatedAt || "";
   sharedLineInput.value = summary;
+  sharedLineStatusInput.value = current.interpretationStatus === "confirmed" ? "confirmed" : "draft";
+  sharedLineFactsInput.value = Array.isArray(current.factsUsed) ? current.factsUsed.join(", ") : "";
+  renderSharedLineMetadata(current.metadata || {});
   sharedLineResume.textContent = sharedLine?.text || "";
-  const history = sharedLine?.history || [];
   if (history.length === 0) {
     sharedLineHistoryList.innerHTML = `<div class="endpoint-empty">${t("sharedLine.historyEmpty")}</div>`;
   } else {
@@ -1708,7 +1988,7 @@ function renderSharedLine() {
               <strong>${escapeHtml(item.interpretationStatus || "draft")}</strong>
               <span>${escapeHtml(item.createdAt || "")}</span>
             </div>
-            <p>${escapeHtml(item.summary || "")}</p>
+            <p>${renderReadableText(item.summary || "", "•") || escapeHtml(item.summary || "")}</p>
             ${
               Array.isArray(item.factsUsed) && item.factsUsed.length
                 ? `<small>${escapeHtml(item.factsUsed.join(", "))}</small>`
@@ -1719,7 +1999,6 @@ function renderSharedLine() {
       )
       .join("");
   }
-  const snapshots = sharedLine?.snapshots || [];
   if (snapshots.length === 0) {
     sharedLineSnapshotList.innerHTML = `<div class="endpoint-empty">${t("sharedLine.snapshotsEmpty")}</div>`;
   } else {
@@ -1731,14 +2010,13 @@ function renderSharedLine() {
               <strong>${escapeHtml(item.reason || "save")}</strong>
               <span>${escapeHtml(item.createdAt || "")}</span>
             </div>
-            <p>${escapeHtml(item.summary || "")}</p>
+            <p>${renderReadableText(item.summary || "", "•") || escapeHtml(item.summary || "")}</p>
             <small>${escapeHtml(item.interpretationStatus || "draft")}</small>
           </article>
         `
       )
       .join("");
   }
-  const handoffs = sharedLine?.handoffs || [];
   if (handoffs.length === 0) {
     sharedLineHandoffList.innerHTML = `<div class="endpoint-empty">${t("sharedLine.handoffsEmpty")}</div>`;
   } else {
@@ -1750,7 +2028,7 @@ function renderSharedLine() {
               <strong>${escapeHtml(item.objective || "")}</strong>
               <span>${escapeHtml(item.createdAt || "")}</span>
             </div>
-            ${item.nextStep ? `<p>${escapeHtml(item.nextStep)}</p>` : ""}
+            ${item.nextStep ? `<p>${renderReadableText(item.nextStep, "→") || escapeHtml(item.nextStep)}</p>` : ""}
             ${Array.isArray(item.openItems) && item.openItems.length ? `<small>${escapeHtml(item.openItems.join(", "))}</small>` : ""}
           </article>
         `
@@ -2827,6 +3105,20 @@ memoryTabs.forEach((tab) => {
   });
 });
 
+function setSharedLineTab(tabName) {
+  sharedLineTabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.sharedLineTab === tabName));
+  sharedLineTabPanels.forEach((panel) => panel.classList.toggle("active", panel.dataset.sharedLinePanel === tabName));
+}
+
+sharedLineTabs.forEach((tab) => {
+  tab.addEventListener("click", () => setSharedLineTab(tab.dataset.sharedLineTab || "lines"));
+});
+
+sharedLineAgentFilter.addEventListener("change", () => {
+  activeSharedLineAgentFilter = sharedLineAgentFilter.value || "";
+  renderSharedLine();
+});
+
 memoryLabelList.addEventListener("click", (event) => {
   const button = event.target.closest("[data-memory-label]");
   if (!button) return;
@@ -2990,11 +3282,15 @@ sharedLineList.addEventListener("click", async (event) => {
   if (!button) return;
   const action = button.dataset.sharedLineAction;
   const lineId = button.dataset.sharedLineId;
-  button.disabled = true;
-  sharedLineNotice.textContent = t("common.checking");
+  button.setAttribute("aria-busy", "true");
+  if (action !== "select") sharedLineNotice.textContent = t("common.checking");
   try {
     let result;
-    if (action === "activate") {
+    if (action === "select") {
+      selectedSharedLineId = lineId;
+      result = await window.ClaraCoreDesktop.getSharedLine({ lineId });
+      sharedLineNotice.textContent = "";
+    } else if (action === "activate") {
       result = await window.ClaraCoreDesktop.activateSharedLine(lineId);
       showCopyNotice(t("sharedLine.lineActivated"), sharedLineNotice);
     } else if (action === "rename") {
@@ -3024,8 +3320,16 @@ sharedLineList.addEventListener("click", async (event) => {
     console.error(error);
     sharedLineNotice.textContent = t("sharedLine.lineFailed");
   } finally {
-    button.disabled = false;
+    button.removeAttribute("aria-busy");
   }
+});
+
+sharedLineList.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  const card = event.target.closest("[data-shared-line-action]");
+  if (!card) return;
+  event.preventDefault();
+  card.click();
 });
 
 saveSharedLine.addEventListener("click", async () => {
@@ -3034,7 +3338,8 @@ saveSharedLine.addEventListener("click", async () => {
   try {
     const input = {
       summary: sharedLineInput.value,
-      interpretationStatus: "draft"
+      interpretationStatus: sharedLineStatusInput.value === "confirmed" ? "confirmed" : "draft",
+      factsUsed: splitListInput(sharedLineFactsInput.value)
     };
     let sharedLine;
     try {
@@ -3071,12 +3376,18 @@ createSharedLineHandoff.addEventListener("click", async () => {
   try {
     const summary = sharedLineInput.value || snapshot?.sharedLine?.currentPosition?.summary || "";
     const result = await window.ClaraCoreDesktop.createSharedLineHandoff({
-      objective: summary || "Continue from the current Shared Line.",
-      completed: [],
-      openItems: [],
-      nextStep: summary ? "Resume from this Shared Line and update it after the next meaningful step." : "Save a Shared Line position before continuing."
+      objective: sharedLineHandoffObjective.value || summary || "Continue from the current Shared Line.",
+      completed: splitListInput(sharedLineHandoffCompleted.value),
+      openItems: splitListInput(sharedLineHandoffOpenItems.value),
+      nextStep:
+        sharedLineHandoffNextStep.value ||
+        (summary ? "Resume from this Shared Line and update it after the next meaningful step." : "Save a Shared Line position before continuing.")
     });
     snapshot.sharedLine = result.sharedLine;
+    sharedLineHandoffObjective.value = "";
+    sharedLineHandoffCompleted.value = "";
+    sharedLineHandoffOpenItems.value = "";
+    sharedLineHandoffNextStep.value = "";
     renderSharedLine();
     showCopyNotice(t("sharedLine.handoffCreated"), sharedLineNotice);
   } catch (error) {

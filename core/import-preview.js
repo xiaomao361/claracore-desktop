@@ -204,7 +204,10 @@ const importPlanRules = {
   continuity: [
     { table: "continuity_lines", target: "continuity_lines", action: "copy_candidate", note: "old shared lines" },
     { table: "current_positions", target: "current_positions", action: "copy_candidate", note: "old current positions" },
-    { table: "continuity_handoffs", target: "continuity_handoffs", action: "copy_candidate", note: "old handoffs" }
+    { table: "continuity_handoffs", target: "continuity_handoffs", action: "copy_candidate", note: "old handoffs" },
+    { table: "session_threads", target: "continuity_lines", action: "copy_candidate", note: "legacy shared lines and positions" },
+    { table: "handoffs", target: "continuity_handoffs", action: "copy_candidate", note: "legacy handoffs" },
+    { table: "state_snapshots", target: "continuity_snapshots", action: "copy_candidate", note: "legacy state snapshots" }
   ],
   innerlife: [
     { table: "innerlife_profiles", target: "innerlife_profiles", action: "copy_candidate", note: "old profiles" },

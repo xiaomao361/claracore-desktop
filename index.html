@@ -228,50 +228,110 @@
       </section>
 
       <section id="sharedLineView" class="view">
-        <div class="screen-grid">
-          <article class="panel main-panel">
+        <div class="shared-line-page-head">
+          <div>
             <h2 data-i18n="sharedLine.title">Shared Line</h2>
             <p data-i18n="sharedLine.body">Continuity shows the current shared position so agents can resume with less drift.</p>
-            <div class="shared-line-lines">
-              <strong data-i18n="sharedLine.lines">Lines</strong>
+          </div>
+          <div class="shared-line-active-pill">
+            <span data-i18n="sharedLine.activeLine">Active line</span>
+            <strong id="sharedLineActiveTitle">Checking...</strong>
+          </div>
+        </div>
+        <div class="shared-line-stats-grid">
+          <div><span data-i18n="sharedLine.stats.lines">Lines</span><strong id="sharedLineLineCount">0</strong></div>
+          <div><span data-i18n="sharedLine.stats.history">History</span><strong id="sharedLineHistoryCount">0</strong></div>
+          <div><span data-i18n="sharedLine.stats.snapshots">Snapshots</span><strong id="sharedLineSnapshotCount">0</strong></div>
+          <div><span data-i18n="sharedLine.stats.handoffs">Handoffs</span><strong id="sharedLineHandoffCount">0</strong></div>
+        </div>
+
+        <div class="shared-line-layout">
+          <article class="panel main-panel">
+            <div class="shared-line-tabs" role="tablist" aria-label="Shared Line views">
+              <button class="active" data-shared-line-tab="lines" data-i18n="sharedLine.tab.lines">Threads</button>
+              <button data-shared-line-tab="snapshots" data-i18n="sharedLine.tab.snapshots">Snapshots</button>
+              <button data-shared-line-tab="handoffs" data-i18n="sharedLine.tab.handoffs">Handoffs</button>
+              <button data-shared-line-tab="history" data-i18n="sharedLine.tab.history">History</button>
+            </div>
+            <section class="shared-line-tab-panel active" data-shared-line-panel="lines">
+              <div class="section-heading-line">
+                <strong data-i18n="sharedLine.lines">Lines</strong>
+                <div class="shared-line-filter">
+                  <span data-i18n="sharedLine.filter.agent">Agent</span>
+                  <select id="sharedLineAgentFilter"></select>
+                </div>
+              </div>
               <div id="sharedLineList" class="shared-line-history-list"></div>
-              <div class="memory-search compact-form">
+              <div class="memory-search compact-form hidden">
                 <input id="sharedLineTitleInput" data-i18n-placeholder="sharedLine.form.titlePlaceholder" placeholder="New line title" />
                 <button id="createSharedLine" class="secondary" data-i18n="sharedLine.createLine">Create line</button>
               </div>
+            </section>
+            <section class="shared-line-tab-panel" data-shared-line-panel="snapshots">
+              <div class="section-heading-line">
+                <strong data-i18n="sharedLine.snapshots">Recent snapshots</strong>
+              </div>
+              <div id="sharedLineSnapshotList" class="shared-line-history-list"></div>
+            </section>
+            <section class="shared-line-tab-panel" data-shared-line-panel="handoffs">
+              <div class="section-heading-line">
+                <strong data-i18n="sharedLine.handoffs">Recent handoffs</strong>
+              </div>
+              <div id="sharedLineHandoffList" class="shared-line-handoff-list"></div>
+            </section>
+            <section class="shared-line-tab-panel" data-shared-line-panel="history">
+              <div class="section-heading-line">
+                <strong data-i18n="sharedLine.history">Recent history</strong>
+              </div>
+              <div id="sharedLineHistoryList" class="shared-line-history-list"></div>
+            </section>
+          </article>
+
+          <article class="panel shared-line-detail-panel">
+            <div class="panel-heading">
+              <div>
+                <h2 data-i18n="sharedLine.detail.title">Line detail</h2>
+                <p class="quiet" id="sharedLineUpdated"></p>
+              </div>
+              <span id="sharedLineDetailStatus" class="badge ok">active</span>
             </div>
             <div class="shared-line-current">
               <strong data-i18n="sharedLine.current">Current position</strong>
               <p id="sharedLineSummary" data-i18n="sharedLine.currentEmpty">No current position saved yet.</p>
-              <span id="sharedLineUpdated"></span>
             </div>
-            <label class="shared-line-form">
-              <span data-i18n="sharedLine.form.summary">Update current position</span>
-              <textarea id="sharedLineInput" rows="6" data-i18n-placeholder="sharedLine.form.placeholder" placeholder="Write the current shared position..."></textarea>
-            </label>
-            <div class="form-actions">
+            <div id="sharedLineMetadataPanel" class="shared-line-detail-list"></div>
+            <div class="shared-line-readonly-form hidden">
+              <textarea id="sharedLineInput" rows="3" readonly></textarea>
+              <select id="sharedLineStatusInput" disabled>
+                <option value="draft" data-i18n="sharedLine.status.draft">Draft</option>
+                <option value="confirmed" data-i18n="sharedLine.status.confirmed">Confirmed</option>
+              </select>
+              <input id="sharedLineFactsInput" readonly />
               <span id="sharedLineNotice" class="quiet" aria-live="polite"></span>
               <button id="saveSharedLine" class="primary" data-i18n="sharedLine.form.save">Save position</button>
             </div>
-            <div class="shared-line-history">
-              <strong data-i18n="sharedLine.history">Recent history</strong>
-              <div id="sharedLineHistoryList" class="shared-line-history-list"></div>
-            </div>
-            <div class="shared-line-history">
-              <strong data-i18n="sharedLine.snapshots">Recent snapshots</strong>
-              <div id="sharedLineSnapshotList" class="shared-line-history-list"></div>
-            </div>
-          </article>
-          <article class="panel">
-            <h2 data-i18n="sharedLine.controls">Controls</h2>
             <div class="snippet">
               <span data-i18n="sharedLine.resume">Resume packet</span>
               <pre><code id="sharedLineResume">Checking...</code></pre>
             </div>
             <button id="copySharedLineResume" class="secondary full" data-i18n="sharedLine.copyResume">Copy resume packet</button>
-            <button id="createSharedLineHandoff" class="primary full" data-i18n="sharedLine.createHandoff">Create handoff</button>
-            <h2 class="section-title" data-i18n="sharedLine.handoffs">Recent handoffs</h2>
-            <div id="sharedLineHandoffList" class="shared-line-handoff-list"></div>
+            <label class="field hidden">
+              <span data-i18n="sharedLine.handoff.objective">Objective</span>
+              <input id="sharedLineHandoffObjective" data-i18n-placeholder="sharedLine.handoff.objectivePlaceholder" placeholder="Continue from the current Shared Line." />
+            </label>
+            <label class="field hidden">
+              <span data-i18n="sharedLine.handoff.completed">Completed</span>
+              <input id="sharedLineHandoffCompleted" data-i18n-placeholder="sharedLine.handoff.listPlaceholder" placeholder="item one, item two" />
+            </label>
+            <label class="field hidden">
+              <span data-i18n="sharedLine.handoff.openItems">Open items</span>
+              <input id="sharedLineHandoffOpenItems" data-i18n-placeholder="sharedLine.handoff.listPlaceholder" placeholder="item one, item two" />
+            </label>
+            <label class="field hidden">
+              <span data-i18n="sharedLine.handoff.nextStep">Next step</span>
+              <textarea id="sharedLineHandoffNextStep" rows="3" data-i18n-placeholder="sharedLine.handoff.nextStepPlaceholder" placeholder="What should the next agent do first?"></textarea>
+            </label>
+            <button id="createSharedLineHandoff" class="primary full hidden" data-i18n="sharedLine.createHandoff">Create handoff</button>
           </article>
         </div>
       </section>

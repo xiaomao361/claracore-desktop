@@ -11,7 +11,7 @@ It is not a chat client and does not include a primary chat model. The desktop a
 
 ## Current Status
 
-The current version is a working desktop shell with a product-owned local data store and a mostly complete Memoria module.
+The current version is a working desktop shell with a product-owned local data store, a mostly complete Memoria module, and a Desktop-native Shared Line module.
 
 Included:
 
@@ -25,6 +25,9 @@ Included:
 - View-focused Memoria UI for search, graph, labels, all memories, restricted memories, archive/delete review, and manual delete/restore
 - Lazy-loaded Memoria list tabs and cached canvas graph with primary/restricted layers
 - Manual vector rebuild with progress, plus daily small-batch Memoria maintenance
+- Shared Line CLI and Desktop-owned Gateway MCP tools for agent-driven line create/list/get/activate/rename/archive/restore/update/handoff
+- View-focused Shared Line UI for line browsing, agent filtering, current position, metadata, history, snapshots, handoffs, and resume packet review
+- Copy-based import for old Continuity data into Desktop-owned Shared Line tables
 - Backup-gated import preview for old Memoria, Continuity, and InnerLife data
 - Terminal-style runtime log view for maintenance and Gateway traces
 - Chinese and English UI switching

@@ -438,8 +438,8 @@ class ProductDatabase {
   }
 
   async migrateAdditiveSchema() {
-    const columns = new Set((await this.query("PRAGMA table_info(memory_records);")).map((row) => row.name));
-    const additions = [
+    const memoryRecordColumns = new Set((await this.query("PRAGMA table_info(memory_records);")).map((row) => row.name));
+    const memoryRecordAdditions = [
       ["user_id", "ALTER TABLE memory_records ADD COLUMN user_id TEXT NOT NULL DEFAULT 'local-user';"],
       ["local_date", "ALTER TABLE memory_records ADD COLUMN local_date TEXT NOT NULL DEFAULT '';"],
       ["timezone", "ALTER TABLE memory_records ADD COLUMN timezone TEXT NOT NULL DEFAULT 'Asia/Shanghai';"],
@@ -449,8 +449,15 @@ class ProductDatabase {
       ["source_run_id", "ALTER TABLE memory_records ADD COLUMN source_run_id TEXT;"],
       ["dedupe_key", "ALTER TABLE memory_records ADD COLUMN dedupe_key TEXT;"]
     ];
-    for (const [column, sql] of additions) {
-      if (!columns.has(column)) await this.exec(sql);
+    for (const [column, sql] of memoryRecordAdditions) {
+      if (!memoryRecordColumns.has(column)) await this.exec(sql);
+    }
+    const currentPositionColumns = new Set((await this.query("PRAGMA table_info(current_positions);")).map((row) => row.name));
+    const currentPositionAdditions = [
+      ["metadata_json", "ALTER TABLE current_positions ADD COLUMN metadata_json TEXT NOT NULL DEFAULT '{}';"]
+    ];
+    for (const [column, sql] of currentPositionAdditions) {
+      if (!currentPositionColumns.has(column)) await this.exec(sql);
     }
     await this.exec(`
       UPDATE memory_records
@@ -2021,6 +2028,7 @@ class ProductDatabase {
         l.updated_at,
         p.summary,
         p.interpretation_status,
+        p.metadata_json,
         p.updated_at AS position_updated_at
       FROM continuity_lines l
       LEFT JOIN current_positions p ON p.line_id = l.id
@@ -2038,6 +2046,7 @@ class ProductDatabase {
       active: row.id === activeLineId,
       summary: row.summary || "",
       interpretationStatus: row.interpretation_status || "draft",
+      metadata: parseJson(row.metadata_json, {}),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       positionUpdatedAt: row.position_updated_at
@@ -2142,6 +2151,7 @@ class ProductDatabase {
         p.summary,
         p.interpretation_status,
         p.facts_used_json,
+        p.metadata_json,
         p.updated_at
       FROM continuity_lines l
       LEFT JOIN current_positions p ON p.line_id = l.id
@@ -2158,6 +2168,7 @@ class ProductDatabase {
       summary: row.summary || "",
       interpretationStatus: row.interpretation_status || "draft",
       factsUsed: parseJson(row.facts_used_json, []),
+      metadata: parseJson(row.metadata_json, {}),
       updatedAt: row.updated_at || null
     };
   }
@@ -2189,12 +2200,13 @@ class ProductDatabase {
     const snapshotId = newId("position_snapshot");
     const snapshotReason = changesConfirmedPosition ? "confirmed_overwrite" : "save";
     await this.exec(`
-      INSERT INTO current_positions (id, line_id, summary, interpretation_status, facts_used_json, updated_at)
-      VALUES (${sqlString(positionId)}, ${sqlString(lineId)}, ${sqlString(summary)}, ${sqlString(status)}, ${jsonSql(factsUsed)}, CURRENT_TIMESTAMP)
+      INSERT INTO current_positions (id, line_id, summary, interpretation_status, facts_used_json, metadata_json, updated_at)
+      VALUES (${sqlString(positionId)}, ${sqlString(lineId)}, ${sqlString(summary)}, ${sqlString(status)}, ${jsonSql(factsUsed)}, ${jsonSql(input?.metadata || {})}, CURRENT_TIMESTAMP)
       ON CONFLICT(id) DO UPDATE SET
         summary = excluded.summary,
         interpretation_status = excluded.interpretation_status,
         facts_used_json = excluded.facts_used_json,
+        metadata_json = excluded.metadata_json,
         updated_at = CURRENT_TIMESTAMP;
 
       INSERT INTO continuity_position_history (id, line_id, position_id, summary, interpretation_status, facts_used_json, source)
