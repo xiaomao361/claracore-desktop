@@ -31,6 +31,9 @@ const mcpConfig = document.querySelector("#mcpConfig");
 const copyNotice = document.querySelector("#copyNotice");
 const httpEndpointList = document.querySelector("#httpEndpointList");
 const gatewayTraceList = document.querySelector("#gatewayTraceList");
+const logTerminal = document.querySelector("#logTerminal");
+const refreshLogs = document.querySelector("#refreshLogs");
+const toggleLogFollow = document.querySelector("#toggleLogFollow");
 const openGatewayFolder = document.querySelector("#openGatewayFolder");
 const eventList = document.querySelector("#eventList");
 const healthSummary = document.querySelector("#healthSummary");
@@ -105,6 +108,9 @@ const memoryPendingEmbeddingCount = document.querySelector("#memoryPendingEmbedd
 const memoryRestrictedCount = document.querySelector("#memoryRestrictedCount");
 const memoryArchivedCount = document.querySelector("#memoryArchivedCount");
 const memoryLabelList = document.querySelector("#memoryLabelList");
+const processMemoryEmbeddings = document.querySelector("#processMemoryEmbeddings");
+const memoryEmbeddingNotice = document.querySelector("#memoryEmbeddingNotice");
+const memoryEmbeddingProgressBar = document.querySelector("#memoryEmbeddingProgressBar");
 const memoryTabs = Array.from(document.querySelectorAll("[data-memory-tab]"));
 const memoryTabPanels = Array.from(document.querySelectorAll("[data-memory-panel]"));
 const sharedLineSummary = document.querySelector("#sharedLineSummary");
@@ -130,6 +136,7 @@ const translations = {
     "nav.innerLife": "InnerLife",
     "nav.data": "Data",
     "nav.connections": "Connections",
+    "nav.logs": "Logs",
     "nav.agentSetup": "Agent Setup",
     "nav.settings": "Settings",
     "footer.label": "Local ownership",
@@ -157,6 +164,7 @@ const translations = {
     "common.ready": "Ready",
     "common.paused": "Paused",
     "common.missing": "Missing",
+    "common.needsAttention": "Needs attention",
     "common.optionalMissing": "Optional missing",
     "common.planned": "Planned",
     "common.notTracked": "Not tracked yet",
@@ -220,6 +228,8 @@ const translations = {
     "memory.store": "Store",
     "memory.policy": "Policy",
     "memory.factsFirst": "Facts first",
+    "memory.boundary": "Boundary",
+    "memory.factsAndRecords": "Facts and records",
     "memory.preview": "Preview",
     "memory.tab.search": "Search",
     "memory.tab.labels": "Labels",
@@ -349,6 +359,21 @@ const translations = {
     "memory.embedding.failed": "Embedding failed",
     "memory.embedding.saved": "Embedding updated",
     "memory.embedding.processing": "Embedding...",
+    "memory.embedding.processPending": "Generate all missing vectors",
+    "memory.embedding.processed": "Processed {count} vector item(s)",
+    "memory.embedding.processFailed": "Vector generation failed",
+    "memory.embedding.nonePending": "No pending vectors",
+    "memory.embedding.progress": "Processed {processed}/{total}; ready {ready}, failed {failed}, pending {pending}",
+    "memory.embedding.stopped": "Some failed; check Logs.",
+    "logs.title": "Logs",
+    "logs.body": "Runtime events and Gateway traces for local debugging.",
+    "logs.runtimeEvents": "Runtime events",
+    "logs.gatewayTraces": "Gateway traces",
+    "logs.localOnly": "Local only",
+    "logs.follow": "Follow",
+    "logs.noRuntimeEvents": "No runtime events yet.",
+    "logs.noGatewayTraces": "No Gateway traces yet.",
+    "logs.empty": "No log lines yet.",
     "sharedLine.title": "Shared Line",
     "sharedLine.body": "Continuity shows the current shared position so agents can resume with less drift.",
     "sharedLine.current": "Current position",
@@ -580,6 +605,12 @@ const translations = {
     "module.gateway.auth": "Auth",
     "module.memoria.location": "Location",
     "module.memoria.localStore": "Local store",
+    "module.memoria.agentSurface": "Agent surface",
+    "module.memoria.records": "Memories",
+    "module.memoria.vectors": "Vectors",
+    "module.memoria.restricted": "Restricted",
+    "module.memoria.maintenance": "Maintenance",
+    "module.memoria.readyForAgents": "CLI + MCP ready",
     "module.continuity.role": "Role",
     "module.continuity.sharedLine": "Shared line",
     "module.innerlife.reason": "Reason",
@@ -619,6 +650,7 @@ const translations = {
     "nav.innerLife": "内在活动",
     "nav.data": "数据",
     "nav.connections": "连接",
+    "nav.logs": "日志",
     "nav.agentSetup": "Agent 设置",
     "nav.settings": "设置",
     "footer.label": "本机掌控",
@@ -646,6 +678,7 @@ const translations = {
     "common.ready": "可用",
     "common.paused": "已暂停",
     "common.missing": "缺失",
+    "common.needsAttention": "需要处理",
     "common.optionalMissing": "可选项缺失",
     "common.planned": "待实现",
     "common.notTracked": "尚未记录",
@@ -709,6 +742,8 @@ const translations = {
     "memory.store": "存储位置",
     "memory.policy": "策略",
     "memory.factsFirst": "事实优先",
+    "memory.boundary": "边界",
+    "memory.factsAndRecords": "事实与流水",
     "memory.preview": "预览",
     "memory.tab.search": "搜索",
     "memory.tab.labels": "标签",
@@ -838,6 +873,21 @@ const translations = {
     "memory.embedding.failed": "向量失败",
     "memory.embedding.saved": "向量状态已更新",
     "memory.embedding.processing": "正在生成向量...",
+    "memory.embedding.processPending": "生成全部缺失向量",
+    "memory.embedding.processed": "已处理 {count} 条向量",
+    "memory.embedding.processFailed": "向量生成失败",
+    "memory.embedding.nonePending": "没有待生成向量",
+    "memory.embedding.progress": "已处理 {processed}/{total}；成功 {ready}，失败 {failed}，待处理 {pending}",
+    "memory.embedding.stopped": "部分失败，查看日志。",
+    "logs.title": "日志",
+    "logs.body": "本机运行事件和 Gateway 调用轨迹，用于调试。",
+    "logs.runtimeEvents": "运行事件",
+    "logs.gatewayTraces": "Gateway 轨迹",
+    "logs.localOnly": "仅本机",
+    "logs.follow": "跟随",
+    "logs.noRuntimeEvents": "还没有运行事件。",
+    "logs.noGatewayTraces": "还没有 Gateway 轨迹。",
+    "logs.empty": "还没有日志行。",
     "sharedLine.title": "共同线",
     "sharedLine.body": "Continuity 显示当前共同位置，让智能体接续时更少偏移。",
     "sharedLine.current": "当前位置",
@@ -1069,6 +1119,12 @@ const translations = {
     "module.gateway.auth": "授权",
     "module.memoria.location": "位置",
     "module.memoria.localStore": "本机存储",
+    "module.memoria.agentSurface": "Agent 接口",
+    "module.memoria.records": "记忆",
+    "module.memoria.vectors": "向量",
+    "module.memoria.restricted": "受限",
+    "module.memoria.maintenance": "维护",
+    "module.memoria.readyForAgents": "CLI + MCP 可用",
     "module.continuity.role": "作用",
     "module.continuity.sharedLine": "共同线",
     "module.innerlife.reason": "原因",
@@ -1141,6 +1197,11 @@ const views = {
     subtitleKey: "view.connections.subtitle",
     panel: document.querySelector("#connectionsView")
   },
+  logs: {
+    titleKey: "logs.title",
+    subtitleKey: "logs.body",
+    panel: document.querySelector("#logsView")
+  },
   "agent-setup": {
     titleKey: "view.agentSetup.title",
     subtitleKey: "view.agentSetup.subtitle",
@@ -1162,6 +1223,11 @@ let memoryGraphState = null;
 let memoryGraphAnimation = null;
 let memoryGraphDrag = null;
 let activeMemoryGraphLayer = "primary";
+let memoryEmbeddingBatchRunning = false;
+let logFollowEnabled = true;
+let logRefreshTimer = null;
+let logRefreshInFlight = false;
+const liveLogLines = [];
 const loadedMemoryTabs = {
   all: false,
   restricted: false,
@@ -1273,11 +1339,15 @@ function moduleDetails(module) {
     ];
   }
   if (module.id === "memoria") {
+    const stats = snapshot?.memoryStats || {};
+    const maintenance = snapshot?.memoryMaintenance || {};
+    const vectorSummary = `${stats.embeddedCount ?? 0} / ${stats.pendingEmbeddingCount ?? 0}${stats.failedEmbeddingCount ? ` / ${stats.failedEmbeddingCount}` : ""}`;
     return [
-      [t("home.model.provider"), t("common.sqlite")],
-      [t("module.memoria.location"), t("module.memoria.localStore")],
-      [t("common.status"), module.present ? t("common.ok") : t("common.missing")],
-      [t("common.path"), module.servicePath]
+      [t("module.memoria.agentSurface"), t("module.memoria.readyForAgents")],
+      [t("module.memoria.records"), `${stats.activeCount ?? 0} / ${stats.totalCount ?? 0}`],
+      [t("module.memoria.vectors"), vectorSummary],
+      [t("module.memoria.restricted"), String(stats.restrictedCount ?? 0)],
+      [t("module.memoria.maintenance"), maintenance.status === "ok" ? t("common.ok") : t("common.needsAttention")]
     ];
   }
   if (module.id === "continuity") {
@@ -1320,7 +1390,7 @@ function renderModules(modules) {
             ${serviceBadge(module)}
           </header>
           <div class="module-details">${details}</div>
-          <button class="module-action secondary">${
+          <button class="module-action secondary" data-module-open="${module.id}">${
             module.state === "paused"
               ? t("module.action.enableInnerLife")
               : module.state === "planned"
@@ -1442,6 +1512,57 @@ function renderConnections() {
       `
     )
     .join("");
+}
+
+function renderLogs() {
+  const runtimeEvents = (snapshot?.runtimeEvents || []).map((event) => ({
+    createdAt: event.createdAt || "",
+    line: `[${event.createdAt || ""}] [${event.level || "info"}/${event.source || "runtime"}] ${event.message || ""}${
+      event.metadata && Object.keys(event.metadata).length ? ` ${JSON.stringify(event.metadata)}` : ""
+    }`
+  }));
+  const gatewayEvents = (snapshot?.gatewayTraces || []).map((trace) => ({
+    createdAt: trace.createdAt || "",
+    line: `[${trace.createdAt || ""}] [gateway/${trace.status || "ok"}] ${trace.toolName || "unknown"} ${String(trace.durationMs ?? 0)}ms ${
+      trace.error || trace.responseSummary || ""
+    }`
+  }));
+  const lines = [...runtimeEvents, ...gatewayEvents, ...liveLogLines]
+    .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
+    .slice(-200)
+    .map((entry) => entry.line);
+  logTerminal.textContent = lines.length ? lines.join("\n") : t("logs.empty");
+  toggleLogFollow.classList.toggle("active", logFollowEnabled);
+  if (logFollowEnabled) {
+    logTerminal.scrollTop = logTerminal.scrollHeight;
+  }
+}
+
+function appendLiveLogLine(source, message) {
+  const createdAt = new Date().toISOString();
+  liveLogLines.push({
+    createdAt,
+    line: `[${createdAt}] [ui/${source}] ${message}`
+  });
+  while (liveLogLines.length > 80) liveLogLines.shift();
+  renderLogs();
+}
+
+function setEmbeddingProgress(stats, progress) {
+  memoryEmbeddedCount.textContent = stats.embeddedCount ?? 0;
+  memoryPendingEmbeddingCount.textContent = stats.pendingEmbeddingCount ?? 0;
+  const pending = Number(stats.pendingEmbeddingCount || 0);
+  const text = t("memory.embedding.progress", {
+    processed: progress.processed,
+    total: progress.total,
+    ready: progress.ready,
+    failed: progress.failed,
+    pending
+  });
+  memoryEmbeddingNotice.textContent = text;
+  const percent = progress.total > 0 ? Math.min(100, Math.round((progress.processed / progress.total) * 100)) : 0;
+  memoryEmbeddingProgressBar.style.width = `${percent}%`;
+  appendLiveLogLine("memoria", text);
 }
 
 function buildAgentSetupMarkdown() {
@@ -2341,6 +2462,12 @@ function renderMemoryOverview() {
   memoryDeletedCount.textContent = stats.deletedCount ?? 0;
   memoryEmbeddedCount.textContent = stats.embeddedCount ?? 0;
   memoryPendingEmbeddingCount.textContent = stats.pendingEmbeddingCount ?? 0;
+  if (!memoryEmbeddingBatchRunning) {
+    const actionableEmbeddings = Number(stats.pendingEmbeddingCount || 0) + Number(stats.failedEmbeddingCount || 0);
+    processMemoryEmbeddings.disabled = actionableEmbeddings <= 0;
+    if (actionableEmbeddings <= 0) memoryEmbeddingNotice.textContent = t("memory.embedding.nonePending");
+    if (actionableEmbeddings <= 0) memoryEmbeddingProgressBar.style.width = "0%";
+  }
   memoryRestrictedCount.textContent = stats.restrictedCount ?? 0;
   memoryArchivedCount.textContent = stats.archivedCount ?? 0;
   const labels = stats.labels || [];
@@ -2447,6 +2574,7 @@ function renderSnapshot() {
   renderHealth();
   renderEvents();
   renderConnections();
+  renderLogs();
   renderAgentSetup();
   renderSettings();
   renderMemoryOverview();
@@ -2502,6 +2630,7 @@ function setView(viewName) {
   });
   viewTitle.textContent = t(views[nextView].titleKey);
   viewSubtitle.textContent = t(views[nextView].subtitleKey);
+  syncLogRefreshTimer();
 }
 
 function setLanguage(language) {
@@ -2532,6 +2661,30 @@ async function refresh() {
   }
 }
 
+async function refreshRuntimeSnapshotOnly() {
+  snapshot = await window.ClaraCoreDesktop.getRuntimeSnapshot();
+  renderSnapshot();
+}
+
+function syncLogRefreshTimer() {
+  if (logRefreshTimer) {
+    clearInterval(logRefreshTimer);
+    logRefreshTimer = null;
+  }
+  if (activeView !== "logs" || !logFollowEnabled) return;
+  logRefreshTimer = setInterval(async () => {
+    if (logRefreshInFlight) return;
+    logRefreshInFlight = true;
+    try {
+      await refreshRuntimeSnapshotOnly();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      logRefreshInFlight = false;
+    }
+  }, 2000);
+}
+
 async function refreshResources() {
   const resources = await window.ClaraCoreDesktop.getResourceSnapshot();
   renderResourceSnapshot(resources);
@@ -2551,6 +2704,18 @@ document.querySelectorAll("[data-view]").forEach((button) => {
 
 document.querySelectorAll("[data-view-target]").forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.viewTarget));
+});
+
+moduleGrid.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-module-open]");
+  if (!button) return;
+  const targets = {
+    gateway: "connections",
+    memoria: "memory",
+    continuity: "shared-line",
+    innerlife: "innerlife"
+  };
+  setView(targets[button.dataset.moduleOpen] || "home");
 });
 
 document.querySelectorAll("[data-language]").forEach((button) => {
@@ -2581,6 +2746,54 @@ searchMemory.addEventListener("click", async () => {
   const results = Array.isArray(response) ? response : response?.results || [];
   renderMemoryResults(results);
   if (response?.error) showCopyNotice(t("memory.search.fallback"));
+});
+
+processMemoryEmbeddings.addEventListener("click", async () => {
+  memoryEmbeddingBatchRunning = true;
+  processMemoryEmbeddings.disabled = true;
+  memoryEmbeddingNotice.textContent = t("memory.embedding.processing");
+  const progress = {
+    processed: 0,
+    total: Number(snapshot?.memoryStats?.pendingEmbeddingCount || 0),
+    ready: 0,
+    failed: 0
+  };
+  appendLiveLogLine("memoria", "starting full embedding generation");
+  try {
+    let firstBatch = true;
+    while (true) {
+      const result = await window.ClaraCoreDesktop.processMemoryEmbeddings({
+        batchSize: memoryPaging.pageSize,
+        requeue: firstBatch
+      });
+      firstBatch = false;
+      const results = result?.results || [];
+      progress.processed += Number(result?.processed || results.length || 0);
+      progress.ready += results.filter((item) => item.ok).length;
+      progress.failed += results.filter((item) => !item.ok).length;
+      const stats = await window.ClaraCoreDesktop.getMemoryStats();
+      progress.total = Math.max(progress.total, progress.processed + Number(stats.pendingEmbeddingCount || 0));
+      setEmbeddingProgress(stats, progress);
+      if (!result?.processed || Number(stats.pendingEmbeddingCount || 0) <= 0) break;
+      await new Promise((resolve) => window.setTimeout(resolve, 80));
+    }
+    await refreshRuntimeSnapshotOnly();
+    const finalText =
+      progress.failed > 0
+        ? `${t("memory.embedding.processed", { count: progress.processed })}; ${t("memory.embedding.stopped")}`
+        : t("memory.embedding.processed", { count: progress.processed });
+    memoryEmbeddingNotice.textContent = finalText;
+    appendLiveLogLine("memoria", finalText);
+  } catch (error) {
+    console.error(error);
+    memoryEmbeddingNotice.textContent = t("memory.embedding.processFailed");
+    appendLiveLogLine("memoria", `${t("memory.embedding.processFailed")}: ${error.message || error}`);
+  } finally {
+    memoryEmbeddingBatchRunning = false;
+    const pending = Number(snapshot?.memoryStats?.pendingEmbeddingCount || 0);
+    const failed = Number(snapshot?.memoryStats?.failedEmbeddingCount || 0);
+    processMemoryEmbeddings.disabled = pending <= 0 && failed <= 0;
+  }
 });
 
 memorySearchInput.addEventListener("keydown", (event) => {
@@ -3343,6 +3556,19 @@ refreshButton.addEventListener("click", () => {
   refresh().catch((error) => {
     console.error(error);
   });
+});
+
+refreshLogs.addEventListener("click", () => {
+  refreshRuntimeSnapshotOnly().catch((error) => {
+    console.error(error);
+  });
+});
+
+toggleLogFollow.addEventListener("click", () => {
+  logFollowEnabled = !logFollowEnabled;
+  toggleLogFollow.classList.toggle("active", logFollowEnabled);
+  syncLogRefreshTimer();
+  renderLogs();
 });
 
 primaryAction.addEventListener("click", () => {

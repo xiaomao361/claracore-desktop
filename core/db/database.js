@@ -620,6 +620,41 @@ class ProductDatabase {
     return this.getMemory(memoryId);
   }
 
+  async updateMemoryLabels(id, input = {}) {
+    const memoryId = String(id || "").trim();
+    if (!memoryId) throw new Error("Memory id is required.");
+    const memory = await this.getMemory(memoryId);
+    if (!memory) throw new Error("Memory not found.");
+    if (memory.status !== "active") throw new Error("Only active Memory records can be tagged.");
+    const addLabels = await this.canonicalizeMemoryLabels(input.add || []);
+    const removeLabels = await this.canonicalizeMemoryLabels(input.remove || []);
+    const existing = new Set(memory.labels || []);
+    for (const label of addLabels) existing.add(label);
+    for (const label of removeLabels) existing.delete(label);
+    const labels = [...existing].sort((left, right) => left.localeCompare(right));
+    const labelSql = labels
+      .map(
+        (label) => `
+          INSERT INTO memory_labels (memory_id, label)
+          VALUES (${sqlString(memoryId)}, ${sqlString(label)})
+          ON CONFLICT(memory_id, label) DO NOTHING;
+        `
+      )
+      .join("\n");
+    await this.exec(`
+      DELETE FROM memory_labels WHERE memory_id = ${sqlString(memoryId)};
+      ${labelSql}
+      UPDATE memories
+      SET updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${sqlString(memoryId)};
+    `);
+    return {
+      memory: await this.getMemory(memoryId),
+      added: addLabels,
+      removed: removeLabels
+    };
+  }
+
   async deleteMemory(id) {
     const memoryId = String(id || "").trim();
     if (!memoryId) throw new Error("Memory id is required.");
@@ -1220,6 +1255,91 @@ class ProductDatabase {
     };
   }
 
+  async getMemoryAuditReport(input = {}) {
+    const safeLimit = Math.max(1, Math.min(50, Number.parseInt(String(input.limit || 10), 10) || 10));
+    const maintenance = await this.getMemoryMaintenanceReport();
+    const mergeSuggestions = await this.getMemoryMergeSuggestions({ limit: safeLimit });
+    const archiveSuggestions = await this.getMemoryArchiveSuggestions({
+      limit: safeLimit,
+      olderThanDays: input.olderThanDays || 30
+    });
+    const aliasRows = await this.query(`
+      SELECT alias, canonical_label
+      FROM memory_label_aliases
+      ORDER BY alias ASC
+      LIMIT ${safeLimit};
+    `);
+    const failedEmbeddingRows = await this.query(`
+      SELECT m.id, m.title, substr(m.body, 1, 160) AS body_preview, e.error, e.embedded_at
+      FROM memories m
+      JOIN memory_embeddings e ON e.memory_id = m.id
+      WHERE m.status = 'active'
+        AND m.sensitivity != 'restricted'
+        AND e.status = 'failed'
+      ORDER BY e.embedded_at DESC
+      LIMIT ${safeLimit};
+    `);
+    const missingTitleRows = await this.query(`
+      SELECT id, substr(body, 1, 160) AS body_preview, created_at, updated_at
+      FROM memories
+      WHERE status = 'active'
+        AND sensitivity != 'restricted'
+        AND COALESCE(title, '') = ''
+      ORDER BY updated_at DESC, created_at DESC
+      LIMIT ${safeLimit};
+    `);
+    const duplicateTitleRows = await this.query(`
+      SELECT lower(title) AS title_key, COUNT(*) AS count, group_concat(id, ',') AS ids
+      FROM memories
+      WHERE status = 'active'
+        AND sensitivity != 'restricted'
+        AND COALESCE(title, '') != ''
+      GROUP BY lower(title)
+      HAVING COUNT(*) > 1
+      ORDER BY count DESC, title_key ASC
+      LIMIT ${safeLimit};
+    `);
+    return {
+      generatedAt: new Date().toISOString(),
+      status:
+        maintenance.status !== "ok" ||
+        mergeSuggestions.count > 0 ||
+        archiveSuggestions.count > 0 ||
+        failedEmbeddingRows.length > 0 ||
+        missingTitleRows.length > 0 ||
+        duplicateTitleRows.length > 0
+          ? "needs_review"
+          : "ok",
+      maintenance,
+      review: {
+        mergeSuggestions,
+        archiveSuggestions,
+        failedEmbeddings: failedEmbeddingRows.map((row) => ({
+          id: row.id,
+          title: row.title || "",
+          bodyPreview: row.body_preview || "",
+          error: row.error || "",
+          embeddedAt: row.embedded_at || ""
+        })),
+        missingTitles: missingTitleRows.map((row) => ({
+          id: row.id,
+          bodyPreview: row.body_preview || "",
+          createdAt: row.created_at,
+          updatedAt: row.updated_at
+        })),
+        duplicateTitles: duplicateTitleRows.map((row) => ({
+          title: row.title_key,
+          count: row.count || 0,
+          ids: row.ids ? row.ids.split(",").filter(Boolean) : []
+        })),
+        labelAliases: aliasRows.map((row) => ({
+          alias: row.alias,
+          canonicalLabel: row.canonical_label
+        }))
+      }
+    };
+  }
+
   async getMemoryMergeSuggestions(input = {}) {
     const safeLimit = Math.max(1, Math.min(50, Number.parseInt(String(input.limit || 10), 10) || 10));
     const rows = await this.query(`
@@ -1806,6 +1926,43 @@ class ProductDatabase {
       processed: results.length,
       results
     };
+  }
+
+  async recordRuntimeEvent(input = {}) {
+    const id = newId("event");
+    const level = ["debug", "info", "warn", "error"].includes(input.level) ? input.level : "info";
+    const source = String(input.source || "runtime").trim() || "runtime";
+    const message = String(input.message || "").trim() || "Runtime event";
+    await this.exec(`
+      INSERT INTO runtime_events (id, level, source, message, metadata_json)
+      VALUES (${sqlString(id)}, ${sqlString(level)}, ${sqlString(source)}, ${sqlString(message)}, ${jsonSql(input.metadata || {})});
+    `);
+    return (await this.listRuntimeEvents({ limit: 1 })).find((event) => event.id === id);
+  }
+
+  async listRuntimeEvents(input = {}) {
+    const safeLimit = Math.max(1, Math.min(Number.parseInt(String(input.limit || 50), 10) || 50, 200));
+    const level = String(input.level || "").trim();
+    const source = String(input.source || "").trim();
+    const filters = [];
+    if (level) filters.push(`level = ${sqlString(level)}`);
+    if (source) filters.push(`source = ${sqlString(source)}`);
+    const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
+    const rows = await this.query(`
+      SELECT id, level, source, message, metadata_json, created_at
+      FROM runtime_events
+      ${where}
+      ORDER BY created_at DESC, id DESC
+      LIMIT ${safeLimit};
+    `);
+    return rows.map((row) => ({
+      id: row.id,
+      level: row.level,
+      source: row.source,
+      message: row.message,
+      metadata: parseJson(row.metadata_json, {}),
+      createdAt: row.created_at
+    }));
   }
 
   async ensureDefaultContinuityLine() {

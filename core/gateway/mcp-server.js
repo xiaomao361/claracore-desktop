@@ -156,6 +156,21 @@ function toolDefinitions() {
       }
     },
     {
+      name: "memoria_get",
+      title: "Get Memory",
+      description: "Get one ClaraCore Desktop memory record by id, including labels, status, sensitivity, and embedding state.",
+      inputSchema: {
+        type: "object",
+        required: ["id"],
+        properties: {
+          id: {
+            type: "string"
+          }
+        },
+        additionalProperties: false
+      }
+    },
+    {
       name: "memoria_create",
       title: "Create Memory",
       description: "Create a ClaraCore Desktop memory record. Use factual, reviewable content.",
@@ -223,6 +238,39 @@ function toolDefinitions() {
           sensitivity: {
             type: "string",
             enum: ["normal", "restricted"]
+          }
+        },
+        additionalProperties: false
+      }
+    },
+    {
+      name: "memoria_tag",
+      title: "Tag Memory",
+      description: "Incrementally add or remove labels on an active ClaraCore Desktop memory record.",
+      inputSchema: {
+        type: "object",
+        required: ["id"],
+        properties: {
+          id: {
+            type: "string"
+          },
+          add: {
+            oneOf: [
+              { type: "string" },
+              {
+                type: "array",
+                items: { type: "string" }
+              }
+            ]
+          },
+          remove: {
+            oneOf: [
+              { type: "string" },
+              {
+                type: "array",
+                items: { type: "string" }
+              }
+            ]
           }
         },
         additionalProperties: false
@@ -440,6 +488,27 @@ function toolDefinitions() {
         properties: {
           dryRun: {
             type: "boolean"
+          }
+        },
+        additionalProperties: false
+      }
+    },
+    {
+      name: "memoria_maintenance_audit",
+      title: "Memory Maintenance Audit",
+      description: "Read a review-oriented Memory audit report with maintenance issues, merge/archive candidates, failed embeddings, duplicate titles, and label aliases.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          limit: {
+            type: "number",
+            minimum: 1,
+            maximum: 50
+          },
+          olderThanDays: {
+            type: "number",
+            minimum: 1,
+            maximum: 3650
           }
         },
         additionalProperties: false
@@ -1021,6 +1090,10 @@ async function callToolBody(name, args = {}, paths, database) {
   if (name === "memoria_search") {
     return textResult(await database.searchMemories(args.query || "", args.limit || 50));
   }
+  if (name === "memoria_get") {
+    const memory = await database.getMemory(args.id);
+    return textResult(memory ? { memory } : { error: "not found", id: args.id });
+  }
   if (name === "memoria_create") {
     const memory = await database.createMemory(args);
     await database.processPendingEmbeddings(1);
@@ -1034,6 +1107,9 @@ async function callToolBody(name, args = {}, paths, database) {
     return textResult({
       memory
     });
+  }
+  if (name === "memoria_tag") {
+    return textResult(await database.updateMemoryLabels(args.id, args));
   }
   if (name === "memoria_restricted_list") {
     return textResult({
@@ -1090,6 +1166,9 @@ async function callToolBody(name, args = {}, paths, database) {
   }
   if (name === "memoria_maintenance_run") {
     return textResult(await database.runMemoryMaintenance(args));
+  }
+  if (name === "memoria_maintenance_audit") {
+    return textResult(await database.getMemoryAuditReport(args));
   }
   if (name === "memoria_export") {
     return textResult(await exportProductMemoryArchive(runtimeAppForGateway(), args));

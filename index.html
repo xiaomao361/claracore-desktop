@@ -22,6 +22,7 @@
         <button class="nav-item" data-view="innerlife" data-i18n="nav.innerLife">InnerLife</button>
         <button class="nav-item" data-view="data" data-i18n="nav.data">Data</button>
         <button class="nav-item" data-view="connections" data-i18n="nav.connections">Connections</button>
+        <button class="nav-item" data-view="logs" data-i18n="nav.logs">Logs</button>
         <button class="nav-item" data-view="agent-setup" data-i18n="nav.agentSetup">Agent Setup</button>
         <button class="nav-item" data-view="settings" data-i18n="nav.settings">Settings</button>
       </nav>
@@ -140,8 +141,8 @@
               <strong id="memoryStore">Checking...</strong>
             </div>
             <div>
-              <span data-i18n="memory.policy">Policy</span>
-              <strong data-i18n="memory.factsFirst">Facts first</strong>
+              <span data-i18n="memory.boundary">Boundary</span>
+              <strong data-i18n="memory.factsAndRecords">Facts and records</strong>
             </div>
           </section>
         </div>
@@ -156,6 +157,13 @@
               <div><span data-i18n="memory.stats.pending">Pending</span><strong id="memoryPendingEmbeddingCount">0</strong></div>
               <div><span data-i18n="memory.stats.restricted">Restricted</span><strong id="memoryRestrictedCount">0</strong></div>
               <div><span data-i18n="memory.stats.archived">Archived</span><strong id="memoryArchivedCount">0</strong></div>
+            </div>
+            <div class="memory-embedding-actions">
+              <button id="processMemoryEmbeddings" class="primary" data-i18n="memory.embedding.processPending">Generate all missing vectors</button>
+              <span id="memoryEmbeddingNotice"></span>
+            </div>
+            <div class="memory-embedding-progress" aria-hidden="true">
+              <div id="memoryEmbeddingProgressBar"></div>
             </div>
             <div class="memory-labels">
               <strong data-i18n="memory.labels.title">Labels</strong>
@@ -392,6 +400,24 @@
             <div id="gatewayTraceList" class="endpoint-list"></div>
             <h2 class="section-title" data-i18n="connections.httpEndpoints">HTTP endpoints</h2>
             <div id="httpEndpointList" class="endpoint-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="logsView" class="view">
+        <div class="logs-grid">
+          <article class="panel main-panel log-terminal-panel">
+            <div class="panel-heading">
+              <div>
+                <h2 data-i18n="logs.title">Logs</h2>
+                <p data-i18n="logs.body">Runtime events and Gateway traces for local debugging.</p>
+              </div>
+              <div class="log-toolbar">
+                <button id="refreshLogs" class="secondary" data-i18n="actions.refresh">Refresh</button>
+                <button id="toggleLogFollow" class="secondary active" data-i18n="logs.follow">Follow</button>
+              </div>
+            </div>
+            <pre id="logTerminal" class="log-terminal" aria-live="polite"></pre>
           </article>
         </div>
       </section>

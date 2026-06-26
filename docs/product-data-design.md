@@ -345,16 +345,17 @@ Implemented:
 - Desktop can list archived Memory records and restore them to active status.
 - Desktop can export Memory data to a portable JSON file outside whole-database backup.
 - Desktop can import a portable Memory JSON file by adding missing records and skipping existing IDs.
-- Desktop-owned Gateway MCP entry can expose Memory status/list/search/create/update/delete/restore/stats tools over stdio.
+- Desktop-owned Gateway MCP entry can expose Memory status/list/get/search/create/update/tag/delete/restore/stats tools over stdio.
 - Desktop-owned Gateway MCP entry can expose restricted Memory list/restrict/unrestrict tools over stdio.
 - Desktop-owned Gateway MCP entry can expose Memory label alias list/create/delete tools over stdio.
 - Desktop-owned Gateway MCP entry can expose the bounded Memory graph over stdio.
-- Desktop-owned Gateway MCP entry can expose Memory maintenance check/run tools over stdio.
+- Desktop-owned Gateway MCP entry can expose Memory maintenance check/run/audit tools over stdio.
 - Desktop-owned Gateway MCP entry can expose Memory merge suggestion/run tools over stdio.
 - Desktop-owned Gateway MCP entry can expose Memory archive/list/restore and dormant archive tools over stdio.
 - Desktop-owned Gateway MCP entry can expose portable Memory JSON export/import tools over stdio.
 - Desktop-owned Gateway MCP entry exposes `gateway_docs` so agents can read setup notes, available tools, and CLI fallback.
 - Desktop can manually generate a local Ollama embedding for a Memory record.
+- Desktop Memory UI can manually process all currently pending embeddings in 20-record batches with visible progress, primarily for imported records.
 - Desktop automatically processes pending Memory embeddings after create/update.
 - Memory embedding state is visible in the Memory list.
 - Memory search source and match score are visible in the Memory list when applicable.
@@ -369,7 +370,9 @@ Implemented:
 - Creating a label alias merges existing alias labels into the canonical label.
 - Memory graph reads from product-owned Memory labels and Shared Line `factsUsed` references.
 - Memory maintenance can requeue bad embedding state without calling Ollama directly, and can rewrite alias labels to canonical labels.
-- Memory nightly maintenance runs at most once per local day by Desktop scheduler and refreshes Memory graph cache files.
+- Memory nightly maintenance runs at most once per local day by Desktop scheduler, processes a small pending embedding batch, and refreshes Memory graph cache files.
+- Desktop Logs page shows runtime events and Gateway traces in a terminal-style auto-refreshing debug console.
+- Desktop Home reports Memoria as product-ready from the Desktop runtime snapshot when the product database is initialized and Memoria MCP/CLI surfaces are available; this status is independent of the old Memoria service process.
 - Memory merge suggestions are generated only from active non-restricted Memory records.
 - Memory merge is conservative: the target stays active, the source becomes deleted, and restricted records are blocked from merge.
 - Memory archive suggestions are generated only from active non-restricted Memory records older than the configured age threshold.
@@ -377,6 +380,12 @@ Implemented:
 - Portable Memory JSON archives include memories, deleted/restricted state, labels, label aliases, and structured records.
 - Portable Memory JSON archives intentionally omit machine-specific embedding vectors; imported active non-restricted memories are queued for embedding regeneration.
 - Portable Memory JSON import does not delete or overwrite current product records; duplicate IDs are skipped.
+
+Deferred:
+
+- Old Memoria REST API compatibility is intentionally deferred. Desktop's Memoria surface is MCP/CLI-first for agents and view-first for humans.
+- Permanent Memory purge remains deferred until a stricter confirmation and audit trail are designed.
+- Conflict/outdated candidate reports and persisted nightly JSON review artifacts remain future maintenance enhancements.
 
 Validated:
 

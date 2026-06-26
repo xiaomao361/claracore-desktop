@@ -75,6 +75,7 @@ Remaining parity gaps:
 
 The current Desktop Memoria UI is view-focused and backed by the product database:
 
+- The Home module card marks Memoria ready from the product runtime snapshot, not from the old service process. The badge should follow `modules[].present/state`, while details summarize CLI/MCP readiness, memory counts, vector counts, restricted count, and maintenance status.
 - Search shows a small recent/search result set first.
 - The `All`, `Restricted`, and `Archive` tabs are lazy-loaded.
 - Memory lists use `limit + offset` pagination. Each load appends 20 rows and updates the visible count, for example `20 / 327`, `40 / 327`.
@@ -114,16 +115,24 @@ The Desktop scheduler runs Memoria maintenance at most once per local day. The d
 Current nightly maintenance includes:
 
 - Requeue missing, failed, or stale embeddings for normal active memories.
+- Process one small pending embedding batch so imported or repaired records do not stay queued forever.
 - Remove orphan memory labels.
 - Canonicalize labels that still use configured aliases.
 - Refresh primary and restricted Memory graph cache files under the Desktop runtime directory.
 
+The Desktop UI also exposes a manual "Generate all missing vectors" action. It first requeues missing, failed, or stale embedding state, then drains the current pending embedding queue in 20-record batches, updates visible progress after each batch, and records runtime log entries with processed, ready, and failed counts. Nightly maintenance intentionally remains small-batch so it does not turn into a long foreground rebuild.
+
+The agent-facing Gateway also exposes `memoria_maintenance_audit`, a read-only review report with maintenance status, merge candidates, dormant archive candidates, failed embedding samples, duplicate-title samples, and label aliases.
+
 Still pending from the old Memoria `maintain nightly` concept:
 
-- Dormant memory candidate reports.
-- Merge candidate review packets.
 - Conflict/outdated candidate reports.
-- A structured nightly JSON review artifact for external agents.
+- A persisted nightly JSON review artifact under the runtime logs directory.
+
+Deferred by product decision:
+
+- REST API compatibility with the old `services/memoria/server/app.py`; Desktop is MCP/CLI-first for agent use.
+- Permanent purge deletion. Keep soft delete, archive, and restore as the default destructive boundary until a stronger confirmation flow is designed.
 
 ## Current First Step
 

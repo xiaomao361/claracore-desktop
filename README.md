@@ -9,18 +9,24 @@ ClaraCore Desktop is the local desktop manager for the first ClaraCore core pack
 
 It is not a chat client and does not include a primary chat model. The desktop app is meant to make the local core visible, configurable, and eventually manageable without starting every service by hand.
 
-## v0.1 Status
+## Current Status
 
-The current version is a working desktop shell with read-only local awareness.
+The current version is a working desktop shell with a product-owned local data store and a mostly complete Memoria module.
 
 Included:
 
 - Electron desktop app
 - ClaraCore root detection
-- Gateway, Memoria, Continuity, and InnerLife module presence checks
-- Home, Memory, Shared Line, InnerLife, Data, Connections, and Settings pages
+- Product-owned SQLite data root under Desktop user data
+- Home, Memoria, Shared Line, InnerLife, Data, Connections, Settings, and Logs pages
 - MCP connection command and copyable config
-- Local HTTP endpoint list
+- Desktop-owned Gateway stdio entry for Memoria MCP tools
+- Memoria CLI for store, recall, get, update, tag, delete, restore, archive, import/export, records, and maintenance audit/run
+- View-focused Memoria UI for search, graph, labels, all memories, restricted memories, archive/delete review, and manual delete/restore
+- Lazy-loaded Memoria list tabs and cached canvas graph with primary/restricted layers
+- Manual vector rebuild with progress, plus daily small-batch Memoria maintenance
+- Backup-gated import preview for old Memoria, Continuity, and InnerLife data
+- Terminal-style runtime log view for maintenance and Gateway traces
 - Chinese and English UI switching
 - macOS menu bar / Windows tray entry
 - Real local resource monitor for uptime, CPU, memory, disk, and local time
@@ -29,10 +35,9 @@ Not included yet:
 
 - Starting or stopping Gateway from Desktop
 - Replacing the existing manually started local gateway
-- Importing existing ClaraCore data into a Desktop-managed runtime
-- Full backup and restore flow
 - Packaged macOS release artifact
 - Windows package
+- Old Memoria REST API compatibility
 
 ## Development Mode
 

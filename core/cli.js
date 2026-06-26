@@ -73,10 +73,10 @@ function usage() {
       "restore --id <memory_id>",
       "archive --id <memory_id>",
       "restore-archived --id <memory_id>",
-      "tag --id <memory_id> --labels a,b",
+      "tag --id <memory_id> [--add a,b] [--remove c,d]",
       "stats",
       "labels",
-      "maintenance check|run [--dry-run]",
+      "maintenance check|run|audit [--dry-run]",
       "export [--target-path <path>] [--allow-external-path]",
       "import --file-path <path> [--allow-external-path]",
       "record add --type <type> --data <json> [--title <text>] [--occurred-at <iso>] [--user-id <id>] [--timezone <tz>] [--dedupe-key <key>] [--note <text>]",
@@ -138,23 +138,24 @@ async function runMemoryCommand(app, command, subcommand, options) {
   if (command === "restore-archived") return { memory: await runtime.restoreArchivedProductMemory(app, requireOption(options, "id")) };
   if (command === "tag") {
     const { database } = await runtime.ensureProductCore(app);
-    const memory = await database.getMemory(requireOption(options, "id"));
-    if (!memory) throw new Error("Memory not found.");
-    return {
-      memory: await runtime.updateProductMemory(app, memory.id, {
-        title: memory.title || "",
-        body: memory.body,
-        labels: splitLabels(options.labels),
-        sensitivity: memory.sensitivity || "normal"
-      })
-    };
+    return database.updateMemoryLabels(requireOption(options, "id"), {
+      add: splitLabels(options.add || options.labels),
+      remove: splitLabels(options.remove)
+    });
   }
   if (command === "stats") return { stats: await runtime.getProductMemoryStats(app) };
   if (command === "labels") return { aliases: await runtime.getProductMemoryLabelAliases(app), stats: await runtime.getProductMemoryStats(app) };
   if (command === "maintenance") {
     if (subcommand === "check") return runtime.getProductMemoryMaintenance(app);
     if (subcommand === "run") return runtime.runProductMemoryMaintenance(app, { dryRun: Boolean(options["dry-run"] || options.dryRun) });
-    throw new Error("maintenance requires check or run.");
+    if (subcommand === "audit") {
+      const { database } = await runtime.ensureProductCore(app);
+      return database.getMemoryAuditReport({
+        limit: Number.parseInt(String(options.limit || 10), 10) || 10,
+        olderThanDays: Number.parseInt(String(options["older-than-days"] || 30), 10) || 30
+      });
+    }
+    throw new Error("maintenance requires check, run, or audit.");
   }
   if (command === "export") {
     return runtime.exportProductMemoryArchive(app, {

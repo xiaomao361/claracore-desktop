@@ -213,8 +213,7 @@ async function getRuntimeSnapshot() {
     },
     modules: snapshot.modules.map((module) => ({
       ...module,
-      present: false,
-      servicePath: "product core planned"
+      servicePath: module.servicePath || (module.id === "memoria" ? snapshot.data.databasePath : "product core planned")
     }))
   };
 }
@@ -388,7 +387,8 @@ async function runMemoryMaintenanceScheduledTick() {
     await saveProductSettings(app, { "memory.maintenance.last_run_date": today });
     notifyRuntimeChanged("memory-maintenance-nightly", {
       actions: result?.actions || [],
-      graphCache: result?.graphCache || null
+      graphCache: result?.graphCache || null,
+      embeddings: result?.embeddings || null
     });
   } catch (error) {
     console.error("Memoria maintenance scheduler failed:", error);

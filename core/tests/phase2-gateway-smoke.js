@@ -21,8 +21,10 @@ async function main() {
       "gateway_docs",
       "memoria_list",
       "memoria_search",
+      "memoria_get",
       "memoria_create",
       "memoria_update",
+      "memoria_tag",
       "memoria_delete",
       "memoria_restore",
       "memoria_archive",
@@ -34,6 +36,7 @@ async function main() {
       "memoria_graph",
       "memoria_maintenance_check",
       "memoria_maintenance_run",
+      "memoria_maintenance_audit",
       "memoria_export",
       "memoria_import",
       "memoria_merge_suggestions",
@@ -68,6 +71,10 @@ async function main() {
     });
     const created = parseTextResult(createdResponse).memory;
     if (!created?.id) throw new Error("Gateway memoria_create did not return a Memory id.");
+    const fetched = parseTextResult(await client.callTool("memoria_get", { id: created.id })).memory;
+    if (fetched?.id !== created.id || !fetched.labels.includes("gateway")) {
+      throw new Error(`Gateway memoria_get did not return created Memory details: ${JSON.stringify(fetched)}`);
+    }
 
     const aliasCreate = parseTextResult(await client.callTool("memoria_label_alias_create", {
       alias: "gw",
@@ -106,6 +113,10 @@ async function main() {
     const maintenanceDryRun = parseTextResult(await client.callTool("memoria_maintenance_run", { dryRun: true }));
     if (!maintenanceDryRun.dryRun || !maintenanceDryRun.before || !maintenanceDryRun.after) {
       throw new Error(`Gateway memoria_maintenance_run dry run returned invalid result: ${JSON.stringify(maintenanceDryRun)}`);
+    }
+    const maintenanceAudit = parseTextResult(await client.callTool("memoria_maintenance_audit", { limit: 5 }));
+    if (!["ok", "needs_review"].includes(maintenanceAudit.status) || !maintenanceAudit.review) {
+      throw new Error(`Gateway memoria_maintenance_audit returned invalid report: ${JSON.stringify(maintenanceAudit)}`);
     }
     const exportedArchive = parseTextResult(await client.callTool("memoria_export"));
     if (!exportedArchive.path || exportedArchive.counts.memories < 1) {
@@ -192,6 +203,10 @@ async function main() {
     if (!updated.labels.includes("gateway") || updated.labels.includes("gw")) {
       throw new Error(`Gateway memoria_update did not canonicalize alias labels: ${JSON.stringify(updated.labels)}`);
     }
+    const tagged = parseTextResult(await client.callTool("memoria_tag", { id: created.id, add: "agent-facing", remove: "updated" }));
+    if (!tagged.memory.labels.includes("agent-facing") || tagged.memory.labels.includes("updated")) {
+      throw new Error(`Gateway memoria_tag did not add/remove labels incrementally: ${JSON.stringify(tagged)}`);
+    }
     const restrictedCreated = parseTextResult(
       await client.callTool("memoria_create", {
         title: "Gateway restricted smoke",
@@ -263,7 +278,7 @@ async function main() {
 
     await client.callTool("memoria_delete", { id: created.id });
     const statsAfterDelete = parseTextResult(await client.callTool("memoria_stats"));
-    if (statsAfterDelete.deletedCount !== 2 || statsAfterDelete.labels.some((item) => item.label === "updated")) {
+    if (statsAfterDelete.deletedCount !== 2 || statsAfterDelete.labels.some((item) => item.label === "agent-facing")) {
       throw new Error(`Gateway memoria_stats did not reflect delete and labels: ${JSON.stringify(statsAfterDelete)}`);
     }
     const afterDeleteResponse = await client.callTool("memoria_search", {
@@ -282,7 +297,7 @@ async function main() {
     if (statsAfterRestore.deletedCount !== 1 || statsAfterRestore.activeCount !== 3) {
       throw new Error(`Gateway memoria_stats did not reflect restore: ${JSON.stringify(statsAfterRestore)}`);
     }
-    if (!statsAfterRestore.labels.some((item) => item.label === "updated")) {
+    if (!statsAfterRestore.labels.some((item) => item.label === "agent-facing")) {
       throw new Error(`Gateway memoria_stats did not restore active labels: ${JSON.stringify(statsAfterRestore)}`);
     }
 

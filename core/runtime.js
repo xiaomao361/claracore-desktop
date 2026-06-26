@@ -203,7 +203,8 @@ function productModules() {
       label: "Memoria",
       descriptionKey: "module.memoria.description",
       required: true,
-      state: "planned"
+      present: true,
+      state: "ready"
     },
     {
       id: "continuity",
@@ -342,6 +343,7 @@ async function buildProductSnapshot(app) {
   const sharedLine = await database.getResumePacket();
   const innerLife = await database.getInnerLifeSnapshot();
   const gatewayTraces = await database.listGatewayTraces({ limit: 20 });
+  const runtimeEvents = await database.listRuntimeEvents({ limit: 50 });
   const importPreview = await previewImportSources();
   const backups = await database.listBackups(5);
   const health = buildHealthChecks(app, paths, configuration, databaseSummary, await canWriteRuntimeProbe(paths));
@@ -354,6 +356,7 @@ async function buildProductSnapshot(app) {
     data: {
       root: paths.dataRoot,
       databasePath: paths.databasePath,
+      databasePresent: Boolean(databaseSummary.initialized),
       backupsDir: paths.backupsDir,
       exportsDir: paths.exportsDir,
       runtimeDir: paths.runtimeDir,
@@ -378,6 +381,7 @@ async function buildProductSnapshot(app) {
     sharedLine,
     innerLife,
     gatewayTraces,
+    runtimeEvents,
     importPreview,
     backups,
     modules: productModules(),
@@ -554,11 +558,25 @@ async function runProductMemoryMaintenance(app, input = {}) {
   const database = await initializeProductDatabase(paths.databasePath);
   const maintenance = await database.runMemoryMaintenance(input || {});
   let graphCache = null;
+  let embeddings = null;
   if (input?.dryRun !== true) {
+    embeddings = await database.processPendingEmbeddings(input?.embeddingLimit ?? 20);
     graphCache = await refreshMemoryGraphCaches(paths, database);
+    await database.recordRuntimeEvent({
+      level: embeddings.results?.some((item) => !item.ok) ? "warn" : "info",
+      source: "memoria",
+      message: "Memoria maintenance completed",
+      metadata: {
+        scheduled: Boolean(input?.scheduled),
+        actions: maintenance.actions || [],
+        embeddings: summarizeEmbeddingProcessResult(embeddings),
+        graphCache
+      }
+    });
   }
   return {
     ...maintenance,
+    embeddings,
     graphCache
   };
 }
@@ -588,9 +606,74 @@ async function embedProductMemory(app, id) {
   return database.embedMemory(id);
 }
 
-async function processProductMemoryEmbeddings(app, limit = 5) {
+function summarizeEmbeddingProcessResult(result) {
+  const rows = result?.results || [];
+  return {
+    processed: Number(result?.processed || rows.length || 0),
+    ready: rows.filter((item) => item.ok).length,
+    failed: rows.filter((item) => !item.ok).length,
+    batches: Number(result?.batches || 1)
+  };
+}
+
+function normalizeEmbeddingProcessInput(input) {
+  if (input && typeof input === "object" && !Array.isArray(input)) {
+    return {
+      all: Boolean(input.all || input.mode === "all"),
+      requeue: Boolean(input.requeue),
+      batchSize: Math.max(1, Math.min(20, Number.parseInt(String(input.batchSize || input.limit || 20), 10) || 20))
+    };
+  }
+  return {
+    all: false,
+    requeue: false,
+    batchSize: Math.max(1, Math.min(20, Number.parseInt(String(input || 5), 10) || 5))
+  };
+}
+
+async function processProductMemoryEmbeddings(app, input = 5) {
   const { database } = await ensureProductCore(app);
-  return database.processPendingEmbeddings(limit);
+  const options = normalizeEmbeddingProcessInput(input);
+  let result;
+  if (options.all) {
+    const maintenance = await database.runMemoryMaintenance({});
+    const results = [];
+    let batches = 0;
+    while (batches < 1000) {
+      const batch = await database.processPendingEmbeddings(options.batchSize);
+      batches += 1;
+      results.push(...(batch.results || []));
+      if (!batch.processed) break;
+    }
+    result = {
+      mode: "all",
+      batchSize: options.batchSize,
+      batches,
+      processed: results.length,
+      maintenanceActions: maintenance.actions || [],
+      results
+    };
+  } else {
+    const maintenance = options.requeue ? await database.runMemoryMaintenance({}) : null;
+    result = {
+      mode: "batch",
+      batchSize: options.batchSize,
+      maintenanceActions: maintenance?.actions || [],
+      ...(await database.processPendingEmbeddings(options.batchSize))
+    };
+  }
+  const summary = summarizeEmbeddingProcessResult(result);
+  await database.recordRuntimeEvent({
+    level: summary.failed > 0 ? "warn" : "info",
+    source: "memoria",
+    message: options.all ? "Processed all pending Memory embeddings" : "Processed pending Memory embedding batch",
+    metadata: {
+      mode: result.mode,
+      batchSize: options.batchSize,
+      ...summary
+    }
+  });
+  return result;
 }
 
 async function exportProductMemoryArchive(app, input = {}) {
