@@ -5,19 +5,36 @@ const refreshButton = document.querySelector("#refreshButton");
 const primaryAction = document.querySelector("#primaryAction");
 const openDevelopmentPlan = document.querySelector("#openDevelopmentPlan");
 const openDesignPlan = document.querySelector("#openDesignPlan");
-const coreStatus = document.querySelector("#coreStatus");
-const coreHint = document.querySelector("#coreHint");
 const dataLocation = document.querySelector("#dataLocation");
 const dataHint = document.querySelector("#dataHint");
 const dataRootPath = document.querySelector("#dataRootPath");
+const exportBackup = document.querySelector("#exportBackup");
+const exportMemoryArchive = document.querySelector("#exportMemoryArchive");
+const importMemoryArchive = document.querySelector("#importMemoryArchive");
+const importOldMemoria = document.querySelector("#importOldMemoria");
+const importOldContinuity = document.querySelector("#importOldContinuity");
+const importOldInnerLife = document.querySelector("#importOldInnerLife");
+const openBackupsFolder = document.querySelector("#openBackupsFolder");
+const backupNotice = document.querySelector("#backupNotice");
+const memoryArchiveNotice = document.querySelector("#memoryArchiveNotice");
+const backupList = document.querySelector("#backupList");
+const importPreviewList = document.querySelector("#importPreviewList");
+const restoreConfirmPanel = document.querySelector("#restoreConfirmPanel");
+const restorePreview = document.querySelector("#restorePreview");
+const restoreConfirmInput = document.querySelector("#restoreConfirmInput");
+const confirmRestoreBackup = document.querySelector("#confirmRestoreBackup");
+const cancelRestoreBackup = document.querySelector("#cancelRestoreBackup");
 const memoryStore = document.querySelector("#memoryStore");
 const memoryStoreShort = document.querySelector("#memoryStoreShort");
 const mcpCommand = document.querySelector("#mcpCommand");
 const mcpConfig = document.querySelector("#mcpConfig");
 const copyNotice = document.querySelector("#copyNotice");
 const httpEndpointList = document.querySelector("#httpEndpointList");
+const gatewayTraceList = document.querySelector("#gatewayTraceList");
 const openGatewayFolder = document.querySelector("#openGatewayFolder");
 const eventList = document.querySelector("#eventList");
+const healthSummary = document.querySelector("#healthSummary");
+const healthList = document.querySelector("#healthList");
 const viewTitle = document.querySelector("#viewTitle");
 const viewSubtitle = document.querySelector("#viewSubtitle");
 const monitorVersion = document.querySelector("#monitorVersion");
@@ -26,6 +43,107 @@ const monitorCpu = document.querySelector("#monitorCpu");
 const monitorRam = document.querySelector("#monitorRam");
 const monitorDisk = document.querySelector("#monitorDisk");
 const monitorTime = document.querySelector("#monitorTime");
+const agentSetupMarkdown = document.querySelector("#agentSetupMarkdown");
+const agentSetupNotice = document.querySelector("#agentSetupNotice");
+const copyAgentSetup = document.querySelector("#copyAgentSetup");
+const memoriaProvider = document.querySelector("#memoriaProvider");
+const memoriaEndpoint = document.querySelector("#memoriaEndpoint");
+const memoriaModel = document.querySelector("#memoriaModel");
+const memoriaDimension = document.querySelector("#memoriaDimension");
+const memoriaSource = document.querySelector("#memoriaSource");
+const innerLifeBackend = document.querySelector("#innerLifeBackend");
+const innerLifeEndpoint = document.querySelector("#innerLifeEndpoint");
+const innerLifeLightModel = document.querySelector("#innerLifeLightModel");
+const innerLifeDeepModel = document.querySelector("#innerLifeDeepModel");
+const innerLifePollSeconds = document.querySelector("#innerLifePollSeconds");
+const innerLifeApiKey = document.querySelector("#innerLifeApiKey");
+const innerLifeSource = document.querySelector("#innerLifeSource");
+const innerLifeNotice = document.querySelector("#innerLifeNotice");
+const startInnerLifeSession = document.querySelector("#startInnerLifeSession");
+const endInnerLifeSession = document.querySelector("#endInnerLifeSession");
+const innerLifeSessionSummary = document.querySelector("#innerLifeSessionSummary");
+const innerLifeInboxInput = document.querySelector("#innerLifeInboxInput");
+const submitInnerLifeInbox = document.querySelector("#submitInnerLifeInbox");
+const runInnerLifeDigest = document.querySelector("#runInnerLifeDigest");
+const enableInnerLifeDaemon = document.querySelector("#enableInnerLifeDaemon");
+const pauseInnerLifeDaemon = document.querySelector("#pauseInnerLifeDaemon");
+const tickInnerLifeDaemon = document.querySelector("#tickInnerLifeDaemon");
+const innerLifeShareContext = document.querySelector("#innerLifeShareContext");
+const checkInnerLifeShareTiming = document.querySelector("#checkInnerLifeShareTiming");
+const innerLifeSessionList = document.querySelector("#innerLifeSessionList");
+const innerLifeDigestList = document.querySelector("#innerLifeDigestList");
+const innerLifeShareCheckList = document.querySelector("#innerLifeShareCheckList");
+const processInnerLifeOnce = document.querySelector("#processInnerLifeOnce");
+const innerLifeShareList = document.querySelector("#innerLifeShareList");
+const innerLifeDaemonStatus = document.querySelector("#innerLifeDaemonStatus");
+const innerLifeNextRun = document.querySelector("#innerLifeNextRun");
+const innerLifeLastResult = document.querySelector("#innerLifeLastResult");
+const innerLifeRecovery = document.querySelector("#innerLifeRecovery");
+const innerLifeDoctorStatus = document.querySelector("#innerLifeDoctorStatus");
+const innerLifeDoctorList = document.querySelector("#innerLifeDoctorList");
+const innerLifePendingCount = document.querySelector("#innerLifePendingCount");
+const innerLifeEventCount = document.querySelector("#innerLifeEventCount");
+const innerLifeThoughtCount = document.querySelector("#innerLifeThoughtCount");
+const saveSettings = document.querySelector("#saveSettings");
+const settingsNotice = document.querySelector("#settingsNotice");
+const memoryTitleInput = document.querySelector("#memoryTitleInput");
+const memoryBodyInput = document.querySelector("#memoryBodyInput");
+const memoryLabelsInput = document.querySelector("#memoryLabelsInput");
+const memoryRestrictedInput = document.querySelector("#memoryRestrictedInput");
+const memoryNotice = document.querySelector("#memoryNotice");
+const saveMemory = document.querySelector("#saveMemory");
+const cancelMemoryEdit = document.querySelector("#cancelMemoryEdit");
+const memorySearchInput = document.querySelector("#memorySearchInput");
+const searchMemory = document.querySelector("#searchMemory");
+const memoryList = document.querySelector("#memoryList");
+const memoryGraphSummary = document.querySelector("#memoryGraphSummary");
+const memoryGraph = document.querySelector("#memoryGraph");
+const deletedMemoryList = document.querySelector("#deletedMemoryList");
+const restrictedMemoryList = document.querySelector("#restrictedMemoryList");
+const archivedMemoryList = document.querySelector("#archivedMemoryList");
+const memoryActiveCount = document.querySelector("#memoryActiveCount");
+const memoryDeletedCount = document.querySelector("#memoryDeletedCount");
+const memoryEmbeddedCount = document.querySelector("#memoryEmbeddedCount");
+const memoryPendingEmbeddingCount = document.querySelector("#memoryPendingEmbeddingCount");
+const memoryRestrictedCount = document.querySelector("#memoryRestrictedCount");
+const memoryArchivedCount = document.querySelector("#memoryArchivedCount");
+const memoryLabelList = document.querySelector("#memoryLabelList");
+const memoryMaintenanceSummary = document.querySelector("#memoryMaintenanceSummary");
+const memoryMaintenanceList = document.querySelector("#memoryMaintenanceList");
+const memoryMaintenanceNotice = document.querySelector("#memoryMaintenanceNotice");
+const runMemoryMaintenance = document.querySelector("#runMemoryMaintenance");
+const memoryMergeSummary = document.querySelector("#memoryMergeSummary");
+const memoryMergeList = document.querySelector("#memoryMergeList");
+const memoryArchiveSummary = document.querySelector("#memoryArchiveSummary");
+const memoryArchiveList = document.querySelector("#memoryArchiveList");
+const memoryArchiveActionNotice = document.querySelector("#memoryArchiveActionNotice");
+const archiveDormantMemories = document.querySelector("#archiveDormantMemories");
+const memoryAliasInput = document.querySelector("#memoryAliasInput");
+const memoryCanonicalLabelInput = document.querySelector("#memoryCanonicalLabelInput");
+const saveMemoryAlias = document.querySelector("#saveMemoryAlias");
+const memoryAliasNotice = document.querySelector("#memoryAliasNotice");
+const memoryAliasList = document.querySelector("#memoryAliasList");
+const memoryRecordTypeInput = document.querySelector("#memoryRecordTypeInput");
+const memoryRecordTitleInput = document.querySelector("#memoryRecordTitleInput");
+const memoryRecordValueInput = document.querySelector("#memoryRecordValueInput");
+const memoryRecordNotice = document.querySelector("#memoryRecordNotice");
+const saveMemoryRecord = document.querySelector("#saveMemoryRecord");
+const memoryRecordStats = document.querySelector("#memoryRecordStats");
+const memoryRecordList = document.querySelector("#memoryRecordList");
+const sharedLineSummary = document.querySelector("#sharedLineSummary");
+const sharedLineUpdated = document.querySelector("#sharedLineUpdated");
+const sharedLineList = document.querySelector("#sharedLineList");
+const sharedLineTitleInput = document.querySelector("#sharedLineTitleInput");
+const createSharedLine = document.querySelector("#createSharedLine");
+const sharedLineInput = document.querySelector("#sharedLineInput");
+const sharedLineNotice = document.querySelector("#sharedLineNotice");
+const saveSharedLine = document.querySelector("#saveSharedLine");
+const sharedLineResume = document.querySelector("#sharedLineResume");
+const sharedLineHistoryList = document.querySelector("#sharedLineHistoryList");
+const sharedLineSnapshotList = document.querySelector("#sharedLineSnapshotList");
+const createSharedLineHandoff = document.querySelector("#createSharedLineHandoff");
+const sharedLineHandoffList = document.querySelector("#sharedLineHandoffList");
+const copySharedLineResume = document.querySelector("#copySharedLineResume");
 
 const translations = {
   en: {
@@ -35,6 +153,7 @@ const translations = {
     "nav.innerLife": "InnerLife",
     "nav.data": "Data",
     "nav.connections": "Connections",
+    "nav.agentSetup": "Agent Setup",
     "nav.settings": "Settings",
     "footer.label": "Local ownership",
     "footer.value": "Portable core",
@@ -42,18 +161,27 @@ const translations = {
     "status.localMode": "Local mode",
     "status.dataSafe": "Data safe",
     "actions.refresh": "Refresh",
-    "actions.openGateway": "Open Gateway",
+    "actions.openGateway": "Open runtime",
     "actions.import": "Import",
     "actions.export": "Export",
     "actions.restore": "Restore",
+    "actions.archive": "Archive",
     "actions.open": "Open",
     "actions.copy": "Copy",
+    "actions.cancel": "Cancel",
+    "actions.search": "Search",
+    "actions.edit": "Edit",
+    "actions.delete": "Delete",
+    "actions.embed": "Embed",
+    "actions.restrict": "Restrict",
+    "actions.unrestrict": "Unrestrict",
     "common.status": "Status",
     "common.path": "Path",
     "common.ready": "Ready",
     "common.paused": "Paused",
     "common.missing": "Missing",
     "common.optionalMissing": "Optional missing",
+    "common.planned": "Planned",
     "common.notTracked": "Not tracked yet",
     "common.checking": "Checking...",
     "common.found": "Found",
@@ -74,6 +202,8 @@ const translations = {
     "view.data.subtitle": "Import, export, and restore without mixing risky actions.",
     "view.connections.title": "Connections",
     "view.connections.subtitle": "Local entry points for external agents.",
+    "view.agentSetup.title": "Agent Setup",
+    "view.agentSetup.subtitle": "Copyable handoff notes for external agents.",
     "view.settings.title": "Settings",
     "view.settings.subtitle": "Model and service settings kept understandable.",
     "home.model.title": "Model & Provider",
@@ -92,9 +222,18 @@ const translations = {
     "home.importExport.lastExport": "Last export",
     "home.events.title": "Recent system events",
     "home.events.localOnly": "Local only",
+    "health.title": "First-run check",
+    "health.ok": "Ready",
+    "health.warn": "Needs attention",
+    "health.error": "Error",
+    "health.dataRoot": "Data directory",
+    "health.database": "Product database",
+    "health.gateway": "Gateway entry",
+    "health.embedding": "Embedding setup",
+    "health.oldServices": "Old services",
     "home.agentConnection.title": "Agent connection",
-    "home.agentConnection.developmentPlan": "Development plan",
-    "home.agentConnection.designPlan": "Design plan",
+    "home.agentConnection.developmentPlan": "Product reset plan",
+    "home.agentConnection.designPlan": "Legacy v0.2 plan",
     "home.backup.title": "Backup reminder",
     "home.backup.body": "Export memory and shared-line data before large local changes.",
     "home.backup.review": "Review data",
@@ -107,29 +246,276 @@ const translations = {
     "memory.preview1": "Recent facts stay reviewable.",
     "memory.preview2": "Private data remains under the local ClaraCore folder.",
     "memory.preview3": "Search and cleanup controls will land behind confirmation.",
+    "memory.form.title": "Title",
+    "memory.form.body": "Fact",
+    "memory.form.labels": "Labels",
+    "memory.form.restricted": "Restricted content",
+    "memory.form.save": "Save memory",
+    "memory.form.update": "Update memory",
+    "memory.form.saved": "Memory saved",
+    "memory.form.updated": "Memory updated",
+    "memory.form.deleted": "Memory deleted",
+    "memory.form.restored": "Memory restored",
+    "memory.form.saveFailed": "Could not save memory",
+    "memory.empty": "No memories yet.",
+    "memory.deleted.empty": "No deleted memories.",
+    "memory.deleted.title": "Deleted memories",
+    "memory.archived.empty": "No archived memories.",
+    "memory.archived.title": "Archived memories",
+    "memory.restricted.empty": "No restricted memories.",
+    "memory.restricted.title": "Restricted memories",
+    "memory.labels.title": "Labels",
+    "memory.labels.empty": "No labels yet.",
+    "memory.aliases.title": "Label aliases",
+    "memory.aliases.aliasPlaceholder": "Alias",
+    "memory.aliases.labelPlaceholder": "Canonical label",
+    "memory.aliases.save": "Save alias",
+    "memory.aliases.saved": "Alias saved",
+    "memory.aliases.deleted": "Alias deleted",
+    "memory.aliases.empty": "No aliases yet.",
+    "memory.aliases.saveFailed": "Could not save alias",
+    "memory.aliases.deleteConfirm": "Delete this label alias?",
+    "memory.stats.active": "Active",
+    "memory.stats.deleted": "Deleted",
+    "memory.stats.embedded": "Embedded",
+    "memory.stats.pending": "Pending",
+    "memory.stats.restricted": "Restricted",
+    "memory.stats.archived": "Archived",
+    "memory.records.title": "Structured records",
+    "memory.records.type": "Type",
+    "memory.records.name": "Name",
+    "memory.records.value": "Value JSON",
+    "memory.records.save": "Save record",
+    "memory.records.saved": "Record saved",
+    "memory.records.saveFailed": "Could not save record",
+    "memory.records.invalidJson": "Value must be valid JSON",
+    "memory.records.empty": "No structured records yet.",
+    "memory.records.typesEmpty": "No record types yet.",
+    "memory.graph.title": "Memory graph",
+    "memory.graph.empty": "No graph links yet.",
+    "memory.graph.summary": "{nodes} nodes · {edges} links",
+    "memory.graph.kind.memory": "Memory",
+    "memory.graph.kind.label": "Label",
+    "memory.graph.kind.shared_line": "Shared Line",
+    "memory.graph.edge.labeled": "labeled",
+    "memory.graph.edge.uses": "uses",
+    "memory.maintenance.title": "Maintenance",
+    "memory.maintenance.run": "Run maintenance",
+    "memory.maintenance.ok": "No maintenance issues found.",
+    "memory.maintenance.needsRepair": "{count} issue(s) need repair.",
+    "memory.maintenance.done": "Maintenance complete",
+    "memory.maintenance.failed": "Maintenance failed",
+    "memory.maintenance.missing_embeddings": "Missing embeddings",
+    "memory.maintenance.failed_embeddings": "Failed embeddings",
+    "memory.maintenance.stale_embeddings": "Stale embeddings",
+    "memory.maintenance.orphan_labels": "Orphan labels",
+    "memory.maintenance.alias_labels": "Alias labels",
+    "memory.maintenance.queued_embeddings": "Queued embeddings",
+    "memory.maintenance.removed_orphan_labels": "Removed orphan labels",
+    "memory.maintenance.canonicalized_alias_labels": "Canonicalized alias labels",
+    "memory.merge.title": "Merge suggestions",
+    "memory.merge.empty": "No merge suggestions found.",
+    "memory.merge.count": "{count} suggestion(s)",
+    "memory.merge.action": "Merge",
+    "memory.merge.confirm": "Merge this source Memory into the target Memory? The source will move to deleted memories.",
+    "memory.merge.done": "Memory merged",
+    "memory.merge.failed": "Merge failed",
+    "memory.merge.same_title": "same title",
+    "memory.merge.body_contained": "overlapping body",
+    "memory.merge.shared_labels": "shared labels",
+    "memory.merge.similar_text": "similar text",
+    "memory.archive.title": "Archive suggestions",
+    "memory.archive.empty": "No dormant memories found.",
+    "memory.archive.count": "{count} dormant item(s)",
+    "memory.archive.run": "Archive dormant",
+    "memory.archive.done": "Dormant memories archived",
+    "memory.archive.failed": "Archive failed",
+    "memory.archive.confirm": "Archive this Memory? It will leave normal list and search results.",
+    "memory.archive.restoreDone": "Archived Memory restored",
+    "memory.archive.dormant": "dormant",
+    "memory.search.placeholder": "Search memory",
+    "memory.search.list": "Showing recent memories.",
+    "memory.search.keyword": "Keyword search results.",
+    "memory.search.hybrid": "Keyword + vector search results.",
+    "memory.search.fallback": "Vector search unavailable. Showing keyword results.",
+    "memory.search.source.keyword": "Keyword",
+    "memory.search.source.vector": "Vector",
+    "memory.search.source.keyword+vector": "Keyword + vector",
+    "memory.search.score": "Match",
+    "memory.embedding.pending": "Embedding pending",
+    "memory.embedding.ready": "Embedded",
+    "memory.embedding.failed": "Embedding failed",
+    "memory.embedding.saved": "Embedding updated",
+    "memory.embedding.processing": "Embedding...",
     "sharedLine.title": "Shared Line",
     "sharedLine.body": "Continuity shows the current shared position so agents can resume with less drift.",
     "sharedLine.current": "Current position",
+    "sharedLine.lines": "Lines",
+    "sharedLine.linesEmpty": "No Shared Lines yet.",
+    "sharedLine.createLine": "Create line",
+    "sharedLine.renameLine": "Rename line",
+    "sharedLine.lineCreated": "Shared Line created",
+    "sharedLine.lineActivated": "Shared Line activated",
+    "sharedLine.lineRenamed": "Shared Line renamed",
+    "sharedLine.lineArchived": "Shared Line archived",
+    "sharedLine.lineRestored": "Shared Line restored",
+    "sharedLine.renamePrompt": "Rename Shared Line",
+    "sharedLine.archiveConfirm": "Archive this Shared Line?",
+    "sharedLine.lineFailed": "Could not update Shared Line",
     "sharedLine.currentBody": "Ready to read from Continuity.",
+    "sharedLine.currentEmpty": "No current position saved yet.",
     "sharedLine.resume": "Resume packet",
     "sharedLine.resumeBody": "Prepared for connected agents.",
     "sharedLine.review": "Review point",
     "sharedLine.reviewBody": "Confirm before overwriting context.",
     "sharedLine.controls": "Controls",
-    "sharedLine.open": "Open shared line",
-    "sharedLine.export": "Export packet",
+    "sharedLine.form.summary": "Update current position",
+    "sharedLine.form.titlePlaceholder": "New line title",
+    "sharedLine.form.placeholder": "Write the current shared position...",
+    "sharedLine.form.save": "Save position",
+    "sharedLine.form.saved": "Shared position saved",
+    "sharedLine.form.saveFailed": "Could not save shared position",
+    "sharedLine.form.confirmOverwrite": "This will overwrite a confirmed Shared Line. Continue?",
+    "sharedLine.history": "Recent history",
+    "sharedLine.historyEmpty": "No saved history yet.",
+    "sharedLine.snapshots": "Recent snapshots",
+    "sharedLine.snapshotsEmpty": "No snapshots yet.",
+    "sharedLine.handoffs": "Recent handoffs",
+    "sharedLine.handoffsEmpty": "No handoffs yet.",
+    "sharedLine.createHandoff": "Create handoff",
+    "sharedLine.handoffCreated": "Handoff created",
+    "sharedLine.handoffFailed": "Could not create handoff",
+    "sharedLine.copyResume": "Copy resume packet",
+    "sharedLine.resumeCopied": "Resume packet copied",
     "innerLife.body": "Optional background reflection is available, but it should stay calm and explicit.",
     "innerLife.paused": "Paused by default",
     "innerLife.pausedBody": "This is a normal state, not a failure.",
     "innerLife.allowQuiet": "Allow quiet background review",
     "innerLife.shareReviewed": "Share only reviewed output",
+    "innerLife.startSession": "Start session",
+    "innerLife.endSession": "End session",
+    "innerLife.sessionStarted": "Session started",
+    "innerLife.sessionEnded": "Session ended",
+    "innerLife.sessionFailed": "Session action failed",
+    "innerLife.sessionSummary": "Session summary",
+    "innerLife.sessionSummaryPlaceholder": "What should InnerLife remember from this session?",
+    "innerLife.sessionsEmpty": "No InnerLife sessions yet.",
+    "innerLife.inbox": "Inbox",
+    "innerLife.inboxPlaceholder": "Submit material for InnerLife to digest later.",
+    "innerLife.submitInbox": "Submit inbox",
+    "innerLife.inboxSubmitted": "Inbox submitted",
+    "innerLife.runDigest": "Run digest",
+    "innerLife.digestRan": "Digest completed",
+    "innerLife.digestEmpty": "No digest runs yet.",
+    "innerLife.enableDaemon": "Enable daemon",
+    "innerLife.pauseDaemon": "Pause daemon",
+    "innerLife.tickDaemon": "Run due tick",
+    "innerLife.daemonEnabled": "Daemon enabled",
+    "innerLife.daemonPaused": "Daemon paused",
+    "innerLife.daemonTicked": "Daemon tick completed",
+    "innerLife.daemonStatus": "Daemon",
+    "innerLife.nextRun": "Next run",
+    "innerLife.lastResult": "Last result",
+    "innerLife.recovery": "Recovery",
+    "innerLife.recoveryRetry": "failed, retry in",
+    "innerLife.doctor": "Doctor",
+    "innerLife.doctorEmpty": "No recovery action is needed.",
+    "innerLife.daemonFailed": "Daemon action failed",
+    "innerLife.shareContext": "Share context",
+    "innerLife.shareContextPlaceholder": "What is happening now?",
+    "innerLife.checkTiming": "Check share timing",
+    "innerLife.timingChecked": "Share timing checked",
+    "innerLife.timingEmpty": "No share timing checks yet.",
+    "innerLife.processOnce": "Process once",
+    "innerLife.pendingShares": "Pending shares",
+    "innerLife.events": "Events",
+    "innerLife.thoughts": "Thoughts",
+    "innerLife.empty": "No pending InnerLife output.",
+    "innerLife.generated": "InnerLife output is waiting for review.",
+    "innerLife.processFailed": "InnerLife process failed",
+    "innerLife.approved": "InnerLife output approved",
+    "innerLife.rejected": "InnerLife output rejected",
+    "innerLife.reviewFailed": "InnerLife review failed",
+    "innerLife.approve": "Approve",
+    "innerLife.reject": "Reject",
+    "innerLife.approvedOutput": "Approved output",
+    "innerLife.applyMemory": "Save as Memory",
+    "innerLife.applySharedLine": "Use as Shared Line",
+    "innerLife.markUsed": "Used",
+    "innerLife.markDeferred": "Defer",
+    "innerLife.markDiscarded": "Discard",
+    "innerLife.marked": "Share updated",
+    "innerLife.appliedMemory": "Saved as Memory",
+    "innerLife.appliedSharedLine": "Shared Line updated",
+    "innerLife.applyFailed": "Could not apply InnerLife output",
     "data.title": "Data import and export",
     "data.body": "Import and restore are separated so destructive actions stay clear.",
     "data.exportBackup": "Export backup",
+    "data.exportMemoryArchive": "Export Memory JSON",
+    "data.importMemoryArchive": "Import Memory JSON",
+    "data.importOldMemoria": "Import old Memoria",
+    "data.importOldContinuity": "Import old Continuity",
+    "data.importOldInnerLife": "Import old InnerLife",
     "data.importRecords": "Import records",
     "data.restoreBackup": "Restore from backup",
     "data.location": "Location",
     "data.dataRoot": "Data root",
+    "data.recentBackups": "Recent backups",
+    "data.openBackupsFolder": "Open backups folder",
+    "data.manifest": "Manifest",
+    "data.verified": "Verified",
+    "data.quickCheck": "Quick check",
+    "data.noBackups": "No backups yet.",
+    "data.backupCreated": "Backup created",
+    "data.backupFailed": "Backup failed",
+    "data.memoryExported": "Memory JSON exported",
+    "data.memoryExportFailed": "Memory JSON export failed",
+    "data.memoryImportDone": "Memory JSON import complete",
+    "data.memoryImportFailed": "Memory JSON import failed",
+    "data.memoryImportCancelled": "Memory JSON import cancelled",
+    "data.memoryArchiveSummary": "{memories} memories, {records} records, {aliases} aliases",
+    "data.oldMemoriaConfirm": "Import old Memoria into this product database? A verified product backup will be created first. Old source files will be read only.",
+    "data.oldMemoriaImported": "Old Memoria import complete",
+    "data.oldMemoriaImportFailed": "Old Memoria import failed",
+    "data.oldMemoriaSummary": "{memories} memories, {records} records",
+    "data.oldContinuityConfirm": "Import old Continuity into this product database? A verified product backup will be created first. Old source files will be read only.",
+    "data.oldContinuityImported": "Old Continuity import complete",
+    "data.oldContinuityImportFailed": "Old Continuity import failed",
+    "data.oldContinuitySummary": "{lines} lines, {positions} positions, {handoffs} handoffs",
+    "data.oldInnerLifeConfirm": "Import old InnerLife into this product database? A verified product backup will be created first. Old source files will be read only.",
+    "data.oldInnerLifeImported": "Old InnerLife import complete",
+    "data.oldInnerLifeImportFailed": "Old InnerLife import failed",
+    "data.oldInnerLifeSummary": "{profiles} profiles, {events} events, {thoughts} thoughts, {shares} shares",
+    "data.restoreConfirm": "Restore this verified backup? A safety backup of the current database will be created first.",
+    "data.restorePrompt": "Type RESTORE to confirm.",
+    "data.restorePreview": "Restore preview",
+    "data.restoreCurrent": "Current",
+    "data.restoreTarget": "Target",
+    "data.restoreMemories": "Memories",
+    "data.restoreSharedLines": "Shared lines",
+    "data.restoreBackups": "Backups",
+    "data.restoreWillRemove": "Will be removed",
+    "data.restoreWillReturn": "Will be restored",
+    "data.restoreWillChange": "Will be changed",
+    "data.restoreNoRecordChanges": "No Memory record changes in this restore preview.",
+    "data.restoreCancelled": "Restore cancelled",
+    "data.restoreDone": "Backup restored",
+    "data.restoreFailed": "Restore failed",
+    "data.importPreview": "Import preview",
+    "data.importPreviewReadOnly": "Read-only scan. Import only writes to this product database after a verified backup.",
+    "data.importPreviewMissing": "Not found",
+    "data.importPreviewFound": "Found",
+    "data.importPreviewTables": "Tables",
+    "data.importPreviewQuickCheck": "Quick check",
+    "data.importPlan": "Plan",
+    "data.importCandidates": "candidate rows",
+    "data.importSkipped": "Skipped tables",
+    "data.importEnabled": "Import enabled",
+    "data.importDisabled": "Import disabled",
+    "data.importRequirement": "Requirement",
+    "data.importTarget": "Target",
+    "data.importSamples": "Sample rows",
+    "data.importNoSamples": "No sample rows.",
     "connections.title": "Connections",
     "connections.body": "External agents connect through the local gateway instead of owning the data layer.",
     "connections.mcpCommand": "MCP command",
@@ -137,7 +523,9 @@ const translations = {
     "connections.shortcuts": "Shortcuts",
     "connections.copyMcpCommand": "Copy MCP command",
     "connections.copyMcpConfig": "Copy MCP config",
-    "connections.openGatewayFolder": "Open gateway folder",
+    "connections.openGatewayFolder": "Open runtime folder",
+    "connections.agentActivity": "Agent activity",
+    "connections.noGatewayTraces": "No Gateway calls yet.",
     "connections.httpEndpoints": "HTTP endpoints",
     "connections.copied.mcpCommand": "MCP command copied",
     "connections.copied.mcpConfig": "MCP config copied",
@@ -146,8 +534,35 @@ const translations = {
     "connections.endpoint.memoria-web": "Memoria",
     "connections.endpoint.continuity-web": "Continuity",
     "connections.endpoint.innerlife-web": "InnerLife",
+    "connections.noEndpoints": "Unified Gateway endpoints will appear here after the product core is implemented.",
+    "agentSetup.title": "Agent Setup",
+    "agentSetup.body": "Copy this setup note into an agent so it can connect through the unified Gateway first.",
+    "agentSetup.actions": "Actions",
+    "agentSetup.copy": "Copy setup note",
+    "agentSetup.openConnections": "Open connection details",
+    "agentSetup.includes": "Includes",
+    "agentSetup.includeGateway": "Gateway MCP config",
+    "agentSetup.includeServices": "Planned product-owned service entry points",
+    "agentSetup.includeRuntime": "Bundled runtime and data paths",
+    "agentSetup.includeTroubleshooting": "Troubleshooting notes",
+    "agentSetup.copied": "Setup note copied",
     "settings.title": "Model settings",
     "settings.body": "Provider and model choices should be understandable without reading configuration files.",
+    "settings.memoriaTitle": "Memoria embedding",
+    "settings.innerLifeTitle": "InnerLife daemon model",
+    "settings.endpoint": "Endpoint",
+    "settings.embeddingModel": "Embedding model",
+    "settings.dimension": "Dimension",
+    "settings.source": "Source",
+    "settings.lightModel": "Light model",
+    "settings.deepModel": "Deep model",
+    "settings.pollSeconds": "Loop seconds",
+    "settings.apiKey": "API key",
+    "settings.apiKey.configured": "Configured",
+    "settings.apiKey.notConfigured": "Not configured",
+    "settings.save": "Save settings",
+    "settings.saved": "Settings saved",
+    "settings.saveFailed": "Could not save settings",
     "settings.openaiCompatible": "OpenAI compatible",
     "settings.defaultModel": "Default model",
     "settings.advanced": "Advanced",
@@ -170,20 +585,23 @@ const translations = {
     "module.innerlife.whenEnabled": "When enabled",
     "module.action.enableInnerLife": "Enable InnerLife",
     "module.action.open": "Open {label}",
-    "event.requiredFound.title": "Required modules found",
-    "event.requiredFound.detail": "Gateway, Memoria, and Continuity paths are available.",
-    "event.requiredMissing.title": "Required module missing",
-    "event.memoryFound.title": "Memory store located",
-    "event.memoryMissing.title": "Memory store not created yet",
-    "event.innerLifeFound.title": "InnerLife available and paused",
-    "event.innerLifeMissing.title": "InnerLife optional path not found",
-    "event.innerLife.detail": "Paused is the normal first-run state.",
+    "event.requiredFound.title": "Product modules planned",
+    "event.requiredFound.detail": "Gateway, Memoria, Continuity, and InnerLife are being rebuilt inside Desktop.",
+    "event.requiredMissing.title": "Product module not implemented yet",
+    "event.memoryFound.title": "Product database located",
+    "event.memoryMissing.title": "Product database not created yet",
+    "event.innerLifeFound.title": "InnerLife is planned",
+    "event.innerLifeMissing.title": "InnerLife will stay disabled until explicitly implemented",
+    "event.innerLife.detail": "This reset does not start old background services.",
     "runtime.customRoot": "Custom root",
     "runtime.developmentRoot": "Development root",
-    "runtime.memoriaStoreAvailable": "Memoria store available",
-    "runtime.noMemoriaStore": "No Memoria store detected",
     "runtime.requiredPresent": "Required local modules are present.",
     "runtime.needsAttention": "One or more required modules need attention.",
+    "runtime.isolatedProductDev": "Isolated product dev",
+    "runtime.customProductData": "Custom product data",
+    "runtime.productCorePlanned": "Product core planned; old local services are not controlled.",
+    "runtime.databaseReady": "Product database is present.",
+    "runtime.databaseNotCreated": "Product database has not been created yet.",
     "runtime.unavailable": "Unavailable",
     "runtime.unableSnapshot": "Unable to read runtime snapshot.",
     "monitor.uptime": "Uptime",
@@ -199,6 +617,7 @@ const translations = {
     "nav.innerLife": "内在活动",
     "nav.data": "数据",
     "nav.connections": "连接",
+    "nav.agentSetup": "Agent 设置",
     "nav.settings": "设置",
     "footer.label": "本机掌控",
     "footer.value": "可迁移核心",
@@ -206,18 +625,27 @@ const translations = {
     "status.localMode": "本机模式",
     "status.dataSafe": "数据在本机",
     "actions.refresh": "刷新",
-    "actions.openGateway": "打开网关",
+    "actions.openGateway": "打开运行目录",
     "actions.import": "导入",
     "actions.export": "导出",
     "actions.restore": "恢复",
+    "actions.archive": "归档",
     "actions.open": "打开",
     "actions.copy": "复制",
+    "actions.cancel": "取消",
+    "actions.search": "搜索",
+    "actions.edit": "编辑",
+    "actions.delete": "删除",
+    "actions.embed": "生成向量",
+    "actions.restrict": "设为受限",
+    "actions.unrestrict": "恢复普通",
     "common.status": "状态",
     "common.path": "路径",
     "common.ready": "可用",
     "common.paused": "已暂停",
     "common.missing": "缺失",
     "common.optionalMissing": "可选项缺失",
+    "common.planned": "待实现",
     "common.notTracked": "尚未记录",
     "common.checking": "检查中...",
     "common.found": "已找到",
@@ -238,6 +666,8 @@ const translations = {
     "view.data.subtitle": "导入、导出、恢复分开处理，避免误操作。",
     "view.connections.title": "连接",
     "view.connections.subtitle": "给外部智能体使用的本机入口。",
+    "view.agentSetup.title": "Agent 设置",
+    "view.agentSetup.subtitle": "给外部智能体复制使用的接入说明。",
     "view.settings.title": "设置",
     "view.settings.subtitle": "模型和服务设置保持清楚可读。",
     "home.model.title": "模型与提供方",
@@ -256,9 +686,18 @@ const translations = {
     "home.importExport.lastExport": "上次导出",
     "home.events.title": "近期系统事件",
     "home.events.localOnly": "仅本机",
+    "health.title": "首次运行检查",
+    "health.ok": "可用",
+    "health.warn": "需要注意",
+    "health.error": "错误",
+    "health.dataRoot": "数据目录",
+    "health.database": "产品数据库",
+    "health.gateway": "Gateway 入口",
+    "health.embedding": "向量设置",
+    "health.oldServices": "旧服务",
     "home.agentConnection.title": "智能体连接",
-    "home.agentConnection.developmentPlan": "开发计划",
-    "home.agentConnection.designPlan": "设计计划",
+    "home.agentConnection.developmentPlan": "新产品计划",
+    "home.agentConnection.designPlan": "旧 v0.2 计划",
     "home.backup.title": "备份提醒",
     "home.backup.body": "做较大本机改动前，先导出记忆和共同线数据。",
     "home.backup.review": "查看数据",
@@ -271,29 +710,276 @@ const translations = {
     "memory.preview1": "近期事实保持可查看。",
     "memory.preview2": "私有数据留在本机 ClaraCore 文件夹里。",
     "memory.preview3": "搜索和清理控制会放在确认之后。",
+    "memory.form.title": "标题",
+    "memory.form.body": "事实",
+    "memory.form.labels": "标签",
+    "memory.form.restricted": "受限内容",
+    "memory.form.save": "保存记忆",
+    "memory.form.update": "更新记忆",
+    "memory.form.saved": "记忆已保存",
+    "memory.form.updated": "记忆已更新",
+    "memory.form.deleted": "记忆已删除",
+    "memory.form.restored": "记忆已恢复",
+    "memory.form.saveFailed": "记忆保存失败",
+    "memory.empty": "还没有记忆。",
+    "memory.deleted.empty": "没有已删除记忆。",
+    "memory.deleted.title": "已删除记忆",
+    "memory.archived.empty": "没有已归档记忆。",
+    "memory.archived.title": "已归档记忆",
+    "memory.restricted.empty": "没有受限记忆。",
+    "memory.restricted.title": "受限记忆",
+    "memory.labels.title": "标签",
+    "memory.labels.empty": "还没有标签。",
+    "memory.aliases.title": "标签别名",
+    "memory.aliases.aliasPlaceholder": "别名",
+    "memory.aliases.labelPlaceholder": "主标签",
+    "memory.aliases.save": "保存别名",
+    "memory.aliases.saved": "别名已保存",
+    "memory.aliases.deleted": "别名已删除",
+    "memory.aliases.empty": "还没有别名。",
+    "memory.aliases.saveFailed": "别名保存失败",
+    "memory.aliases.deleteConfirm": "删除这个标签别名？",
+    "memory.stats.active": "可用",
+    "memory.stats.deleted": "已删除",
+    "memory.stats.embedded": "已向量化",
+    "memory.stats.pending": "待处理",
+    "memory.stats.restricted": "受限",
+    "memory.stats.archived": "已归档",
+    "memory.records.title": "结构化记录",
+    "memory.records.type": "类型",
+    "memory.records.name": "名称",
+    "memory.records.value": "JSON 内容",
+    "memory.records.save": "保存记录",
+    "memory.records.saved": "记录已保存",
+    "memory.records.saveFailed": "记录保存失败",
+    "memory.records.invalidJson": "JSON 内容格式不正确",
+    "memory.records.empty": "还没有结构化记录。",
+    "memory.records.typesEmpty": "还没有记录类型。",
+    "memory.graph.title": "记忆图谱",
+    "memory.graph.empty": "还没有图谱关系。",
+    "memory.graph.summary": "{nodes} 个节点 · {edges} 条关系",
+    "memory.graph.kind.memory": "记忆",
+    "memory.graph.kind.label": "标签",
+    "memory.graph.kind.shared_line": "共同线",
+    "memory.graph.edge.labeled": "标记为",
+    "memory.graph.edge.uses": "引用",
+    "memory.maintenance.title": "维护",
+    "memory.maintenance.run": "运行维护",
+    "memory.maintenance.ok": "没有发现需要维护的问题。",
+    "memory.maintenance.needsRepair": "{count} 个问题需要修复。",
+    "memory.maintenance.done": "维护完成",
+    "memory.maintenance.failed": "维护失败",
+    "memory.maintenance.missing_embeddings": "缺失向量状态",
+    "memory.maintenance.failed_embeddings": "失败向量",
+    "memory.maintenance.stale_embeddings": "过期向量",
+    "memory.maintenance.orphan_labels": "孤立标签",
+    "memory.maintenance.alias_labels": "别名标签",
+    "memory.maintenance.queued_embeddings": "已重新排队向量",
+    "memory.maintenance.removed_orphan_labels": "已移除孤立标签",
+    "memory.maintenance.canonicalized_alias_labels": "已归并别名标签",
+    "memory.merge.title": "合并建议",
+    "memory.merge.empty": "没有发现合并建议。",
+    "memory.merge.count": "{count} 条建议",
+    "memory.merge.action": "合并",
+    "memory.merge.confirm": "把来源 Memory 合并到目标 Memory 吗？来源会移入已删除列表。",
+    "memory.merge.done": "Memory 已合并",
+    "memory.merge.failed": "合并失败",
+    "memory.merge.same_title": "标题相同",
+    "memory.merge.body_contained": "正文重叠",
+    "memory.merge.shared_labels": "标签相同",
+    "memory.merge.similar_text": "内容相似",
+    "memory.archive.title": "归档建议",
+    "memory.archive.empty": "没有发现休眠记忆。",
+    "memory.archive.count": "{count} 条休眠项",
+    "memory.archive.run": "归档休眠项",
+    "memory.archive.done": "休眠记忆已归档",
+    "memory.archive.failed": "归档失败",
+    "memory.archive.confirm": "归档这条 Memory 吗？它会离开普通列表和搜索结果。",
+    "memory.archive.restoreDone": "已归档 Memory 已恢复",
+    "memory.archive.dormant": "休眠",
+    "memory.search.placeholder": "搜索记忆",
+    "memory.search.list": "显示最近记忆。",
+    "memory.search.keyword": "普通搜索结果。",
+    "memory.search.hybrid": "普通搜索 + 向量搜索结果。",
+    "memory.search.fallback": "向量搜索暂不可用，已显示普通搜索结果。",
+    "memory.search.source.keyword": "普通匹配",
+    "memory.search.source.vector": "向量匹配",
+    "memory.search.source.keyword+vector": "普通 + 向量",
+    "memory.search.score": "匹配度",
+    "memory.embedding.pending": "待生成向量",
+    "memory.embedding.ready": "向量已生成",
+    "memory.embedding.failed": "向量失败",
+    "memory.embedding.saved": "向量状态已更新",
+    "memory.embedding.processing": "正在生成向量...",
     "sharedLine.title": "共同线",
     "sharedLine.body": "Continuity 显示当前共同位置，让智能体接续时更少偏移。",
     "sharedLine.current": "当前位置",
+    "sharedLine.lines": "线",
+    "sharedLine.linesEmpty": "还没有 Shared Line。",
+    "sharedLine.createLine": "创建线",
+    "sharedLine.renameLine": "重命名线",
+    "sharedLine.lineCreated": "Shared Line 已创建",
+    "sharedLine.lineActivated": "Shared Line 已切换",
+    "sharedLine.lineRenamed": "Shared Line 已重命名",
+    "sharedLine.lineArchived": "Shared Line 已归档",
+    "sharedLine.lineRestored": "Shared Line 已恢复",
+    "sharedLine.renamePrompt": "重命名 Shared Line",
+    "sharedLine.archiveConfirm": "归档这条 Shared Line？",
+    "sharedLine.lineFailed": "Shared Line 操作失败",
     "sharedLine.currentBody": "可以从 Continuity 读取。",
+    "sharedLine.currentEmpty": "还没有保存当前位置。",
     "sharedLine.resume": "接续包",
     "sharedLine.resumeBody": "可提供给已连接的智能体。",
     "sharedLine.review": "确认点",
     "sharedLine.reviewBody": "覆盖上下文前先确认。",
     "sharedLine.controls": "控制",
-    "sharedLine.open": "打开共同线",
-    "sharedLine.export": "导出接续包",
+    "sharedLine.form.summary": "更新当前位置",
+    "sharedLine.form.titlePlaceholder": "新线标题",
+    "sharedLine.form.placeholder": "写下当前共同位置...",
+    "sharedLine.form.save": "保存位置",
+    "sharedLine.form.saved": "共同线已保存",
+    "sharedLine.form.saveFailed": "共同线保存失败",
+    "sharedLine.form.confirmOverwrite": "这会覆盖已确认的 Shared Line，继续吗？",
+    "sharedLine.history": "最近历史",
+    "sharedLine.historyEmpty": "还没有保存历史。",
+    "sharedLine.snapshots": "最近快照",
+    "sharedLine.snapshotsEmpty": "还没有快照。",
+    "sharedLine.handoffs": "最近交接",
+    "sharedLine.handoffsEmpty": "还没有交接记录。",
+    "sharedLine.createHandoff": "创建交接",
+    "sharedLine.handoffCreated": "交接已创建",
+    "sharedLine.handoffFailed": "交接创建失败",
+    "sharedLine.copyResume": "复制接续包",
+    "sharedLine.resumeCopied": "接续包已复制",
     "innerLife.body": "可选的后台反思已经可用，但应该保持安静且可控。",
     "innerLife.paused": "默认暂停",
     "innerLife.pausedBody": "这是正常状态，不是故障。",
     "innerLife.allowQuiet": "允许安静后台检查",
     "innerLife.shareReviewed": "只分享已确认输出",
+    "innerLife.startSession": "开始会话",
+    "innerLife.endSession": "结束会话",
+    "innerLife.sessionStarted": "会话已开始",
+    "innerLife.sessionEnded": "会话已结束",
+    "innerLife.sessionFailed": "会话操作失败",
+    "innerLife.sessionSummary": "会话摘要",
+    "innerLife.sessionSummaryPlaceholder": "这次会话里 InnerLife 应该记住什么？",
+    "innerLife.sessionsEmpty": "还没有 InnerLife 会话。",
+    "innerLife.inbox": "收件箱",
+    "innerLife.inboxPlaceholder": "提交材料，稍后让 InnerLife 消化。",
+    "innerLife.submitInbox": "提交收件箱",
+    "innerLife.inboxSubmitted": "收件箱已提交",
+    "innerLife.runDigest": "运行 digest",
+    "innerLife.digestRan": "Digest 已完成",
+    "innerLife.digestEmpty": "还没有 digest 记录。",
+    "innerLife.enableDaemon": "启用后台循环",
+    "innerLife.pauseDaemon": "暂停后台循环",
+    "innerLife.tickDaemon": "运行到期检查",
+    "innerLife.daemonEnabled": "后台循环已启用",
+    "innerLife.daemonPaused": "后台循环已暂停",
+    "innerLife.daemonTicked": "后台检查已完成",
+    "innerLife.daemonStatus": "后台循环",
+    "innerLife.nextRun": "下次运行",
+    "innerLife.lastResult": "上次结果",
+    "innerLife.recovery": "恢复",
+    "innerLife.recoveryRetry": "次失败，重试倒计时",
+    "innerLife.doctor": "诊断",
+    "innerLife.doctorEmpty": "无需恢复操作。",
+    "innerLife.daemonFailed": "后台循环操作失败",
+    "innerLife.shareContext": "分享上下文",
+    "innerLife.shareContextPlaceholder": "现在发生了什么？",
+    "innerLife.checkTiming": "检查分享时机",
+    "innerLife.timingChecked": "分享时机已检查",
+    "innerLife.timingEmpty": "还没有分享时机检查。",
+    "innerLife.processOnce": "手动处理一次",
+    "innerLife.pendingShares": "待审核输出",
+    "innerLife.events": "事件",
+    "innerLife.thoughts": "思考",
+    "innerLife.empty": "没有待审核的 InnerLife 输出。",
+    "innerLife.generated": "InnerLife 输出已生成，等待审核。",
+    "innerLife.processFailed": "InnerLife 处理失败",
+    "innerLife.approved": "InnerLife 输出已批准",
+    "innerLife.rejected": "InnerLife 输出已拒绝",
+    "innerLife.reviewFailed": "InnerLife 审核失败",
+    "innerLife.approve": "批准",
+    "innerLife.reject": "拒绝",
+    "innerLife.approvedOutput": "已批准输出",
+    "innerLife.applyMemory": "保存为 Memory",
+    "innerLife.applySharedLine": "用于 Shared Line",
+    "innerLife.markUsed": "已使用",
+    "innerLife.markDeferred": "延后",
+    "innerLife.markDiscarded": "放弃",
+    "innerLife.marked": "分享状态已更新",
+    "innerLife.appliedMemory": "已保存为 Memory",
+    "innerLife.appliedSharedLine": "Shared Line 已更新",
+    "innerLife.applyFailed": "InnerLife 输出应用失败",
     "data.title": "数据导入与导出",
     "data.body": "导入和恢复分开，危险操作要清楚。",
     "data.exportBackup": "导出备份",
+    "data.exportMemoryArchive": "导出 Memory JSON",
+    "data.importMemoryArchive": "导入 Memory JSON",
+    "data.importOldMemoria": "导入旧 Memoria",
+    "data.importOldContinuity": "导入旧 Continuity",
+    "data.importOldInnerLife": "导入旧 InnerLife",
     "data.importRecords": "导入记录",
     "data.restoreBackup": "从备份恢复",
     "data.location": "位置",
     "data.dataRoot": "数据根目录",
+    "data.recentBackups": "最近备份",
+    "data.openBackupsFolder": "打开备份目录",
+    "data.manifest": "清单",
+    "data.verified": "已校验",
+    "data.quickCheck": "快速检查",
+    "data.noBackups": "还没有备份。",
+    "data.backupCreated": "备份已创建",
+    "data.backupFailed": "备份失败",
+    "data.memoryExported": "Memory JSON 已导出",
+    "data.memoryExportFailed": "Memory JSON 导出失败",
+    "data.memoryImportDone": "Memory JSON 导入完成",
+    "data.memoryImportFailed": "Memory JSON 导入失败",
+    "data.memoryImportCancelled": "Memory JSON 导入已取消",
+    "data.memoryArchiveSummary": "{memories} 条记忆，{records} 条结构记录，{aliases} 个别名",
+    "data.oldMemoriaConfirm": "把旧 Memoria 导入当前产品库吗？会先创建已验证的产品备份，旧来源文件只读。",
+    "data.oldMemoriaImported": "旧 Memoria 导入完成",
+    "data.oldMemoriaImportFailed": "旧 Memoria 导入失败",
+    "data.oldMemoriaSummary": "{memories} 条记忆，{records} 条记录",
+    "data.oldContinuityConfirm": "把旧 Continuity 导入当前产品库吗？会先创建已验证的产品备份，旧来源文件只读。",
+    "data.oldContinuityImported": "旧 Continuity 导入完成",
+    "data.oldContinuityImportFailed": "旧 Continuity 导入失败",
+    "data.oldContinuitySummary": "{lines} 条线，{positions} 条当前位置，{handoffs} 条交接",
+    "data.oldInnerLifeConfirm": "把旧 InnerLife 导入当前产品库吗？会先创建已验证的产品备份，旧来源文件只读。",
+    "data.oldInnerLifeImported": "旧 InnerLife 导入完成",
+    "data.oldInnerLifeImportFailed": "旧 InnerLife 导入失败",
+    "data.oldInnerLifeSummary": "{profiles} 个 profile，{events} 条事件，{thoughts} 条思考，{shares} 条分享",
+    "data.restoreConfirm": "恢复这个已校验备份？系统会先为当前数据库创建一个安全备份。",
+    "data.restorePrompt": "输入 RESTORE 确认恢复。",
+    "data.restorePreview": "恢复预览",
+    "data.restoreCurrent": "当前",
+    "data.restoreTarget": "目标",
+    "data.restoreMemories": "记忆",
+    "data.restoreSharedLines": "共同线",
+    "data.restoreBackups": "备份",
+    "data.restoreWillRemove": "将被移除",
+    "data.restoreWillReturn": "将恢复回来",
+    "data.restoreWillChange": "将被改回备份版本",
+    "data.restoreNoRecordChanges": "这次恢复不会改变 Memory 记录。",
+    "data.restoreCancelled": "恢复已取消",
+    "data.restoreDone": "备份已恢复",
+    "data.restoreFailed": "恢复失败",
+    "data.importPreview": "导入预览",
+    "data.importPreviewReadOnly": "只读扫描；只有在创建已验证备份后，才会写入当前产品库。",
+    "data.importPreviewMissing": "未找到",
+    "data.importPreviewFound": "已找到",
+    "data.importPreviewTables": "表",
+    "data.importPreviewQuickCheck": "快速检查",
+    "data.importPlan": "计划",
+    "data.importCandidates": "候选行",
+    "data.importSkipped": "跳过的表",
+    "data.importEnabled": "导入已开启",
+    "data.importDisabled": "导入未开启",
+    "data.importRequirement": "要求",
+    "data.importTarget": "目标",
+    "data.importSamples": "样例行",
+    "data.importNoSamples": "没有样例行。",
     "connections.title": "连接",
     "connections.body": "外部智能体通过本机网关连接，不直接接管数据层。",
     "connections.mcpCommand": "MCP 命令",
@@ -301,7 +987,9 @@ const translations = {
     "connections.shortcuts": "快捷操作",
     "connections.copyMcpCommand": "复制 MCP 命令",
     "connections.copyMcpConfig": "复制 MCP 配置",
-    "connections.openGatewayFolder": "打开网关文件夹",
+    "connections.openGatewayFolder": "打开运行目录",
+    "connections.agentActivity": "Agent 活动",
+    "connections.noGatewayTraces": "还没有 Gateway 调用。",
     "connections.httpEndpoints": "HTTP 入口",
     "connections.copied.mcpCommand": "MCP 命令已复制",
     "connections.copied.mcpConfig": "MCP 配置已复制",
@@ -310,8 +998,35 @@ const translations = {
     "connections.endpoint.memoria-web": "Memoria",
     "connections.endpoint.continuity-web": "Continuity",
     "connections.endpoint.innerlife-web": "InnerLife",
+    "connections.noEndpoints": "产品核心实现后，统一 Gateway 入口会显示在这里。",
+    "agentSetup.title": "Agent 设置",
+    "agentSetup.body": "把这份说明复制给 agent，让它优先通过统一 Gateway 连接。",
+    "agentSetup.actions": "操作",
+    "agentSetup.copy": "复制接入说明",
+    "agentSetup.openConnections": "打开连接详情",
+    "agentSetup.includes": "包含内容",
+    "agentSetup.includeGateway": "Gateway MCP 配置",
+    "agentSetup.includeServices": "产品自有服务入口规划",
+    "agentSetup.includeRuntime": "内置运行环境与数据路径",
+    "agentSetup.includeTroubleshooting": "常见问题处理",
+    "agentSetup.copied": "接入说明已复制",
     "settings.title": "模型设置",
     "settings.body": "提供方和模型选择要做到不用读配置文件也能看懂。",
+    "settings.memoriaTitle": "Memoria 向量模型",
+    "settings.innerLifeTitle": "InnerLife daemon 模型",
+    "settings.endpoint": "地址",
+    "settings.embeddingModel": "向量模型",
+    "settings.dimension": "维度",
+    "settings.source": "来源",
+    "settings.lightModel": "轻量模型",
+    "settings.deepModel": "深度模型",
+    "settings.pollSeconds": "循环秒数",
+    "settings.apiKey": "API key",
+    "settings.apiKey.configured": "已配置",
+    "settings.apiKey.notConfigured": "未配置",
+    "settings.save": "保存设置",
+    "settings.saved": "设置已保存",
+    "settings.saveFailed": "设置保存失败",
     "settings.openaiCompatible": "OpenAI 兼容",
     "settings.defaultModel": "默认模型",
     "settings.advanced": "高级",
@@ -334,20 +1049,23 @@ const translations = {
     "module.innerlife.whenEnabled": "启用后运行",
     "module.action.enableInnerLife": "启用 InnerLife",
     "module.action.open": "打开 {label}",
-    "event.requiredFound.title": "必需模块已找到",
-    "event.requiredFound.detail": "Gateway、Memoria、Continuity 路径都可用。",
-    "event.requiredMissing.title": "必需模块缺失",
-    "event.memoryFound.title": "记忆存储已找到",
-    "event.memoryMissing.title": "记忆存储尚未创建",
-    "event.innerLifeFound.title": "InnerLife 可用且已暂停",
-    "event.innerLifeMissing.title": "未找到 InnerLife 可选路径",
-    "event.innerLife.detail": "默认暂停是正常的首次状态。",
+    "event.requiredFound.title": "产品模块已规划",
+    "event.requiredFound.detail": "Gateway、Memoria、Continuity、InnerLife 会在 Desktop 内重建。",
+    "event.requiredMissing.title": "产品模块尚未实现",
+    "event.memoryFound.title": "产品数据库已找到",
+    "event.memoryMissing.title": "产品数据库尚未创建",
+    "event.innerLifeFound.title": "InnerLife 已进入规划",
+    "event.innerLifeMissing.title": "InnerLife 会保持关闭，直到明确实现",
+    "event.innerLife.detail": "这次重置不会启动旧的后台服务。",
     "runtime.customRoot": "自定义根目录",
     "runtime.developmentRoot": "开发根目录",
-    "runtime.memoriaStoreAvailable": "Memoria 存储可用",
-    "runtime.noMemoriaStore": "未检测到 Memoria 存储",
     "runtime.requiredPresent": "必需的本机模块都已找到。",
     "runtime.needsAttention": "有必需模块需要处理。",
+    "runtime.isolatedProductDev": "隔离的新产品开发",
+    "runtime.customProductData": "自定义产品数据目录",
+    "runtime.productCorePlanned": "产品核心已规划，不控制旧的本机服务。",
+    "runtime.databaseReady": "产品数据库已存在。",
+    "runtime.databaseNotCreated": "产品数据库尚未创建。",
     "runtime.unavailable": "不可用",
     "runtime.unableSnapshot": "无法读取运行状态。",
     "monitor.uptime": "运行时长",
@@ -396,6 +1114,11 @@ const views = {
     subtitleKey: "view.connections.subtitle",
     panel: document.querySelector("#connectionsView")
   },
+  "agent-setup": {
+    titleKey: "view.agentSetup.title",
+    subtitleKey: "view.agentSetup.subtitle",
+    panel: document.querySelector("#agentSetupView")
+  },
   settings: {
     titleKey: "view.settings.title",
     subtitleKey: "view.settings.subtitle",
@@ -405,12 +1128,39 @@ const views = {
 
 let snapshot = null;
 let activeView = "home";
+let editingMemoryId = null;
+let renamingSharedLineId = null;
+let pendingRestoreBackupId = null;
+let runtimeRefreshTimer = null;
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 
 function formatMode(mode) {
+  if (mode === "custom-product-data") return t("runtime.customProductData");
+  if (mode === "isolated-product-dev") return t("runtime.isolatedProductDev");
   return mode === "custom-root" ? t("runtime.customRoot") : t("runtime.developmentRoot");
 }
 
+function formatBytes(bytes) {
+  const value = Number(bytes);
+  if (!Number.isFinite(value) || value <= 0) return "0 B";
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  if (value < 1024 * 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)} MB`;
+  return `${(value / 1024 / 1024 / 1024).toFixed(1)} GB`;
+}
+
 function serviceBadge(module) {
+  if (module.state === "planned") {
+    return `<span class="badge planned">${t("common.planned")}</span>`;
+  }
   if (module.present && module.state === "paused") {
     return `<span class="badge paused">${t("common.paused")}</span>`;
   }
@@ -424,6 +1174,7 @@ function serviceBadge(module) {
 }
 
 function moduleTone(module) {
+  if (module.state === "planned") return "is-planned";
   if (!module.present && module.required) return "needs-attention";
   if (module.state === "paused") return "is-paused";
   return "is-ready";
@@ -460,6 +1211,13 @@ function moduleIcon(module) {
 }
 
 function moduleDetails(module) {
+  if (module.state === "planned") {
+    return [
+      [t("common.status"), t("common.planned")],
+      [t("home.model.mode"), formatMode(snapshot?.mode)],
+      [t("common.path"), module.servicePath]
+    ];
+  }
   if (module.id === "gateway") {
     return [
       [t("module.gateway.address"), t("module.gateway.localGateway")],
@@ -519,6 +1277,8 @@ function renderModules(modules) {
           <button class="module-action secondary">${
             module.state === "paused"
               ? t("module.action.enableInnerLife")
+              : module.state === "planned"
+                ? t("common.planned")
               : t("module.action.open", { label: module.label })
           }</button>
         </article>
@@ -529,22 +1289,30 @@ function renderModules(modules) {
 
 function renderEvents() {
   if (!snapshot) return;
-  const requiredMissing = snapshot.modules.filter((module) => module.required && !module.present);
+  const plannedModules = snapshot.modules.filter((module) => module.state === "planned");
+  const requiredMissing = snapshot.modules.filter((module) => module.required && !module.present && module.state !== "planned");
   const innerLife = snapshot.modules.find((module) => module.id === "innerlife");
   const events = [
     {
-      title: requiredMissing.length === 0 ? t("event.requiredFound.title") : t("event.requiredMissing.title"),
+      title:
+        plannedModules.length > 0
+          ? t("event.requiredFound.title")
+          : requiredMissing.length === 0
+            ? t("event.requiredFound.title")
+            : t("event.requiredMissing.title"),
       detail:
-        requiredMissing.length === 0
+        plannedModules.length > 0
           ? t("event.requiredFound.detail")
+          : requiredMissing.length === 0
+            ? t("event.requiredFound.detail")
           : requiredMissing.map((module) => module.label).join(", ")
     },
     {
-      title: snapshot.data.memoriaStorePresent ? t("event.memoryFound.title") : t("event.memoryMissing.title"),
-      detail: snapshot.data.memoriaStore
+      title: snapshot.data.databasePresent ? t("event.memoryFound.title") : t("event.memoryMissing.title"),
+      detail: snapshot.data.databasePath
     },
     {
-      title: innerLife?.present ? t("event.innerLifeFound.title") : t("event.innerLifeMissing.title"),
+      title: innerLife?.state === "planned" ? t("event.innerLifeFound.title") : t("event.innerLifeMissing.title"),
       detail: t("event.innerLife.detail")
     }
   ];
@@ -561,11 +1329,57 @@ function renderEvents() {
     .join("");
 }
 
+function renderHealth() {
+  const health = snapshot?.health;
+  if (!health) return;
+  healthSummary.textContent = t(`health.${health.status}`) || health.status;
+  healthSummary.className = `quiet health-summary ${health.status}`;
+  healthList.innerHTML = (health.checks || [])
+    .map((check) => {
+      const level = check.level || "warn";
+      return `
+        <div class="health-item ${escapeHtml(level)}">
+          <span class="health-dot"></span>
+          <div>
+            <strong>${escapeHtml(t(check.labelKey) || check.id)}</strong>
+            <small>${escapeHtml(check.detail || "")}</small>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+}
+
 function renderConnections() {
   if (!snapshot?.connections) return;
   mcpCommand.textContent = snapshot.connections.mcpCommand;
   mcpConfig.textContent = snapshot.connections.mcpConfig;
-  httpEndpointList.innerHTML = snapshot.connections.httpEndpoints
+  const traces = snapshot.gatewayTraces || [];
+  if (traces.length === 0) {
+    gatewayTraceList.innerHTML = `<div class="endpoint-empty">${t("connections.noGatewayTraces")}</div>`;
+  } else {
+    gatewayTraceList.innerHTML = traces
+      .slice(0, 8)
+      .map(
+        (trace) => `
+          <div class="endpoint-card trace-card ${escapeHtml(trace.status || "")}">
+            <div>
+              <strong>${escapeHtml(trace.toolName || "")}</strong>
+              <code>${escapeHtml(trace.status || "")} · ${escapeHtml(String(trace.durationMs ?? 0))}ms</code>
+              <span>${escapeHtml(trace.error || trace.responseSummary || "")}</span>
+              <small>${escapeHtml(trace.createdAt || "")}</small>
+            </div>
+          </div>
+        `
+      )
+      .join("");
+  }
+  const endpoints = snapshot.connections.httpEndpoints || [];
+  if (endpoints.length === 0) {
+    httpEndpointList.innerHTML = `<div class="endpoint-empty">${t("connections.noEndpoints")}</div>`;
+    return;
+  }
+  httpEndpointList.innerHTML = endpoints
     .map(
       (endpoint) => `
         <div class="endpoint-card">
@@ -584,24 +1398,827 @@ function renderConnections() {
     .join("");
 }
 
-function renderSnapshot() {
-  if (coreStatus) coreStatus.textContent = snapshot.coreStatus === "Ready" ? t("common.ready") : t("runtime.needsAttention");
-  if (coreHint) {
-    coreHint.textContent =
-      snapshot.coreStatus === "Ready"
-        ? t("runtime.requiredPresent")
-        : t("runtime.needsAttention");
+function buildAgentSetupMarkdown() {
+  if (!snapshot?.connections) return t("common.checking");
+  const endpoints = (snapshot.connections.httpEndpoints || [])
+    .map((endpoint) => `- ${t(`connections.endpoint.${endpoint.id}`)}: ${endpoint.url}`)
+    .join("\n") || "- No HTTP endpoints are exposed yet.";
+  return `# ClaraCore Agent Setup
+
+This is the product-core reset setup. Desktop is the owner of Gateway, Memoria, Continuity, and InnerLife. Old local services are references only and should not be stopped or changed by this setup.
+
+## Gateway MCP
+
+\`\`\`json
+${snapshot.connections.mcpConfig}
+\`\`\`
+
+## First Context Call
+
+After connecting, call \`gateway_context\` first. It returns the current Shared Line, recent Memory, InnerLife state, Doctor guidance, and recovery advice in one packet.
+
+## Runtime
+
+- App root: ${snapshot.appRoot}
+- Data root: ${snapshot.data.root}
+- Product database: ${snapshot.data.databasePath}
+- Gateway command: ${snapshot.connections.mcpCommand}
+- Python: ${snapshot.connections.python}
+- Python source: ${snapshot.connections.pythonSource}
+- Gateway env: ${snapshot.connections.gatewayEnvPath}
+
+## HTTP Management Endpoints
+
+${endpoints}
+
+## Product Service Plan
+
+- Gateway: available for status, unified context, Memory tools, Shared Line tools, and InnerLife tools
+- Memoria: available for manual memory create, list, search, update, and delete
+- Continuity: available for current position and resume packet
+- InnerLife: available for session lifecycle, reviewed shares, daemon controls, and Doctor guidance
+
+More product-owned MCP tools and CLI fallbacks will be added through this Gateway.
+
+## Troubleshooting
+
+- If MCP tools are missing, confirm the command above uses the same Data root as Desktop.
+- If an old local Gateway is running, leave it alone during this product-core development phase.
+- If you need a custom data directory, set CLARACORE_DESKTOP_DATA_DIR before launching Desktop.
+`;
+}
+
+function renderAgentSetup() {
+  agentSetupMarkdown.textContent = buildAgentSetupMarkdown();
+}
+
+function renderSettings() {
+  if (!snapshot?.configuration) return;
+  const memoria = snapshot.configuration.memoria;
+  const innerlife = snapshot.configuration.innerlife;
+  memoriaProvider.value = memoria.provider;
+  memoriaEndpoint.value = memoria.endpoint;
+  memoriaModel.value = memoria.model;
+  memoriaDimension.value = memoria.dimension;
+  memoriaSource.value = memoria.source;
+  innerLifeBackend.value = innerlife.backend;
+  innerLifeEndpoint.value = innerlife.baseUrl;
+  innerLifeLightModel.value = innerlife.lightModel;
+  innerLifeDeepModel.value = innerlife.deepModel;
+  innerLifePollSeconds.value = innerlife.pollSeconds;
+  innerLifeApiKey.value =
+    innerlife.apiKeyStatus === "configured"
+      ? t("settings.apiKey.configured")
+      : t("settings.apiKey.notConfigured");
+  innerLifeSource.value = innerlife.source;
+}
+
+function renderMemoryList() {
+  renderMemoryResults(snapshot?.memories || []);
+}
+
+function renderSharedLine() {
+  const sharedLine = snapshot?.sharedLine;
+  const current = sharedLine?.currentPosition || {};
+  const summary = current.summary || "";
+  const lines = sharedLine?.lines || [];
+  if (renamingSharedLineId && !lines.some((line) => line.id === renamingSharedLineId && line.status !== "archived")) {
+    renamingSharedLineId = null;
+    sharedLineTitleInput.value = "";
   }
+  createSharedLine.textContent = renamingSharedLineId ? t("sharedLine.renameLine") : t("sharedLine.createLine");
+  if (lines.length === 0) {
+    sharedLineList.innerHTML = `<div class="endpoint-empty">${t("sharedLine.linesEmpty")}</div>`;
+  } else {
+    sharedLineList.innerHTML = lines
+      .map(
+        (line) => {
+          const isArchived = line.status === "archived";
+          const canArchive = !line.active && line.id !== "line_default" && !isArchived;
+          return `
+          <article class="shared-line-history-item ${line.active ? "active-line" : ""}">
+            <div>
+              <strong>${escapeHtml(line.title || line.id)}</strong>
+              <span>${line.active ? "active" : escapeHtml(line.status || "")}</span>
+            </div>
+            <p>${escapeHtml(line.summary || t("sharedLine.currentEmpty"))}</p>
+            <div class="memory-actions">
+              ${
+                !line.active && !isArchived
+                  ? `<button class="secondary" data-shared-line-action="activate" data-shared-line-id="${escapeHtml(line.id)}">${t("actions.open")}</button>`
+                  : ""
+              }
+              ${
+                isArchived
+                  ? `<button class="secondary" data-shared-line-action="restore" data-shared-line-id="${escapeHtml(line.id)}">${t("actions.restore")}</button>`
+                  : `<button class="secondary" data-shared-line-action="rename" data-shared-line-title="${escapeHtml(line.title || "")}" data-shared-line-id="${escapeHtml(line.id)}">${t("actions.edit")}</button>`
+              }
+              ${
+                canArchive
+                  ? `<button class="secondary danger-button" data-shared-line-action="archive" data-shared-line-id="${escapeHtml(line.id)}">${t("actions.archive")}</button>`
+                  : ""
+              }
+            </div>
+          </article>
+        `;
+        }
+      )
+      .join("");
+  }
+  sharedLineSummary.textContent = summary || t("sharedLine.currentEmpty");
+  sharedLineUpdated.textContent = current.updatedAt || "";
+  sharedLineInput.value = summary;
+  sharedLineResume.textContent = sharedLine?.text || "";
+  const history = sharedLine?.history || [];
+  if (history.length === 0) {
+    sharedLineHistoryList.innerHTML = `<div class="endpoint-empty">${t("sharedLine.historyEmpty")}</div>`;
+  } else {
+    sharedLineHistoryList.innerHTML = history
+      .map(
+        (item) => `
+          <article class="shared-line-history-item">
+            <div>
+              <strong>${escapeHtml(item.interpretationStatus || "draft")}</strong>
+              <span>${escapeHtml(item.createdAt || "")}</span>
+            </div>
+            <p>${escapeHtml(item.summary || "")}</p>
+            ${
+              Array.isArray(item.factsUsed) && item.factsUsed.length
+                ? `<small>${escapeHtml(item.factsUsed.join(", "))}</small>`
+                : ""
+            }
+          </article>
+        `
+      )
+      .join("");
+  }
+  const snapshots = sharedLine?.snapshots || [];
+  if (snapshots.length === 0) {
+    sharedLineSnapshotList.innerHTML = `<div class="endpoint-empty">${t("sharedLine.snapshotsEmpty")}</div>`;
+  } else {
+    sharedLineSnapshotList.innerHTML = snapshots
+      .map(
+        (item) => `
+          <article class="shared-line-history-item">
+            <div>
+              <strong>${escapeHtml(item.reason || "save")}</strong>
+              <span>${escapeHtml(item.createdAt || "")}</span>
+            </div>
+            <p>${escapeHtml(item.summary || "")}</p>
+            <small>${escapeHtml(item.interpretationStatus || "draft")}</small>
+          </article>
+        `
+      )
+      .join("");
+  }
+  const handoffs = sharedLine?.handoffs || [];
+  if (handoffs.length === 0) {
+    sharedLineHandoffList.innerHTML = `<div class="endpoint-empty">${t("sharedLine.handoffsEmpty")}</div>`;
+  } else {
+    sharedLineHandoffList.innerHTML = handoffs
+      .map(
+        (item) => `
+          <article class="shared-line-history-item">
+            <div>
+              <strong>${escapeHtml(item.objective || "")}</strong>
+              <span>${escapeHtml(item.createdAt || "")}</span>
+            </div>
+            ${item.nextStep ? `<p>${escapeHtml(item.nextStep)}</p>` : ""}
+            ${Array.isArray(item.openItems) && item.openItems.length ? `<small>${escapeHtml(item.openItems.join(", "))}</small>` : ""}
+          </article>
+        `
+      )
+      .join("");
+  }
+}
+
+function renderInnerLife() {
+  const innerLife = snapshot?.innerLife || {};
+  const counts = innerLife.counts || {};
+  const daemon = innerLife.daemon || {};
+  innerLifeDaemonStatus.textContent = daemon.status || "paused";
+  innerLifeNextRun.textContent = daemon.nextRunAt || "-";
+  innerLifeLastResult.textContent = daemon.lastResult || daemon.lastError || "-";
+  const retrySeconds = Number.parseInt(String(daemon.metadata?.retrySeconds || 0), 10) || 0;
+  const failureCount = Number.parseInt(String(daemon.metadata?.failureCount || 0), 10) || 0;
+  innerLifeRecovery.textContent =
+    failureCount > 0 ? `${failureCount} ${t("innerLife.recoveryRetry")} ${retrySeconds}s` : daemon.lastError || "-";
+  const doctor = innerLife.doctor || {};
+  innerLifeDoctorStatus.textContent = doctor.status || "-";
+  const doctorItems = Array.isArray(doctor.issues) && doctor.issues.length
+    ? doctor.issues
+    : [{ level: "ok", code: "healthy", message: doctor.summary || t("innerLife.doctorEmpty"), action: (doctor.nextActions || [t("innerLife.doctorEmpty")])[0] }];
+  innerLifeDoctorList.innerHTML = doctorItems
+    .slice(0, 5)
+    .map(
+      (issue) => `
+        <article class="shared-line-history-item">
+          <div>
+            <strong>${escapeHtml(issue.level || "ok")}</strong>
+            <span>${escapeHtml(issue.code || "")}</span>
+          </div>
+          <p>${escapeHtml(issue.message || "")}</p>
+          ${issue.action ? `<small>${escapeHtml(issue.action)}</small>` : ""}
+        </article>
+      `
+    )
+    .join("");
+  enableInnerLifeDaemon.disabled = Boolean(daemon.enabled) && daemon.status !== "paused";
+  pauseInnerLifeDaemon.disabled = !daemon.enabled || daemon.status === "paused";
+  innerLifePendingCount.textContent = counts.pending_shares_count ?? 0;
+  innerLifeEventCount.textContent = counts.events_count ?? 0;
+  innerLifeThoughtCount.textContent = counts.thoughts_count ?? 0;
+  const sessions = innerLife.sessions || [];
+  const activeSession = sessions.find((session) => session.status === "active");
+  endInnerLifeSession.disabled = !activeSession;
+  if (sessions.length === 0) {
+    innerLifeSessionList.innerHTML = `<div class="endpoint-empty">${t("innerLife.sessionsEmpty")}</div>`;
+  } else {
+    innerLifeSessionList.innerHTML = sessions
+      .slice(0, 5)
+      .map(
+        (session) => `
+          <article class="shared-line-history-item" data-innerlife-session-id="${escapeHtml(session.id)}">
+            <div>
+              <strong>${escapeHtml(session.status || "")}</strong>
+              <span>${escapeHtml(session.startedAt || "")}</span>
+            </div>
+            <p>${escapeHtml(session.summary || session.externalSessionId || session.id || "")}</p>
+            ${session.endedAt ? `<small>${escapeHtml(session.endedAt)}</small>` : ""}
+          </article>
+        `
+      )
+      .join("");
+  }
+  const digestRuns = innerLife.digestRuns || [];
+  if (digestRuns.length === 0) {
+    innerLifeDigestList.innerHTML = `<div class="endpoint-empty">${t("innerLife.digestEmpty")}</div>`;
+  } else {
+    innerLifeDigestList.innerHTML = digestRuns
+      .slice(0, 5)
+      .map(
+        (run) => `
+          <article class="shared-line-history-item">
+            <div>
+              <strong>${escapeHtml(run.mode || "manual")}</strong>
+              <span>${escapeHtml(run.completedAt || run.createdAt || "")}</span>
+            </div>
+            <p>${escapeHtml((run.summary || "").split("\n").find((line) => line.startsWith("Current position:")) || run.status || "")}</p>
+          </article>
+        `
+      )
+      .join("");
+  }
+  const shareChecks = innerLife.shareChecks || [];
+  if (shareChecks.length === 0) {
+    innerLifeShareCheckList.innerHTML = `<div class="endpoint-empty">${t("innerLife.timingEmpty")}</div>`;
+  } else {
+    innerLifeShareCheckList.innerHTML = shareChecks
+      .slice(0, 5)
+      .map(
+        (check) => `
+          <article class="shared-line-history-item">
+            <div>
+              <strong>${escapeHtml(check.decision || "")}</strong>
+              <span>${escapeHtml(check.createdAt || "")}</span>
+            </div>
+            <p>${escapeHtml(check.reason || "")}</p>
+            ${check.context ? `<small>${escapeHtml(check.context)}</small>` : ""}
+          </article>
+        `
+      )
+      .join("");
+  }
+  const pendingShares = innerLife.pendingShares || [];
+  const approvedShares = (innerLife.recentShares || []).filter((share) => share.status === "approved").slice(0, 5);
+  if (pendingShares.length === 0 && approvedShares.length === 0) {
+    innerLifeShareList.innerHTML = `<div class="endpoint-empty">${t("innerLife.empty")}</div>`;
+    return;
+  }
+  const pendingHtml = pendingShares
+    .map(
+      (share) => `
+        <article class="innerlife-share" data-innerlife-share-id="${escapeHtml(share.id)}">
+          <div>
+            <strong>${escapeHtml(share.created_at || "")}</strong>
+            <span>${escapeHtml(share.status || "")}</span>
+          </div>
+          <pre>${escapeHtml(share.body || "")}</pre>
+          <div class="innerlife-share-actions">
+            <button class="secondary" data-innerlife-action="approve" data-innerlife-share-id="${escapeHtml(share.id)}">${t("innerLife.approve")}</button>
+            <button class="secondary danger-button" data-innerlife-action="reject" data-innerlife-share-id="${escapeHtml(share.id)}">${t("innerLife.reject")}</button>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+  const approvedHtml = approvedShares
+    .map(
+      (share) => `
+        <article class="innerlife-share approved" data-innerlife-share-id="${escapeHtml(share.id)}">
+          <div>
+            <strong>${t("innerLife.approvedOutput")}</strong>
+            <span>${escapeHtml(share.updated_at || share.created_at || "")}</span>
+          </div>
+          <pre>${escapeHtml(share.body || "")}</pre>
+          <div class="innerlife-share-actions">
+            <button class="secondary" data-innerlife-action="apply-memory" data-innerlife-share-id="${escapeHtml(share.id)}">${t("innerLife.applyMemory")}</button>
+            <button class="secondary" data-innerlife-action="apply-shared-line" data-innerlife-share-id="${escapeHtml(share.id)}">${t("innerLife.applySharedLine")}</button>
+            <button class="secondary" data-innerlife-action="used" data-innerlife-share-id="${escapeHtml(share.id)}">${t("innerLife.markUsed")}</button>
+            <button class="secondary" data-innerlife-action="deferred" data-innerlife-share-id="${escapeHtml(share.id)}">${t("innerLife.markDeferred")}</button>
+            <button class="secondary danger-button" data-innerlife-action="discarded" data-innerlife-share-id="${escapeHtml(share.id)}">${t("innerLife.markDiscarded")}</button>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+  innerLifeShareList.innerHTML = `${pendingHtml}${approvedHtml}`;
+}
+
+function renderBackups() {
+  const backups = snapshot?.backups || [];
+  if (backups.length === 0) {
+    backupList.innerHTML = `<div class="endpoint-empty">${t("data.noBackups")}</div>`;
+    return;
+  }
+  backupList.innerHTML = backups
+    .map(
+      (backup) => {
+        const manifestPath = backup.metadata?.manifestPath || "";
+        const quickCheck = backup.metadata?.verification?.quickCheck || "";
+        return `
+          <div class="backup-item ${escapeHtml(backup.status || "")}" data-backup-id="${escapeHtml(backup.id || "")}">
+            <div class="backup-item-heading">
+              <div>
+                <strong>${escapeHtml(backup.created_at || "")}</strong>
+                <span>${escapeHtml(backup.status || "")}</span>
+              </div>
+              ${
+                backup.status === "verified"
+                  ? `<button class="secondary" data-backup-action="restore" data-backup-id="${escapeHtml(backup.id)}">${t("actions.restore")}</button>`
+                  : ""
+              }
+            </div>
+            <code>${escapeHtml(backup.path || "")}</code>
+            ${manifestPath ? `<small>${t("data.manifest")}: ${escapeHtml(manifestPath)}</small>` : ""}
+            ${quickCheck ? `<small>${t("data.quickCheck")}: ${escapeHtml(quickCheck)}</small>` : ""}
+          </div>
+        `;
+      }
+    )
+    .join("");
+}
+
+function renderImportPreview() {
+  const sources = snapshot?.importPreview?.sources || {};
+  const entries = Object.values(sources);
+  if (entries.length === 0) {
+    importPreviewList.innerHTML = `<div class="endpoint-empty">${t("data.importPreviewMissing")}</div>`;
+    return;
+  }
+  importPreviewList.innerHTML = entries
+    .map((source) => {
+      const database = source.database || {};
+      const present = Boolean(database.present);
+      const counts = Object.entries(database.counts || {})
+        .map(([table, count]) => `${table}: ${count}`)
+        .join(", ");
+      const extras = [
+        source.labelAliases?.present ? `label_aliases.json: ${formatBytes(source.labelAliases.sizeBytes)}` : "",
+        source.modelAdjustments?.present ? `model_adjustments.json: ${formatBytes(source.modelAdjustments.sizeBytes)}` : "",
+        source.envFile?.present ? "innerlife.env" : ""
+      ].filter(Boolean);
+      const importPlan = source.importPlan || {};
+      const candidateRows = Number.isFinite(importPlan.candidateRows) ? importPlan.candidateRows : 0;
+      const skippedTables = importPlan.skippedTables || [];
+      const importState = importPlan.importEnabled ? t("data.importEnabled") : t("data.importDisabled");
+      const candidateHtml = (importPlan.candidates || [])
+        .map((candidate) => {
+          const sampleRows = candidate.samples || [];
+          const sampleHtml = sampleRows.length
+            ? sampleRows
+                .map((sample) => {
+                  const parts = [sample.id ? `# ${sample.id}` : "", sample.title, sample.status, sample.preview].filter(Boolean);
+                  return `<li>${escapeHtml(parts.join(" · "))}</li>`;
+                })
+                .join("")
+            : `<li>${t("data.importNoSamples")}</li>`;
+          return `
+            <div class="import-candidate">
+              <div>
+                <strong>${escapeHtml(candidate.table || "")}</strong>
+                <span>${escapeHtml(String(candidate.rowCount ?? 0))} ${t("data.importCandidates")}</span>
+              </div>
+              <small>${t("data.importTarget")}: ${escapeHtml(candidate.target || "")} · ${escapeHtml(candidate.note || "")}</small>
+              <small>${t("data.importSamples")}:</small>
+              <ul>${sampleHtml}</ul>
+              ${candidate.sampleError ? `<small class="error-text">${escapeHtml(candidate.sampleError)}</small>` : ""}
+            </div>
+          `;
+        })
+        .join("");
+      return `
+        <article class="import-preview-item ${present ? "present" : "missing"}">
+          <div>
+            <strong>${escapeHtml(source.label || source.id || "")}</strong>
+            <span>${present ? t("data.importPreviewFound") : t("data.importPreviewMissing")}</span>
+          </div>
+          <code>${escapeHtml(database.dbPath || source.root || "")}</code>
+          <small>${escapeHtml(formatBytes(database.sizeBytes || 0))}</small>
+          ${
+            present
+              ? `<small>${t("data.importPreviewTables")}: ${escapeHtml((database.tables || []).length)} · ${t("data.importPreviewQuickCheck")}: ${escapeHtml(database.quickCheck || "-")}</small>`
+              : ""
+          }
+          ${counts ? `<small>${escapeHtml(counts)}</small>` : ""}
+          ${extras.length ? `<small>${escapeHtml(extras.join(", "))}</small>` : ""}
+          <small><strong>${t("data.importPlan")}:</strong> ${escapeHtml(String(candidateRows))} ${t("data.importCandidates")} · ${escapeHtml(importState)}</small>
+          ${importPlan.requirement ? `<small><strong>${t("data.importRequirement")}:</strong> ${escapeHtml(importPlan.requirement)}</small>` : ""}
+          ${candidateHtml ? `<div class="import-candidate-list">${candidateHtml}</div>` : ""}
+          ${skippedTables.length ? `<small>${t("data.importSkipped")}: ${escapeHtml(skippedTables.join(", "))}</small>` : ""}
+          ${database.error ? `<small class="error-text">${escapeHtml(database.error)}</small>` : ""}
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function renderMemoryResults(memories) {
+  if (memories.length === 0) {
+    memoryList.innerHTML = `<div class="endpoint-empty">${t("memory.empty")}</div>`;
+    return;
+  }
+  memoryList.innerHTML = memories
+    .map((memory) => {
+      const labels = (memory.labels || [])
+        .map((label) => `<span>${escapeHtml(label)}</span>`)
+        .join("");
+      const embeddingStatus = memory.embedding_status || "pending";
+      const embeddingLabel = t(`memory.embedding.${embeddingStatus}`) || embeddingStatus;
+      const embeddingDetail = memory.embedding_error
+        ? `<span title="${escapeHtml(memory.embedding_error)}">${escapeHtml(memory.embedding_error)}</span>`
+        : `<span>${escapeHtml(memory.embedding_model || "")}</span>`;
+      const sourceLabel = memory.search_source ? t(`memory.search.source.${memory.search_source}`) || memory.search_source : "";
+      const scoreLabel =
+        memory.search_source && Number(memory.search_score) > 0
+          ? `${t("memory.search.score")} ${Math.round(Number(memory.search_score) * 100)}%`
+          : "";
+      const searchMeta =
+        sourceLabel || scoreLabel
+          ? `<div class="memory-search-rank"><span>${escapeHtml(sourceLabel)}</span><span>${escapeHtml(scoreLabel)}</span></div>`
+          : "";
+      return `
+        <article class="memory-item" data-memory-id="${escapeHtml(memory.id)}">
+          <strong>${escapeHtml(memory.title || t("memory.form.body"))}</strong>
+          <p>${escapeHtml(memory.body)}</p>
+          ${searchMeta}
+          <div class="memory-meta">
+            <span>${escapeHtml(memory.created_at || "")}</span>
+            <div>${labels}</div>
+          </div>
+          <div class="memory-embedding ${escapeHtml(embeddingStatus)}">
+            <b>${escapeHtml(embeddingLabel)}</b>
+            ${embeddingDetail}
+          </div>
+          <div class="memory-actions">
+            <button class="secondary" data-memory-action="embed" data-memory-id="${escapeHtml(memory.id)}">${t("actions.embed")}</button>
+            <button class="secondary" data-memory-action="edit" data-memory-id="${escapeHtml(memory.id)}">${t("actions.edit")}</button>
+            <button class="secondary" data-memory-action="archive" data-memory-id="${escapeHtml(memory.id)}">${t("actions.archive")}</button>
+            <button class="secondary" data-memory-action="restrict" data-memory-id="${escapeHtml(memory.id)}">${t("actions.restrict")}</button>
+            <button class="secondary danger-button" data-memory-action="delete" data-memory-id="${escapeHtml(memory.id)}">${t("actions.delete")}</button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function renderDeletedMemoryResults(memories) {
+  if (memories.length === 0) {
+    deletedMemoryList.innerHTML = `<div class="endpoint-empty">${t("memory.deleted.empty")}</div>`;
+    return;
+  }
+  deletedMemoryList.innerHTML = memories
+    .map((memory) => {
+      const labels = (memory.labels || [])
+        .map((label) => `<span>${escapeHtml(label)}</span>`)
+        .join("");
+      return `
+        <article class="memory-item deleted" data-memory-id="${escapeHtml(memory.id)}">
+          <strong>${escapeHtml(memory.title || t("memory.form.body"))}</strong>
+          <p>${escapeHtml(memory.body)}</p>
+          <div class="memory-meta">
+            <span>${escapeHtml(memory.updated_at || memory.created_at || "")}</span>
+            <div>${labels}</div>
+          </div>
+          <div class="memory-actions">
+            <button class="secondary" data-memory-action="restore" data-memory-id="${escapeHtml(memory.id)}">${t("actions.restore")}</button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function renderRestrictedMemoryResults(memories) {
+  if (memories.length === 0) {
+    restrictedMemoryList.innerHTML = `<div class="endpoint-empty">${t("memory.restricted.empty")}</div>`;
+    return;
+  }
+  restrictedMemoryList.innerHTML = memories
+    .map((memory) => {
+      const labels = (memory.labels || [])
+        .map((label) => `<span>${escapeHtml(label)}</span>`)
+        .join("");
+      return `
+        <article class="memory-item restricted" data-memory-id="${escapeHtml(memory.id)}">
+          <strong>${escapeHtml(memory.title || t("memory.form.body"))}</strong>
+          <p>${escapeHtml(memory.body)}</p>
+          <div class="memory-meta">
+            <span>${escapeHtml(memory.updated_at || memory.created_at || "")}</span>
+            <div>${labels}</div>
+          </div>
+          <div class="memory-actions">
+            <button class="secondary" data-memory-action="edit-restricted" data-memory-id="${escapeHtml(memory.id)}">${t("actions.edit")}</button>
+            <button class="secondary" data-memory-action="unrestrict" data-memory-id="${escapeHtml(memory.id)}">${t("actions.unrestrict")}</button>
+            <button class="secondary danger-button" data-memory-action="delete-restricted" data-memory-id="${escapeHtml(memory.id)}">${t("actions.delete")}</button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function renderArchivedMemoryResults(memories) {
+  if (memories.length === 0) {
+    archivedMemoryList.innerHTML = `<div class="endpoint-empty">${t("memory.archived.empty")}</div>`;
+    return;
+  }
+  archivedMemoryList.innerHTML = memories
+    .map((memory) => {
+      const labels = (memory.labels || [])
+        .map((label) => `<span>${escapeHtml(label)}</span>`)
+        .join("");
+      return `
+        <article class="memory-item archived" data-memory-id="${escapeHtml(memory.id)}">
+          <strong>${escapeHtml(memory.title || t("memory.form.body"))}</strong>
+          <p>${escapeHtml(memory.body)}</p>
+          <div class="memory-meta">
+            <span>${escapeHtml(memory.updated_at || memory.created_at || "")}</span>
+            <div>${labels}</div>
+          </div>
+          <div class="memory-actions">
+            <button class="secondary" data-memory-action="restore-archived" data-memory-id="${escapeHtml(memory.id)}">${t("actions.restore")}</button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function renderMemoryOverview() {
+  const stats = snapshot?.memoryStats || {};
+  memoryActiveCount.textContent = stats.activeCount ?? 0;
+  memoryDeletedCount.textContent = stats.deletedCount ?? 0;
+  memoryEmbeddedCount.textContent = stats.embeddedCount ?? 0;
+  memoryPendingEmbeddingCount.textContent = stats.pendingEmbeddingCount ?? 0;
+  memoryRestrictedCount.textContent = stats.restrictedCount ?? 0;
+  memoryArchivedCount.textContent = stats.archivedCount ?? 0;
+  const labels = stats.labels || [];
+  if (labels.length === 0) {
+    memoryLabelList.innerHTML = `<span class="quiet">${t("memory.labels.empty")}</span>`;
+  } else {
+    memoryLabelList.innerHTML = labels
+      .slice(0, 12)
+      .map((item) => `<button class="tag-button" data-memory-label="${escapeHtml(item.label)}">${escapeHtml(item.label)} <span>${escapeHtml(item.count)}</span></button>`)
+      .join("");
+  }
+  renderDeletedMemoryResults(snapshot?.deletedMemories || []);
+  renderRestrictedMemoryResults(snapshot?.restrictedMemories || []);
+  renderArchivedMemoryResults(snapshot?.archivedMemories || []);
+  renderMemoryGraph();
+  renderMemoryMaintenance();
+  renderMemoryMergeSuggestions();
+  renderMemoryArchiveSuggestions();
+  renderMemoryAliases();
+  renderMemoryRecords();
+}
+
+function renderMemoryMaintenance() {
+  const report = snapshot?.memoryMaintenance || {};
+  const issues = report.issues || [];
+  memoryMaintenanceSummary.textContent =
+    report.status === "ok"
+      ? t("memory.maintenance.ok")
+      : t("memory.maintenance.needsRepair", { count: issues.reduce((sum, issue) => sum + (issue.count || 0), 0) });
+  if (issues.length === 0) {
+    memoryMaintenanceList.innerHTML = "";
+    return;
+  }
+  memoryMaintenanceList.innerHTML = issues
+    .map(
+      (issue) => `
+        <div class="maintenance-item">
+          <span>${escapeHtml(t(`memory.maintenance.${issue.code}`) || issue.code)}</span>
+          <strong>${escapeHtml(issue.count || 0)}</strong>
+        </div>
+      `
+    )
+    .join("");
+}
+
+function renderMemoryGraph() {
+  const graph = snapshot?.memoryGraph || {};
+  const nodes = graph.nodes || [];
+  const edges = graph.edges || [];
+  memoryGraphSummary.textContent = t("memory.graph.summary", {
+    nodes: nodes.length,
+    edges: edges.length
+  });
+  if (nodes.length === 0 || edges.length === 0) {
+    memoryGraph.innerHTML = `<div class="endpoint-empty">${t("memory.graph.empty")}</div>`;
+    return;
+  }
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  memoryGraph.innerHTML = edges
+    .slice(0, 40)
+    .map((edge) => {
+      const from = nodeById.get(edge.from) || { label: edge.from, kind: "" };
+      const to = nodeById.get(edge.to) || { label: edge.to, kind: "" };
+      return `
+        <article class="graph-edge">
+          <span class="graph-node ${escapeHtml(from.kind || "")}">${escapeHtml(t(`memory.graph.kind.${from.kind}`) || from.kind)} · ${escapeHtml(from.label || "")}</span>
+          <span class="graph-link">${escapeHtml(t(`memory.graph.edge.${edge.kind}`) || edge.kind)}</span>
+          <span class="graph-node ${escapeHtml(to.kind || "")}">${escapeHtml(t(`memory.graph.kind.${to.kind}`) || to.kind)} · ${escapeHtml(to.label || "")}</span>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function renderMemoryMergeSuggestions() {
+  const report = snapshot?.memoryMergeSuggestions || {};
+  const suggestions = report.suggestions || [];
+  memoryMergeSummary.textContent = suggestions.length
+    ? t("memory.merge.count", { count: suggestions.length })
+    : t("memory.merge.empty");
+  if (suggestions.length === 0) {
+    memoryMergeList.innerHTML = "";
+    return;
+  }
+  memoryMergeList.innerHTML = suggestions
+    .map((suggestion) => {
+      const reasons = (suggestion.reasons || []).map((reason) => t(`memory.merge.${reason}`) || reason).join(" · ");
+      return `
+        <div class="maintenance-item merge-item">
+          <div>
+            <span>${escapeHtml(reasons)} · ${escapeHtml(Math.round((suggestion.score || 0) * 100))}%</span>
+            <strong>${escapeHtml(suggestion.target?.title || suggestion.target?.id || "-")}</strong>
+            <small>${escapeHtml(suggestion.source?.title || suggestion.source?.id || "-")}</small>
+          </div>
+          <button class="secondary" data-memory-merge-target="${escapeHtml(suggestion.target?.id || "")}" data-memory-merge-source="${escapeHtml(suggestion.source?.id || "")}">${t("memory.merge.action")}</button>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function renderMemoryArchiveSuggestions() {
+  const report = snapshot?.memoryArchiveSuggestions || {};
+  const suggestions = report.suggestions || [];
+  memoryArchiveSummary.textContent = suggestions.length
+    ? t("memory.archive.count", { count: suggestions.length })
+    : t("memory.archive.empty");
+  if (suggestions.length === 0) {
+    memoryArchiveList.innerHTML = "";
+    return;
+  }
+  memoryArchiveList.innerHTML = suggestions
+    .map(
+      (suggestion) => `
+        <div class="maintenance-item merge-item">
+          <div>
+            <span>${escapeHtml(t(`memory.archive.${suggestion.reason}`) || suggestion.reason || "")} · ${escapeHtml(suggestion.updatedAt || "")}</span>
+            <strong>${escapeHtml(suggestion.title || suggestion.id)}</strong>
+            <small>${escapeHtml(suggestion.bodyPreview || "")}</small>
+          </div>
+          <button class="secondary" data-memory-archive-id="${escapeHtml(suggestion.id || "")}">${t("actions.archive")}</button>
+        </div>
+      `
+    )
+    .join("");
+}
+
+function renderMemoryAliases() {
+  const aliases = snapshot?.memoryLabelAliases || [];
+  if (aliases.length === 0) {
+    memoryAliasList.innerHTML = `<span class="quiet">${t("memory.aliases.empty")}</span>`;
+    return;
+  }
+  memoryAliasList.innerHTML = aliases
+    .map(
+      (item) => `
+        <button class="tag-button alias-chip" data-memory-alias="${escapeHtml(item.alias)}">
+          ${escapeHtml(item.alias)} <span>${escapeHtml(item.canonicalLabel)}</span>
+        </button>
+      `
+    )
+    .join("");
+}
+
+function formatRecordValue(value) {
+  if (!value || typeof value !== "object") return "{}";
+  return JSON.stringify(value);
+}
+
+function renderMemoryRecords() {
+  const recordStats = snapshot?.memoryRecordStats || {};
+  const recordTypes = recordStats.types || [];
+  if (recordTypes.length === 0) {
+    memoryRecordStats.innerHTML = `<span class="quiet">${t("memory.records.typesEmpty")}</span>`;
+  } else {
+    memoryRecordStats.innerHTML = recordTypes
+      .slice(0, 8)
+      .map(
+        (item) =>
+          `<button class="tag-button" data-memory-record-type="${escapeHtml(item.recordType)}">${escapeHtml(item.recordType)} <span>${escapeHtml(item.count)}</span></button>`
+      )
+      .join("");
+  }
+  const records = snapshot?.memoryRecords || [];
+  if (records.length === 0) {
+    memoryRecordList.innerHTML = `<div class="endpoint-empty">${t("memory.records.empty")}</div>`;
+    return;
+  }
+  memoryRecordList.innerHTML = records
+    .slice(0, 10)
+    .map(
+      (record) => `
+        <article class="memory-item structured-record" data-memory-record-id="${escapeHtml(record.id)}">
+          <strong>${escapeHtml(record.title || record.recordType)}</strong>
+          <p>${escapeHtml(formatRecordValue(record.value))}</p>
+          <div class="memory-meta">
+            <span>${escapeHtml(record.occurredAt || "")}</span>
+            <div><span>${escapeHtml(record.recordType || "")}</span><span>${escapeHtml(record.source || "")}</span></div>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function clearMemoryForm() {
+  editingMemoryId = null;
+  memoryTitleInput.value = "";
+  memoryBodyInput.value = "";
+  memoryLabelsInput.value = "";
+  memoryRestrictedInput.checked = false;
+  saveMemory.textContent = t("memory.form.save");
+}
+
+function fillMemoryForm(memory) {
+  editingMemoryId = memory.id;
+  memoryTitleInput.value = memory.title || "";
+  memoryBodyInput.value = memory.body || "";
+  memoryLabelsInput.value = (memory.labels || []).join(", ");
+  memoryRestrictedInput.checked = memory.sensitivity === "restricted";
+  saveMemory.textContent = t("memory.form.update");
+  memoryBodyInput.focus();
+}
+
+function collectSettingsForm() {
+  return {
+    "memory.embedding.provider": memoriaProvider.value,
+    "memory.embedding.base_url": memoriaEndpoint.value,
+    "memory.embedding.model": memoriaModel.value,
+    "memory.embedding.dimension": memoriaDimension.value,
+    "innerlife.provider": innerLifeBackend.value,
+    "innerlife.light_model": innerLifeLightModel.value,
+    "innerlife.deep_model": innerLifeDeepModel.value,
+    "innerlife.loop_seconds": innerLifePollSeconds.value
+  };
+}
+
+function renderSnapshot() {
   runtimeMode.textContent = formatMode(snapshot.mode);
   rootPath.textContent = snapshot.root;
   dataLocation.textContent = snapshot.data.root;
-  dataHint.textContent = snapshot.data.memoriaStorePresent ? t("runtime.memoriaStoreAvailable") : t("runtime.noMemoriaStore");
+  dataHint.textContent = snapshot.data.databasePresent ? t("runtime.databaseReady") : t("runtime.databaseNotCreated");
   dataRootPath.textContent = snapshot.data.root;
-  memoryStore.textContent = snapshot.data.memoriaStore;
-  memoryStoreShort.textContent = snapshot.data.memoriaStorePresent ? t("common.found") : t("common.notCreated");
+  memoryStore.textContent = snapshot.data.databasePath;
+  memoryStoreShort.textContent = snapshot.data.databasePresent ? t("common.found") : t("common.notCreated");
   renderModules(snapshot.modules);
+  renderHealth();
   renderEvents();
   renderConnections();
+  renderAgentSetup();
+  renderSettings();
+  renderMemoryOverview();
+  renderMemoryList();
+  renderSharedLine();
+  renderInnerLife();
+  renderBackups();
+  renderImportPreview();
 }
 
 function renderResourceSnapshot(resources) {
@@ -629,6 +2246,9 @@ function applyStaticTranslations() {
   });
   document.querySelectorAll("[data-i18n-value]").forEach((element) => {
     element.value = t(element.dataset.i18nValue);
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((element) => {
+    element.setAttribute("placeholder", t(element.dataset.i18nPlaceholder));
   });
   document.querySelectorAll("[data-language]").forEach((button) => {
     button.classList.toggle("active", button.dataset.language === currentLanguage);
@@ -668,6 +2288,20 @@ async function refreshResources() {
   renderResourceSnapshot(resources);
 }
 
+function scheduleRuntimeRefresh() {
+  if (runtimeRefreshTimer) return;
+  runtimeRefreshTimer = window.setTimeout(() => {
+    runtimeRefreshTimer = null;
+    refresh().catch(console.error);
+  }, 250);
+}
+
+async function processMemoryEmbeddingsAndRefresh() {
+  memoryNotice.textContent = t("memory.embedding.processing");
+  await window.ClaraCoreDesktop.processMemoryEmbeddings(5);
+  await refresh();
+}
+
 document.querySelectorAll("[data-view]").forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.view));
 });
@@ -680,6 +2314,941 @@ document.querySelectorAll("[data-language]").forEach((button) => {
   button.addEventListener("click", () => setLanguage(button.dataset.language));
 });
 
+copyAgentSetup.addEventListener("click", () => {
+  copyValue(buildAgentSetupMarkdown(), t("agentSetup.copied"), agentSetupNotice).catch(console.error);
+});
+
+saveSettings.addEventListener("click", async () => {
+  saveSettings.disabled = true;
+  settingsNotice.textContent = t("common.checking");
+  try {
+    await window.ClaraCoreDesktop.saveSettings(collectSettingsForm());
+    await refresh();
+    showCopyNotice(t("settings.saved"), settingsNotice);
+  } catch (error) {
+    console.error(error);
+    settingsNotice.textContent = t("settings.saveFailed");
+  } finally {
+    saveSettings.disabled = false;
+  }
+});
+
+saveMemory.addEventListener("click", async () => {
+  saveMemory.disabled = true;
+  memoryNotice.textContent = t("common.checking");
+  try {
+    const input = {
+      title: memoryTitleInput.value,
+      body: memoryBodyInput.value,
+      labels: memoryLabelsInput.value,
+      sensitivity: memoryRestrictedInput.checked ? "restricted" : "normal"
+    };
+    if (editingMemoryId) {
+      await window.ClaraCoreDesktop.updateMemory(editingMemoryId, input);
+    } else {
+      await window.ClaraCoreDesktop.createMemory(input);
+    }
+    const message = editingMemoryId ? t("memory.form.updated") : t("memory.form.saved");
+    clearMemoryForm();
+    await refresh();
+    await processMemoryEmbeddingsAndRefresh();
+    showCopyNotice(message, memoryNotice);
+  } catch (error) {
+    console.error(error);
+    memoryNotice.textContent = t("memory.form.saveFailed");
+  } finally {
+    saveMemory.disabled = false;
+  }
+});
+
+cancelMemoryEdit.addEventListener("click", () => {
+  clearMemoryForm();
+  memoryNotice.textContent = "";
+});
+
+saveMemoryAlias.addEventListener("click", async () => {
+  saveMemoryAlias.disabled = true;
+  memoryAliasNotice.textContent = t("common.checking");
+  try {
+    await window.ClaraCoreDesktop.createMemoryLabelAlias({
+      alias: memoryAliasInput.value,
+      canonicalLabel: memoryCanonicalLabelInput.value
+    });
+    memoryAliasInput.value = "";
+    memoryCanonicalLabelInput.value = "";
+    await refresh();
+    showCopyNotice(t("memory.aliases.saved"), memoryAliasNotice);
+  } catch (error) {
+    console.error(error);
+    memoryAliasNotice.textContent = t("memory.aliases.saveFailed");
+  } finally {
+    saveMemoryAlias.disabled = false;
+  }
+});
+
+saveMemoryRecord.addEventListener("click", async () => {
+  saveMemoryRecord.disabled = true;
+  memoryRecordNotice.textContent = t("common.checking");
+  try {
+    const valueText = memoryRecordValueInput.value.trim() || "{}";
+    let value;
+    try {
+      value = JSON.parse(valueText);
+    } catch (_error) {
+      memoryRecordNotice.textContent = t("memory.records.invalidJson");
+      return;
+    }
+    await window.ClaraCoreDesktop.createMemoryRecord({
+      recordType: memoryRecordTypeInput.value,
+      title: memoryRecordTitleInput.value,
+      value
+    });
+    memoryRecordTitleInput.value = "";
+    memoryRecordValueInput.value = "";
+    await refresh();
+    showCopyNotice(t("memory.records.saved"), memoryRecordNotice);
+  } catch (error) {
+    console.error(error);
+    memoryRecordNotice.textContent = t("memory.records.saveFailed");
+  } finally {
+    saveMemoryRecord.disabled = false;
+  }
+});
+
+searchMemory.addEventListener("click", async () => {
+  const response = await window.ClaraCoreDesktop.searchMemories(memorySearchInput.value);
+  const results = Array.isArray(response) ? response : response?.results || [];
+  renderMemoryResults(results);
+  if (Array.isArray(response)) {
+    memoryNotice.textContent = "";
+  } else if (response?.error) {
+    memoryNotice.textContent = t("memory.search.fallback");
+  } else {
+    memoryNotice.textContent = t(`memory.search.${response?.mode || "list"}`) || "";
+  }
+});
+
+memorySearchInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    searchMemory.click();
+  }
+});
+
+memoryLabelList.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-memory-label]");
+  if (!button) return;
+  memorySearchInput.value = button.dataset.memoryLabel || "";
+  searchMemory.click();
+});
+
+runMemoryMaintenance.addEventListener("click", async () => {
+  runMemoryMaintenance.disabled = true;
+  memoryMaintenanceNotice.textContent = t("common.checking");
+  try {
+    const result = await window.ClaraCoreDesktop.runMemoryMaintenance({ dryRun: false });
+    await refresh();
+    const actions = result.actions || [];
+    const actionText = actions
+      .map((action) => `${t(`memory.maintenance.${action.code}`) || action.code}: ${action.count}`)
+      .join(" · ");
+    showCopyNotice(actionText || t("memory.maintenance.done"), memoryMaintenanceNotice);
+  } catch (error) {
+    console.error(error);
+    memoryMaintenanceNotice.textContent = t("memory.maintenance.failed");
+  } finally {
+    runMemoryMaintenance.disabled = false;
+  }
+});
+
+memoryMergeList.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-memory-merge-target]");
+  if (!button) return;
+  const targetId = button.dataset.memoryMergeTarget;
+  const sourceId = button.dataset.memoryMergeSource;
+  if (!targetId || !sourceId) return;
+  if (!window.confirm(t("memory.merge.confirm"))) return;
+  button.disabled = true;
+  memoryMaintenanceNotice.textContent = t("common.checking");
+  try {
+    await window.ClaraCoreDesktop.mergeMemories({ targetId, sourceId });
+    await refresh();
+    showCopyNotice(t("memory.merge.done"), memoryMaintenanceNotice);
+  } catch (error) {
+    console.error(error);
+    memoryMaintenanceNotice.textContent = t("memory.merge.failed");
+  } finally {
+    button.disabled = false;
+  }
+});
+
+memoryArchiveList.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-memory-archive-id]");
+  if (!button) return;
+  const memoryId = button.dataset.memoryArchiveId;
+  if (!memoryId) return;
+  if (!window.confirm(t("memory.archive.confirm"))) return;
+  button.disabled = true;
+  memoryArchiveActionNotice.textContent = t("common.checking");
+  try {
+    await window.ClaraCoreDesktop.archiveMemory(memoryId);
+    await refresh();
+    showCopyNotice(t("memory.archive.done"), memoryArchiveActionNotice);
+  } catch (error) {
+    console.error(error);
+    memoryArchiveActionNotice.textContent = t("memory.archive.failed");
+  } finally {
+    button.disabled = false;
+  }
+});
+
+archiveDormantMemories.addEventListener("click", async () => {
+  archiveDormantMemories.disabled = true;
+  memoryArchiveActionNotice.textContent = t("common.checking");
+  try {
+    const result = await window.ClaraCoreDesktop.archiveDormantMemories({
+      olderThanDays: 30,
+      limit: 10,
+      dryRun: false
+    });
+    await refresh();
+    showCopyNotice(`${t("memory.archive.done")}: ${result.archived || 0}`, memoryArchiveActionNotice);
+  } catch (error) {
+    console.error(error);
+    memoryArchiveActionNotice.textContent = t("memory.archive.failed");
+  } finally {
+    archiveDormantMemories.disabled = false;
+  }
+});
+
+memoryAliasList.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-memory-alias]");
+  if (!button) return;
+  if (!window.confirm(t("memory.aliases.deleteConfirm"))) return;
+  button.disabled = true;
+  try {
+    await window.ClaraCoreDesktop.deleteMemoryLabelAlias(button.dataset.memoryAlias || "");
+    await refresh();
+    showCopyNotice(t("memory.aliases.deleted"), memoryAliasNotice);
+  } catch (error) {
+    console.error(error);
+    memoryAliasNotice.textContent = t("memory.aliases.saveFailed");
+  }
+});
+
+memoryRecordStats.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-memory-record-type]");
+  if (!button) return;
+  const response = await window.ClaraCoreDesktop.getMemoryRecords({
+    recordType: button.dataset.memoryRecordType || "",
+    limit: 20
+  });
+  snapshot = {
+    ...snapshot,
+    memoryRecords: response.records || [],
+    memoryRecordStats: response.stats || snapshot?.memoryRecordStats || {}
+  };
+  renderMemoryRecords();
+});
+
+memoryList.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-memory-action]");
+  if (!button) return;
+  const memoryId = button.dataset.memoryId;
+  const memory = (snapshot?.memories || []).find((item) => item.id === memoryId);
+  if (button.dataset.memoryAction === "edit" && memory) {
+    fillMemoryForm(memory);
+    return;
+  }
+  if (button.dataset.memoryAction === "embed") {
+    button.disabled = true;
+    try {
+      await window.ClaraCoreDesktop.embedMemory(memoryId);
+      await refresh();
+      showCopyNotice(t("memory.embedding.saved"), memoryNotice);
+    } catch (error) {
+      console.error(error);
+      await refresh();
+      memoryNotice.textContent = t("memory.embedding.failed");
+    }
+    return;
+  }
+  if (button.dataset.memoryAction === "delete") {
+    button.disabled = true;
+    await window.ClaraCoreDesktop.deleteMemory(memoryId);
+    if (editingMemoryId === memoryId) clearMemoryForm();
+    await refresh();
+    showCopyNotice(t("memory.form.deleted"), memoryNotice);
+    return;
+  }
+  if (button.dataset.memoryAction === "archive") {
+    if (!window.confirm(t("memory.archive.confirm"))) return;
+    button.disabled = true;
+    await window.ClaraCoreDesktop.archiveMemory(memoryId);
+    if (editingMemoryId === memoryId) clearMemoryForm();
+    await refresh();
+    showCopyNotice(t("memory.archive.done"), memoryNotice);
+    return;
+  }
+  if (button.dataset.memoryAction === "restrict") {
+    button.disabled = true;
+    await window.ClaraCoreDesktop.restrictMemory(memoryId);
+    if (editingMemoryId === memoryId) clearMemoryForm();
+    await refresh();
+    showCopyNotice(t("memory.form.updated"), memoryNotice);
+  }
+});
+
+restrictedMemoryList.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-memory-action]");
+  if (!button) return;
+  const memoryId = button.dataset.memoryId;
+  const memory = (snapshot?.restrictedMemories || []).find((item) => item.id === memoryId);
+  if (button.dataset.memoryAction === "edit-restricted" && memory) {
+    fillMemoryForm(memory);
+    return;
+  }
+  if (button.dataset.memoryAction === "unrestrict") {
+    button.disabled = true;
+    await window.ClaraCoreDesktop.unrestrictMemory(memoryId);
+    if (editingMemoryId === memoryId) clearMemoryForm();
+    await refresh();
+    showCopyNotice(t("memory.form.updated"), memoryNotice);
+    return;
+  }
+  if (button.dataset.memoryAction === "delete-restricted") {
+    button.disabled = true;
+    await window.ClaraCoreDesktop.deleteMemory(memoryId);
+    if (editingMemoryId === memoryId) clearMemoryForm();
+    await refresh();
+    showCopyNotice(t("memory.form.deleted"), memoryNotice);
+  }
+});
+
+archivedMemoryList.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-memory-action='restore-archived']");
+  if (!button) return;
+  button.disabled = true;
+  try {
+    await window.ClaraCoreDesktop.restoreArchivedMemory(button.dataset.memoryId);
+    await refresh();
+    showCopyNotice(t("memory.archive.restoreDone"), memoryNotice);
+  } catch (error) {
+    console.error(error);
+    memoryNotice.textContent = t("memory.form.saveFailed");
+  }
+});
+
+deletedMemoryList.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-memory-action='restore']");
+  if (!button) return;
+  button.disabled = true;
+  try {
+    await window.ClaraCoreDesktop.restoreMemory(button.dataset.memoryId);
+    await refresh();
+    showCopyNotice(t("memory.form.restored"), memoryNotice);
+  } catch (error) {
+    console.error(error);
+    memoryNotice.textContent = t("memory.form.saveFailed");
+  }
+});
+
+createSharedLine.addEventListener("click", async () => {
+  createSharedLine.disabled = true;
+  sharedLineNotice.textContent = t("common.checking");
+  try {
+    const result = renamingSharedLineId
+      ? await window.ClaraCoreDesktop.renameSharedLine(renamingSharedLineId, sharedLineTitleInput.value)
+      : await window.ClaraCoreDesktop.createSharedLine({
+          title: sharedLineTitleInput.value,
+          makeActive: true
+        });
+    snapshot.sharedLine = result.sharedLine;
+    const message = renamingSharedLineId ? t("sharedLine.lineRenamed") : t("sharedLine.lineCreated");
+    renamingSharedLineId = null;
+    sharedLineTitleInput.value = "";
+    renderSharedLine();
+    showCopyNotice(message, sharedLineNotice);
+  } catch (error) {
+    console.error(error);
+    sharedLineNotice.textContent = t("sharedLine.lineFailed");
+  } finally {
+    createSharedLine.disabled = false;
+  }
+});
+
+sharedLineTitleInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    createSharedLine.click();
+  }
+});
+
+sharedLineList.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-shared-line-action]");
+  if (!button) return;
+  const action = button.dataset.sharedLineAction;
+  const lineId = button.dataset.sharedLineId;
+  button.disabled = true;
+  sharedLineNotice.textContent = t("common.checking");
+  try {
+    let result;
+    if (action === "activate") {
+      result = await window.ClaraCoreDesktop.activateSharedLine(lineId);
+      showCopyNotice(t("sharedLine.lineActivated"), sharedLineNotice);
+    } else if (action === "rename") {
+      renamingSharedLineId = lineId;
+      sharedLineTitleInput.value = button.dataset.sharedLineTitle || "";
+      createSharedLine.textContent = t("sharedLine.renameLine");
+      sharedLineTitleInput.focus();
+      sharedLineNotice.textContent = "";
+      return;
+    } else if (action === "archive") {
+      if (!window.confirm(t("sharedLine.archiveConfirm"))) {
+        sharedLineNotice.textContent = "";
+        return;
+      }
+      renamingSharedLineId = null;
+      result = await window.ClaraCoreDesktop.archiveSharedLine(lineId);
+      showCopyNotice(t("sharedLine.lineArchived"), sharedLineNotice);
+    } else if (action === "restore") {
+      renamingSharedLineId = null;
+      result = await window.ClaraCoreDesktop.restoreSharedLine(lineId, true);
+      showCopyNotice(t("sharedLine.lineRestored"), sharedLineNotice);
+    }
+    if (!result?.sharedLine) return;
+    snapshot.sharedLine = result.sharedLine;
+    renderSharedLine();
+  } catch (error) {
+    console.error(error);
+    sharedLineNotice.textContent = t("sharedLine.lineFailed");
+  } finally {
+    button.disabled = false;
+  }
+});
+
+saveSharedLine.addEventListener("click", async () => {
+  saveSharedLine.disabled = true;
+  sharedLineNotice.textContent = t("common.checking");
+  try {
+    const input = {
+      summary: sharedLineInput.value,
+      interpretationStatus: "draft"
+    };
+    let sharedLine;
+    try {
+      sharedLine = await window.ClaraCoreDesktop.saveSharedLine(input);
+    } catch (error) {
+      if (String(error?.message || "").includes("Confirmed Shared Line overwrite requires explicit confirmation")) {
+        if (!window.confirm(t("sharedLine.form.confirmOverwrite"))) throw error;
+        sharedLine = await window.ClaraCoreDesktop.saveSharedLine({
+          ...input,
+          confirmOverwrite: true
+        });
+      } else {
+        throw error;
+      }
+    }
+    snapshot.sharedLine = sharedLine;
+    renderSharedLine();
+    showCopyNotice(t("sharedLine.form.saved"), sharedLineNotice);
+  } catch (error) {
+    console.error(error);
+    sharedLineNotice.textContent = t("sharedLine.form.saveFailed");
+  } finally {
+    saveSharedLine.disabled = false;
+  }
+});
+
+copySharedLineResume.addEventListener("click", () => {
+  copyValue(sharedLineResume.textContent, t("sharedLine.resumeCopied"), sharedLineNotice).catch(console.error);
+});
+
+createSharedLineHandoff.addEventListener("click", async () => {
+  createSharedLineHandoff.disabled = true;
+  sharedLineNotice.textContent = t("common.checking");
+  try {
+    const summary = sharedLineInput.value || snapshot?.sharedLine?.currentPosition?.summary || "";
+    const result = await window.ClaraCoreDesktop.createSharedLineHandoff({
+      objective: summary || "Continue from the current Shared Line.",
+      completed: [],
+      openItems: [],
+      nextStep: summary ? "Resume from this Shared Line and update it after the next meaningful step." : "Save a Shared Line position before continuing."
+    });
+    snapshot.sharedLine = result.sharedLine;
+    renderSharedLine();
+    showCopyNotice(t("sharedLine.handoffCreated"), sharedLineNotice);
+  } catch (error) {
+    console.error(error);
+    sharedLineNotice.textContent = t("sharedLine.handoffFailed");
+  } finally {
+    createSharedLineHandoff.disabled = false;
+  }
+});
+
+startInnerLifeSession.addEventListener("click", async () => {
+  startInnerLifeSession.disabled = true;
+  innerLifeNotice.textContent = t("common.checking");
+  try {
+    await window.ClaraCoreDesktop.startInnerLifeSession({
+      agentId: "my-agent",
+      userId: "local-user",
+      host: "desktop",
+      externalSessionId: `desktop-${Date.now()}`
+    });
+    await refresh();
+    showCopyNotice(t("innerLife.sessionStarted"), innerLifeNotice);
+  } catch (error) {
+    console.error(error);
+    innerLifeNotice.textContent = t("innerLife.sessionFailed");
+  } finally {
+    startInnerLifeSession.disabled = false;
+  }
+});
+
+endInnerLifeSession.addEventListener("click", async () => {
+  endInnerLifeSession.disabled = true;
+  innerLifeNotice.textContent = t("common.checking");
+  try {
+    const sessions = snapshot?.innerLife?.sessions || [];
+    const activeSession = sessions.find((session) => session.status === "active");
+    if (!activeSession) throw new Error("No active InnerLife session.");
+    await window.ClaraCoreDesktop.endInnerLifeSession(activeSession.id, {
+      summary: innerLifeSessionSummary.value
+    });
+    innerLifeSessionSummary.value = "";
+    await refresh();
+    showCopyNotice(t("innerLife.sessionEnded"), innerLifeNotice);
+  } catch (error) {
+    console.error(error);
+    innerLifeNotice.textContent = t("innerLife.sessionFailed");
+  } finally {
+    endInnerLifeSession.disabled = false;
+  }
+});
+
+submitInnerLifeInbox.addEventListener("click", async () => {
+  submitInnerLifeInbox.disabled = true;
+  innerLifeNotice.textContent = t("common.checking");
+  try {
+    await window.ClaraCoreDesktop.submitInnerLifeInbox({
+      agentId: "my-agent",
+      source: "desktop",
+      body: innerLifeInboxInput.value
+    });
+    innerLifeInboxInput.value = "";
+    await refresh();
+    showCopyNotice(t("innerLife.inboxSubmitted"), innerLifeNotice);
+  } catch (error) {
+    console.error(error);
+    innerLifeNotice.textContent = t("innerLife.processFailed");
+  } finally {
+    submitInnerLifeInbox.disabled = false;
+  }
+});
+
+runInnerLifeDigest.addEventListener("click", async () => {
+  runInnerLifeDigest.disabled = true;
+  innerLifeNotice.textContent = t("common.checking");
+  try {
+    await window.ClaraCoreDesktop.runInnerLifeDigest({
+      mode: "manual",
+      prompt: innerLifeShareContext.value
+    });
+    showCopyNotice(t("innerLife.digestRan"), innerLifeNotice);
+    await refresh();
+  } catch (_error) {
+    innerLifeNotice.textContent = t("innerLife.processFailed");
+  } finally {
+    runInnerLifeDigest.disabled = false;
+  }
+});
+
+enableInnerLifeDaemon.addEventListener("click", async () => {
+  enableInnerLifeDaemon.disabled = true;
+  innerLifeNotice.textContent = t("common.checking");
+  try {
+    await window.ClaraCoreDesktop.setInnerLifeDaemon({ action: "enable" });
+    await refresh();
+    showCopyNotice(t("innerLife.daemonEnabled"), innerLifeNotice);
+  } catch (error) {
+    console.error(error);
+    innerLifeNotice.textContent = t("innerLife.daemonFailed");
+  } finally {
+    renderInnerLife();
+  }
+});
+
+pauseInnerLifeDaemon.addEventListener("click", async () => {
+  pauseInnerLifeDaemon.disabled = true;
+  innerLifeNotice.textContent = t("common.checking");
+  try {
+    await window.ClaraCoreDesktop.setInnerLifeDaemon({ action: "pause" });
+    await refresh();
+    showCopyNotice(t("innerLife.daemonPaused"), innerLifeNotice);
+  } catch (error) {
+    console.error(error);
+    innerLifeNotice.textContent = t("innerLife.daemonFailed");
+  } finally {
+    renderInnerLife();
+  }
+});
+
+tickInnerLifeDaemon.addEventListener("click", async () => {
+  tickInnerLifeDaemon.disabled = true;
+  innerLifeNotice.textContent = t("common.checking");
+  try {
+    await window.ClaraCoreDesktop.tickInnerLifeDaemon({ force: true });
+    await refresh();
+    showCopyNotice(t("innerLife.daemonTicked"), innerLifeNotice);
+  } catch (error) {
+    console.error(error);
+    innerLifeNotice.textContent = t("innerLife.daemonFailed");
+  } finally {
+    tickInnerLifeDaemon.disabled = false;
+  }
+});
+
+checkInnerLifeShareTiming.addEventListener("click", async () => {
+  checkInnerLifeShareTiming.disabled = true;
+  innerLifeNotice.textContent = t("common.checking");
+  try {
+    await window.ClaraCoreDesktop.checkInnerLifeShareTiming({
+      context: innerLifeShareContext.value
+    });
+    showCopyNotice(t("innerLife.timingChecked"), innerLifeNotice);
+    await refresh();
+  } catch (_error) {
+    innerLifeNotice.textContent = t("innerLife.processFailed");
+  } finally {
+    checkInnerLifeShareTiming.disabled = false;
+  }
+});
+
+processInnerLifeOnce.addEventListener("click", async () => {
+  processInnerLifeOnce.disabled = true;
+  innerLifeNotice.textContent = t("common.checking");
+  try {
+    await window.ClaraCoreDesktop.processInnerLifeOnce({});
+    await refresh();
+    showCopyNotice(t("innerLife.generated"), innerLifeNotice);
+  } catch (error) {
+    console.error(error);
+    innerLifeNotice.textContent = t("innerLife.processFailed");
+  } finally {
+    processInnerLifeOnce.disabled = false;
+  }
+});
+
+innerLifeShareList.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-innerlife-action]");
+  if (!button) return;
+  const shareId = button.dataset.innerlifeShareId;
+  const action = button.dataset.innerlifeAction;
+  if (!shareId || !action) return;
+  button.disabled = true;
+  innerLifeNotice.textContent = t("common.checking");
+  try {
+    if (action === "apply-memory") {
+      await window.ClaraCoreDesktop.applyInnerLifeShareToMemory(shareId);
+      await refresh();
+      showCopyNotice(t("innerLife.appliedMemory"), innerLifeNotice);
+      return;
+    }
+    if (action === "apply-shared-line") {
+      await window.ClaraCoreDesktop.applyInnerLifeShareToSharedLine(shareId);
+      await refresh();
+      showCopyNotice(t("innerLife.appliedSharedLine"), innerLifeNotice);
+      return;
+    }
+    if (["used", "deferred", "discarded"].includes(action)) {
+      await window.ClaraCoreDesktop.markInnerLifeShare(shareId, action);
+      await refresh();
+      showCopyNotice(t("innerLife.marked"), innerLifeNotice);
+      return;
+    }
+    await window.ClaraCoreDesktop.reviewInnerLifeShare(shareId, action);
+    await refresh();
+    showCopyNotice(action === "approve" ? t("innerLife.approved") : t("innerLife.rejected"), innerLifeNotice);
+  } catch (error) {
+    console.error(error);
+    innerLifeNotice.textContent = action.startsWith("apply-") ? t("innerLife.applyFailed") : t("innerLife.reviewFailed");
+  } finally {
+    button.disabled = false;
+  }
+});
+
+exportBackup.addEventListener("click", async () => {
+  exportBackup.disabled = true;
+  backupNotice.textContent = t("common.checking");
+  try {
+    const backup = await window.ClaraCoreDesktop.createBackup();
+    await refresh();
+    showCopyNotice(`${t("data.backupCreated")}: ${backup.path}`, backupNotice);
+  } catch (error) {
+    console.error(error);
+    backupNotice.textContent = t("data.backupFailed");
+  } finally {
+    exportBackup.disabled = false;
+  }
+});
+
+exportMemoryArchive.addEventListener("click", async () => {
+  exportMemoryArchive.disabled = true;
+  memoryArchiveNotice.textContent = t("common.checking");
+  try {
+    const exported = await window.ClaraCoreDesktop.exportMemoryArchive({});
+    if (exported?.canceled) {
+      memoryArchiveNotice.textContent = "";
+      return;
+    }
+    await refresh();
+    const counts = exported.counts || {};
+    showCopyNotice(
+      `${t("data.memoryExported")}: ${t("data.memoryArchiveSummary", {
+        memories: counts.memories || 0,
+        records: counts.records || 0,
+        aliases: counts.aliases || 0
+      })} · ${exported.path}`,
+      memoryArchiveNotice
+    );
+  } catch (error) {
+    console.error(error);
+    memoryArchiveNotice.textContent = t("data.memoryExportFailed");
+  } finally {
+    exportMemoryArchive.disabled = false;
+  }
+});
+
+importMemoryArchive.addEventListener("click", async () => {
+  importMemoryArchive.disabled = true;
+  memoryArchiveNotice.textContent = t("common.checking");
+  try {
+    const imported = await window.ClaraCoreDesktop.importMemoryArchive({});
+    if (imported?.canceled) {
+      memoryArchiveNotice.textContent = t("data.memoryImportCancelled");
+      return;
+    }
+    await refresh();
+    showCopyNotice(
+      `${t("data.memoryImportDone")}: ${t("data.memoryArchiveSummary", {
+        memories: imported.memories?.imported || 0,
+        records: imported.records?.imported || 0,
+        aliases: imported.aliases?.imported || 0
+      })}`,
+      memoryArchiveNotice
+    );
+  } catch (error) {
+    console.error(error);
+    memoryArchiveNotice.textContent = t("data.memoryImportFailed");
+  } finally {
+    importMemoryArchive.disabled = false;
+  }
+});
+
+const oldSourceImporters = {
+  memoria: {
+    button: importOldMemoria,
+    confirmKey: "data.oldMemoriaConfirm",
+    doneKey: "data.oldMemoriaImported",
+    failedKey: "data.oldMemoriaImportFailed",
+    importFn: () => window.ClaraCoreDesktop.importOldMemoria({}),
+    summary(imported) {
+      return t("data.oldMemoriaSummary", {
+        memories: imported.memories?.imported || 0,
+        records: imported.records?.imported || 0
+      });
+    }
+  },
+  continuity: {
+    button: importOldContinuity,
+    confirmKey: "data.oldContinuityConfirm",
+    doneKey: "data.oldContinuityImported",
+    failedKey: "data.oldContinuityImportFailed",
+    importFn: () => window.ClaraCoreDesktop.importOldContinuity({}),
+    summary(imported) {
+      return t("data.oldContinuitySummary", {
+        lines: imported.lines?.imported || 0,
+        positions: imported.positions?.imported || 0,
+        handoffs: imported.handoffs?.imported || 0
+      });
+    }
+  },
+  innerlife: {
+    button: importOldInnerLife,
+    confirmKey: "data.oldInnerLifeConfirm",
+    doneKey: "data.oldInnerLifeImported",
+    failedKey: "data.oldInnerLifeImportFailed",
+    importFn: () => window.ClaraCoreDesktop.importOldInnerLife({}),
+    summary(imported) {
+      return t("data.oldInnerLifeSummary", {
+        profiles: imported.profiles?.imported || 0,
+        events: imported.events?.imported || 0,
+        thoughts: imported.thoughts?.imported || 0,
+        shares: imported.shares?.imported || 0
+      });
+    }
+  }
+};
+
+async function importOldSource(sourceId, triggerButton = null) {
+  const config = oldSourceImporters[sourceId];
+  if (!config) return;
+  if (!window.confirm(t(config.confirmKey))) return;
+  const button = triggerButton || config.button;
+  if (button) button.disabled = true;
+  memoryArchiveNotice.textContent = t("common.checking");
+  try {
+    const imported = await config.importFn();
+    await refresh();
+    const backupPath = imported.backup?.path ? ` · ${imported.backup.path}` : "";
+    showCopyNotice(`${t(config.doneKey)}: ${config.summary(imported)}${backupPath}`, memoryArchiveNotice);
+  } catch (error) {
+    console.error(error);
+    memoryArchiveNotice.textContent = t(config.failedKey);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+importOldMemoria.addEventListener("click", () => importOldSource("memoria"));
+importOldContinuity.addEventListener("click", () => importOldSource("continuity"));
+importOldInnerLife.addEventListener("click", () => importOldSource("innerlife"));
+
+openBackupsFolder.addEventListener("click", () => {
+  if (snapshot?.data?.backupsDir) {
+    window.ClaraCoreDesktop.openPath(snapshot.data.backupsDir);
+  }
+});
+
+function closeRestoreConfirm() {
+  pendingRestoreBackupId = null;
+  restoreConfirmInput.value = "";
+  restorePreview.innerHTML = "";
+  restoreConfirmPanel.classList.add("hidden");
+}
+
+function renderRestoreDiffSection(label, count, records) {
+  if (!count) return "";
+  return `
+    <section class="restore-diff-section">
+      <div>
+        <strong>${escapeHtml(label)}</strong>
+        <span>${escapeHtml(count)}</span>
+      </div>
+      <ul class="restore-diff-list">
+        ${(records || [])
+          .map(
+            (record) => `
+              <li>
+                <span>${escapeHtml(record.title || record.id || "-")}</span>
+                <small>${escapeHtml(record.bodyPreview || record.updatedAt || "")}</small>
+              </li>
+            `
+          )
+          .join("")}
+      </ul>
+    </section>
+  `;
+}
+
+function renderRestoreMemoryDiff(memoryDiff) {
+  if (!memoryDiff) return "";
+  const totalChanges = (memoryDiff.removedCount || 0) + (memoryDiff.restoredCount || 0) + (memoryDiff.changedCount || 0);
+  if (!totalChanges) {
+    return `<div class="restore-diff empty">${t("data.restoreNoRecordChanges")}</div>`;
+  }
+  return `
+    <div class="restore-diff">
+      ${renderRestoreDiffSection(t("data.restoreWillReturn"), memoryDiff.restoredCount, memoryDiff.restored)}
+      ${renderRestoreDiffSection(t("data.restoreWillRemove"), memoryDiff.removedCount, memoryDiff.removed)}
+      ${renderRestoreDiffSection(t("data.restoreWillChange"), memoryDiff.changedCount, memoryDiff.changed)}
+    </div>
+  `;
+}
+
+function renderRestorePreview(preview) {
+  const current = preview?.current || {};
+  const target = preview?.target || {};
+  const rows = [
+    [t("data.restoreMemories"), current.memories_count, target.memories_count],
+    [t("data.restoreSharedLines"), current.continuity_lines_count, target.continuity_lines_count],
+    [t("data.restoreBackups"), current.backups_count, target.backups_count]
+  ];
+  restorePreview.innerHTML = `
+    <strong>${t("data.restorePreview")}</strong>
+    <table>
+      <thead>
+        <tr><th></th><th>${t("data.restoreCurrent")}</th><th>${t("data.restoreTarget")}</th></tr>
+      </thead>
+      <tbody>
+        ${rows
+          .map(
+            ([label, currentValue, targetValue]) => `
+              <tr>
+                <td>${escapeHtml(label)}</td>
+                <td>${escapeHtml(currentValue ?? "-")}</td>
+                <td>${escapeHtml(targetValue ?? "-")}</td>
+              </tr>
+            `
+          )
+          .join("")}
+      </tbody>
+    </table>
+    ${renderRestoreMemoryDiff(preview?.memoryDiff)}
+    <small>${t("data.quickCheck")}: ${escapeHtml(preview?.quickCheck || "")}</small>
+  `;
+}
+
+backupList.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-backup-action='restore']");
+  if (!button) return;
+  const backupId = button.dataset.backupId;
+  if (!backupId) return;
+  if (!window.confirm(t("data.restoreConfirm"))) return;
+  button.disabled = true;
+  backupNotice.textContent = t("common.checking");
+  try {
+    const preview = await window.ClaraCoreDesktop.previewRestore(backupId);
+    pendingRestoreBackupId = backupId;
+    restoreConfirmInput.value = "";
+    renderRestorePreview(preview);
+    restoreConfirmPanel.classList.remove("hidden");
+    restoreConfirmInput.focus();
+    backupNotice.textContent = "";
+  } catch (error) {
+    console.error(error);
+    backupNotice.textContent = t("data.restoreFailed");
+  } finally {
+    button.disabled = false;
+  }
+});
+
+cancelRestoreBackup.addEventListener("click", () => {
+  closeRestoreConfirm();
+  backupNotice.textContent = t("data.restoreCancelled");
+});
+
+confirmRestoreBackup.addEventListener("click", async () => {
+  if (!pendingRestoreBackupId) return;
+  if (restoreConfirmInput.value !== "RESTORE") {
+    backupNotice.textContent = t("data.restoreCancelled");
+    restoreConfirmInput.focus();
+    return;
+  }
+  confirmRestoreBackup.disabled = true;
+  backupNotice.textContent = t("common.checking");
+  try {
+    await window.ClaraCoreDesktop.restoreBackup(pendingRestoreBackupId);
+    closeRestoreConfirm();
+    await refresh();
+    showCopyNotice(t("data.restoreDone"), backupNotice);
+  } catch (error) {
+    console.error(error);
+    backupNotice.textContent = t("data.restoreFailed");
+  } finally {
+    confirmRestoreBackup.disabled = false;
+  }
+});
+
 refreshButton.addEventListener("click", () => {
   refresh().catch((error) => {
     console.error(error);
@@ -687,28 +3256,28 @@ refreshButton.addEventListener("click", () => {
 });
 
 primaryAction.addEventListener("click", () => {
-  if (snapshot?.root) {
-    window.ClaraCoreDesktop.openPath(`${snapshot.root}/gateway`);
+  if (snapshot?.data?.root) {
+    window.ClaraCoreDesktop.openPath(snapshot.data.root);
   }
 });
 
 openGatewayFolder.addEventListener("click", () => {
-  if (snapshot?.root) {
-    window.ClaraCoreDesktop.openPath(`${snapshot.root}/gateway`);
+  if (snapshot?.data?.runtimeDir) {
+    window.ClaraCoreDesktop.openPath(snapshot.data.runtimeDir);
   }
 });
 
-function showCopyNotice(label) {
-  copyNotice.textContent = label;
+function showCopyNotice(label, target = copyNotice) {
+  target.textContent = label;
   window.setTimeout(() => {
-    copyNotice.textContent = "";
+    target.textContent = "";
   }, 1800);
 }
 
-async function copyValue(value, label) {
+async function copyValue(value, label, target = copyNotice) {
   if (!value) return;
   const ok = await window.ClaraCoreDesktop.copyText(value);
-  if (ok) showCopyNotice(label);
+  if (ok) showCopyNotice(label, target);
 }
 
 document.querySelectorAll("[data-copy]").forEach((button) => {
@@ -735,20 +3304,18 @@ httpEndpointList.addEventListener("click", (event) => {
 });
 
 openDevelopmentPlan.addEventListener("click", () => {
-  if (snapshot?.plans?.development) {
-    window.ClaraCoreDesktop.openPath(snapshot.plans.development);
+  if (snapshot?.plans?.productReset) {
+    window.ClaraCoreDesktop.openPath(snapshot.plans.productReset);
   }
 });
 
 openDesignPlan.addEventListener("click", () => {
-  if (snapshot?.plans?.design) {
-    window.ClaraCoreDesktop.openPath(snapshot.plans.design);
+  if (snapshot?.plans?.v02Legacy) {
+    window.ClaraCoreDesktop.openPath(snapshot.plans.v02Legacy);
   }
 });
 
 refresh().catch((error) => {
-  if (coreStatus) coreStatus.textContent = "Error";
-  if (coreHint) coreHint.textContent = error.message;
   runtimeMode.textContent = t("runtime.unavailable");
   rootPath.textContent = t("runtime.unableSnapshot");
 });
@@ -765,4 +3332,7 @@ window.setInterval(() => {
 
 applyStaticTranslations();
 window.ClaraCoreDesktop.setLanguage(currentLanguage).catch(console.error);
+if (typeof window.ClaraCoreDesktop.onRuntimeChanged === "function") {
+  window.ClaraCoreDesktop.onRuntimeChanged(() => scheduleRuntimeRefresh());
+}
 setView("home");

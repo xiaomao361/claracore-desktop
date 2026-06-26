@@ -1,37 +1,103 @@
-const { app, BrowserWindow, Menu, Tray, clipboard, ipcMain, nativeImage, shell } = require("electron");
+const { app, BrowserWindow, Menu, Tray, clipboard, dialog, ipcMain, nativeImage, shell } = require("electron");
 const path = require("path");
 const fs = require("fs/promises");
 const os = require("os");
+const {
+  applyProductInnerLifeShareToMemory,
+  applyProductInnerLifeShareToSharedLine,
+  buildProductSnapshot,
+  checkProductInnerLifeShareTiming,
+  activateProductSharedLine,
+  archiveProductDormantMemories,
+  archiveProductMemory,
+  archiveProductSharedLine,
+  createProductBackup,
+  createProductMemory,
+  createProductMemoryLabelAlias,
+  createProductMemoryRecord,
+  createProductSharedLine,
+  createProductSharedLineHandoff,
+  deleteProductMemory,
+  deleteProductMemoryLabelAlias,
+  embedProductMemory,
+  ensureProductCore,
+  ensureProductDirectories,
+  exportProductMemoryArchive,
+  getProductInnerLife,
+  getProductImportPreview,
+  getProductArchivedMemories,
+  getProductMemoryArchiveSuggestions,
+  getProductMemoryLabelAliases,
+  getProductMemoryGraph,
+  getProductMemoryMaintenance,
+  getProductMemoryMergeSuggestions,
+  getProductMemoryRecords,
+  getProductMemoryStats,
+  getProductRestrictedMemories,
+  getProductSharedLine,
+  importProductMemoryArchive,
+  importOldContinuityIntoProduct,
+  importOldInnerLifeIntoProduct,
+  importOldMemoriaIntoProduct,
+  markProductInnerLifeShare,
+  mergeProductMemories,
+  previewProductRestore,
+  processProductMemoryEmbeddings,
+  processProductInnerLifeOnce,
+  reviewProductInnerLifeShare,
+  renameProductSharedLine,
+  restoreProductBackup,
+  restoreArchivedProductMemory,
+  restoreProductMemory,
+  restoreProductSharedLine,
+  restrictProductMemory,
+  runProductInnerLifeDigest,
+  runProductMemoryMaintenance,
+  setProductInnerLifeDaemon,
+  saveProductSettings,
+  saveProductSharedLine,
+  searchProductMemories,
+  submitProductInnerLifeInbox,
+  tickProductInnerLifeDaemon,
+  startProductInnerLifeSession,
+  endProductInnerLifeSession,
+  unrestrictProductMemory,
+  updateProductMemory
+} = require("../core/runtime");
 
 const APP_ROOT = path.resolve(__dirname, "..");
+const isGatewayMode = process.argv.includes("--gateway");
 let mainWindow = null;
 let tray = null;
 let isQuitting = false;
 let trayLanguage = "en";
 let lastCpuSample = null;
+let innerLifeScheduler = null;
+let innerLifeSchedulerBusy = false;
 const appStartedAt = Date.now();
+
+if (isGatewayMode) {
+  require("../core/gateway/mcp-server").start();
+}
 
 const trayLabels = {
   en: {
+    status: "Status: running",
+    data: "Open data folder",
     show: "Show ClaraCore",
     hide: "Hide ClaraCore",
     quit: "Quit",
     tooltip: "ClaraCore Desktop"
   },
   zh: {
+    status: "状态：运行中",
+    data: "打开数据目录",
     show: "显示 ClaraCore",
     hide: "隐藏 ClaraCore",
     quit: "退出",
     tooltip: "ClaraCore 桌面"
   }
 };
-
-function resolveClaraCoreRoot() {
-  if (process.env.CLARACORE_ROOT) {
-    return path.resolve(process.env.CLARACORE_ROOT);
-  }
-  return path.resolve(APP_ROOT, "..", "..");
-}
 
 async function exists(targetPath) {
   try {
@@ -112,7 +178,7 @@ async function getDiskSnapshot(targetPath) {
 }
 
 async function getResourceSnapshot() {
-  const dataRoot = path.join(app.getPath("home"), ".claracore");
+  const dataRoot = (await ensureProductDirectories(app)).dataRoot;
   const totalMem = os.totalmem();
   const freeMem = os.freemem();
   const usedMem = Math.max(0, totalMem - freeMem);
@@ -133,129 +199,28 @@ async function getResourceSnapshot() {
 }
 
 async function getRuntimeSnapshot() {
-  const root = resolveClaraCoreRoot();
-  const gatewayCommand = path.join(root, "gateway", "run_mcp.sh");
-  const httpEndpoints = [
-    {
-      id: "gateway-web",
-      label: "Gateway console",
-      url: "http://127.0.0.1:8010/",
-      healthUrl: "http://127.0.0.1:8010/"
-    },
-    {
-      id: "memoria-web",
-      label: "Memoria",
-      url: "http://127.0.0.1:8011/",
-      healthUrl: "http://127.0.0.1:8011/api/stats"
-    },
-    {
-      id: "continuity-web",
-      label: "Continuity",
-      url: "http://127.0.0.1:8012/?agent_id=clara",
-      healthUrl: "http://127.0.0.1:8012/api/dashboard?agent_id=clara"
-    },
-    {
-      id: "innerlife-web",
-      label: "InnerLife",
-      url: "http://127.0.0.1:8013/",
-      healthUrl: "http://127.0.0.1:8013/api/status"
-    }
-  ];
-  const mcpConfig = {
-    mcpServers: {
-      claracore: {
-        type: "stdio",
-        command: gatewayCommand,
-        args: [],
-        env: {
-          CLARACORE_AGENT_ID: "my-agent",
-          CLARACORE_PYTHON: "/path/to/python3"
-        }
-      }
-    }
-  };
-  const modules = [
-    {
-      id: "gateway",
-      label: "Gateway",
-      description: "Unified MCP and local service entry",
-      required: true,
-      state: "ready",
-      path: gatewayCommand
-    },
-    {
-      id: "memoria",
-      label: "Memoria",
-      description: "Long-term factual memory",
-      required: true,
-      state: "ready",
-      path: path.join(root, "services", "memoria", "server", "app.py")
-    },
-    {
-      id: "continuity",
-      label: "Continuity",
-      description: "Shared line and current position",
-      required: true,
-      state: "ready",
-      path: path.join(root, "services", "continuity", "server", "app.py")
-    },
-    {
-      id: "innerlife",
-      label: "InnerLife",
-      description: "Optional background thoughts",
-      required: false,
-      state: "paused",
-      path: path.join(root, "services", "innerlife", "innerlife", "service.py")
-    }
-  ];
-
-  const checkedModules = [];
-  for (const module of modules) {
-    checkedModules.push({
-      ...module,
-      present: await exists(module.path),
-      servicePath: path.relative(root, module.path)
-    });
-  }
-
-  const dataRoot = path.join(app.getPath("home"), ".claracore");
-  const memoriaStore = path.join(dataRoot, "memoria");
-  const dataRootPresent = await exists(dataRoot);
-  const memoriaStorePresent = await exists(memoriaStore);
-  const gatewayPresent = checkedModules.find((module) => module.id === "gateway")?.present;
-  const requiredReady = checkedModules
-    .filter((module) => module.required)
-    .every((module) => module.present);
-
+  const snapshot = await buildProductSnapshot(app);
   return {
-    mode: process.env.CLARACORE_ROOT ? "custom-root" : "development-root",
-    root,
-    appRoot: APP_ROOT,
-    coreStatus: gatewayPresent && requiredReady ? "Ready" : "Needs attention",
+    ...snapshot,
     data: {
-      root: dataRoot,
-      memoriaStore,
-      rootPresent: dataRootPresent,
-      memoriaStorePresent
+      ...snapshot.data,
+      rootPresent: await exists(snapshot.data.root),
+      databasePresent: await exists(snapshot.data.databasePath)
     },
-    connections: {
-      mcpCommand: gatewayCommand,
-      mcpConfig: JSON.stringify(mcpConfig, null, 2),
-      httpEndpoints
-    },
-    modules: checkedModules,
-    plans: {
-      development: path.join(root, "seeds", "claracore_desktop_development_plan.md"),
-      design: path.join(root, "seeds", "claracore_desktop_design_plan.md")
-    }
+    modules: snapshot.modules.map((module) => ({
+      ...module,
+      present: false,
+      servicePath: "product core planned"
+    }))
   };
 }
 
 function createTrayIcon() {
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-      <rect width="32" height="32" rx="8" fill="#202421"/>
-      <text x="16" y="22" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="17" font-weight="700">C</text>
+      <path d="M9 16c0-4.1 3.1-7.3 7.3-7.3 2.5 0 4.7 1.1 6 3" fill="none" stroke="#111111" stroke-width="3.2" stroke-linecap="round"/>
+      <path d="M22.3 20.3c-1.3 1.8-3.5 3-6 3C12.1 23.3 9 20.1 9 16" fill="none" stroke="#111111" stroke-width="3.2" stroke-linecap="round"/>
+      <circle cx="24.5" cy="16" r="2.7" fill="#111111"/>
     </svg>
   `;
   const image = nativeImage.createFromDataURL(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
@@ -284,13 +249,25 @@ function updateTrayMenu(language = trayLanguage) {
   if (!tray) return;
   const labels = trayLabels[trayLanguage];
   tray.setToolTip(labels.tooltip);
+  if (process.platform === "darwin" && typeof tray.setTitle === "function") {
+    tray.setTitle("ClaraCore");
+  }
   tray.setContextMenu(
     Menu.buildFromTemplate([
+      { label: labels.status, enabled: false },
+      { type: "separator" },
       { label: labels.show, click: showMainWindow },
       {
         label: labels.hide,
         click() {
           if (mainWindow) mainWindow.hide();
+        }
+      },
+      {
+        label: labels.data,
+        async click() {
+          const { dataRoot } = await ensureProductDirectories(app);
+          await shell.openPath(dataRoot);
         }
       },
       { type: "separator" },
@@ -309,6 +286,7 @@ function createTray() {
   if (tray) return;
   tray = new Tray(createTrayIcon());
   tray.on("click", toggleMainWindow);
+  tray.on("double-click", showMainWindow);
   updateTrayMenu();
 }
 
@@ -338,42 +316,360 @@ function createWindow() {
   mainWindow.loadFile(path.join(APP_ROOT, "index.html"));
 }
 
-ipcMain.handle("claracore:getRuntimeSnapshot", () => getRuntimeSnapshot());
-ipcMain.handle("claracore:getResourceSnapshot", () => getResourceSnapshot());
-ipcMain.handle("claracore:openPath", async (_event, targetPath) => {
-  if (typeof targetPath !== "string" || targetPath.length === 0) return false;
-  await shell.openPath(targetPath);
-  return true;
-});
-ipcMain.handle("claracore:openExternal", async (_event, targetUrl) => {
-  if (typeof targetUrl !== "string" || !targetUrl.startsWith("http://127.0.0.1:")) return false;
-  await shell.openExternal(targetUrl);
-  return true;
-});
-ipcMain.handle("claracore:copyText", (_event, value) => {
-  if (typeof value !== "string" || value.length === 0) return false;
-  clipboard.writeText(value);
-  return true;
-});
-ipcMain.handle("claracore:setLanguage", (_event, language) => {
-  updateTrayMenu(language);
-  return trayLanguage;
-});
-
-app.whenReady().then(() => {
-  createWindow();
-  createTray();
-
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-    showMainWindow();
+function notifyRuntimeChanged(reason, payload = {}) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.webContents.send("claracore:runtimeChanged", {
+    reason,
+    ...payload
   });
-});
+}
 
-app.on("window-all-closed", () => {
-  if (!tray && process.platform !== "darwin") app.quit();
-});
+async function runInnerLifeScheduledTick() {
+  if (innerLifeSchedulerBusy || isQuitting) return;
+  innerLifeSchedulerBusy = true;
+  try {
+    const result = await tickProductInnerLifeDaemon(app, { force: false });
+    if (result?.reason && result.reason !== "paused" && result.reason !== "not_due") {
+      notifyRuntimeChanged("innerlife-daemon", {
+        daemonReason: result.reason,
+        ran: Boolean(result.ran)
+      });
+    }
+  } catch (error) {
+    console.error("InnerLife scheduler failed:", error);
+    notifyRuntimeChanged("innerlife-daemon-error", {
+      error: error.message || String(error)
+    });
+  } finally {
+    innerLifeSchedulerBusy = false;
+  }
+}
 
-app.on("before-quit", () => {
-  isQuitting = true;
-});
+function startInnerLifeScheduler() {
+  if (innerLifeScheduler) return;
+  innerLifeScheduler = setInterval(() => {
+    runInnerLifeScheduledTick().catch(console.error);
+  }, 1000);
+  if (typeof innerLifeScheduler.unref === "function") innerLifeScheduler.unref();
+}
+
+function stopInnerLifeScheduler() {
+  if (!innerLifeScheduler) return;
+  clearInterval(innerLifeScheduler);
+  innerLifeScheduler = null;
+}
+
+if (!isGatewayMode) {
+  ipcMain.handle("claracore:getRuntimeSnapshot", () => getRuntimeSnapshot());
+  ipcMain.handle("claracore:getResourceSnapshot", () => getResourceSnapshot());
+  ipcMain.handle("claracore:getImportPreview", () => getProductImportPreview(app));
+  ipcMain.handle("claracore:saveSettings", async (_event, updates) => {
+    if (!updates || typeof updates !== "object" || Array.isArray(updates)) return false;
+    return saveProductSettings(app, updates);
+  });
+  ipcMain.handle("claracore:createMemory", async (_event, input) => {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return false;
+    return createProductMemory(app, input);
+  });
+  ipcMain.handle("claracore:updateMemory", async (_event, id, input) => {
+    if (typeof id !== "string" || !input || typeof input !== "object" || Array.isArray(input)) return false;
+    return updateProductMemory(app, id, input);
+  });
+  ipcMain.handle("claracore:deleteMemory", async (_event, id) => {
+    if (typeof id !== "string") return false;
+    return deleteProductMemory(app, id);
+  });
+  ipcMain.handle("claracore:archiveMemory", async (_event, id) => {
+    if (typeof id !== "string") return false;
+    const result = await archiveProductMemory(app, id);
+    notifyRuntimeChanged("memory-archive");
+    return result;
+  });
+  ipcMain.handle("claracore:restoreMemory", async (_event, id) => {
+    if (typeof id !== "string") return false;
+    return restoreProductMemory(app, id);
+  });
+  ipcMain.handle("claracore:restoreArchivedMemory", async (_event, id) => {
+    if (typeof id !== "string") return false;
+    const result = await restoreArchivedProductMemory(app, id);
+    notifyRuntimeChanged("memory-archive");
+    return result;
+  });
+  ipcMain.handle("claracore:restrictMemory", async (_event, id) => {
+    if (typeof id !== "string") return false;
+    return restrictProductMemory(app, id);
+  });
+  ipcMain.handle("claracore:unrestrictMemory", async (_event, id) => {
+    if (typeof id !== "string") return false;
+    return unrestrictProductMemory(app, id);
+  });
+  ipcMain.handle("claracore:getRestrictedMemories", async (_event, limit) => {
+    return getProductRestrictedMemories(app, limit);
+  });
+  ipcMain.handle("claracore:getArchivedMemories", async (_event, limit) => {
+    return getProductArchivedMemories(app, limit);
+  });
+  ipcMain.handle("claracore:getMemoryStats", async () => {
+    return getProductMemoryStats(app);
+  });
+  ipcMain.handle("claracore:createMemoryLabelAlias", async (_event, input) => {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return false;
+    return createProductMemoryLabelAlias(app, input);
+  });
+  ipcMain.handle("claracore:deleteMemoryLabelAlias", async (_event, alias) => {
+    if (typeof alias !== "string") return false;
+    return deleteProductMemoryLabelAlias(app, alias);
+  });
+  ipcMain.handle("claracore:getMemoryLabelAliases", async () => {
+    return getProductMemoryLabelAliases(app);
+  });
+  ipcMain.handle("claracore:getMemoryGraph", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    return getProductMemoryGraph(app, input || {});
+  });
+  ipcMain.handle("claracore:getMemoryMaintenance", async () => {
+    return getProductMemoryMaintenance(app);
+  });
+  ipcMain.handle("claracore:runMemoryMaintenance", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    return runProductMemoryMaintenance(app, input || {});
+  });
+  ipcMain.handle("claracore:getMemoryMergeSuggestions", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    return getProductMemoryMergeSuggestions(app, input || {});
+  });
+  ipcMain.handle("claracore:mergeMemories", async (_event, input) => {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return false;
+    const result = await mergeProductMemories(app, input);
+    notifyRuntimeChanged("memory-merge");
+    return result;
+  });
+  ipcMain.handle("claracore:getMemoryArchiveSuggestions", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    return getProductMemoryArchiveSuggestions(app, input || {});
+  });
+  ipcMain.handle("claracore:archiveDormantMemories", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    const result = await archiveProductDormantMemories(app, input || {});
+    notifyRuntimeChanged("memory-archive");
+    return result;
+  });
+  ipcMain.handle("claracore:createMemoryRecord", async (_event, input) => {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return false;
+    return createProductMemoryRecord(app, input);
+  });
+  ipcMain.handle("claracore:getMemoryRecords", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    return getProductMemoryRecords(app, input || {});
+  });
+  ipcMain.handle("claracore:searchMemories", async (_event, query) => {
+    if (typeof query !== "string") return { mode: "list", query: "", results: [], error: null };
+    return searchProductMemories(app, query);
+  });
+  ipcMain.handle("claracore:embedMemory", async (_event, id) => {
+    if (typeof id !== "string") return false;
+    return embedProductMemory(app, id);
+  });
+  ipcMain.handle("claracore:processMemoryEmbeddings", async (_event, limit) => {
+    return processProductMemoryEmbeddings(app, limit);
+  });
+  ipcMain.handle("claracore:getSharedLine", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    return getProductSharedLine(app, input || {});
+  });
+  ipcMain.handle("claracore:saveSharedLine", async (_event, input) => {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return false;
+    return saveProductSharedLine(app, input);
+  });
+  ipcMain.handle("claracore:createSharedLine", async (_event, input) => {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return false;
+    return createProductSharedLine(app, input);
+  });
+  ipcMain.handle("claracore:activateSharedLine", async (_event, lineId) => {
+    if (typeof lineId !== "string") return false;
+    return activateProductSharedLine(app, lineId);
+  });
+  ipcMain.handle("claracore:renameSharedLine", async (_event, lineId, title) => {
+    if (typeof lineId !== "string" || typeof title !== "string") return false;
+    return renameProductSharedLine(app, lineId, title);
+  });
+  ipcMain.handle("claracore:archiveSharedLine", async (_event, lineId) => {
+    if (typeof lineId !== "string") return false;
+    return archiveProductSharedLine(app, lineId);
+  });
+  ipcMain.handle("claracore:restoreSharedLine", async (_event, lineId, makeActive) => {
+    if (typeof lineId !== "string") return false;
+    return restoreProductSharedLine(app, lineId, Boolean(makeActive));
+  });
+  ipcMain.handle("claracore:createSharedLineHandoff", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    return createProductSharedLineHandoff(app, input || {});
+  });
+  ipcMain.handle("claracore:getInnerLife", async () => {
+    return getProductInnerLife(app);
+  });
+  ipcMain.handle("claracore:processInnerLifeOnce", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    return processProductInnerLifeOnce(app, input || {});
+  });
+  ipcMain.handle("claracore:runInnerLifeDigest", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    return runProductInnerLifeDigest(app, input || {});
+  });
+  ipcMain.handle("claracore:checkInnerLifeShareTiming", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    return checkProductInnerLifeShareTiming(app, input || {});
+  });
+  ipcMain.handle("claracore:setInnerLifeDaemon", async (_event, input) => {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return false;
+    const result = await setProductInnerLifeDaemon(app, input);
+    notifyRuntimeChanged("innerlife-daemon");
+    return result;
+  });
+  ipcMain.handle("claracore:tickInnerLifeDaemon", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    const result = await tickProductInnerLifeDaemon(app, input || {});
+    notifyRuntimeChanged("innerlife-daemon", {
+      daemonReason: result?.reason,
+      ran: Boolean(result?.ran)
+    });
+    return result;
+  });
+  ipcMain.handle("claracore:startInnerLifeSession", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    return startProductInnerLifeSession(app, input || {});
+  });
+  ipcMain.handle("claracore:submitInnerLifeInbox", async (_event, input) => {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return false;
+    return submitProductInnerLifeInbox(app, input);
+  });
+  ipcMain.handle("claracore:endInnerLifeSession", async (_event, sessionId, input) => {
+    if (typeof sessionId !== "string" || sessionId.length === 0) return false;
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    return endProductInnerLifeSession(app, sessionId, input || {});
+  });
+  ipcMain.handle("claracore:reviewInnerLifeShare", async (_event, id, decision, reason) => {
+    if (typeof id !== "string" || typeof decision !== "string") return false;
+    return reviewProductInnerLifeShare(app, id, decision, typeof reason === "string" ? reason : "");
+  });
+  ipcMain.handle("claracore:markInnerLifeShare", async (_event, id, action, reason) => {
+    if (typeof id !== "string" || typeof action !== "string") return false;
+    return markProductInnerLifeShare(app, id, action, typeof reason === "string" ? reason : "");
+  });
+  ipcMain.handle("claracore:applyInnerLifeShareToMemory", async (_event, id) => {
+    if (typeof id !== "string") return false;
+    return applyProductInnerLifeShareToMemory(app, id);
+  });
+  ipcMain.handle("claracore:applyInnerLifeShareToSharedLine", async (_event, id) => {
+    if (typeof id !== "string") return false;
+    return applyProductInnerLifeShareToSharedLine(app, id);
+  });
+  ipcMain.handle("claracore:createBackup", async () => {
+    return createProductBackup(app);
+  });
+  ipcMain.handle("claracore:exportMemoryArchive", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    const options = input || {};
+    if (!options.targetPath && !options.silent) {
+      const paths = await ensureProductDirectories(app);
+      const defaultPath = path.join(paths.exportsDir, `claracore-memory-export-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
+      const result = await dialog.showSaveDialog(mainWindow, {
+        title: "Export Memory JSON",
+        defaultPath,
+        filters: [{ name: "JSON", extensions: ["json"] }]
+      });
+      if (result.canceled || !result.filePath) return { canceled: true };
+      options.targetPath = result.filePath;
+      options.allowExternalPath = true;
+    }
+    return exportProductMemoryArchive(app, options);
+  });
+  ipcMain.handle("claracore:importMemoryArchive", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    const options = input || {};
+    if (!options.filePath && !options.silent) {
+      const result = await dialog.showOpenDialog(mainWindow, {
+        title: "Import Memory JSON",
+        properties: ["openFile"],
+        filters: [{ name: "JSON", extensions: ["json"] }]
+      });
+      if (result.canceled || !result.filePaths?.[0]) return { canceled: true };
+      options.filePath = result.filePaths[0];
+    }
+    const imported = await importProductMemoryArchive(app, options);
+    notifyRuntimeChanged("memory-import");
+    return imported;
+  });
+  ipcMain.handle("claracore:importOldMemoria", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    const imported = await importOldMemoriaIntoProduct(app, input || {});
+    notifyRuntimeChanged("old-memoria-import");
+    return imported;
+  });
+  ipcMain.handle("claracore:importOldContinuity", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    const imported = await importOldContinuityIntoProduct(app, input || {});
+    notifyRuntimeChanged("old-continuity-import");
+    return imported;
+  });
+  ipcMain.handle("claracore:importOldInnerLife", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    const imported = await importOldInnerLifeIntoProduct(app, input || {});
+    notifyRuntimeChanged("old-innerlife-import");
+    return imported;
+  });
+  ipcMain.handle("claracore:restoreBackup", async (_event, backupId) => {
+    if (typeof backupId !== "string" || backupId.length === 0) return false;
+    return restoreProductBackup(app, backupId);
+  });
+  ipcMain.handle("claracore:previewRestore", async (_event, backupId) => {
+    if (typeof backupId !== "string" || backupId.length === 0) return false;
+    return previewProductRestore(app, backupId);
+  });
+  ipcMain.handle("claracore:openPath", async (_event, targetPath) => {
+    if (typeof targetPath !== "string" || targetPath.length === 0) return false;
+    await shell.openPath(targetPath);
+    return true;
+  });
+  ipcMain.handle("claracore:openExternal", async (_event, targetUrl) => {
+    if (typeof targetUrl !== "string" || !targetUrl.startsWith("http://127.0.0.1:")) return false;
+    await shell.openExternal(targetUrl);
+    return true;
+  });
+  ipcMain.handle("claracore:copyText", (_event, value) => {
+    if (typeof value !== "string" || value.length === 0) return false;
+    clipboard.writeText(value);
+    return true;
+  });
+  ipcMain.handle("claracore:setLanguage", (_event, language) => {
+    updateTrayMenu(language);
+    return trayLanguage;
+  });
+  ipcMain.handle("claracore:getShellState", () => ({
+    hasTray: Boolean(tray),
+    trayBounds: tray ? tray.getBounds() : null,
+    trayTitle: tray && typeof tray.getTitle === "function" ? tray.getTitle() : "",
+    windowVisible: mainWindow ? mainWindow.isVisible() : false
+  }));
+
+  app.whenReady().then(async () => {
+    await ensureProductCore(app);
+    createWindow();
+    createTray();
+    startInnerLifeScheduler();
+
+    app.on("activate", () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+      showMainWindow();
+    });
+  });
+
+  app.on("window-all-closed", () => {
+    if (!tray && process.platform !== "darwin") app.quit();
+  });
+
+  app.on("before-quit", () => {
+    isQuitting = true;
+    stopInnerLifeScheduler();
+  });
+}
