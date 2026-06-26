@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="520" viewBox="0 0 1800 520" role="img" aria-labelledby="title desc">
+  <title id="title">ClaraCore wordmark</title>
+  <desc id="desc">ClaraCore horizontal logo lockup.</desc>
+  <rect width="1800" height="520" rx="96" fill="#fbfbf8"/>
+  <g transform="translate(78 64) scale(.3828125)">
+    <rect width="1024" height="1024" rx="224" fill="#f7f7f4"/>
+    <path d="M657 246C609 210 551 192 492 196c-139 9-249 124-249 265 0 149 121 270 270 270 65 0 126-23 174-63" fill="none" stroke="#202421" stroke-width="112" stroke-linecap="round"/>
+    <path d="M316 646c80-95 153-141 219-139 58 2 94 40 146 39 42 0 77-23 109-69" fill="none" stroke="#28745a" stroke-width="54" stroke-linecap="round"/>
+    <circle cx="658" cy="512" r="72" fill="#f7f7f4" stroke="#202421" stroke-width="42"/>
+    <circle cx="658" cy="512" r="29" fill="#28745a"/>
+  </g>
+  <text x="540" y="250" fill="#202421" font-family="Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="142" font-weight="760" letter-spacing="0">ClaraCore</text>
+  <text x="548" y="338" fill="#656d68" font-family="Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="44" font-weight="560" letter-spacing="0">local personal cognitive core</text>
+  <path d="M548 394H1250" fill="none" stroke="#28745a" stroke-width="12" stroke-linecap="round"/>
+</svg>

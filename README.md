@@ -11,14 +11,16 @@ It is not a chat client and does not include a primary chat model. The desktop a
 
 ## Current Status
 
-The current version is a working desktop shell with a product-owned local data store, a mostly complete Memoria module, and a Desktop-native Shared Line module.
+The current version is a working desktop shell with a product-owned local data
+store, Desktop-native Memoria, Shared Line, InnerLife, and a separate Models
+surface for model and daemon configuration.
 
 Included:
 
 - Electron desktop app
 - ClaraCore root detection
 - Product-owned SQLite data root under Desktop user data
-- Home, Memoria, Shared Line, InnerLife, Data, Connections, Settings, and Logs pages
+- Home, Memoria, Shared Line, InnerLife, Models, Data, Connections, Settings, and Logs pages
 - MCP connection command and copyable config
 - Desktop-owned Gateway stdio entry for Memoria MCP tools
 - Memoria CLI for store, recall, get, update, tag, delete, restore, archive, import/export, records, and maintenance audit/run
@@ -26,12 +28,19 @@ Included:
 - Lazy-loaded Memoria list tabs and cached canvas graph with primary/restricted layers
 - Manual vector rebuild with progress, plus daily small-batch Memoria maintenance
 - Shared Line CLI and Desktop-owned Gateway MCP tools for agent-driven line create/list/get/activate/rename/archive/restore/update/handoff
-- View-focused Shared Line UI for line browsing, agent filtering, current position, metadata, history, snapshots, handoffs, and resume packet review
+- View-focused Shared Line UI for line browsing, agent filtering, current position, metadata, history, snapshots, handoffs, and resume packet review; selecting a line only changes the reviewed detail, not the agent-active line
+- Desktop-owned InnerLife storage, agent profiles, inbox, sessions, events, thoughts, shares, digest runs, and daemon state
+- Agent-managed InnerLife access through Gateway MCP and CLI fallback; the Desktop UI is primarily for inspection and runtime control
+- Models page for Memoria embedding configuration, InnerLife model configuration, secret references, loop cadence, and InnerLife daemon enable/pause/tick
 - Copy-based import for old Continuity data into Desktop-owned Shared Line tables
 - Backup-gated import preview for old Memoria, Continuity, and InnerLife data
+- Backup-gated copy import for old Memoria, Continuity, and InnerLife data
+- Agent identity labels using `tool:agent` form, such as `claude-code:clara` and `hermes:lara`, with single-name agents such as `codex` supported
+- Settings page placeholder sections for future language, theme, window, tray, paths, logs, Gateway policy, privacy, security, and developer diagnostics
 - Terminal-style runtime log view for maintenance and Gateway traces
 - Chinese and English UI switching
 - macOS menu bar / Windows tray entry
+- Unified ClaraCore app, tray, favicon, README, and packaging icon assets
 - Real local resource monitor for uptime, CPU, memory, disk, and local time
 
 Not included yet:

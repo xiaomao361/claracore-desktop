@@ -169,7 +169,7 @@ Agent Setup remains important, but it should eventually describe the Desktop-own
 
 Configuration should be product-owned and visible inside Desktop.
 
-Configuration areas:
+Model configuration belongs on the Models page, not the general Settings page:
 
 - Memory embedding provider.
 - Embedding model.
@@ -177,6 +177,19 @@ Configuration areas:
 - InnerLife provider.
 - InnerLife light/deep model.
 - InnerLife loop settings.
+
+Settings is reserved for general app and runtime configuration:
+
+- Language and theme.
+- Window and tray behavior.
+- Data, backup, import, and export paths.
+- Log retention and debug tracing.
+- Gateway local access policy, port, and transport preference.
+- Privacy and security display choices, automatic maintenance policy, and secret-storage status.
+- Development paths, packaged runtime information, and diagnostic toggles.
+
+Other product configuration areas:
+
 - Agent access configuration.
 - Runtime paths.
 - Backup settings.
@@ -255,7 +268,7 @@ Recommended next steps:
 6. Move Desktop UI data reads away from old absolute ClaraCore paths.
 7. Build the first internal Memory page against the new database.
 8. Build the first internal Shared Line page against the new database.
-9. Build the first internal Settings page backed by product settings.
+9. Build the first internal Models page backed by product settings.
 10. Build the Desktop-owned agent setup contract.
 11. Only after that, design importers from existing systems.
 

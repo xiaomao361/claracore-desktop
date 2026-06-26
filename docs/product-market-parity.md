@@ -97,7 +97,7 @@ Old product capabilities:
 
 Desktop status:
 
-- Implemented: profile placeholder, session start/end, briefing, inbox submission/processing, manual process once, explicit digest records, pending shares, approve/reject, deterministic share timing checks, used/deferred/discarded lifecycle, share-action history, explicit apply to Memory or Shared Line, counts, model settings surface, explicit daemon enable/pause/status/tick controls, Desktop automatic daemon scheduler, daemon retry/backoff recovery, Doctor recovery guidance, Gateway daemon/doctor tools.
+- Implemented: profile/state storage, imported agent identities, session start/end, briefing, inbox submission/processing, explicit digest records, pending shares, deterministic share timing checks, used/deferred/discarded lifecycle, share-action history, inspect-first Desktop UI with agent filtering, Models page for provider/model/key/cadence configuration, explicit daemon enable/pause/status/tick controls in Models, Desktop automatic daemon scheduler, daemon retry/backoff recovery, Doctor recovery guidance, Gateway daemon/doctor tools, and backup-gated old InnerLife v2 copy import.
 - Missing: model-backed digest/timing, autonomous sources/exploration, experiences, convergence summaries, delivery queue, scenarios.
 
 ### Gateway

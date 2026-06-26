@@ -9,7 +9,8 @@ This module uses the product database at `claracore.db`. Existing Continuity dat
 - Shared Line stores the current resumable position.
 - Memoria stores durable observable facts and structured records.
 - Shared Line may reference fact IDs in `facts_used_json`, but it does not call Memoria to work.
-- InnerLife output may update Shared Line only through explicit user action.
+- InnerLife output may update Shared Line only when an agent explicitly calls the
+  Shared Line product tools. It is not auto-applied by the InnerLife UI.
 
 ## Data Surface
 
@@ -26,6 +27,7 @@ The Shared Line view supports:
 
 - active line status and module counts,
 - view-first line browsing without activating or reordering the clicked line,
+- right-side detail review for the selected line; selection is a UI focus state, not the agent-active line,
 - agent filtering for imported and agent-authored lines,
 - current position, `draft` / `confirmed` status, and fact-reference review,
 - formatted current position and trace display so old raw text is split into readable rows,
@@ -35,6 +37,8 @@ The Shared Line view supports:
 - copyable resume packet.
 
 Human UI is intentionally review-oriented. Create, update, archive, restore, and handoff writes are primarily agent-facing through CLI and Gateway MCP.
+
+Chinese Desktop UI uses `记忆` for the left navigation and Memory page title. `Memoria` remains the English/module name in technical surfaces.
 
 ## Old Continuity Import
 

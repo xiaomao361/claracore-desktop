@@ -53,15 +53,24 @@ const memoriaProvider = document.querySelector("#memoriaProvider");
 const memoriaEndpoint = document.querySelector("#memoriaEndpoint");
 const memoriaModel = document.querySelector("#memoriaModel");
 const memoriaDimension = document.querySelector("#memoriaDimension");
+const memoriaApiKey = document.querySelector("#memoriaApiKey");
+const copyMemoriaApiKey = document.querySelector("#copyMemoriaApiKey");
 const memoriaSource = document.querySelector("#memoriaSource");
+const memoriaModelStatus = document.querySelector("#memoriaModelStatus");
 const innerLifeBackend = document.querySelector("#innerLifeBackend");
 const innerLifeEndpoint = document.querySelector("#innerLifeEndpoint");
 const innerLifeLightModel = document.querySelector("#innerLifeLightModel");
 const innerLifeDeepModel = document.querySelector("#innerLifeDeepModel");
 const innerLifePollSeconds = document.querySelector("#innerLifePollSeconds");
 const innerLifeApiKey = document.querySelector("#innerLifeApiKey");
+const innerLifeApiKeySummary = document.querySelector("#innerLifeApiKeySummary");
+const copyInnerLifeApiKey = document.querySelector("#copyInnerLifeApiKey");
 const innerLifeSource = document.querySelector("#innerLifeSource");
+const innerLifeModelStatus = document.querySelector("#innerLifeModelStatus");
+const settingsInnerLifeDaemonStatus = document.querySelector("#settingsInnerLifeDaemonStatus");
+const innerLifeDaemonControlPanel = document.querySelector("#innerLifeDaemonControlPanel");
 const innerLifeNotice = document.querySelector("#innerLifeNotice");
+const innerLifeAgentFilter = document.querySelector("#innerLifeAgentFilter");
 const startInnerLifeSession = document.querySelector("#startInnerLifeSession");
 const endInnerLifeSession = document.querySelector("#endInnerLifeSession");
 const innerLifeSessionSummary = document.querySelector("#innerLifeSessionSummary");
@@ -75,6 +84,7 @@ const innerLifeShareContext = document.querySelector("#innerLifeShareContext");
 const checkInnerLifeShareTiming = document.querySelector("#checkInnerLifeShareTiming");
 const innerLifeSessionList = document.querySelector("#innerLifeSessionList");
 const innerLifeDigestList = document.querySelector("#innerLifeDigestList");
+const innerLifeInboxList = document.querySelector("#innerLifeInboxList");
 const innerLifeShareCheckList = document.querySelector("#innerLifeShareCheckList");
 const processInnerLifeOnce = document.querySelector("#processInnerLifeOnce");
 const innerLifeShareList = document.querySelector("#innerLifeShareList");
@@ -92,6 +102,7 @@ const settingsNotice = document.querySelector("#settingsNotice");
 const memorySearchInput = document.querySelector("#memorySearchInput");
 const searchMemory = document.querySelector("#searchMemory");
 const memoryList = document.querySelector("#memoryList");
+const memoryAgentFilter = document.querySelector("#memoryAgentFilter");
 const allMemoryList = document.querySelector("#allMemoryList");
 const memoryGraphSummary = document.querySelector("#memoryGraphSummary");
 const memoryGraph = document.querySelector("#memoryGraph");
@@ -117,7 +128,6 @@ const sharedLineSummary = document.querySelector("#sharedLineSummary");
 const sharedLineUpdated = document.querySelector("#sharedLineUpdated");
 const sharedLineList = document.querySelector("#sharedLineList");
 const sharedLineAgentFilter = document.querySelector("#sharedLineAgentFilter");
-const sharedLineActiveTitle = document.querySelector("#sharedLineActiveTitle");
 const sharedLineLineCount = document.querySelector("#sharedLineLineCount");
 const sharedLineHistoryCount = document.querySelector("#sharedLineHistoryCount");
 const sharedLineSnapshotCount = document.querySelector("#sharedLineSnapshotCount");
@@ -154,6 +164,7 @@ const translations = {
     "nav.connections": "Connections",
     "nav.logs": "Logs",
     "nav.agentSetup": "Agent Setup",
+    "nav.models": "Models",
     "nav.settings": "Settings",
     "footer.label": "Local ownership",
     "footer.value": "Portable core",
@@ -198,15 +209,17 @@ const translations = {
     "view.sharedLine.title": "Shared Line",
     "view.sharedLine.subtitle": "The current position that connected agents can resume from.",
     "view.innerLife.title": "InnerLife",
-    "view.innerLife.subtitle": "Optional background reflection with explicit controls.",
+    "view.innerLife.subtitle": "Agent-managed internal activity, grouped by agent identity.",
     "view.data.title": "Data",
     "view.data.subtitle": "Import, export, and restore without mixing risky actions.",
     "view.connections.title": "Connections",
     "view.connections.subtitle": "Local entry points for external agents.",
     "view.agentSetup.title": "Agent Setup",
     "view.agentSetup.subtitle": "Copyable handoff notes for external agents.",
+    "view.models.title": "Models",
+    "view.models.subtitle": "Model providers and daemon runtime controls.",
     "view.settings.title": "Settings",
-    "view.settings.subtitle": "Model and service settings kept understandable.",
+    "view.settings.subtitle": "General product settings and shortcuts.",
     "home.model.title": "Model & Provider",
     "home.model.settings": "Model settings",
     "home.model.provider": "Provider",
@@ -214,7 +227,7 @@ const translations = {
     "home.model.model": "Model",
     "home.model.configuredOutside": "configured outside app",
     "home.model.mode": "Mode",
-    "home.model.edit": "Edit settings",
+    "home.model.edit": "Edit models",
     "home.dataLocation.title": "Data Location",
     "home.dataLocation.root": "Root",
     "home.dataLocation.openControls": "Open data controls",
@@ -475,7 +488,7 @@ const translations = {
     "sharedLine.handoffFailed": "Could not create handoff",
     "sharedLine.copyResume": "Copy resume packet",
     "sharedLine.resumeCopied": "Resume packet copied",
-    "innerLife.body": "Optional background reflection is available, but it should stay calm and explicit.",
+    "innerLife.body": "InnerLife is written and maintained by agents through MCP or CLI. This page only shows agent-scoped state.",
     "innerLife.paused": "Paused by default",
     "innerLife.pausedBody": "This is a normal state, not a failure.",
     "innerLife.allowQuiet": "Allow quiet background review",
@@ -518,6 +531,14 @@ const translations = {
     "innerLife.pendingShares": "Pending shares",
     "innerLife.events": "Events",
     "innerLife.thoughts": "Thoughts",
+    "innerLife.runtime": "Runtime",
+    "innerLife.sessions": "Sessions",
+    "innerLife.digests": "Digests",
+    "innerLife.inboxRecent": "Recent inbox",
+    "innerLife.inboxEmpty": "No inbox items yet.",
+    "innerLife.timingChecks": "Timing checks",
+    "innerLife.shareQueue": "Share queue",
+    "innerLife.reviewPolicy": "Agent-managed",
     "innerLife.empty": "No pending InnerLife output.",
     "innerLife.generated": "InnerLife output is waiting for review.",
     "innerLife.processFailed": "InnerLife process failed",
@@ -573,7 +594,7 @@ const translations = {
     "data.oldInnerLifeConfirm": "Import old InnerLife into this product database? A verified product backup will be created first. Old source files will be read only.",
     "data.oldInnerLifeImported": "Old InnerLife import complete",
     "data.oldInnerLifeImportFailed": "Old InnerLife import failed",
-    "data.oldInnerLifeSummary": "{profiles} profiles, {events} events, {thoughts} thoughts, {shares} shares",
+    "data.oldInnerLifeSummary": "{profiles} profiles, {inbox} inbox, {events} events, {shares} shares, {digestRuns} digests, {sessions} sessions",
     "data.restoreConfirm": "Restore this verified backup? A safety backup of the current database will be created first.",
     "data.restorePrompt": "Type RESTORE to confirm.",
     "data.restorePreview": "Restore preview",
@@ -636,8 +657,12 @@ const translations = {
     "agentSetup.copied": "Setup note copied",
     "settings.title": "Model settings",
     "settings.body": "Provider and model choices should be understandable without reading configuration files.",
+    "settings.modelsTitle": "Model configuration",
+    "settings.modelsBody": "Keep model wiring simple and visible before enabling InnerLife.",
     "settings.memoriaTitle": "Memoria embedding",
+    "settings.memoriaBody": "Used for Memory semantic search and graph-ready recall.",
     "settings.innerLifeTitle": "InnerLife daemon model",
+    "settings.innerLifeBody": "Required before the InnerLife daemon can become useful.",
     "settings.endpoint": "Endpoint",
     "settings.embeddingModel": "Embedding model",
     "settings.dimension": "Dimension",
@@ -645,13 +670,53 @@ const translations = {
     "settings.lightModel": "Light model",
     "settings.deepModel": "Deep model",
     "settings.pollSeconds": "Loop seconds",
+    "settings.pollMinutes": "Loop minutes",
     "settings.apiKey": "API key",
+    "settings.apiKeyRef": "API key reference",
+    "settings.apiKeyRefPlaceholder": "env:OPENAI_API_KEY",
     "settings.apiKey.configured": "Configured",
     "settings.apiKey.notConfigured": "Not configured",
+    "settings.apiKey.copied": "API key reference copied",
     "settings.save": "Save settings",
-    "settings.saved": "Settings saved",
-    "settings.saveFailed": "Could not save settings",
+    "settings.saveModels": "Save model configuration",
+    "settings.saved": "Model configuration saved",
+    "settings.saveFailed": "Could not save model configuration",
+    "settings.status.ready": "ready",
+    "settings.status.disabled": "disabled",
+    "settings.status.future": "future",
     "settings.openaiCompatible": "OpenAI compatible",
+    "settings.simpleBoundaryTitle": "Boundary",
+    "settings.memoryRole": "Memory",
+    "settings.memoryRoleBody": "Embedding only",
+    "settings.innerLifeRole": "InnerLife",
+    "settings.innerLifeRoleBody": "Daemon model",
+    "settings.secretsRole": "Secrets",
+    "settings.daemonStatus": "Daemon status",
+    "settings.generalTitle": "Settings",
+    "settings.generalBody": "General product settings stay here. Model wiring and daemon controls live in Models.",
+    "settings.modelsRole": "Models",
+    "settings.modelsRoleBody": "Provider and daemon runtime controls",
+    "settings.dataRole": "Data",
+    "settings.dataRoleBody": "Import, export, backup, and restore",
+    "settings.agentRole": "Agents",
+    "settings.agentRoleBody": "Connect through Gateway, MCP, or CLI",
+    "settings.shortcutsTitle": "Shortcuts",
+    "settings.openModels": "Open Models",
+    "settings.openData": "Open Data",
+    "settings.openAgentSetup": "Open Agent Setup",
+    "settings.appearanceTitle": "Appearance",
+    "settings.appearanceBody": "Language, theme, window behavior, and tray behavior.",
+    "settings.pathsTitle": "Data paths",
+    "settings.pathsBody": "Data directory, backup directory, and default import/export paths.",
+    "settings.logsTitle": "Logs and diagnostics",
+    "settings.logsBody": "Log retention days and debug trace switches.",
+    "settings.gatewayTitle": "Gateway policy",
+    "settings.gatewayBody": "Local access policy, port preferences, and transport preferences.",
+    "settings.privacyTitle": "Privacy and security",
+    "settings.privacyBody": "Restricted content visibility, automatic maintenance, and secret storage status.",
+    "settings.developerTitle": "Advanced developer options",
+    "settings.developerBody": "Development paths, packaged runtime information, and diagnostic toggles.",
+    "settings.futureProviderNote": "Reserved for a future small ClaraCore local model.",
     "settings.defaultModel": "Default model",
     "settings.advanced": "Advanced",
     "settings.showServiceDetails": "Show service details",
@@ -659,7 +724,7 @@ const translations = {
     "module.gateway.description": "Unified MCP and local service entry",
     "module.memoria.description": "Long-term factual memory",
     "module.continuity.description": "Shared line and current position",
-    "module.innerlife.description": "Optional background thoughts",
+    "module.innerlife.description": "Agent internal activity",
     "module.gateway.address": "Address",
     "module.gateway.localGateway": "Local gateway",
     "module.gateway.protocol": "Protocol",
@@ -674,19 +739,23 @@ const translations = {
     "module.memoria.readyForAgents": "CLI + MCP ready",
     "module.continuity.role": "Role",
     "module.continuity.sharedLine": "Shared line",
+    "module.innerlife.agentSurface": "Agent surface",
+    "module.innerlife.agents": "Agents",
+    "module.innerlife.inbox": "Inbox",
+    "module.innerlife.shares": "Shares",
+    "module.innerlife.sessions": "Sessions",
+    "module.innerlife.daemon": "Daemon",
     "module.innerlife.reason": "Reason",
     "module.innerlife.nextRun": "Next run",
     "module.innerlife.whenEnabled": "When enabled",
-    "module.action.enableInnerLife": "Enable InnerLife",
-    "module.action.open": "Open {label}",
     "event.requiredFound.title": "Product modules planned",
     "event.requiredFound.detail": "Gateway, Memoria, Continuity, and InnerLife are being rebuilt inside Desktop.",
     "event.requiredMissing.title": "Product module not implemented yet",
     "event.memoryFound.title": "Product database located",
     "event.memoryMissing.title": "Product database not created yet",
-    "event.innerLifeFound.title": "InnerLife is planned",
-    "event.innerLifeMissing.title": "InnerLife will stay disabled until explicitly implemented",
-    "event.innerLife.detail": "This reset does not start old background services.",
+    "event.innerLifeFound.title": "InnerLife data is available",
+    "event.innerLifeMissing.title": "InnerLife has no local data yet",
+    "event.innerLife.detail": "Agents manage InnerLife through MCP or CLI.",
     "runtime.customRoot": "Custom root",
     "runtime.developmentRoot": "Development root",
     "runtime.requiredPresent": "Required local modules are present.",
@@ -706,13 +775,14 @@ const translations = {
   },
   zh: {
     "nav.home": "首页",
-    "nav.memory": "Memoria",
+    "nav.memory": "记忆",
     "nav.sharedLine": "共同线",
     "nav.innerLife": "内在活动",
     "nav.data": "数据",
     "nav.connections": "连接",
     "nav.logs": "日志",
     "nav.agentSetup": "Agent 设置",
+    "nav.models": "模型",
     "nav.settings": "设置",
     "footer.label": "本机掌控",
     "footer.value": "可迁移核心",
@@ -757,15 +827,17 @@ const translations = {
     "view.sharedLine.title": "共同线",
     "view.sharedLine.subtitle": "外部智能体可以从这里接上当前进展。",
     "view.innerLife.title": "内在活动",
-    "view.innerLife.subtitle": "可选的后台思考，需要明确控制。",
+    "view.innerLife.subtitle": "由 Agent 管理的内在活动，按 agent 身份查看。",
     "view.data.title": "数据",
     "view.data.subtitle": "导入、导出、恢复分开处理，避免误操作。",
     "view.connections.title": "连接",
     "view.connections.subtitle": "给外部智能体使用的本机入口。",
     "view.agentSetup.title": "Agent 设置",
     "view.agentSetup.subtitle": "给外部智能体复制使用的接入说明。",
+    "view.models.title": "模型",
+    "view.models.subtitle": "模型供应商与 daemon 运行控制。",
     "view.settings.title": "设置",
-    "view.settings.subtitle": "模型和服务设置保持清楚可读。",
+    "view.settings.subtitle": "通用产品设置和快捷入口。",
     "home.model.title": "模型与提供方",
     "home.model.settings": "模型设置",
     "home.model.provider": "提供方",
@@ -773,7 +845,7 @@ const translations = {
     "home.model.model": "模型",
     "home.model.configuredOutside": "在应用外配置",
     "home.model.mode": "模式",
-    "home.model.edit": "编辑设置",
+    "home.model.edit": "编辑模型",
     "home.dataLocation.title": "数据位置",
     "home.dataLocation.root": "根目录",
     "home.dataLocation.openControls": "打开数据控制",
@@ -797,7 +869,7 @@ const translations = {
     "home.backup.title": "备份提醒",
     "home.backup.body": "做较大本机改动前，先导出记忆和共同线数据。",
     "home.backup.review": "查看数据",
-    "memory.title": "Memoria",
+    "memory.title": "记忆",
     "memory.body": "给 agent 使用的事实、回召、标签和结构化流水都在这个本机存储里。",
     "memory.agentSurface": "Agent 接口",
     "memory.store": "存储位置",
@@ -1034,7 +1106,7 @@ const translations = {
     "sharedLine.handoffFailed": "交接创建失败",
     "sharedLine.copyResume": "复制接续包",
     "sharedLine.resumeCopied": "接续包已复制",
-    "innerLife.body": "可选的后台反思已经可用，但应该保持安静且可控。",
+    "innerLife.body": "InnerLife 由 Agent 通过 MCP 或 CLI 写入和维护，这里只按 agent 查看状态。",
     "innerLife.paused": "默认暂停",
     "innerLife.pausedBody": "这是正常状态，不是故障。",
     "innerLife.allowQuiet": "允许安静后台检查",
@@ -1077,6 +1149,14 @@ const translations = {
     "innerLife.pendingShares": "待审核输出",
     "innerLife.events": "事件",
     "innerLife.thoughts": "思考",
+    "innerLife.runtime": "运行状态",
+    "innerLife.sessions": "会话",
+    "innerLife.digests": "Digests",
+    "innerLife.inboxRecent": "最近收件箱",
+    "innerLife.inboxEmpty": "还没有收件箱条目。",
+    "innerLife.timingChecks": "时机检查",
+    "innerLife.shareQueue": "分享队列",
+    "innerLife.reviewPolicy": "由 Agent 管理",
     "innerLife.empty": "没有待审核的 InnerLife 输出。",
     "innerLife.generated": "InnerLife 输出已生成，等待审核。",
     "innerLife.processFailed": "InnerLife 处理失败",
@@ -1132,7 +1212,7 @@ const translations = {
     "data.oldInnerLifeConfirm": "把旧 InnerLife 导入当前产品库吗？会先创建已验证的产品备份，旧来源文件只读。",
     "data.oldInnerLifeImported": "旧 InnerLife 导入完成",
     "data.oldInnerLifeImportFailed": "旧 InnerLife 导入失败",
-    "data.oldInnerLifeSummary": "{profiles} 个 profile，{events} 条事件，{thoughts} 条思考，{shares} 条分享",
+    "data.oldInnerLifeSummary": "{profiles} 个 profile，{inbox} 条收件箱，{events} 条事件，{shares} 条分享，{digestRuns} 条 digest，{sessions} 个会话",
     "data.restoreConfirm": "恢复这个已校验备份？系统会先为当前数据库创建一个安全备份。",
     "data.restorePrompt": "输入 RESTORE 确认恢复。",
     "data.restorePreview": "恢复预览",
@@ -1195,8 +1275,12 @@ const translations = {
     "agentSetup.copied": "接入说明已复制",
     "settings.title": "模型设置",
     "settings.body": "提供方和模型选择要做到不用读配置文件也能看懂。",
+    "settings.modelsTitle": "模型配置",
+    "settings.modelsBody": "先把模型连接保持简单可见，再启用 InnerLife。",
     "settings.memoriaTitle": "Memoria 向量模型",
+    "settings.memoriaBody": "用于记忆语义搜索和图谱召回。",
     "settings.innerLifeTitle": "InnerLife daemon 模型",
+    "settings.innerLifeBody": "InnerLife 后台循环可用前需要先配置这里。",
     "settings.endpoint": "地址",
     "settings.embeddingModel": "向量模型",
     "settings.dimension": "维度",
@@ -1204,13 +1288,53 @@ const translations = {
     "settings.lightModel": "轻量模型",
     "settings.deepModel": "深度模型",
     "settings.pollSeconds": "循环秒数",
+    "settings.pollMinutes": "循环分钟数",
     "settings.apiKey": "API key",
+    "settings.apiKeyRef": "API key 引用",
+    "settings.apiKeyRefPlaceholder": "env:OPENAI_API_KEY",
     "settings.apiKey.configured": "已配置",
     "settings.apiKey.notConfigured": "未配置",
+    "settings.apiKey.copied": "API key 引用已复制",
     "settings.save": "保存设置",
-    "settings.saved": "设置已保存",
-    "settings.saveFailed": "设置保存失败",
+    "settings.saveModels": "保存模型配置",
+    "settings.saved": "模型配置已保存",
+    "settings.saveFailed": "模型配置保存失败",
+    "settings.status.ready": "可用",
+    "settings.status.disabled": "关闭",
+    "settings.status.future": "预留",
     "settings.openaiCompatible": "OpenAI 兼容",
+    "settings.simpleBoundaryTitle": "边界",
+    "settings.memoryRole": "Memory",
+    "settings.memoryRoleBody": "只用于向量",
+    "settings.innerLifeRole": "InnerLife",
+    "settings.innerLifeRoleBody": "后台循环模型",
+    "settings.secretsRole": "密钥",
+    "settings.daemonStatus": "后台循环状态",
+    "settings.generalTitle": "设置",
+    "settings.generalBody": "通用产品设置放在这里。模型连接和 daemon 控制在模型页。",
+    "settings.modelsRole": "模型",
+    "settings.modelsRoleBody": "供应商与 daemon 运行控制",
+    "settings.dataRole": "数据",
+    "settings.dataRoleBody": "导入、导出、备份和恢复",
+    "settings.agentRole": "Agents",
+    "settings.agentRoleBody": "通过 Gateway、MCP 或 CLI 接入",
+    "settings.shortcutsTitle": "快捷入口",
+    "settings.openModels": "打开模型",
+    "settings.openData": "打开数据",
+    "settings.openAgentSetup": "打开 Agent 设置",
+    "settings.appearanceTitle": "外观",
+    "settings.appearanceBody": "语言、主题、窗口行为、托盘行为。",
+    "settings.pathsTitle": "数据路径",
+    "settings.pathsBody": "数据目录、备份目录、导入导出默认路径。",
+    "settings.logsTitle": "日志与诊断",
+    "settings.logsBody": "日志保留天数、debug trace 开关。",
+    "settings.gatewayTitle": "Gateway 策略",
+    "settings.gatewayBody": "本地访问策略、端口偏好、transport 偏好。",
+    "settings.privacyTitle": "隐私与安全",
+    "settings.privacyBody": "restricted 内容显示、自动维护、secret storage 状态。",
+    "settings.developerTitle": "高级开发选项",
+    "settings.developerBody": "开发路径、packaged runtime 信息、诊断开关。",
+    "settings.futureProviderNote": "为后续 ClaraCore 内置小模型预留。",
     "settings.defaultModel": "默认模型",
     "settings.advanced": "高级",
     "settings.showServiceDetails": "显示服务详情",
@@ -1218,7 +1342,7 @@ const translations = {
     "module.gateway.description": "统一 MCP 与本机服务入口",
     "module.memoria.description": "长期事实记忆",
     "module.continuity.description": "共同线与当前位置",
-    "module.innerlife.description": "可选后台思考",
+    "module.innerlife.description": "Agent 内在活动",
     "module.gateway.address": "地址",
     "module.gateway.localGateway": "本机网关",
     "module.gateway.protocol": "协议",
@@ -1233,19 +1357,23 @@ const translations = {
     "module.memoria.readyForAgents": "CLI + MCP 可用",
     "module.continuity.role": "作用",
     "module.continuity.sharedLine": "共同线",
+    "module.innerlife.agentSurface": "Agent 接口",
+    "module.innerlife.agents": "Agents",
+    "module.innerlife.inbox": "收件箱",
+    "module.innerlife.shares": "分享",
+    "module.innerlife.sessions": "会话",
+    "module.innerlife.daemon": "后台循环",
     "module.innerlife.reason": "原因",
     "module.innerlife.nextRun": "下次运行",
     "module.innerlife.whenEnabled": "启用后运行",
-    "module.action.enableInnerLife": "启用 InnerLife",
-    "module.action.open": "打开 {label}",
     "event.requiredFound.title": "产品模块已规划",
     "event.requiredFound.detail": "Gateway、Memoria、Continuity、InnerLife 会在 Desktop 内重建。",
     "event.requiredMissing.title": "产品模块尚未实现",
     "event.memoryFound.title": "产品数据库已找到",
     "event.memoryMissing.title": "产品数据库尚未创建",
-    "event.innerLifeFound.title": "InnerLife 已进入规划",
-    "event.innerLifeMissing.title": "InnerLife 会保持关闭，直到明确实现",
-    "event.innerLife.detail": "这次重置不会启动旧的后台服务。",
+    "event.innerLifeFound.title": "InnerLife 数据已可用",
+    "event.innerLifeMissing.title": "InnerLife 暂无本地数据",
+    "event.innerLife.detail": "Agent 通过 MCP 或 CLI 管理 InnerLife。",
     "runtime.customRoot": "自定义根目录",
     "runtime.developmentRoot": "开发根目录",
     "runtime.requiredPresent": "必需的本机模块都已找到。",
@@ -1313,6 +1441,11 @@ const views = {
     subtitleKey: "view.agentSetup.subtitle",
     panel: document.querySelector("#agentSetupView")
   },
+  models: {
+    titleKey: "view.models.title",
+    subtitleKey: "view.models.subtitle",
+    panel: document.querySelector("#modelView")
+  },
   settings: {
     titleKey: "view.settings.title",
     subtitleKey: "view.settings.subtitle",
@@ -1349,6 +1482,8 @@ const memoryPaging = {
 let editingMemoryId = null;
 let renamingSharedLineId = null;
 let activeSharedLineAgentFilter = "";
+let activeMemoryAgentFilter = "";
+let activeInnerLifeAgentFilter = "";
 let selectedSharedLineId = "";
 let pendingRestoreBackupId = null;
 let runtimeRefreshTimer = null;
@@ -1404,26 +1539,32 @@ function moduleIcon(module) {
   const icons = {
     gateway: `
       <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="8"></circle>
-        <path d="M4 12h16M12 4c2.2 2.3 3.2 5 3.2 8S14.2 17.7 12 20M12 4c-2.2 2.3-3.2 5-3.2 8s1 5.7 3.2 8"></path>
+        <path d="M15.8 5.2A7.8 7.8 0 1 0 15.8 18.8"></path>
+        <path d="M7 15.8c2.4-2.5 4.5-3.7 6.4-3.6 1.6.1 2.7 1.1 4.1 1 1.2 0 2.1-.6 3-1.8"></path>
+        <circle cx="17.3" cy="12" r="1.8"></circle>
       </svg>
     `,
     memoria: `
       <svg viewBox="0 0 24 24" aria-hidden="true">
-        <ellipse cx="12" cy="6" rx="7" ry="3"></ellipse>
-        <path d="M5 6v8c0 1.7 3.1 3 7 3s7-1.3 7-3V6"></path>
-        <path d="M5 10c0 1.7 3.1 3 7 3s7-1.3 7-3"></path>
+        <path d="M16.2 5.5A7.2 7.2 0 1 0 16.2 18.5"></path>
+        <path d="M7.2 16c2.1-2.3 4.1-3.4 5.8-3.3 1.5.1 2.5 1 3.8.9 1.1 0 2-.6 2.8-1.7"></path>
+        <circle cx="16.8" cy="12" r="3.3"></circle>
+        <circle cx="16.8" cy="12" r=".8"></circle>
       </svg>
     `,
     continuity: `
       <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="8"></circle>
-        <path d="M12 7v5l4 2"></path>
+        <path d="M5 14.8c3-3.5 5.8-5.2 8.2-5.1 2.1.1 3.4 1.5 5.3 1.4"></path>
+        <path d="M17 7.2l2.8 3.8-3.8 2.8"></path>
+        <path d="M7.2 18.4A7.5 7.5 0 0 1 8 5.8"></path>
       </svg>
     `,
     innerlife: `
       <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 19s-7-4.5-7-10a4 4 0 0 1 7-2.7A4 4 0 0 1 19 9c0 5.5-7 10-7 10Z"></path>
+        <path d="M15.3 6.4A6.8 6.8 0 1 0 15.3 17.6"></path>
+        <path d="M8.2 15.1c1.9-1.9 3.7-2.8 5.2-2.7 1.2.1 2 .8 3.1.8"></path>
+        <path d="M17.2 9.2c1.8 1.1 1.8 4.5 0 5.6"></path>
+        <circle cx="16.3" cy="12" r="1.2"></circle>
       </svg>
     `
   };
@@ -1466,6 +1607,27 @@ function moduleDetails(module) {
       [t("common.path"), module.servicePath]
     ];
   }
+  if (module.id === "innerlife") {
+    const innerLife = snapshot?.innerLife || {};
+    const counts = innerLife.counts || {};
+    const daemon = innerLife.daemon || {};
+    const agentIds = [
+      ...(innerLife.sessions || []).map(itemAgentId),
+      ...(innerLife.digestRuns || []).map(itemAgentId),
+      ...(innerLife.inbox || []).map(itemAgentId),
+      ...(innerLife.pendingShares || []).map(itemAgentId),
+      ...(innerLife.recentShares || []).map(itemAgentId)
+    ];
+    const agentCount = new Set(agentIds.filter(Boolean)).size;
+    return [
+      [t("module.innerlife.agentSurface"), "MCP + CLI"],
+      [t("module.innerlife.agents"), String(agentCount)],
+      [t("module.innerlife.inbox"), `${counts.pending_inbox_count ?? 0} / ${counts.processed_inbox_count ?? 0}`],
+      [t("module.innerlife.shares"), `${counts.pending_shares_count ?? 0} / ${counts.used_shares_count ?? 0}`],
+      [t("module.innerlife.sessions"), `${counts.active_sessions_count ?? 0} / ${counts.ended_sessions_count ?? 0}`],
+      [t("module.innerlife.daemon"), daemon.enabled ? (daemon.status || t("common.ready")) : t("common.paused")]
+    ];
+  }
   return [
     [t("common.status"), t("common.paused")],
     [t("module.innerlife.reason"), t("common.manual")],
@@ -1498,13 +1660,6 @@ function renderModules(modules) {
             ${serviceBadge(module)}
           </header>
           <div class="module-details">${details}</div>
-          <button class="module-action secondary" data-module-open="${module.id}">${
-            module.state === "paused"
-              ? t("module.action.enableInnerLife")
-              : module.state === "planned"
-                ? t("common.planned")
-              : t("module.action.open", { label: module.label })
-          }</button>
         </article>
       `;
     })
@@ -1536,7 +1691,7 @@ function renderEvents() {
       detail: snapshot.data.databasePath
     },
     {
-      title: innerLife?.state === "planned" ? t("event.innerLifeFound.title") : t("event.innerLifeMissing.title"),
+      title: innerLife?.present ? t("event.innerLifeFound.title") : t("event.innerLifeMissing.title"),
       detail: t("event.innerLife.detail")
     }
   ];
@@ -1727,6 +1882,52 @@ function renderAgentSetup() {
   agentSetupMarkdown.textContent = buildAgentSetupMarkdown();
 }
 
+function modelStatus(provider, hasModel = true) {
+  if (provider === "claracore-built-in") {
+    return { label: t("settings.status.future"), className: "badge warn", note: t("settings.futureProviderNote") };
+  }
+  if (provider === "disabled") {
+    return { label: t("settings.status.disabled"), className: "badge warn", note: "" };
+  }
+  return {
+    label: hasModel ? t("settings.status.ready") : t("common.needsAttention"),
+    className: hasModel ? "badge ok" : "badge warn",
+    note: ""
+  };
+}
+
+function maskMiddle(value) {
+  const text = String(value || "").trim();
+  if (!text) return t("settings.apiKey.notConfigured");
+  if (text.length <= 8) return `${text.slice(0, 2)}••••${text.slice(-2)}`;
+  return `${text.slice(0, 6)}••••••${text.slice(-4)}`;
+}
+
+function setSecretInput(input, value) {
+  const secret = String(value || "").trim();
+  input.dataset.secretValue = secret;
+  input.dataset.maskedValue = secret ? maskMiddle(secret) : "";
+  input.value = input.dataset.maskedValue;
+}
+
+function getSecretInputValue(input) {
+  const visible = String(input.value || "").trim();
+  if (visible === String(input.dataset.maskedValue || "")) {
+    return String(input.dataset.secretValue || "").trim();
+  }
+  return visible;
+}
+
+function secondsToDisplayMinutes(value) {
+  const seconds = Number.parseInt(String(value || 60), 10) || 60;
+  return String(Math.max(1, Math.round(seconds / 60)));
+}
+
+function displayMinutesToSeconds(value) {
+  const minutes = Number.parseInt(String(value || 1), 10) || 1;
+  return String(Math.max(1, minutes) * 60);
+}
+
 function renderSettings() {
   if (!snapshot?.configuration) return;
   const memoria = snapshot.configuration.memoria;
@@ -1735,17 +1936,37 @@ function renderSettings() {
   memoriaEndpoint.value = memoria.endpoint;
   memoriaModel.value = memoria.model;
   memoriaDimension.value = memoria.dimension;
+  setSecretInput(memoriaApiKey, memoria.apiKeyRef || "");
   memoriaSource.value = memoria.source;
   innerLifeBackend.value = innerlife.backend;
   innerLifeEndpoint.value = innerlife.baseUrl;
   innerLifeLightModel.value = innerlife.lightModel;
   innerLifeDeepModel.value = innerlife.deepModel;
-  innerLifePollSeconds.value = innerlife.pollSeconds;
-  innerLifeApiKey.value =
-    innerlife.apiKeyStatus === "configured"
-      ? t("settings.apiKey.configured")
-      : t("settings.apiKey.notConfigured");
+  innerLifePollSeconds.value = secondsToDisplayMinutes(innerlife.pollSeconds);
+  setSecretInput(innerLifeApiKey, innerlife.apiKeyRef || "");
+  innerLifeApiKeySummary.textContent = maskMiddle(innerlife.apiKeyRef);
   innerLifeSource.value = innerlife.source;
+  const memoriaStatus = modelStatus(memoria.provider, Boolean(memoria.model));
+  memoriaModelStatus.textContent = memoriaStatus.label;
+  memoriaModelStatus.className = memoriaStatus.className;
+  memoriaModelStatus.title = memoriaStatus.note;
+  const innerLifeStatus = modelStatus(innerlife.backend, Boolean(innerlife.lightModel || innerlife.deepModel));
+  innerLifeModelStatus.textContent = innerLifeStatus.label;
+  innerLifeModelStatus.className = innerLifeStatus.className;
+  innerLifeModelStatus.title = innerLifeStatus.note;
+  const daemon = snapshot?.innerLife?.daemon || {};
+  if (settingsInnerLifeDaemonStatus) {
+    settingsInnerLifeDaemonStatus.textContent = daemon.enabled ? daemon.status || t("common.ready") : t("common.paused");
+  }
+  if (innerLifeDaemonControlPanel) {
+    innerLifeDaemonControlPanel.classList.toggle("is-enabled", Boolean(daemon.enabled) && daemon.status !== "error");
+    innerLifeDaemonControlPanel.classList.toggle("is-paused", !daemon.enabled || daemon.status === "paused");
+    innerLifeDaemonControlPanel.classList.toggle("is-error", daemon.status === "error");
+  }
+  if (enableInnerLifeDaemon && pauseInnerLifeDaemon) {
+    enableInnerLifeDaemon.disabled = Boolean(daemon.enabled) && daemon.status !== "paused";
+    pauseInnerLifeDaemon.disabled = !daemon.enabled || daemon.status === "paused";
+  }
 }
 
 function splitListInput(value) {
@@ -1790,6 +2011,35 @@ function renderReadableText(value, icon = "•") {
   const parts = splitReadableText(value);
   if (parts.length === 0) return "";
   return parts.map((part) => `<span class="readable-line"><i>${escapeHtml(icon)}</i>${escapeHtml(part)}</span>`).join("");
+}
+
+function memoryAgentId(memory) {
+  const labels = Array.isArray(memory?.labels) ? memory.labels : [];
+  const agentIdLabel = labels.find((label) => String(label || "").startsWith("agent-id:"));
+  if (agentIdLabel) return String(agentIdLabel).slice("agent-id:".length);
+  const agentLabel = labels.find((label) => String(label || "").startsWith("agent:"));
+  return agentLabel ? String(agentLabel).slice("agent:".length) : "";
+}
+
+function itemAgentId(item) {
+  return item?.agentId || item?.agent_id || item?.metadata?.agentId || "";
+}
+
+function filterByAgent(items, agentId, getter = itemAgentId) {
+  if (!agentId) return items || [];
+  return (items || []).filter((item) => getter(item) === agentId);
+}
+
+function renderAgentFilter(select, agentIds, activeValue) {
+  if (!select) return "";
+  const options = [...new Set((agentIds || []).filter(Boolean))].sort();
+  const nextValue = activeValue && options.includes(activeValue) ? activeValue : "";
+  select.innerHTML = [
+    `<option value="">${escapeHtml(t("sharedLine.filter.allAgents"))}</option>`,
+    ...options.map((agentId) => `<option value="${escapeHtml(agentId)}">${escapeHtml(agentId)}</option>`)
+  ].join("");
+  select.value = nextValue;
+  return nextValue;
 }
 
 function renderTraceValue(value) {
@@ -1895,7 +2145,9 @@ function renderSharedLineMetadata(metadata = {}) {
 }
 
 function renderMemoryList() {
-  renderMemoryResults(snapshot?.memories || []);
+  const memories = snapshot?.memories || [];
+  activeMemoryAgentFilter = renderAgentFilter(memoryAgentFilter, memories.map(memoryAgentId), activeMemoryAgentFilter);
+  renderMemoryResults(filterByAgent(memories, activeMemoryAgentFilter, memoryAgentId));
 }
 
 function renderSharedLine() {
@@ -1908,7 +2160,6 @@ function renderSharedLine() {
   const handoffs = sharedLine?.handoffs || [];
   const activeLine = lines.find((line) => line.active) || {};
   selectedSharedLineId = sharedLine?.lineId || selectedSharedLineId || activeLine.id || "";
-  sharedLineActiveTitle.textContent = sharedLine?.lineTitle || activeLine.title || t("sharedLine.title");
   sharedLineDetailStatus.textContent = current.interpretationStatus || activeLine.status || "active";
   sharedLineDetailStatus.className = `badge ${current.interpretationStatus === "confirmed" ? "ok" : "planned"}`;
   sharedLineLineCount.textContent = lines.filter((line) => line.status !== "archived").length;
@@ -2041,6 +2292,14 @@ function renderInnerLife() {
   const innerLife = snapshot?.innerLife || {};
   const counts = innerLife.counts || {};
   const daemon = innerLife.daemon || {};
+  const innerLifeAgentIds = [
+    ...(innerLife.sessions || []).map(itemAgentId),
+    ...(innerLife.digestRuns || []).map(itemAgentId),
+    ...(innerLife.inbox || []).map(itemAgentId),
+    ...(innerLife.pendingShares || []).map(itemAgentId),
+    ...(innerLife.recentShares || []).map(itemAgentId)
+  ];
+  activeInnerLifeAgentFilter = renderAgentFilter(innerLifeAgentFilter, innerLifeAgentIds, activeInnerLifeAgentFilter);
   innerLifeDaemonStatus.textContent = daemon.status || "paused";
   innerLifeNextRun.textContent = daemon.nextRunAt || "-";
   innerLifeLastResult.textContent = daemon.lastResult || daemon.lastError || "-";
@@ -2068,12 +2327,14 @@ function renderInnerLife() {
       `
     )
     .join("");
-  enableInnerLifeDaemon.disabled = Boolean(daemon.enabled) && daemon.status !== "paused";
-  pauseInnerLifeDaemon.disabled = !daemon.enabled || daemon.status === "paused";
+  if (enableInnerLifeDaemon && pauseInnerLifeDaemon) {
+    enableInnerLifeDaemon.disabled = Boolean(daemon.enabled) && daemon.status !== "paused";
+    pauseInnerLifeDaemon.disabled = !daemon.enabled || daemon.status === "paused";
+  }
   innerLifePendingCount.textContent = counts.pending_shares_count ?? 0;
   innerLifeEventCount.textContent = counts.events_count ?? 0;
   innerLifeThoughtCount.textContent = counts.thoughts_count ?? 0;
-  const sessions = innerLife.sessions || [];
+  const sessions = filterByAgent(innerLife.sessions || [], activeInnerLifeAgentFilter);
   const activeSession = sessions.find((session) => session.status === "active");
   endInnerLifeSession.disabled = !activeSession;
   if (sessions.length === 0) {
@@ -2088,14 +2349,36 @@ function renderInnerLife() {
               <strong>${escapeHtml(session.status || "")}</strong>
               <span>${escapeHtml(session.startedAt || "")}</span>
             </div>
-            <p>${escapeHtml(session.summary || session.externalSessionId || session.id || "")}</p>
+            <p>${escapeHtml(session.summary && session.summary !== "{}" ? session.summary : session.externalSessionId || session.id || "")}</p>
             ${session.endedAt ? `<small>${escapeHtml(session.endedAt)}</small>` : ""}
           </article>
         `
       )
       .join("");
   }
-  const digestRuns = innerLife.digestRuns || [];
+  const inboxItems = filterByAgent(innerLife.inbox || [], activeInnerLifeAgentFilter);
+  if (innerLifeInboxList) {
+    if (inboxItems.length === 0) {
+      innerLifeInboxList.innerHTML = `<div class="endpoint-empty">${t("innerLife.inboxEmpty")}</div>`;
+    } else {
+      innerLifeInboxList.innerHTML = inboxItems
+        .slice(0, 6)
+        .map(
+          (item) => `
+            <article class="shared-line-history-item">
+              <div>
+                <strong>${escapeHtml(item.source || "desktop")}</strong>
+                <span>${escapeHtml(item.createdAt || "")}</span>
+              </div>
+              <p>${escapeHtml(item.body || "")}</p>
+              <small>${escapeHtml(item.status || "")}${item.processedAt ? ` · ${escapeHtml(item.processedAt)}` : ""}</small>
+            </article>
+          `
+        )
+        .join("");
+    }
+  }
+  const digestRuns = filterByAgent(innerLife.digestRuns || [], activeInnerLifeAgentFilter);
   if (digestRuns.length === 0) {
     innerLifeDigestList.innerHTML = `<div class="endpoint-empty">${t("innerLife.digestEmpty")}</div>`;
   } else {
@@ -2108,13 +2391,14 @@ function renderInnerLife() {
               <strong>${escapeHtml(run.mode || "manual")}</strong>
               <span>${escapeHtml(run.completedAt || run.createdAt || "")}</span>
             </div>
-            <p>${escapeHtml((run.summary || "").split("\n").find((line) => line.startsWith("Current position:")) || run.status || "")}</p>
+            <p>${escapeHtml((run.summary || "").split("\n").find((line) => line.trim()) || run.status || "")}</p>
+            <small>${escapeHtml(run.status || "")}</small>
           </article>
         `
       )
       .join("");
   }
-  const shareChecks = innerLife.shareChecks || [];
+  const shareChecks = filterByAgent(innerLife.shareChecks || [], activeInnerLifeAgentFilter);
   if (shareChecks.length === 0) {
     innerLifeShareCheckList.innerHTML = `<div class="endpoint-empty">${t("innerLife.timingEmpty")}</div>`;
   } else {
@@ -2134,8 +2418,9 @@ function renderInnerLife() {
       )
       .join("");
   }
-  const pendingShares = innerLife.pendingShares || [];
-  const approvedShares = (innerLife.recentShares || []).filter((share) => share.status === "approved").slice(0, 5);
+  const pendingShares = filterByAgent(innerLife.pendingShares || [], activeInnerLifeAgentFilter);
+  const approvedShares = filterByAgent(innerLife.recentShares || [], activeInnerLifeAgentFilter).filter((share) => share.status === "approved").slice(0, 5);
+  innerLifePendingCount.textContent = pendingShares.length;
   if (pendingShares.length === 0 && approvedShares.length === 0) {
     innerLifeShareList.innerHTML = `<div class="endpoint-empty">${t("innerLife.empty")}</div>`;
     return;
@@ -2146,13 +2431,9 @@ function renderInnerLife() {
         <article class="innerlife-share" data-innerlife-share-id="${escapeHtml(share.id)}">
           <div>
             <strong>${escapeHtml(share.created_at || "")}</strong>
-            <span>${escapeHtml(share.status || "")}</span>
+            <span>${escapeHtml(itemAgentId(share) || "")} · ${escapeHtml(share.status || "")}</span>
           </div>
           <pre>${escapeHtml(share.body || "")}</pre>
-          <div class="innerlife-share-actions">
-            <button class="secondary" data-innerlife-action="approve" data-innerlife-share-id="${escapeHtml(share.id)}">${t("innerLife.approve")}</button>
-            <button class="secondary danger-button" data-innerlife-action="reject" data-innerlife-share-id="${escapeHtml(share.id)}">${t("innerLife.reject")}</button>
-          </div>
         </article>
       `
     )
@@ -2163,16 +2444,9 @@ function renderInnerLife() {
         <article class="innerlife-share approved" data-innerlife-share-id="${escapeHtml(share.id)}">
           <div>
             <strong>${t("innerLife.approvedOutput")}</strong>
-            <span>${escapeHtml(share.updated_at || share.created_at || "")}</span>
+            <span>${escapeHtml(itemAgentId(share) || "")} · ${escapeHtml(share.updated_at || share.created_at || "")}</span>
           </div>
           <pre>${escapeHtml(share.body || "")}</pre>
-          <div class="innerlife-share-actions">
-            <button class="secondary" data-innerlife-action="apply-memory" data-innerlife-share-id="${escapeHtml(share.id)}">${t("innerLife.applyMemory")}</button>
-            <button class="secondary" data-innerlife-action="apply-shared-line" data-innerlife-share-id="${escapeHtml(share.id)}">${t("innerLife.applySharedLine")}</button>
-            <button class="secondary" data-innerlife-action="used" data-innerlife-share-id="${escapeHtml(share.id)}">${t("innerLife.markUsed")}</button>
-            <button class="secondary" data-innerlife-action="deferred" data-innerlife-share-id="${escapeHtml(share.id)}">${t("innerLife.markDeferred")}</button>
-            <button class="secondary danger-button" data-innerlife-action="discarded" data-innerlife-share-id="${escapeHtml(share.id)}">${t("innerLife.markDiscarded")}</button>
-          </div>
         </article>
       `
     )
@@ -2485,7 +2759,7 @@ async function loadMemoryTabData(tabName, options = {}) {
     snapshot.memories = append ? [...(snapshot.memories || []), ...rows] : rows;
     memoryPaging.all.loaded = snapshot.memories.length;
     loadedMemoryTabs.all = true;
-    if ((rows || []).length > 0) renderMemoryResults(rows || [], allMemoryList, { append });
+    if ((rows || []).length > 0) renderMemoryResults(filterByAgent(rows || [], activeMemoryAgentFilter, memoryAgentId), allMemoryList, { append });
     memoryAllHint.textContent = t("memory.list.sample", {
       shown: snapshot?.memories?.length || 0,
       total: snapshot?.memoryStats?.activeCount ?? 0
@@ -2498,7 +2772,7 @@ async function loadMemoryTabData(tabName, options = {}) {
     snapshot.restrictedMemories = append ? [...(snapshot.restrictedMemories || []), ...rows] : rows;
     memoryPaging.restricted.loaded = snapshot.restrictedMemories.length;
     loadedMemoryTabs.restricted = true;
-    if ((rows || []).length > 0) renderMemoryResults(rows || [], restrictedMemoryList, { append, action: "delete-restricted", itemClass: "restricted" });
+    if ((rows || []).length > 0) renderMemoryResults(filterByAgent(rows || [], activeMemoryAgentFilter, memoryAgentId), restrictedMemoryList, { append, action: "delete-restricted", itemClass: "restricted" });
     memoryRestrictedHint.textContent = t("memory.list.sample", {
       shown: snapshot?.restrictedMemories?.length || 0,
       total: snapshot?.memoryStats?.restrictedCount ?? 0
@@ -2517,8 +2791,8 @@ async function loadMemoryTabData(tabName, options = {}) {
     memoryPaging.archived.loaded = snapshot.archivedMemories.length;
     memoryPaging.deleted.loaded = snapshot.deletedMemories.length;
     loadedMemoryTabs.archive = true;
-    if ((archived || []).length > 0) renderMemoryResults(archived || [], archivedMemoryList, { append, action: "restore-archived", itemClass: "archived" });
-    if ((deleted || []).length > 0) renderMemoryResults(deleted || [], deletedMemoryList, { append, action: "restore", itemClass: "deleted" });
+    if ((archived || []).length > 0) renderMemoryResults(filterByAgent(archived || [], activeMemoryAgentFilter, memoryAgentId), archivedMemoryList, { append, action: "restore-archived", itemClass: "archived" });
+    if ((deleted || []).length > 0) renderMemoryResults(filterByAgent(deleted || [], activeMemoryAgentFilter, memoryAgentId), deletedMemoryList, { append, action: "restore", itemClass: "deleted" });
     renderLoadMore("archive");
   }
 }
@@ -2833,10 +3107,13 @@ function collectSettingsForm() {
     "memory.embedding.base_url": memoriaEndpoint.value,
     "memory.embedding.model": memoriaModel.value,
     "memory.embedding.dimension": memoriaDimension.value,
+    "memory.embedding.api_key_ref": getSecretInputValue(memoriaApiKey),
     "innerlife.provider": innerLifeBackend.value,
+    "innerlife.base_url": innerLifeEndpoint.value,
     "innerlife.light_model": innerLifeLightModel.value,
     "innerlife.deep_model": innerLifeDeepModel.value,
-    "innerlife.loop_seconds": innerLifePollSeconds.value
+    "innerlife.loop_seconds": displayMinutesToSeconds(innerLifePollSeconds.value),
+    "innerlife.llm.api_key_ref": getSecretInputValue(innerLifeApiKey)
   };
 }
 
@@ -2984,18 +3261,6 @@ document.querySelectorAll("[data-view-target]").forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.viewTarget));
 });
 
-moduleGrid.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-module-open]");
-  if (!button) return;
-  const targets = {
-    gateway: "connections",
-    memoria: "memory",
-    continuity: "shared-line",
-    innerlife: "innerlife"
-  };
-  setView(targets[button.dataset.moduleOpen] || "home");
-});
-
 document.querySelectorAll("[data-language]").forEach((button) => {
   button.addEventListener("click", () => setLanguage(button.dataset.language));
 });
@@ -3019,11 +3284,42 @@ saveSettings.addEventListener("click", async () => {
   }
 });
 
+copyMemoriaApiKey.addEventListener("click", () => {
+  const value = getSecretInputValue(memoriaApiKey);
+  if (!value) {
+    showCopyNotice(t("settings.apiKey.notConfigured"), settingsNotice);
+    return;
+  }
+  copyValue(value, t("settings.apiKey.copied"), settingsNotice).catch(console.error);
+});
+
+copyInnerLifeApiKey.addEventListener("click", () => {
+  const value = getSecretInputValue(innerLifeApiKey);
+  if (!value) {
+    showCopyNotice(t("settings.apiKey.notConfigured"), settingsNotice);
+    return;
+  }
+  copyValue(value, t("settings.apiKey.copied"), settingsNotice).catch(console.error);
+});
+
 searchMemory.addEventListener("click", async () => {
   const response = await window.ClaraCoreDesktop.searchMemories(memorySearchInput.value);
   const results = Array.isArray(response) ? response : response?.results || [];
-  renderMemoryResults(results);
+  renderMemoryResults(filterByAgent(results, activeMemoryAgentFilter, memoryAgentId));
   if (response?.error) showCopyNotice(t("memory.search.fallback"));
+});
+
+memoryAgentFilter?.addEventListener("change", async () => {
+  activeMemoryAgentFilter = memoryAgentFilter.value || "";
+  renderMemoryList();
+  if (activeMemoryTab !== "search") {
+    await loadMemoryTabData(activeMemoryTab, { force: true });
+  }
+});
+
+innerLifeAgentFilter?.addEventListener("change", () => {
+  activeInnerLifeAgentFilter = innerLifeAgentFilter.value || "";
+  renderInnerLife();
 });
 
 processMemoryEmbeddings.addEventListener("click", async () => {
@@ -3288,7 +3584,7 @@ sharedLineList.addEventListener("click", async (event) => {
     let result;
     if (action === "select") {
       selectedSharedLineId = lineId;
-      result = await window.ClaraCoreDesktop.getSharedLine({ lineId });
+      result = { sharedLine: await window.ClaraCoreDesktop.getSharedLine({ lineId }) };
       sharedLineNotice.textContent = "";
     } else if (action === "activate") {
       result = await window.ClaraCoreDesktop.activateSharedLine(lineId);
@@ -3403,7 +3699,7 @@ startInnerLifeSession.addEventListener("click", async () => {
   innerLifeNotice.textContent = t("common.checking");
   try {
     await window.ClaraCoreDesktop.startInnerLifeSession({
-      agentId: "my-agent",
+      agentId: "codex",
       userId: "local-user",
       host: "desktop",
       externalSessionId: `desktop-${Date.now()}`
@@ -3444,7 +3740,7 @@ submitInnerLifeInbox.addEventListener("click", async () => {
   innerLifeNotice.textContent = t("common.checking");
   try {
     await window.ClaraCoreDesktop.submitInnerLifeInbox({
-      agentId: "my-agent",
+      agentId: "codex",
       source: "desktop",
       body: innerLifeInboxInput.value
     });
@@ -3695,9 +3991,11 @@ const oldSourceImporters = {
     summary(imported) {
       return t("data.oldInnerLifeSummary", {
         profiles: imported.profiles?.imported || 0,
+        inbox: imported.inbox?.imported || 0,
         events: imported.events?.imported || 0,
-        thoughts: imported.thoughts?.imported || 0,
-        shares: imported.shares?.imported || 0
+        shares: imported.shares?.imported || 0,
+        digestRuns: imported.digestRuns?.imported || 0,
+        sessions: imported.sessions?.imported || 0
       });
     }
   }

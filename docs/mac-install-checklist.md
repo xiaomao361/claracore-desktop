@@ -51,7 +51,7 @@ Open `Data`.
 ## Current Limits
 
 - The app is not signed or notarized yet.
-- Import from old Memoria, Continuity, and InnerLife data is intentionally not enabled yet.
+- Import from old Memoria, Continuity, and InnerLife data is preview-first and backup-gated.
 - Restore is limited to verified product backups, requires `RESTORE`, and creates a safety backup first.
-- InnerLife background loop remains disabled by default.
+- InnerLife background loop remains paused by default and can be enabled from Models.
 - Windows packaging still needs a separate validation pass.

@@ -4,12 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ClaraCore Desktop</title>
+    <link rel="icon" type="image/svg+xml" href="./assets/brand/claracore-mark-flat.svg" />
+    <link rel="apple-touch-icon" href="./assets/generated/icon-256.png" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-mark">C</div>
+        <img class="brand-mark" src="./assets/brand/claracore-mark-flat.svg" alt="" />
         <div>
           <strong>ClaraCore</strong>
           <span>Desktop v0.1</span>
@@ -24,6 +26,7 @@
         <button class="nav-item" data-view="connections" data-i18n="nav.connections">Connections</button>
         <button class="nav-item" data-view="logs" data-i18n="nav.logs">Logs</button>
         <button class="nav-item" data-view="agent-setup" data-i18n="nav.agentSetup">Agent Setup</button>
+        <button class="nav-item" data-view="models" data-i18n="nav.models">Models</button>
         <button class="nav-item" data-view="settings" data-i18n="nav.settings">Settings</button>
       </nav>
       <div class="sidebar-footer">
@@ -65,7 +68,7 @@
             <div class="kv-row"><span data-i18n="home.model.provider">Provider</span><strong data-i18n="home.model.localProvider">Local provider</strong></div>
             <div class="kv-row"><span data-i18n="home.model.model">Model</span><strong data-i18n="home.model.configuredOutside">Configured outside app</strong></div>
             <div class="kv-row"><span data-i18n="home.model.mode">Mode</span><strong id="runtimeMode">Checking...</strong></div>
-            <button class="link-button" data-view-target="settings" data-i18n="home.model.edit">Edit settings</button>
+            <button class="link-button" data-view-target="models" data-i18n="home.model.edit">Edit models</button>
           </article>
 
           <article class="panel compact-panel">
@@ -173,6 +176,10 @@
           <article class="panel">
             <div class="panel-heading">
               <h2 data-i18n="memory.preview">Search and memories</h2>
+              <div class="shared-line-filter">
+                <span data-i18n="sharedLine.filter.agent">Agent</span>
+                <select id="memoryAgentFilter"></select>
+              </div>
             </div>
             <div class="memoria-tabs" role="tablist" aria-label="Memoria views">
               <button class="active" data-memory-tab="search" data-i18n="memory.tab.search">Search</button>
@@ -228,16 +235,6 @@
       </section>
 
       <section id="sharedLineView" class="view">
-        <div class="shared-line-page-head">
-          <div>
-            <h2 data-i18n="sharedLine.title">Shared Line</h2>
-            <p data-i18n="sharedLine.body">Continuity shows the current shared position so agents can resume with less drift.</p>
-          </div>
-          <div class="shared-line-active-pill">
-            <span data-i18n="sharedLine.activeLine">Active line</span>
-            <strong id="sharedLineActiveTitle">Checking...</strong>
-          </div>
-        </div>
         <div class="shared-line-stats-grid">
           <div><span data-i18n="sharedLine.stats.lines">Lines</span><strong id="sharedLineLineCount">0</strong></div>
           <div><span data-i18n="sharedLine.stats.history">History</span><strong id="sharedLineHistoryCount">0</strong></div>
@@ -337,63 +334,99 @@
       </section>
 
       <section id="innerlifeView" class="view">
-        <div class="screen-grid">
-          <article class="panel main-panel">
-            <h2>InnerLife</h2>
-            <p data-i18n="innerLife.body">Optional background reflection is available, but it should stay calm and explicit.</p>
-            <div class="state-card paused">
-              <strong data-i18n="innerLife.paused">Paused by default</strong>
-              <p data-i18n="innerLife.pausedBody">This is a normal state, not a failure.</p>
+        <div class="innerlife-shell">
+          <section class="innerlife-status-strip">
+            <div>
+              <span data-i18n="innerLife.daemonStatus">Daemon</span>
+              <strong id="innerLifeDaemonStatus">paused</strong>
             </div>
-            <div class="innerlife-actions">
-              <span id="innerLifeNotice" class="quiet" aria-live="polite"></span>
-              <button id="startInnerLifeSession" class="secondary" data-i18n="innerLife.startSession">Start session</button>
-              <button id="endInnerLifeSession" class="secondary" data-i18n="innerLife.endSession">End session</button>
-              <button id="runInnerLifeDigest" class="secondary" data-i18n="innerLife.runDigest">Run digest</button>
-              <button id="enableInnerLifeDaemon" class="secondary" data-i18n="innerLife.enableDaemon">Enable daemon</button>
-              <button id="pauseInnerLifeDaemon" class="secondary" data-i18n="innerLife.pauseDaemon">Pause daemon</button>
-              <button id="tickInnerLifeDaemon" class="secondary" data-i18n="innerLife.tickDaemon">Run due tick</button>
-              <button id="processInnerLifeOnce" class="primary" data-i18n="innerLife.processOnce">Process once</button>
+            <div>
+              <span data-i18n="innerLife.pendingShares">Pending shares</span>
+              <strong id="innerLifePendingCount">0</strong>
             </div>
-            <label class="shared-line-form">
-              <span data-i18n="innerLife.sessionSummary">Session summary</span>
-              <textarea id="innerLifeSessionSummary" rows="3" data-i18n-placeholder="innerLife.sessionSummaryPlaceholder" placeholder="What should InnerLife remember from this session?"></textarea>
-            </label>
-            <label class="shared-line-form">
-              <span data-i18n="innerLife.inbox">Inbox</span>
-              <textarea id="innerLifeInboxInput" rows="3" data-i18n-placeholder="innerLife.inboxPlaceholder" placeholder="Submit material for InnerLife to digest later."></textarea>
-            </label>
-            <div class="form-actions">
-              <button id="submitInnerLifeInbox" class="secondary" data-i18n="innerLife.submitInbox">Submit inbox</button>
+            <div>
+              <span data-i18n="innerLife.events">Events</span>
+              <strong id="innerLifeEventCount">0</strong>
             </div>
-            <label class="shared-line-form">
-              <span data-i18n="innerLife.shareContext">Share context</span>
-              <textarea id="innerLifeShareContext" rows="2" data-i18n-placeholder="innerLife.shareContextPlaceholder" placeholder="What is happening now?"></textarea>
-            </label>
-            <div class="form-actions">
-              <button id="checkInnerLifeShareTiming" class="secondary" data-i18n="innerLife.checkTiming">Check share timing</button>
+            <div>
+              <span data-i18n="innerLife.thoughts">Thoughts</span>
+              <strong id="innerLifeThoughtCount">0</strong>
             </div>
-            <div id="innerLifeSessionList" class="shared-line-history-list"></div>
-            <div id="innerLifeDigestList" class="shared-line-history-list"></div>
-            <div id="innerLifeShareCheckList" class="shared-line-history-list"></div>
-            <div id="innerLifeShareList" class="innerlife-share-list"></div>
-          </article>
-          <article class="panel">
-            <h2 data-i18n="nav.settings">Settings</h2>
-            <label class="toggle-row"><input type="checkbox" disabled /> <span data-i18n="innerLife.allowQuiet">Allow quiet background review</span></label>
-            <label class="toggle-row"><input type="checkbox" checked disabled /> <span data-i18n="innerLife.shareReviewed">Share only reviewed output</span></label>
-            <div class="metric-list">
-              <div><span data-i18n="innerLife.daemonStatus">Daemon</span><strong id="innerLifeDaemonStatus">paused</strong></div>
-              <div><span data-i18n="innerLife.nextRun">Next run</span><strong id="innerLifeNextRun">-</strong></div>
-              <div><span data-i18n="innerLife.lastResult">Last result</span><strong id="innerLifeLastResult">-</strong></div>
-              <div><span data-i18n="innerLife.recovery">Recovery</span><strong id="innerLifeRecovery">-</strong></div>
-              <div><span data-i18n="innerLife.doctor">Doctor</span><strong id="innerLifeDoctorStatus">-</strong></div>
-              <div><span data-i18n="innerLife.pendingShares">Pending shares</span><strong id="innerLifePendingCount">0</strong></div>
-              <div><span data-i18n="innerLife.events">Events</span><strong id="innerLifeEventCount">0</strong></div>
-              <div><span data-i18n="innerLife.thoughts">Thoughts</span><strong id="innerLifeThoughtCount">0</strong></div>
-            </div>
-            <div id="innerLifeDoctorList" class="shared-line-history-list"></div>
-          </article>
+          </section>
+          <div class="innerlife-layout">
+            <article class="panel main-panel">
+            <div class="panel-heading">
+                <div>
+                  <h2>InnerLife</h2>
+                  <p data-i18n="innerLife.body">Optional background reflection is available, but it should stay calm and explicit.</p>
+                </div>
+                <div class="shared-line-filter">
+                  <span data-i18n="sharedLine.filter.agent">Agent</span>
+                  <select id="innerLifeAgentFilter"></select>
+                </div>
+              </div>
+              <span id="innerLifeNotice" class="quiet hidden" aria-live="polite"></span>
+              <div class="innerlife-command-grid hidden">
+                <button id="startInnerLifeSession" class="secondary" data-i18n="innerLife.startSession">Start session</button>
+                <button id="endInnerLifeSession" class="secondary" data-i18n="innerLife.endSession">End session</button>
+                <button id="runInnerLifeDigest" class="secondary" data-i18n="innerLife.runDigest">Run digest</button>
+                <button id="processInnerLifeOnce" class="primary" data-i18n="innerLife.processOnce">Process once</button>
+              </div>
+              <div class="innerlife-compose-grid hidden">
+                <label class="shared-line-form">
+                  <span data-i18n="innerLife.sessionSummary">Session summary</span>
+                  <textarea id="innerLifeSessionSummary" rows="3" data-i18n-placeholder="innerLife.sessionSummaryPlaceholder" placeholder="What should InnerLife remember from this session?"></textarea>
+                </label>
+                <label class="shared-line-form">
+                  <span data-i18n="innerLife.inbox">Inbox</span>
+                  <textarea id="innerLifeInboxInput" rows="3" data-i18n-placeholder="innerLife.inboxPlaceholder" placeholder="Submit material for InnerLife to digest later."></textarea>
+                </label>
+              </div>
+              <div class="form-actions hidden">
+                <button id="submitInnerLifeInbox" class="secondary" data-i18n="innerLife.submitInbox">Submit inbox</button>
+              </div>
+              <label class="shared-line-form hidden">
+                <span data-i18n="innerLife.shareContext">Share context</span>
+                <textarea id="innerLifeShareContext" rows="2" data-i18n-placeholder="innerLife.shareContextPlaceholder" placeholder="What is happening now?"></textarea>
+              </label>
+              <div class="form-actions hidden">
+                <button id="checkInnerLifeShareTiming" class="secondary" data-i18n="innerLife.checkTiming">Check share timing</button>
+              </div>
+              <div class="section-heading-line">
+                <strong data-i18n="innerLife.shareQueue">Share queue</strong>
+                <span data-i18n="innerLife.reviewPolicy">Reviewed output only</span>
+              </div>
+              <div id="innerLifeShareList" class="innerlife-share-list"></div>
+            </article>
+            <aside class="innerlife-side">
+              <article class="panel">
+                <h2 data-i18n="innerLife.runtime">Runtime</h2>
+                <div class="metric-list">
+                  <div><span data-i18n="innerLife.nextRun">Next run</span><strong id="innerLifeNextRun">-</strong></div>
+                  <div><span data-i18n="innerLife.lastResult">Last result</span><strong id="innerLifeLastResult">-</strong></div>
+                  <div><span data-i18n="innerLife.recovery">Recovery</span><strong id="innerLifeRecovery">-</strong></div>
+                  <div><span data-i18n="innerLife.doctor">Doctor</span><strong id="innerLifeDoctorStatus">-</strong></div>
+                </div>
+                <div id="innerLifeDoctorList" class="shared-line-history-list"></div>
+              </article>
+              <article class="panel">
+                <h2 data-i18n="innerLife.sessions">Sessions</h2>
+                <div id="innerLifeSessionList" class="shared-line-history-list"></div>
+              </article>
+              <article class="panel">
+                <h2 data-i18n="innerLife.digests">Digests</h2>
+                <div id="innerLifeDigestList" class="shared-line-history-list"></div>
+              </article>
+              <article class="panel">
+                <h2 data-i18n="innerLife.inboxRecent">Recent inbox</h2>
+                <div id="innerLifeInboxList" class="shared-line-history-list"></div>
+              </article>
+              <article class="panel">
+                <h2 data-i18n="innerLife.timingChecks">Timing checks</h2>
+                <div id="innerLifeShareCheckList" class="shared-line-history-list"></div>
+              </article>
+            </aside>
+          </div>
         </div>
       </section>
 
@@ -511,33 +544,155 @@
         </div>
       </section>
 
+      <section id="modelView" class="view">
+        <div class="screen-grid">
+          <article class="panel main-panel">
+            <div class="panel-heading">
+              <div>
+                <h2 data-i18n="settings.modelsTitle">Model configuration</h2>
+                <p class="quiet" data-i18n="settings.modelsBody">Keep model wiring simple and visible before enabling InnerLife.</p>
+              </div>
+              <span id="settingsNotice" class="quiet" aria-live="polite"></span>
+            </div>
+            <div class="model-config-list">
+              <section class="model-config-card">
+                <div class="model-config-head">
+                  <div>
+                    <h3 data-i18n="settings.memoriaTitle">Memoria embedding</h3>
+                    <p data-i18n="settings.memoriaBody">Used for Memory semantic search and graph-ready recall.</p>
+                  </div>
+                  <span id="memoriaModelStatus" class="badge ok">ready</span>
+                </div>
+                <div class="settings-grid">
+                  <label class="field">
+                    <span data-i18n="home.model.provider">Provider</span>
+                    <select id="memoriaProvider">
+                      <option value="ollama">Ollama</option>
+                      <option value="claracore-built-in">ClaraCore built-in (future)</option>
+                      <option value="openai-compatible">OpenAI compatible</option>
+                      <option value="disabled">Disabled</option>
+                    </select>
+                  </label>
+                  <label class="field"><span data-i18n="settings.endpoint">Endpoint</span><input id="memoriaEndpoint" /></label>
+                  <label class="field"><span data-i18n="settings.embeddingModel">Embedding model</span><input id="memoriaModel" /></label>
+                  <label class="field"><span data-i18n="settings.dimension">Dimension</span><input id="memoriaDimension" type="number" min="1" step="1" /></label>
+                  <label class="field">
+                    <span data-i18n="settings.apiKeyRef">API key reference</span>
+                    <span class="copy-field">
+                      <input id="memoriaApiKey" data-secret-input="true" data-i18n-placeholder="settings.apiKeyRefPlaceholder" placeholder="optional" />
+                      <button id="copyMemoriaApiKey" class="secondary" type="button" data-i18n="actions.copy">Copy</button>
+                    </span>
+                  </label>
+                  <label class="field wide-field"><span data-i18n="settings.source">Source</span><input id="memoriaSource" readonly /></label>
+                </div>
+              </section>
+              <section class="model-config-card">
+                <div class="model-config-head">
+                  <div>
+                    <h3 data-i18n="settings.innerLifeTitle">InnerLife daemon model</h3>
+                    <p data-i18n="settings.innerLifeBody">Required before the InnerLife daemon can become useful.</p>
+                  </div>
+                  <span id="innerLifeModelStatus" class="badge warn">disabled</span>
+                </div>
+                <div class="settings-grid">
+                  <label class="field">
+                    <span data-i18n="home.model.provider">Provider</span>
+                    <select id="innerLifeBackend">
+                      <option value="disabled">Disabled</option>
+                      <option value="ollama">Ollama</option>
+                      <option value="claracore-built-in">ClaraCore built-in (future)</option>
+                      <option value="openai-compatible">OpenAI compatible</option>
+                      <option value="custom-command">Custom command</option>
+                    </select>
+                  </label>
+                  <label class="field"><span data-i18n="settings.endpoint">Endpoint</span><input id="innerLifeEndpoint" /></label>
+                  <label class="field"><span data-i18n="settings.lightModel">Light model</span><input id="innerLifeLightModel" /></label>
+                  <label class="field"><span data-i18n="settings.deepModel">Deep model</span><input id="innerLifeDeepModel" /></label>
+                  <label class="field"><span data-i18n="settings.pollMinutes">Loop minutes</span><input id="innerLifePollSeconds" type="number" min="1" step="1" /></label>
+                  <label class="field">
+                    <span data-i18n="settings.apiKeyRef">API key reference</span>
+                    <span class="copy-field">
+                      <input id="innerLifeApiKey" data-secret-input="true" data-i18n-placeholder="settings.apiKeyRefPlaceholder" placeholder="env:OPENAI_API_KEY" />
+                      <button id="copyInnerLifeApiKey" class="secondary" type="button" data-i18n="actions.copy">Copy</button>
+                    </span>
+                  </label>
+                  <label class="field wide-field"><span data-i18n="settings.source">Source</span><input id="innerLifeSource" readonly /></label>
+                </div>
+                <div id="innerLifeDaemonControlPanel" class="daemon-control-panel">
+                  <div>
+                    <span data-i18n="settings.daemonStatus">Daemon status</span>
+                    <strong id="settingsInnerLifeDaemonStatus">paused</strong>
+                  </div>
+                  <div class="daemon-control-actions">
+                    <button id="enableInnerLifeDaemon" class="secondary" type="button" data-i18n="innerLife.enableDaemon">Enable daemon</button>
+                    <button id="pauseInnerLifeDaemon" class="secondary" type="button" data-i18n="innerLife.pauseDaemon">Pause daemon</button>
+                    <button id="tickInnerLifeDaemon" class="secondary" type="button" data-i18n="innerLife.tickDaemon">Run due tick</button>
+                  </div>
+                </div>
+              </section>
+            </div>
+            <div class="settings-actions">
+              <button id="saveSettings" class="primary" data-i18n="settings.saveModels">Save model configuration</button>
+            </div>
+          </article>
+          <article class="panel">
+            <h2 data-i18n="settings.simpleBoundaryTitle">Boundary</h2>
+            <div class="metric-list">
+              <div><span data-i18n="settings.memoryRole">Memory</span><strong data-i18n="settings.memoryRoleBody">Embedding only</strong></div>
+              <div><span data-i18n="settings.innerLifeRole">InnerLife</span><strong data-i18n="settings.innerLifeRoleBody">Daemon model</strong></div>
+              <div><span data-i18n="settings.secretsRole">Secrets</span><strong id="innerLifeApiKeySummary">not configured</strong></div>
+            </div>
+          </article>
+        </div>
+      </section>
+
       <section id="settingsView" class="view">
         <div class="screen-grid">
           <article class="panel main-panel">
             <div class="panel-heading">
-              <h2 data-i18n="settings.memoriaTitle">Memoria embedding</h2>
-              <span id="settingsNotice" class="quiet" aria-live="polite"></span>
+              <div>
+                <h2 data-i18n="settings.generalTitle">Settings</h2>
+                <p class="quiet" data-i18n="settings.generalBody">General product settings stay here. Model wiring and daemon controls live in Models.</p>
+              </div>
             </div>
-            <div class="settings-grid">
-              <label class="field"><span data-i18n="home.model.provider">Provider</span><input id="memoriaProvider" /></label>
-              <label class="field"><span data-i18n="settings.endpoint">Endpoint</span><input id="memoriaEndpoint" /></label>
-              <label class="field"><span data-i18n="settings.embeddingModel">Embedding model</span><input id="memoriaModel" /></label>
-              <label class="field"><span data-i18n="settings.dimension">Dimension</span><input id="memoriaDimension" type="number" min="1" step="1" /></label>
-              <label class="field wide-field"><span data-i18n="settings.source">Source</span><input id="memoriaSource" readonly /></label>
-            </div>
-            <div class="settings-actions">
-              <button id="saveSettings" class="primary" data-i18n="settings.save">Save settings</button>
+            <div class="settings-roadmap-grid">
+              <section class="settings-roadmap-card">
+                <h3 data-i18n="settings.appearanceTitle">Appearance</h3>
+                <p data-i18n="settings.appearanceBody">Language, theme, window behavior, and tray behavior.</p>
+                <span data-i18n="settings.status.future">future</span>
+              </section>
+              <section class="settings-roadmap-card">
+                <h3 data-i18n="settings.pathsTitle">Data paths</h3>
+                <p data-i18n="settings.pathsBody">Data directory, backup directory, and default import/export paths.</p>
+                <span data-i18n="settings.status.future">future</span>
+              </section>
+              <section class="settings-roadmap-card">
+                <h3 data-i18n="settings.logsTitle">Logs and diagnostics</h3>
+                <p data-i18n="settings.logsBody">Log retention days and debug trace switches.</p>
+                <span data-i18n="settings.status.future">future</span>
+              </section>
+              <section class="settings-roadmap-card">
+                <h3 data-i18n="settings.gatewayTitle">Gateway policy</h3>
+                <p data-i18n="settings.gatewayBody">Local access policy, port preferences, and transport preferences.</p>
+                <span data-i18n="settings.status.future">future</span>
+              </section>
+              <section class="settings-roadmap-card">
+                <h3 data-i18n="settings.privacyTitle">Privacy and security</h3>
+                <p data-i18n="settings.privacyBody">Restricted content visibility, automatic maintenance, and secret storage status.</p>
+                <span data-i18n="settings.status.future">future</span>
+              </section>
+              <section class="settings-roadmap-card">
+                <h3 data-i18n="settings.developerTitle">Advanced developer options</h3>
+                <p data-i18n="settings.developerBody">Development paths, packaged runtime information, and diagnostic toggles.</p>
+                <span data-i18n="settings.status.future">future</span>
+              </section>
             </div>
           </article>
           <article class="panel">
-            <h2 data-i18n="settings.innerLifeTitle">InnerLife daemon model</h2>
-            <label class="field"><span data-i18n="home.model.provider">Provider</span><input id="innerLifeBackend" /></label>
-            <label class="field"><span data-i18n="settings.endpoint">Endpoint</span><input id="innerLifeEndpoint" readonly /></label>
-            <label class="field"><span data-i18n="settings.lightModel">Light model</span><input id="innerLifeLightModel" /></label>
-            <label class="field"><span data-i18n="settings.deepModel">Deep model</span><input id="innerLifeDeepModel" /></label>
-            <label class="field"><span data-i18n="settings.pollSeconds">Loop seconds</span><input id="innerLifePollSeconds" type="number" min="1" step="1" /></label>
-            <label class="field"><span data-i18n="settings.apiKey">API key</span><input id="innerLifeApiKey" readonly /></label>
-            <label class="field"><span data-i18n="settings.source">Source</span><input id="innerLifeSource" readonly /></label>
+            <h2 data-i18n="settings.shortcutsTitle">Shortcuts</h2>
+            <button class="secondary full" data-view-target="models" data-i18n="settings.openModels">Open Models</button>
+            <button class="secondary full" data-view-target="data" data-i18n="settings.openData">Open Data</button>
+            <button class="secondary full" data-view-target="agent-setup" data-i18n="settings.openAgentSetup">Open Agent Setup</button>
           </article>
         </div>
       </section>

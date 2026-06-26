@@ -4,6 +4,7 @@ const http = require("http");
 const path = require("path");
 
 const SCHEMA_ID = "001_product_core_schema";
+const DEFAULT_AGENT_ID = "codex";
 
 const DEFAULT_SETTINGS = {
   "memory.embedding.provider": "ollama",
@@ -16,22 +17,23 @@ const DEFAULT_SETTINGS = {
   "memory.maintenance.last_run_date": "",
   "innerlife.enabled": false,
   "innerlife.provider": "disabled",
+  "innerlife.base_url": "http://127.0.0.1:11434",
   "innerlife.light_model": "",
   "innerlife.deep_model": "",
-  "innerlife.loop_seconds": 15,
+  "innerlife.loop_seconds": 900,
   "gateway.enabled": true,
   "gateway.transport": "stdio",
   "gateway.local_only": true,
   "continuity.active_line_id": "line_default",
   "backup.enabled": true,
   "backup.schedule": "manual",
-  "agent.default_id": "my-agent"
+  "agent.default_id": DEFAULT_AGENT_ID
 };
 
 const databaseLocks = new Map();
 
 function innerLifeRetrySeconds(pollSeconds, failureCount) {
-  const safePoll = Math.max(1, Number.parseInt(String(pollSeconds), 10) || 15);
+    const safePoll = Math.max(1, Number.parseInt(String(pollSeconds), 10) || 900);
   const safeFailures = Math.max(1, Math.min(Number.parseInt(String(failureCount), 10) || 1, 8));
   return Math.min(3600, safePoll * 2 ** (safeFailures - 1));
 }
@@ -47,6 +49,7 @@ const WRITABLE_SETTINGS = new Set([
   "memory.maintenance.last_run_date",
   "innerlife.enabled",
   "innerlife.provider",
+  "innerlife.base_url",
   "innerlife.light_model",
   "innerlife.deep_model",
   "innerlife.loop_seconds"
@@ -86,6 +89,54 @@ function meaningfulTokens(text) {
     .map((token) => token.trim())
     .filter((token) => token.length >= 3)
     .slice(0, 80);
+}
+
+function slugAgentPart(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\u4e00-\u9fa5_-]+/gu, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function normalizeAgentId(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .split(":")
+    .map(slugAgentPart)
+    .filter(Boolean)
+    .join(":");
+}
+
+function resolveAgentIdentity(input = {}, fallback = DEFAULT_AGENT_ID) {
+  if (typeof input === "string") {
+    const id = normalizeAgentId(input);
+    return { id: id || fallback, tool: "", name: id || fallback, labels: buildAgentIdentityLabels(id || fallback) };
+  }
+  const explicit = normalizeAgentId(input.agentId || input.agent_id || input.agent || "");
+  const tool = slugAgentPart(input.agentTool || input.agent_tool || input.tool || process.env.CLARACORE_AGENT_TOOL || "");
+  const name = slugAgentPart(input.agentName || input.agent_name || input.name || process.env.CLARACORE_AGENT_NAME || "");
+  const envId = normalizeAgentId(process.env.CLARACORE_AGENT_ID || "");
+  const id = explicit || (tool && name ? `${tool}:${name}` : "") || name || envId || normalizeAgentId(fallback) || DEFAULT_AGENT_ID;
+  return {
+    id,
+    tool: tool || (id.includes(":") ? id.split(":")[0] : ""),
+    name: name || (id.includes(":") ? id.split(":").slice(1).join(":") : id),
+    labels: buildAgentIdentityLabels(id, tool, name)
+  };
+}
+
+function buildAgentIdentityLabels(id, tool = "", name = "") {
+  const safeId = normalizeAgentId(id) || DEFAULT_AGENT_ID;
+  const [idTool, ...idNameParts] = safeId.split(":");
+  const safeTool = slugAgentPart(tool) || (safeId.includes(":") ? idTool : "");
+  const safeName = slugAgentPart(name) || (safeId.includes(":") ? idNameParts.join(":") : safeId);
+  return [
+    safeTool ? `tool:${safeTool}` : "",
+    safeName ? `agent:${safeName}` : "",
+    `agent-id:${safeId}`
+  ].filter(Boolean);
 }
 
 function mergeTitleKey(text) {
@@ -426,13 +477,17 @@ class ProductDatabase {
       ON CONFLICT(id) DO NOTHING;
 
       INSERT INTO agents (id, label, role, status)
-      VALUES ('my-agent', 'My Agent', 'agent', 'active')
+      VALUES
+        ('codex', 'Codex', 'agent', 'active'),
+        ('my-agent', 'My Agent', 'agent', 'active')
       ON CONFLICT(id) DO NOTHING;
 
       ${settingsSql}
 
       INSERT INTO secret_refs (key, provider, status)
-      VALUES ('innerlife.llm.api_key', 'none', 'not-configured')
+      VALUES
+        ('memory.embedding.api_key', 'none', 'not-configured'),
+        ('innerlife.llm.api_key', 'none', 'not-configured')
       ON CONFLICT(key) DO NOTHING;
     `);
   }
@@ -478,7 +533,15 @@ class ProductDatabase {
 
   async updateSettings(updates) {
     const entries = Object.entries(updates || {}).filter(([key]) => WRITABLE_SETTINGS.has(key));
-    if (entries.length === 0) {
+    const memoryApiKeyRef =
+      Object.prototype.hasOwnProperty.call(updates || {}, "memory.embedding.api_key_ref")
+        ? String(updates["memory.embedding.api_key_ref"] || "").trim()
+        : null;
+    const innerLifeApiKeyRef =
+      Object.prototype.hasOwnProperty.call(updates || {}, "innerlife.llm.api_key_ref")
+        ? String(updates["innerlife.llm.api_key_ref"] || "").trim()
+        : null;
+    if (entries.length === 0 && memoryApiKeyRef === null && innerLifeApiKeyRef === null) {
       return this.getSettings();
     }
     const sql = entries
@@ -493,7 +556,30 @@ class ProductDatabase {
         `;
       })
       .join("\n");
-    await this.exec(sql);
+    const secretUpdates = [
+      ["memory.embedding.api_key", memoryApiKeyRef],
+      ["innerlife.llm.api_key", innerLifeApiKeyRef]
+    ]
+      .filter(([, ref]) => ref !== null)
+      .map(
+        ([key, ref]) => `
+          INSERT INTO secret_refs (key, provider, status, ref, updated_at)
+          VALUES (
+            ${sqlString(key)},
+            'manual-ref',
+            ${ref ? "'configured'" : "'not-configured'"},
+            ${ref ? sqlString(ref) : "NULL"},
+            CURRENT_TIMESTAMP
+          )
+          ON CONFLICT(key) DO UPDATE SET
+            provider = excluded.provider,
+            status = excluded.status,
+            ref = excluded.ref,
+            updated_at = CURRENT_TIMESTAMP;
+        `
+      )
+      .join("\n");
+    await this.exec(`${sql}\n${secretUpdates}`);
     return this.getSettings();
   }
 
@@ -568,9 +654,11 @@ class ProductDatabase {
     if (!body) throw new Error("Memory body is required.");
     const id = newId("mem");
     const title = String(input?.title || "").trim();
-    const labels = await this.canonicalizeMemoryLabels(input?.labels);
+    const identity = resolveAgentIdentity(input || {});
+    const labels = await this.canonicalizeMemoryLabels([...(Array.isArray(input?.labels) ? input.labels : normalizeLabels(input?.labels || "")), ...identity.labels]);
     const sensitivity = normalizeSensitivity(input?.sensitivity);
-    const sourceId = "manual_desktop";
+    const source = String(input?.source || identity.tool || identity.id || "manual_desktop").trim() || "manual_desktop";
+    const sourceId = `manual_${identity.id.replace(/[^a-z0-9_-]+/g, "_")}`;
     const labelSql = labels
       .map((label) => {
         return `
@@ -582,7 +670,12 @@ class ProductDatabase {
       .join("\n");
     await this.exec(`
       INSERT INTO memory_sources (id, kind, label, metadata_json)
-      VALUES (${sqlString(sourceId)}, 'manual', 'Desktop manual entry', '{}')
+      VALUES (
+        ${sqlString(sourceId)},
+        'manual',
+        ${sqlString(`Manual entry from ${identity.id}`)},
+        ${jsonSql({ agentId: identity.id, agentTool: identity.tool, agentName: identity.name, source })}
+      )
       ON CONFLICT(id) DO NOTHING;
 
       INSERT INTO memories (id, title, body, status, sensitivity, source_id)
@@ -2373,7 +2466,8 @@ class ProductDatabase {
   }
 
   async getGatewayContext(input = {}) {
-    const agentId = String(input.agentId || "my-agent").trim() || "my-agent";
+    const identity = resolveAgentIdentity(input || {});
+    const agentId = identity.id;
     const query = String(input.query || "").trim();
     const limit = Math.max(1, Math.min(Number.parseInt(String(input.limit || 5), 10) || 5, 20));
     const sharedLine = await this.getResumePacket(input.lineId ? { lineId: input.lineId } : {});
@@ -2451,7 +2545,7 @@ class ProductDatabase {
 
   async recordGatewayTrace(input = {}) {
     const id = newId("gateway_trace");
-    const agentId = String(input.agentId || "my-agent").trim() || "my-agent";
+    const agentId = resolveAgentIdentity(input || {}).id;
     const toolName = String(input.toolName || "unknown").trim() || "unknown";
     const status = input.status === "error" ? "error" : "ok";
     const durationMs = Math.max(0, Number.parseInt(String(input.durationMs || 0), 10) || 0);
@@ -2501,11 +2595,25 @@ class ProductDatabase {
     }));
   }
 
-  async ensureInnerLifeProfile(agentId = "my-agent") {
-    const id = String(agentId || "my-agent").trim() || "my-agent";
+  async ensureInnerLifeProfile(agentId = DEFAULT_AGENT_ID) {
+    const identity = resolveAgentIdentity(agentId || DEFAULT_AGENT_ID);
+    const id = identity.id;
+    const label = identity.tool ? `${identity.name} (${identity.tool})` : identity.name || id;
     await this.exec(`
+      INSERT INTO agents (id, label, role, status)
+      VALUES (${sqlString(id)}, ${sqlString(label)}, 'agent', 'active')
+      ON CONFLICT(id) DO UPDATE SET
+        label = excluded.label,
+        updated_at = CURRENT_TIMESTAMP;
+
       INSERT INTO innerlife_profiles (agent_id, display_name, enabled, profile_json, state_json)
-      VALUES (${sqlString(id)}, 'My Agent', 0, '{}', '{}')
+      VALUES (
+        ${sqlString(id)},
+        ${sqlString(label)},
+        0,
+        ${jsonSql({ agentId: id, agentTool: identity.tool, agentName: identity.name })},
+        '{}'
+      )
       ON CONFLICT(agent_id) DO NOTHING;
     `);
     const rows = await this.query(`
@@ -2571,7 +2679,7 @@ class ProductDatabase {
   }
 
   async submitInnerLifeInbox(input = {}) {
-    const agentId = String(input.agentId || "my-agent").trim() || "my-agent";
+    const agentId = resolveAgentIdentity(input || {}).id;
     const profile = await this.ensureInnerLifeProfile(agentId);
     const body = String(input.body || "").trim();
     if (!body) throw new Error("InnerLife inbox body is required.");
@@ -2584,7 +2692,7 @@ class ProductDatabase {
     return (await this.listInnerLifeInbox("all", 100)).find((item) => item.id === id);
   }
 
-  async ensureInnerLifeDaemonState(agentId = "my-agent") {
+  async ensureInnerLifeDaemonState(agentId = DEFAULT_AGENT_ID) {
     const profile = await this.ensureInnerLifeProfile(agentId);
     const settings = await this.getSettings();
     const enabled = Boolean(settings["innerlife.enabled"]);
@@ -2621,14 +2729,14 @@ class ProductDatabase {
   }
 
   async setInnerLifeDaemonState(input = {}) {
-    const agentId = String(input.agentId || "my-agent").trim() || "my-agent";
+    const agentId = resolveAgentIdentity(input || {}).id;
     const profile = await this.ensureInnerLifeProfile(agentId);
     const action = String(input.action || "").trim().toLowerCase();
     const enable = action === "enable" || action === "start" || input.enabled === true;
     const pause = action === "pause" || action === "disable" || action === "stop" || input.enabled === false;
     if (!enable && !pause) throw new Error("InnerLife daemon action must be enable or pause.");
     const settings = await this.getSettings();
-    const pollSeconds = Math.max(1, Number.parseInt(String(settings["innerlife.loop_seconds"] || 15), 10) || 15);
+    const pollSeconds = Math.max(1, Number.parseInt(String(settings["innerlife.loop_seconds"] || 900), 10) || 900);
     await this.updateSettings({ "innerlife.enabled": enable });
     await this.exec(`
       INSERT INTO innerlife_daemon_state (agent_id, status, enabled, next_run_at, last_result, last_error, updated_at, metadata_json)
@@ -2660,7 +2768,7 @@ class ProductDatabase {
   }
 
   async tickInnerLifeDaemon(input = {}) {
-    const agentId = String(input.agentId || "my-agent").trim() || "my-agent";
+    const agentId = resolveAgentIdentity(input || {}).id;
     const force = Boolean(input.force);
     const state = await this.ensureInnerLifeDaemonState(agentId);
     if (!state.enabled || state.status === "paused") {
@@ -2691,7 +2799,7 @@ class ProductDatabase {
       };
     }
     const settings = await this.getSettings();
-    const pollSeconds = Math.max(1, Number.parseInt(String(settings["innerlife.loop_seconds"] || 15), 10) || 15);
+    const pollSeconds = Math.max(1, Number.parseInt(String(settings["innerlife.loop_seconds"] || 900), 10) || 900);
     const pendingInbox = await this.listInnerLifeInbox("pending", 5);
     if (pendingInbox.length === 0) {
       await this.exec(`
@@ -2767,12 +2875,14 @@ class ProductDatabase {
     }
   }
 
-  async listInnerLifeDigestRuns(agentId = "my-agent", limit = 10) {
+  async listInnerLifeDigestRuns(agentId = DEFAULT_AGENT_ID, limit = 10) {
     const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 10));
+    const agentFilter = String(agentId || DEFAULT_AGENT_ID).trim();
+    const whereClause = agentFilter === "all" ? "" : `WHERE agent_id = ${sqlString(agentFilter)}`;
     const rows = await this.query(`
       SELECT id, agent_id, mode, status, input_json, summary, created_at, completed_at, metadata_json
       FROM innerlife_digest_runs
-      WHERE agent_id = ${sqlString(agentId)}
+      ${whereClause}
       ORDER BY created_at DESC, id DESC
       LIMIT ${safeLimit};
     `);
@@ -2789,7 +2899,7 @@ class ProductDatabase {
     }));
   }
 
-  async listInnerLifeShareChecks(agentId = "my-agent", limit = 10) {
+  async listInnerLifeShareChecks(agentId = DEFAULT_AGENT_ID, limit = 10) {
     const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 10));
     const rows = await this.query(`
       SELECT c.id, c.share_id, c.agent_id, c.session_id, c.context, c.decision, c.reason, c.created_at, c.metadata_json, s.body AS share_body, s.status AS share_status
@@ -2815,12 +2925,12 @@ class ProductDatabase {
   }
 
   async getInnerLifeSnapshot() {
-    const profile = await this.ensureInnerLifeProfile("my-agent");
+    const profile = await this.ensureInnerLifeProfile(DEFAULT_AGENT_ID);
     const pendingShares = await this.listInnerLifeShares("pending", 20);
     const recentShares = await this.listInnerLifeShares("all", 20);
-    const sessions = await this.listInnerLifeSessions(profile.agent_id, 10);
+    const sessions = await this.listInnerLifeSessions("all", 10);
     const inbox = await this.listInnerLifeInbox("all", 20);
-    const digestRuns = await this.listInnerLifeDigestRuns(profile.agent_id, 10);
+    const digestRuns = await this.listInnerLifeDigestRuns("all", 10);
     const shareChecks = await this.listInnerLifeShareChecks(profile.agent_id, 10);
     const daemon = await this.ensureInnerLifeDaemonState(profile.agent_id);
     const rows = await this.query(`
@@ -2854,7 +2964,7 @@ class ProductDatabase {
     };
   }
 
-  async getInnerLifeDoctor(agentId = "my-agent") {
+  async getInnerLifeDoctor(agentId = DEFAULT_AGENT_ID) {
     const profile = await this.ensureInnerLifeProfile(agentId);
     const daemon = await this.ensureInnerLifeDaemonState(profile.agent_id);
     const settings = await this.getSettings();
@@ -2925,7 +3035,7 @@ class ProductDatabase {
     };
   }
 
-  async getInnerLifeBriefing(agentId = "my-agent") {
+  async getInnerLifeBriefing(agentId = DEFAULT_AGENT_ID) {
     const profile = await this.ensureInnerLifeProfile(agentId);
     const resumePacket = await this.getResumePacket();
     const memories = await this.listMemories(5);
@@ -2966,7 +3076,7 @@ class ProductDatabase {
   }
 
   async runInnerLifeDigest(input = {}) {
-    const agentId = String(input.agentId || "my-agent").trim() || "my-agent";
+    const agentId = resolveAgentIdentity(input || {}).id;
     const profile = await this.ensureInnerLifeProfile(agentId);
     const mode = String(input.mode || "manual").trim() || "manual";
     const prompt = String(input.prompt || "").trim();
@@ -3042,7 +3152,7 @@ class ProductDatabase {
   }
 
   async checkInnerLifeShareTiming(input = {}) {
-    const agentId = String(input.agentId || "my-agent").trim() || "my-agent";
+    const agentId = resolveAgentIdentity(input || {}).id;
     const profile = await this.ensureInnerLifeProfile(agentId);
     const context = String(input.context || "").trim();
     const sessionId = String(input.sessionId || "").trim() || null;
@@ -3125,12 +3235,14 @@ class ProductDatabase {
     };
   }
 
-  async listInnerLifeSessions(agentId = "my-agent", limit = 20) {
+  async listInnerLifeSessions(agentId = DEFAULT_AGENT_ID, limit = 20) {
     const safeLimit = Math.max(1, Math.min(Number.parseInt(String(limit), 10) || 20, 100));
+    const agentFilter = String(agentId || DEFAULT_AGENT_ID).trim();
+    const whereClause = agentFilter === "all" ? "" : `WHERE agent_id = ${sqlString(agentFilter)}`;
     const rows = await this.query(`
       SELECT id, agent_id, user_id, host, external_session_id, status, started_at, ended_at, briefing_json, summary, metadata_json
       FROM innerlife_sessions
-      WHERE agent_id = ${sqlString(agentId)}
+      ${whereClause}
       ORDER BY started_at DESC, id DESC
       LIMIT ${safeLimit};
     `);
@@ -3150,7 +3262,7 @@ class ProductDatabase {
   }
 
   async startInnerLifeSession(input = {}) {
-    const agentId = String(input.agentId || "my-agent").trim() || "my-agent";
+    const agentId = resolveAgentIdentity(input || {}).id;
     const profile = await this.ensureInnerLifeProfile(agentId);
     const userId = String(input.userId || "local-user").trim() || "local-user";
     const host = String(input.host || "desktop").trim() || "desktop";
@@ -3257,7 +3369,7 @@ class ProductDatabase {
   }
 
   async processInnerLifeOnce(input = {}) {
-    const profile = await this.ensureInnerLifeProfile("my-agent");
+    const profile = await this.ensureInnerLifeProfile(DEFAULT_AGENT_ID);
     const resumePacket = await this.getResumePacket();
     const memories = await this.listMemories(5);
     const inboxItems = await this.listInnerLifeInbox("pending", 5);
@@ -3556,26 +3668,29 @@ class ProductDatabase {
         maintenanceEnabled: settings["memory.maintenance.enabled"] !== false,
         maintenanceHour: Number.parseInt(String(settings["memory.maintenance.hour"] ?? 3), 10) || 3,
         maintenanceLastRunDate: settings["memory.maintenance.last_run_date"] || "",
+        apiKeyStatus: secrets["memory.embedding.api_key"]?.status || "not-configured",
+        apiKeyRef: secrets["memory.embedding.api_key"]?.ref || "",
         source: "claracore.db"
       },
       innerlife: {
         root: paths.dataRoot,
         source: "claracore.db",
         backend: settings["innerlife.provider"] || "disabled",
-        baseUrl: "",
+        baseUrl: settings["innerlife.base_url"] || "http://127.0.0.1:11434",
         lightModel: settings["innerlife.light_model"] || "",
         deepModel: settings["innerlife.deep_model"] || "",
-        pollSeconds: String(settings["innerlife.loop_seconds"] || 15),
+        pollSeconds: String(settings["innerlife.loop_seconds"] || 900),
         lightIdleSeconds: "",
         deepIdleSeconds: "",
         autonomyEnabled: String(Boolean(settings["innerlife.enabled"])),
-        apiKeyStatus: secrets["innerlife.llm.api_key"]?.status || "not-configured"
+        apiKeyStatus: secrets["innerlife.llm.api_key"]?.status || "not-configured",
+        apiKeyRef: secrets["innerlife.llm.api_key"]?.ref || ""
       },
       gateway: {
         enabled: Boolean(settings["gateway.enabled"]),
         transport: settings["gateway.transport"] || "stdio",
         localOnly: Boolean(settings["gateway.local_only"]),
-        agentId: settings["agent.default_id"] || "my-agent"
+        agentId: settings["agent.default_id"] || DEFAULT_AGENT_ID
       },
       backup: {
         enabled: Boolean(settings["backup.enabled"]),

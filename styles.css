@@ -106,13 +106,9 @@ summary:focus-visible {
 .brand-mark {
   width: 52px;
   height: 52px;
-  display: grid;
-  place-items: center;
   border-radius: 12px;
-  color: #ffffff;
-  background: #202622;
-  font-weight: 760;
-  line-height: 1;
+  display: block;
+  box-shadow: 0 1px 2px rgba(28, 33, 30, 0.08);
 }
 
 .brand strong,
@@ -445,8 +441,8 @@ p {
 }
 
 .module-icon svg {
-  width: 25px;
-  height: 25px;
+  width: 29px;
+  height: 29px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
@@ -455,8 +451,8 @@ p {
 }
 
 .gateway .module-icon {
-  background: #e4eef8;
-  color: #245f9c;
+  background: var(--blue-bg);
+  color: var(--blue);
 }
 
 .gateway .module-icon span {
@@ -524,8 +520,8 @@ p {
 }
 
 .continuity .module-icon {
-  background: #f7efd8;
-  color: #9b741c;
+  background: var(--amber-bg);
+  color: var(--amber);
 }
 
 .continuity .module-icon span {
@@ -556,8 +552,8 @@ p {
 }
 
 .innerlife .module-icon {
-  background: var(--amber-bg);
-  color: #69706b;
+  background: #eef0ea;
+  color: var(--muted);
 }
 
 .innerlife .module-icon span {
@@ -631,11 +627,6 @@ p {
   font-weight: 520;
   text-align: right;
   overflow-wrap: anywhere;
-}
-
-.module-action {
-  width: 100%;
-  margin-top: 14px;
 }
 
 .snippet code {
@@ -1246,6 +1237,45 @@ p {
   line-height: 1.45;
 }
 
+.settings-roadmap-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.settings-roadmap-card {
+  display: grid;
+  gap: 8px;
+  min-height: 128px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fafaf7;
+}
+
+.settings-roadmap-card h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.settings-roadmap-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.settings-roadmap-card span {
+  align-self: end;
+  justify-self: start;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
 .timeline {
   display: grid;
   gap: 12px;
@@ -1316,6 +1346,68 @@ p {
   line-height: 1.45;
 }
 
+.copy-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.copy-field .secondary {
+  min-height: 36px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.daemon-control-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fafaf7;
+}
+
+.daemon-control-panel.is-enabled {
+  border-color: rgba(40, 116, 90, 0.32);
+  background: var(--green-bg);
+}
+
+.daemon-control-panel.is-paused {
+  border-color: rgba(145, 101, 31, 0.28);
+  background: var(--amber-bg);
+}
+
+.daemon-control-panel.is-error {
+  border-color: rgba(166, 64, 54, 0.34);
+  background: var(--red-bg);
+}
+
+.daemon-control-panel span,
+.daemon-control-panel strong {
+  display: block;
+}
+
+.daemon-control-panel span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.daemon-control-panel strong {
+  margin-top: 3px;
+  color: var(--text);
+}
+
+.daemon-control-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .settings-actions {
   display: flex;
   align-items: center;
@@ -1378,48 +1470,11 @@ p {
   white-space: nowrap;
 }
 
-.shared-line-page-head {
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 12px;
-}
-
-.shared-line-page-head h2 {
-  margin-bottom: 4px;
-}
-
-.shared-line-page-head p {
-  max-width: 680px;
-  color: var(--muted);
-}
-
-.shared-line-active-pill {
-  display: grid;
-  gap: 3px;
-  min-width: 220px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #fafaf7;
-}
-
-.shared-line-active-pill span {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.shared-line-active-pill strong {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  font-size: 13px;
-}
-
 .shared-line-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(340px, 0.78fr);
   gap: 12px;
+  align-items: start;
 }
 
 .shared-line-stats-grid {
@@ -2131,18 +2186,90 @@ p {
   margin-top: 10px;
 }
 
-.innerlife-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.innerlife-shell {
+  display: grid;
+  gap: 16px;
+}
+
+.innerlife-status-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
+}
+
+.innerlife-status-strip > div {
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.innerlife-status-strip span,
+.innerlife-status-strip strong {
+  display: block;
+}
+
+.innerlife-status-strip span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.innerlife-status-strip strong {
+  margin-top: 4px;
+  overflow: hidden;
+  font-size: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.innerlife-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.innerlife-side {
+  display: grid;
+  gap: 16px;
+  max-height: calc(100vh - 188px);
+  overflow: auto;
+  padding-right: 4px;
+  position: sticky;
+  top: 18px;
+}
+
+.innerlife-command-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.innerlife-command-grid button {
+  min-height: 38px;
+}
+
+.innerlife-command-grid .primary {
+  grid-column: span 2;
+}
+
+.innerlife-compose-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
   margin-top: 14px;
 }
 
 .innerlife-share-list {
   display: grid;
   gap: 10px;
-  margin-top: 14px;
+  max-height: calc(100vh - 470px);
+  margin-top: 10px;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .innerlife-share {
@@ -2174,6 +2301,18 @@ p {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+@media (max-width: 1180px) {
+  .innerlife-layout,
+  .innerlife-compose-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .innerlife-status-strip,
+  .innerlife-command-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .shared-line-current {
@@ -2222,6 +2361,10 @@ p {
 
 .shared-line-detail-panel {
   align-self: start;
+  max-height: calc(100vh - 188px);
+  overflow: auto;
+  position: sticky;
+  top: 18px;
 }
 
 .shared-line-detail-list {
@@ -2363,6 +2506,9 @@ p {
 .shared-line-tab-panel.active {
   display: grid;
   gap: 8px;
+  max-height: calc(100vh - 310px);
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .shared-line-card {
@@ -2515,6 +2661,39 @@ p {
   text-overflow: ellipsis;
 }
 
+.model-config-list {
+  display: grid;
+  gap: 12px;
+}
+
+.model-config-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fafaf7;
+}
+
+.model-config-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.model-config-head h3 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+
+.model-config-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .settings-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2655,12 +2834,19 @@ summary {
     grid-template-columns: 1fr;
   }
 
-  .shared-line-page-head {
-    display: grid;
+  .innerlife-side,
+  .shared-line-detail-panel {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+    position: static;
   }
 
-  .shared-line-active-pill {
-    min-width: 0;
+  .innerlife-share-list,
+  .shared-line-tab-panel.active {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
   }
 
   .shared-line-detail-row {
@@ -2683,6 +2869,23 @@ summary {
 
   .memory-label-alias-section .memory-search {
     grid-template-columns: 1fr;
+  }
+
+  .settings-roadmap-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .daemon-control-panel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .daemon-control-actions {
+    justify-content: stretch;
+  }
+
+  .daemon-control-actions button {
+    flex: 1 1 140px;
   }
 
   .compact-memory-form {

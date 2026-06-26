@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">ClaraCore monochrome symbol</title>
+  <desc id="desc">Single-color ClaraCore symbol for constrained placements.</desc>
+  <path d="M657 246C609 210 551 192 492 196c-139 9-249 124-249 265 0 149 121 270 270 270 65 0 126-23 174-63" fill="none" stroke="#202421" stroke-width="112" stroke-linecap="round"/>
+  <path d="M316 646c80-95 153-141 219-139 58 2 94 40 146 39 42 0 77-23 109-69" fill="none" stroke="#202421" stroke-width="54" stroke-linecap="round"/>
+  <circle cx="658" cy="512" r="72" fill="#f7f7f4" stroke="#202421" stroke-width="42"/>
+  <circle cx="658" cy="512" r="29" fill="#202421"/>
+</svg>

@@ -45,8 +45,8 @@ async function main() {
     if (!result.shellState.hasTray || !result.shellState.windowVisible) {
       throw new Error(`Shell state missing tray or visible window: ${JSON.stringify(result.shellState)}`);
     }
-    if (process.platform === "darwin" && result.shellState.trayTitle !== "◉") {
-      throw new Error(`macOS tray should show a single visible status icon: ${JSON.stringify(result.shellState)}`);
+    if (process.platform === "darwin" && result.shellState.trayTitle) {
+      throw new Error(`macOS tray should use the icon asset without title text: ${JSON.stringify(result.shellState)}`);
     }
     if (process.platform === "darwin" && Number(result.shellState.trayBounds?.width || 0) > 36) {
       throw new Error(`macOS tray is wider than an icon-only status item: ${JSON.stringify(result.shellState)}`);

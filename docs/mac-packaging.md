@@ -64,7 +64,7 @@ Validated locally:
 - packaged Gateway can create and search a Memory record
 - packaged Desktop UI opens and shows Agent Setup with `--gateway`
 - packaged Desktop UI shows the Home page first-run check
-- packaged app includes `assets/icon.icns` as the macOS app icon
+- packaged app includes `assets/icon.icns` as the macOS app icon, with matching SVG/PNG sources under `assets/`
 - packaged Desktop UI can create and list a product database backup
 - packaged Desktop backup creates both a `.db` file and a sidecar `.json` manifest
 - packaged Desktop backup shows `verified` and `quick_check: ok` after export

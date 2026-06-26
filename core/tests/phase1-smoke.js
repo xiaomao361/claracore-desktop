@@ -56,7 +56,8 @@ async function main() {
     "memory.embedding.max_chars": 2000,
     "innerlife.enabled": false,
     "innerlife.provider": "disabled",
-    "innerlife.loop_seconds": 15,
+    "innerlife.base_url": "http://127.0.0.1:11434",
+    "innerlife.loop_seconds": 900,
     "gateway.enabled": true,
     "gateway.transport": "stdio",
     "gateway.local_only": true,
@@ -82,9 +83,11 @@ async function main() {
     "memory.embedding.model": "bge-m3-phase1-smoke",
     "memory.embedding.dimension": "768",
     "innerlife.provider": "openai-compatible",
+    "innerlife.base_url": "http://127.0.0.1:11439",
     "innerlife.light_model": "phase1-light",
     "innerlife.deep_model": "phase1-deep",
-    "innerlife.loop_seconds": "33"
+    "innerlife.loop_seconds": "1980",
+    "innerlife.llm.api_key_ref": "env:PHASE1_INNERLIFE_API_KEY"
   });
 
   const snapshot = await runtime.buildProductSnapshot(app);
@@ -103,14 +106,23 @@ async function main() {
   if (snapshot.configuration.innerlife.backend !== "openai-compatible") {
     throw new Error("Saved InnerLife provider did not read back from SQLite.");
   }
+  if (snapshot.configuration.innerlife.baseUrl !== "http://127.0.0.1:11439") {
+    throw new Error("Saved InnerLife endpoint did not read back from SQLite.");
+  }
   if (snapshot.configuration.innerlife.lightModel !== "phase1-light") {
     throw new Error("Saved InnerLife light model did not read back from SQLite.");
   }
   if (snapshot.configuration.innerlife.deepModel !== "phase1-deep") {
     throw new Error("Saved InnerLife deep model did not read back from SQLite.");
   }
-  if (snapshot.configuration.innerlife.pollSeconds !== "33") {
+  if (snapshot.configuration.innerlife.pollSeconds !== "1980") {
     throw new Error("Saved InnerLife loop seconds did not read back from SQLite.");
+  }
+  if (
+    snapshot.configuration.innerlife.apiKeyStatus !== "configured" ||
+    snapshot.configuration.innerlife.apiKeyRef !== "env:PHASE1_INNERLIFE_API_KEY"
+  ) {
+    throw new Error("Saved InnerLife API key reference did not read back from SQLite.");
   }
   const oldServices = snapshot.health.checks.find((check) => check.id === "old-services");
   if (oldServices?.detail !== "not controlled by Desktop") {

@@ -42,6 +42,7 @@
       "index.html",
       "styles.css",
       "electron/**/*",
+      "assets/**/*",
       "core/**/*",
       "package.json"
     ],
@@ -54,6 +55,12 @@
         "dir"
       ],
       "identity": null
+    },
+    "win": {
+      "icon": "assets/icon.ico"
+    },
+    "linux": {
+      "icon": "assets/generated/icon-512.png"
     },
     "dmg": {
       "artifactName": "ClaraCore-Desktop-${version}-${arch}.${ext}"

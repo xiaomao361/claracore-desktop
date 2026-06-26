@@ -28,7 +28,10 @@ async function main() {
       model: document.querySelector("#memoriaModel").value,
       dimension: document.querySelector("#memoriaDimension").value,
       innerlifeBackend: document.querySelector("#innerLifeBackend").value,
+      innerlifeEndpoint: document.querySelector("#innerLifeEndpoint").value,
+      innerlifeApiKeyReadonly: document.querySelector("#innerLifeApiKey").hasAttribute("readonly"),
       innerlifeLoop: document.querySelector("#innerLifePollSeconds").value,
+      innerlifeStatus: document.querySelector("#innerLifeModelStatus").textContent,
       source: document.querySelector("#memoriaSource").value,
       innerlifeSource: document.querySelector("#innerLifeSource").value
     }));
@@ -37,18 +40,26 @@ async function main() {
     if (defaults.model !== "bge-m3") throw new Error(`Unexpected model: ${defaults.model}`);
     if (defaults.dimension !== "1024") throw new Error(`Unexpected dimension: ${defaults.dimension}`);
     if (defaults.innerlifeBackend !== "disabled") throw new Error(`Unexpected InnerLife backend: ${defaults.innerlifeBackend}`);
-    if (defaults.innerlifeLoop !== "15") throw new Error(`Unexpected InnerLife loop: ${defaults.innerlifeLoop}`);
+    if (defaults.innerlifeEndpoint !== "http://127.0.0.1:11434") throw new Error(`Unexpected InnerLife endpoint: ${defaults.innerlifeEndpoint}`);
+    if (defaults.innerlifeApiKeyReadonly) throw new Error("InnerLife API key reference should be editable.");
+    if (defaults.innerlifeLoop !== "15") throw new Error(`Unexpected InnerLife loop minutes: ${defaults.innerlifeLoop}`);
+    if (!["disabled", "关闭"].some((label) => defaults.innerlifeStatus.toLowerCase().includes(label))) {
+      throw new Error(`Unexpected InnerLife status: ${defaults.innerlifeStatus}`);
+    }
     if (!defaults.source.includes("claracore.db") || !defaults.innerlifeSource.includes("claracore.db")) {
       throw new Error(`Settings page is not showing database-backed sources: ${JSON.stringify(defaults)}`);
     }
 
+    await page.selectOption("#memoriaProvider", "claracore-built-in");
     await page.fill("#memoriaEndpoint", "http://127.0.0.1:11437");
     await page.fill("#memoriaModel", "bge-m3-ui-smoke");
     await page.fill("#memoriaDimension", "640");
-    await page.fill("#innerLifeBackend", "openai-compatible");
+    await page.selectOption("#innerLifeBackend", "claracore-built-in");
+    await page.fill("#innerLifeEndpoint", "http://127.0.0.1:11438");
     await page.fill("#innerLifeLightModel", "ui-light");
     await page.fill("#innerLifeDeepModel", "ui-deep");
     await page.fill("#innerLifePollSeconds", "44");
+    await page.fill("#innerLifeApiKey", "env:UI_INNERLIFE_API_KEY");
     await page.click("#saveSettings");
     await page.waitForFunction(
       async () => {
@@ -63,6 +74,9 @@ async function main() {
     if (!snapshot.data.databasePath.startsWith(dataRoot)) {
       throw new Error(`Settings UI wrote outside product data root: ${snapshot.data.databasePath}`);
     }
+    if (snapshot.configuration.memoria.provider !== "claracore-built-in") {
+      throw new Error("Settings UI did not persist future ClaraCore built-in Memory provider.");
+    }
     if (snapshot.configuration.memoria.endpoint !== "http://127.0.0.1:11437") {
       throw new Error("Settings UI did not persist Memoria endpoint.");
     }
@@ -72,8 +86,11 @@ async function main() {
     if (snapshot.configuration.memoria.dimension !== "640") {
       throw new Error("Settings UI did not persist Memoria dimension.");
     }
-    if (snapshot.configuration.innerlife.backend !== "openai-compatible") {
+    if (snapshot.configuration.innerlife.backend !== "claracore-built-in") {
       throw new Error("Settings UI did not persist InnerLife backend.");
+    }
+    if (snapshot.configuration.innerlife.baseUrl !== "http://127.0.0.1:11438") {
+      throw new Error("Settings UI did not persist InnerLife endpoint.");
     }
     if (snapshot.configuration.innerlife.lightModel !== "ui-light") {
       throw new Error("Settings UI did not persist InnerLife light model.");
@@ -81,8 +98,11 @@ async function main() {
     if (snapshot.configuration.innerlife.deepModel !== "ui-deep") {
       throw new Error("Settings UI did not persist InnerLife deep model.");
     }
-    if (snapshot.configuration.innerlife.pollSeconds !== "44") {
-      throw new Error("Settings UI did not persist InnerLife loop seconds.");
+    if (snapshot.configuration.innerlife.pollSeconds !== "2640") {
+      throw new Error("Settings UI did not persist InnerLife loop minutes as seconds.");
+    }
+    if (snapshot.configuration.innerlife.apiKeyStatus !== "configured" || snapshot.configuration.innerlife.apiKeyRef !== "env:UI_INNERLIFE_API_KEY") {
+      throw new Error("Settings UI did not persist InnerLife API key reference.");
     }
 
     await app.close();

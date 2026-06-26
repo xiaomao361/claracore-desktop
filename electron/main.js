@@ -68,6 +68,9 @@ const {
 } = require("../core/runtime");
 
 const APP_ROOT = path.resolve(__dirname, "..");
+const APP_ICON_PATH = path.join(APP_ROOT, "assets", "generated", "icon-512.png");
+const TRAY_TEMPLATE_PATH = path.join(APP_ROOT, "assets", "generated", "tray-template-32.png");
+const TRAY_COLOR_PATH = path.join(APP_ROOT, "assets", "generated", "tray-color-32.png");
 const isGatewayMode = process.argv.includes("--gateway");
 let mainWindow = null;
 let tray = null;
@@ -219,17 +222,11 @@ async function getRuntimeSnapshot() {
 }
 
 function createTrayIcon() {
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">
-      <circle cx="22" cy="22" r="18" fill="#202421"/>
-      <path d="M28.8 14.8A10 10 0 1 0 28.8 29.2" fill="none" stroke="#ffffff" stroke-width="4.2" stroke-linecap="round"/>
-      <circle cx="31.8" cy="22" r="3.2" fill="#ffffff"/>
-    </svg>
-  `;
-  const image = nativeImage
-    .createFromDataURL(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`)
-    .resize({ width: 20, height: 20 });
-  image.setTemplateImage(false);
+  const sourcePath = process.platform === "darwin" ? TRAY_TEMPLATE_PATH : TRAY_COLOR_PATH;
+  let image = nativeImage.createFromPath(sourcePath);
+  if (image.isEmpty()) image = nativeImage.createFromPath(TRAY_COLOR_PATH);
+  image = image.resize({ width: 20, height: 20 });
+  image.setTemplateImage(process.platform === "darwin");
   return image;
 }
 
@@ -255,7 +252,7 @@ function updateTrayMenu(language = trayLanguage) {
   const labels = trayLabels[trayLanguage];
   tray.setToolTip(labels.tooltip);
   if (process.platform === "darwin" && typeof tray.setTitle === "function") {
-    tray.setTitle("◉");
+    tray.setTitle("");
   }
   tray.setContextMenu(
     Menu.buildFromTemplate([
@@ -302,6 +299,7 @@ function createWindow() {
     minWidth: 1120,
     minHeight: 640,
     title: "ClaraCore Desktop",
+    icon: APP_ICON_PATH,
     backgroundColor: "#f7f7f4",
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
     webPreferences: {

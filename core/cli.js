@@ -90,7 +90,23 @@ function usage() {
       "shared-line archive --line-id <id>",
       "shared-line restore --line-id <id> [--activate]",
       "shared-line update --summary <text> [--line-id <id>] [--status draft|confirmed] [--facts-used a,b] [--confirm-overwrite]",
-      "shared-line handoff [--line-id <id>] [--objective <text>] [--completed a,b] [--open-items a,b] [--next-step <text>]"
+      "shared-line handoff [--line-id <id>] [--objective <text>] [--completed a,b] [--open-items a,b] [--next-step <text>]",
+      "innerlife status",
+      "innerlife doctor [--agent <id>]",
+      "innerlife briefing [--agent <id>]",
+      "innerlife sessions [--agent <id>] [--limit N]",
+      "innerlife session-start [--agent <id>] [--user <id>] [--host <host>] [--external-session-id <id>]",
+      "innerlife session-end --session-id <id> [--summary <text>] [--transcript <text>]",
+      "innerlife inbox --body <text> [--agent <id>] [--source <text>]",
+      "innerlife submit-fact --body <text> [--agent <id>]",
+      "innerlife submit-continuity --body <text> [--agent <id>]",
+      "innerlife digest [--agent <id>] [--mode <mode>] [--prompt <text>]",
+      "innerlife process-once [--prompt <text>]",
+      "innerlife pending [--status pending|approved|all] [--limit N]",
+      "innerlife share-check [--share-id <id>] [--session-id <id>] [--context <text>]",
+      "innerlife mark-share --id <id> --action used|deferred|discarded [--reason <text>]",
+      "innerlife share-actions [--share-id <id>] [--limit N]",
+      "innerlife daemon status|enable|pause|tick [--force]"
     ]
   };
 }
@@ -274,12 +290,99 @@ async function runMemoryCommand(app, command, subcommand, options) {
     }
     throw new Error("shared-line requires get, list, create, activate, rename, archive, restore, update, or handoff.");
   }
+  if (command === "innerlife") {
+    const agentId = options.agent || options.agentId || process.env.CLARACORE_AGENT_ID || "codex";
+    if (subcommand === "status") return { innerLife: await runtime.getProductInnerLife(app) };
+    if (subcommand === "doctor") return { doctor: await runtime.getProductInnerLifeDoctor(app, agentId) };
+    if (subcommand === "briefing") {
+      const { database } = await runtime.ensureProductCore(app);
+      return { briefing: await database.getInnerLifeBriefing(agentId) };
+    }
+    if (subcommand === "sessions") {
+      const { database } = await runtime.ensureProductCore(app);
+      return {
+        sessions: await database.listInnerLifeSessions(agentId, Number.parseInt(String(options.limit || 20), 10) || 20)
+      };
+    }
+    if (subcommand === "session-start") {
+      return runtime.startProductInnerLifeSession(app, {
+        agentId,
+        userId: options.user || options.userId || "local-user",
+        host: options.host || "cli",
+        externalSessionId: options["external-session-id"] || options.externalSessionId || ""
+      });
+    }
+    if (subcommand === "session-end") {
+      return runtime.endProductInnerLifeSession(app, requireOption(options, "session-id"), {
+        summary: options.summary || "",
+        transcript: options.transcript || ""
+      });
+    }
+    if (subcommand === "inbox" || subcommand === "submit-fact" || subcommand === "submit-continuity") {
+      const sourceByCommand = {
+        inbox: options.source || "cli",
+        "submit-fact": "fact",
+        "submit-continuity": "continuity"
+      };
+      return {
+        inbox: await runtime.submitProductInnerLifeInbox(app, {
+          agentId,
+          source: sourceByCommand[subcommand],
+          body: requireOption(options, "body")
+        }),
+        innerLife: await runtime.getProductInnerLife(app)
+      };
+    }
+    if (subcommand === "digest") {
+      return runtime.runProductInnerLifeDigest(app, {
+        agentId,
+        mode: options.mode || "manual",
+        prompt: options.prompt || ""
+      });
+    }
+    if (subcommand === "process-once") return runtime.processProductInnerLifeOnce(app, { prompt: options.prompt || "" });
+    if (subcommand === "pending") {
+      const { database } = await runtime.ensureProductCore(app);
+      return {
+        shares: await database.listInnerLifeShares(options.status || "pending", Number.parseInt(String(options.limit || 20), 10) || 20)
+      };
+    }
+    if (subcommand === "share-check") {
+      return runtime.checkProductInnerLifeShareTiming(app, {
+        agentId,
+        shareId: options["share-id"] || options.shareId || "",
+        sessionId: options["session-id"] || options.sessionId || "",
+        context: options.context || ""
+      });
+    }
+    if (subcommand === "mark-share") {
+      return runtime.markProductInnerLifeShare(app, requireOption(options, "id"), requireOption(options, "action"), options.reason || "");
+    }
+    if (subcommand === "share-actions") {
+      const { database } = await runtime.ensureProductCore(app);
+      return {
+        actions: await database.listInnerLifeShareActions(options["share-id"] || options.shareId || null, Number.parseInt(String(options.limit || 20), 10) || 20)
+      };
+    }
+    if (subcommand === "daemon") {
+      const action = options.daemonAction || options.action || "status";
+      if (action === "status") {
+        const { database } = await runtime.ensureProductCore(app);
+        return { daemon: await database.ensureInnerLifeDaemonState(agentId) };
+      }
+      if (action === "enable" || action === "pause") return runtime.setProductInnerLifeDaemon(app, { agentId, action });
+      if (action === "tick") return runtime.tickProductInnerLifeDaemon(app, { agentId, force: Boolean(options.force) });
+      throw new Error("innerlife daemon requires status, enable, pause, or tick.");
+    }
+    throw new Error("innerlife requires status, doctor, briefing, sessions, session-start, session-end, inbox, submit-fact, submit-continuity, digest, process-once, pending, share-check, mark-share, share-actions, or daemon.");
+  }
   throw new Error(`Unknown command: ${command || ""}`);
 }
 
 async function main() {
   const { positional, options } = parseArgs(process.argv.slice(2));
-  const [command, subcommand] = positional;
+  const [command, subcommand, daemonAction] = positional;
+  if (daemonAction) options.daemonAction = daemonAction;
   if (!command || command === "help" || options.help) {
     printJson(usage());
     return;

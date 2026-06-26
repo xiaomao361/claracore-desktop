@@ -213,7 +213,20 @@ const importPlanRules = {
     { table: "innerlife_profiles", target: "innerlife_profiles", action: "copy_candidate", note: "old profiles" },
     { table: "innerlife_events", target: "innerlife_events", action: "copy_candidate", note: "old events" },
     { table: "innerlife_thoughts", target: "innerlife_thoughts", action: "copy_candidate", note: "old thoughts" },
-    { table: "innerlife_shares", target: "innerlife_shares", action: "copy_candidate", note: "old pending shares" }
+    { table: "innerlife_shares", target: "innerlife_shares", action: "copy_candidate", note: "old pending shares" },
+    { table: "agent_profiles", target: "innerlife_profiles", action: "copy_candidate", note: "InnerLife v2 agent profiles" },
+    { table: "agent_state", target: "innerlife_profiles", action: "copy_candidate", note: "InnerLife v2 agent state" },
+    { table: "inbox_events", target: "innerlife_inbox", action: "copy_candidate", note: "InnerLife v2 inbox" },
+    { table: "internal_events", target: "innerlife_events", action: "copy_candidate", note: "InnerLife v2 internal events" },
+    { table: "pending_shares", target: "innerlife_shares", action: "copy_candidate", note: "InnerLife v2 pending shares" },
+    { table: "digest_runs", target: "innerlife_digest_runs", action: "copy_candidate", note: "InnerLife v2 digest history" },
+    { table: "sessions", target: "innerlife_sessions", action: "copy_candidate", note: "InnerLife v2 sessions" },
+    { table: "share_actions", target: "innerlife_share_actions", action: "copy_candidate", note: "InnerLife v2 share actions" },
+    { table: "inner_summaries", target: "innerlife_events", action: "copy_candidate", note: "InnerLife v2 summaries" },
+    { table: "autonomous_experiences", target: "innerlife_events", action: "copy_candidate", note: "InnerLife v2 autonomous experiences" },
+    { table: "exploration_runs", target: "innerlife_events", action: "copy_candidate", note: "InnerLife v2 exploration runs" },
+    { table: "convergence_runs", target: "innerlife_events", action: "copy_candidate", note: "InnerLife v2 convergence runs" },
+    { table: "source_subscriptions", target: "innerlife_events", action: "copy_candidate", note: "InnerLife v2 source subscriptions" }
   ]
 };
 
@@ -309,10 +322,19 @@ async function previewImportSources() {
         "innerlife_events",
         "innerlife_thoughts",
         "innerlife_shares",
-        "inbox",
+        "agent_profiles",
+        "agent_state",
+        "inbox_events",
+        "internal_events",
+        "pending_shares",
+        "digest_runs",
         "sessions",
-        "thoughts",
-        "shares"
+        "share_actions",
+        "inner_summaries",
+        "autonomous_experiences",
+        "exploration_runs",
+        "convergence_runs",
+        "source_subscriptions"
       ]),
       envFile: {
         present: await exists(paths.innerlife.envPath),

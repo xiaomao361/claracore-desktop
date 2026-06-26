@@ -68,13 +68,15 @@ Desktop InnerLife must eventually cover:
 - Reflection/digest/session lifecycle.
 - Background loop controls.
 - Light/deep model configuration.
-- Pending share review.
+- Pending share lifecycle and share-action history.
 - Daemon status, heartbeat, and recovery state.
 
 Current reference notes:
 
 - Existing InnerLife has the most operational risk.
-- The product should expose configuration early, keep the daemon disabled by default, and make all generated output reviewable.
+- The product should expose configuration early, keep the daemon paused until
+  explicitly enabled, and keep human UI inspect-oriented. InnerLife state is
+  created and maintained primarily by agents through MCP or CLI.
 
 ### Gateway Baseline
 
@@ -158,9 +160,10 @@ memory.embedding.max_chars = 2000
 
 innerlife.enabled = false
 innerlife.provider = disabled
+innerlife.base_url = http://127.0.0.1:11434
 innerlife.light_model =
 innerlife.deep_model =
-innerlife.loop_seconds = 15
+innerlife.loop_seconds = 900
 
 gateway.enabled = true
 gateway.transport = stdio
@@ -174,7 +177,24 @@ Secrets:
 
 - Do not store visible secret values in normal settings rows.
 - Store only a secret reference/status in SQLite.
+- The Models UI may store API key references for Memory embeddings and InnerLife,
+  such as `env:OPENAI_API_KEY`; it should not store the secret value itself.
+- Ollama providers can leave the API key reference empty.
 - Later use platform secure storage where appropriate.
+
+Provider values should leave room for a future `claracore-built-in` option. That
+option is reserved for a small bundled ClaraCore model that may later cover
+basic embeddings and the InnerLife daemon, but it is only a configuration
+placeholder until the runtime exists.
+
+The Models UI should present the InnerLife daemon cadence in minutes. The
+database keeps `innerlife.loop_seconds` in seconds so the existing scheduler can
+continue to use one internal unit.
+
+Settings is reserved for general app configuration: language, theme, window and
+tray behavior, data and backup paths, log retention, debug tracing, Gateway
+local access policy, privacy/security display choices, secret-storage status,
+development paths, packaged runtime information, and diagnostics.
 
 ## Vector Strategy
 
@@ -215,7 +235,9 @@ Because the modules are empty now, the product can integrate them cleanly:
 
 - Memory facts can be referenced by Continuity through stable `memory_id` links.
 - Continuity positions can create InnerLife events without copying full memory records.
-- InnerLife can propose memories or shared-line updates, but user review should be explicit.
+- InnerLife can produce share candidates, but Memory and Shared Line writes
+  happen through explicit agent calls to those product tools. The InnerLife UI
+  does not auto-apply output into other modules.
 - Gateway can expose one coherent product API instead of exposing three separate internal APIs.
 - Runtime status can be shared across all modules in one event stream.
 
@@ -258,9 +280,9 @@ Because the modules are empty now, the product can integrate them cleanly:
 
 - Add profile/state storage.
 - Add event inbox.
-- Add manual `process once`.
-- Add pending share review.
-- Only then add daemon loop controls.
+- Add agent-facing session, digest, share, and daemon tools.
+- Add an inspect-first Desktop view for InnerLife state.
+- Add daemon loop controls in Models, alongside the model provider settings.
 
 ### Phase 6: Import Preview
 
@@ -275,7 +297,7 @@ The next development checkpoint should be:
 
 - `claracore.db` is created under the Desktop product data directory.
 - Product settings are initialized in the database.
-- Settings page reads real values from the database.
+- Models page reads real model values from the database.
 - Ollama embedding defaults are visible and editable later.
 - No old service data is read or modified.
 
@@ -288,11 +310,11 @@ Implemented:
 - Desktop creates `claracore.db` in the product data directory.
 - Schema initialization creates product-owned tables for settings, agents, memory, continuity, InnerLife, Gateway sessions, runtime events, backups, and migration history.
 - Default settings are written into `app_settings`.
-- Settings can be saved back into `app_settings` from Desktop.
+- Model configuration can be saved back into `app_settings` from Desktop.
 - Local Ollama embedding defaults are stored in the database.
 - InnerLife is stored as disabled by default.
 - Secret state is represented by `secret_refs` without storing visible secret values.
-- Settings page reads Memoria/Ollama and InnerLife values from `claracore.db`.
+- Models page reads Memoria/Ollama and InnerLife values from `claracore.db`.
 
 Validated:
 
@@ -500,14 +522,17 @@ Implemented:
 - Line cards include agent, mode, visibility, interpretation status, confirmation, current position, and next step where available.
 - The line list can be filtered by agent.
 - Clicking a line selects it for right-side detail review and does not activate it or reorder the list.
+- The old page-level duplicate Shared Line heading and misleading `current line` pill were removed from the Shared Line page; the global page title is enough, and line selection is shown by the list/detail state.
 - The current position, next step, history, snapshots, handoff next step, position trace, and affective trace are rendered as readable rows instead of raw long text blocks.
 - The right-side detail panel groups imported fields into basic info, progress, boundary, and trace sections.
+- Chinese UI names the human-facing Memory navigation/page as `记忆`, while keeping `Memoria` as the technical module name where appropriate.
 
 Validated:
 
 - Old Continuity import was run against the local old Continuity database and produced Desktop-owned imported lines, positions/history, snapshots, and handoffs.
 - Product database contains imported Continuity data plus the default Desktop line.
 - Imported old thread metadata was backfilled into `current_positions.metadata_json`.
+- Shared Line card selection was corrected so `getSharedLine({ lineId })` refreshes the selected detail panel.
 - `npm run check` passes after the UI and documentation updates.
 - Smoke tests were intentionally not run for this checkpoint.
 
@@ -546,7 +571,7 @@ Validated:
 - `npm run pack:mac` creates `dist/mac-arm64/ClaraCore Desktop.app`.
 - `npm run dist:mac` creates `dist/ClaraCore-Desktop-0.1.0-arm64.dmg`.
 - Generated DMG mounts successfully and contains `ClaraCore Desktop.app`.
-- Packaged app includes the ClaraCore icon instead of the default Electron icon.
+- Packaged app includes the ClaraCore icon assets instead of default Electron icons.
 - `npm run test:phase4` verifies the development Agent Setup MCP config, active product data root, complete Gateway tool list, Gateway docs, status output, `gateway_context`, Gateway trace recording for success/failure, Connections-page trace rendering, and old-service isolation text.
 - `npm run test:phase4:packaged` rebuilds the packaged app and verifies the app executable works with `--gateway` for Gateway docs, `gateway_context`, `gateway_trace_list`, Memory tools, Shared Line tools, and product data isolation.
 
@@ -558,33 +583,32 @@ Still next:
 
 ## Phase 5 Checkpoint
 
-Status: complete for the current manual InnerLife controlled-loop baseline, explicit daemon controls, safe Desktop scheduling, retry/backoff recovery, and Doctor guidance.
+Status: complete for the current agent-managed InnerLife baseline, explicit
+daemon controls in Models, safe Desktop scheduling, retry/backoff recovery,
+Doctor guidance, and Desktop-native inspection UI.
 
 Implemented:
 
-- InnerLife remains disabled as an automatic daemon by default.
+- InnerLife remains paused as an automatic daemon by default.
 - Desktop can start an InnerLife session and return a briefing from current Shared Line, recent Memory, pending shares, and recent thoughts.
 - Desktop can end an InnerLife session with a summary.
 - Ending a session writes an `innerlife_events` row, an `innerlife_thoughts` row, and a pending `innerlife_shares` afterthought.
 - Desktop can submit inbox items for later InnerLife processing.
 - Desktop can run an explicit InnerLife digest.
 - A digest writes an `innerlife_digest_runs` row, an `innerlife_events` row, and an `innerlife_thoughts` row, then marks consumed inbox items as processed.
-- Manual processing consumes pending inbox items and marks them processed.
-- Desktop can run InnerLife manually through a `process once` action.
-- Manual processing reads the current Shared Line and recent Memory context from `claracore.db`.
-- Manual processing writes an `innerlife_events` row, an `innerlife_thoughts` row, and a pending `innerlife_shares` row.
-- InnerLife page shows pending share candidates as product state.
-- User can make small status corrections to a pending InnerLife share candidate when needed.
+- Agent-triggered processing consumes pending inbox items and marks them processed.
+- Agent-triggered processing reads the current Shared Line and recent Memory context from `claracore.db`.
+- Agent-triggered processing writes an `innerlife_events` row, an `innerlife_thoughts` row, and a pending `innerlife_shares` row.
+- InnerLife page shows profiles, inbox, events, thoughts, sessions, shares, digest runs, and share-action history as inspectable product state.
+- InnerLife page has agent filtering like Memoria and Shared Line.
 - Desktop can check whether a pending/approved/deferred share fits the current context.
 - Share timing checks write `innerlife_share_checks` rows and do not automatically change share status.
-- User can mark reviewed share output as used, deferred, or discarded.
 - Share status stays in `innerlife_shares`; output is not automatically copied into Memory or Shared Line.
-- User can explicitly save selected InnerLife output as a Memory record when a small correction is needed.
-- User can explicitly apply selected InnerLife output as the current Shared Line when a small correction is needed.
+- Memory and Shared Line updates from InnerLife happen only when an agent explicitly calls the corresponding product tools.
 - InnerLife session counts, share counts, event counts, and thought counts are visible in Desktop.
 - InnerLife daemon state is stored in `innerlife_daemon_state`.
 - InnerLife daemon remains paused by default.
-- Desktop can enable, pause, and manually tick the InnerLife daemon.
+- Desktop can enable, pause, and manually tick the InnerLife daemon from the Models page.
 - Desktop runs a lightweight automatic scheduler after startup, but it only processes when the daemon is enabled.
 - A daemon tick records status, next run, last tick, last result, and tick count.
 - A daemon tick with no pending inbox records an idle tick and does not create output.
@@ -592,23 +616,25 @@ Implemented:
 - A failed daemon tick records `status = error`, `last_error`, `failureCount`, `retrySeconds`, and a delayed `next_run_at`.
 - Failed daemon ticks leave pending inbox material pending so it can be retried.
 - A successful retry clears the daemon failure count and recovery delay.
-- Desktop shows daemon recovery state in the InnerLife settings panel.
-- Desktop shows InnerLife Doctor status and recovery guidance in the InnerLife settings panel.
+- Desktop shows daemon recovery state in the Models page.
+- Desktop shows InnerLife Doctor status and recovery guidance in the Models page.
 - The scheduler does not run in `--gateway` mode.
 - Gateway exposes InnerLife daemon status, enable/pause, tick, and Doctor tools.
 - No old InnerLife daemon or old service data is started, read, or modified.
+- The Models page owns Memoria embedding settings, InnerLife model settings, secret references, loop cadence in minutes, and daemon controls.
+- The Settings page now only exposes future general app setting placeholders.
 
 Validated:
 
-- `npm run test:phase5` verifies session start, briefing, idempotent external session IDs, session end, reviewable afterthought creation, inbox submission/processing, explicit digest records, share timing checks, manual process once, daemon pause/enable/tick/pause, daemon failure state, retry delay, pending-input preservation, Doctor recovery guidance, successful retry, Doctor clearing, Memory context use, Shared Line context use, pending share creation, share status changes, used/deferred/discarded share lifecycle, explicit application to Memory, explicit application to Shared Line, SQLite counts, product data isolation, and old-service isolation.
-- Development Desktop UI can show InnerLife session and daemon state, submit or process inbox material, show pending output, make small status corrections, check share timing, show Doctor state, enable/pause the daemon, run explicit digest/process actions, explicitly save selected output as Memory, explicitly apply selected output to Shared Line, and persist the resulting counts.
+- `npm run test:phase5` verifies session start, briefing, idempotent external session IDs, session end, reviewable afterthought creation, inbox submission/processing, explicit digest records, share timing checks, daemon pause/enable/tick/pause, daemon failure state, retry delay, pending-input preservation, Doctor recovery guidance, successful retry, Doctor clearing, Memory context use, Shared Line context use, pending share creation, share lifecycle, SQLite counts, product data isolation, and old-service isolation.
+- Development Desktop UI can show InnerLife session and daemon state, inspect inbox/events/thoughts/shares/digests, filter by agent, show Doctor state, and operate daemon enable/pause/tick from Models.
 - `npm run test:phase5:scheduler-ui` verifies the Desktop scheduler processes a pending inbox item automatically after the daemon is enabled, refreshes the UI, creates only a reviewable pending share, and stops again after pause.
 - `npm run test:phase4` verifies Gateway docs and tool calls for InnerLife daemon status, enable/pause, tick, and Doctor.
 
 Still next:
 
 - Replace deterministic digest/timing with model-backed digest/timing.
-- Add model-backed generation only after the manual review contract stays stable.
+- Add model-backed generation after the agent-managed MCP/CLI contract stays stable.
 - Add richer repeated-failure workflows such as one-click pause, export diagnostic bundle, and model-provider repair checks.
 
 ## Backup Checkpoint
@@ -684,8 +710,8 @@ Implemented:
 - Old Continuity lines, current positions, snapshots, history, and handoffs are copied into product-owned Shared Line records with stable imported IDs.
 - Old InnerLife import creates a verified product backup first.
 - Old InnerLife import reads the source database read-only and verifies the source size and modified time did not change.
-- Old InnerLife profiles, events, thoughts, and shares are copied into product-owned InnerLife records with stable imported IDs.
-- Old InnerLife shares remain reviewable records; import does not automatically apply them to Memory or Shared Line.
+- Old InnerLife profiles, agent state, inbox events, internal events, pending shares, digest runs, sessions, share actions, summaries, autonomous experiences, exploration runs, convergence runs, and source subscriptions are copied or preserved as product-owned InnerLife records with stable imported IDs where possible.
+- Old InnerLife shares remain inspectable records; import does not automatically apply them to Memory or Shared Line.
 
 Validated:
 
@@ -715,7 +741,7 @@ It runs syntax checks and the current non-packaged product smoke coverage:
 - Phase 2 Memory.
 - Phase 3 Shared Line.
 - Phase 4 development Gateway contract.
-- Phase 5 manual InnerLife.
+- Phase 5 agent-managed InnerLife.
 - Backup/restore runtime path.
 - Import preview scanner.
 

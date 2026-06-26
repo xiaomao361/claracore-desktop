@@ -857,6 +857,8 @@ function toolDefinitions() {
         type: "object",
         properties: {
           agentId: { type: "string" },
+          agentTool: { type: "string" },
+          agentName: { type: "string" },
           userId: { type: "string" },
           host: { type: "string" },
           externalSessionId: { type: "string" }
@@ -876,6 +878,31 @@ function toolDefinitions() {
           summary: { type: "string" },
           transcript: { type: "string" }
         },
+        additionalProperties: false
+      }
+    },
+    {
+      name: "innerlife_sessions",
+      title: "List InnerLife Sessions",
+      description: "List recent Desktop-owned InnerLife sessions.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          agentId: { type: "string" },
+          agentTool: { type: "string" },
+          agentName: { type: "string" },
+          limit: { type: "number", minimum: 1, maximum: 100 }
+        },
+        additionalProperties: false
+      }
+    },
+    {
+      name: "innerlife_status",
+      title: "InnerLife Status",
+      description: "Read the Desktop-owned InnerLife snapshot, including inbox, shares, sessions, daemon, and doctor.",
+      inputSchema: {
+        type: "object",
+        properties: {},
         additionalProperties: false
       }
     },
@@ -911,6 +938,8 @@ function toolDefinitions() {
         type: "object",
         properties: {
           agentId: { type: "string" },
+          agentTool: { type: "string" },
+          agentName: { type: "string" },
           mode: { type: "string" },
           prompt: { type: "string" }
         },
@@ -925,6 +954,8 @@ function toolDefinitions() {
         type: "object",
         properties: {
           agentId: { type: "string" },
+          agentTool: { type: "string" },
+          agentName: { type: "string" },
           shareId: { type: "string" },
           sessionId: { type: "string" },
           context: { type: "string" }
@@ -941,8 +972,68 @@ function toolDefinitions() {
         required: ["body"],
         properties: {
           agentId: { type: "string" },
+          agentTool: { type: "string" },
+          agentName: { type: "string" },
           source: { type: "string" },
           body: { type: "string" }
+        },
+        additionalProperties: false
+      }
+    },
+    {
+      name: "innerlife_submit_fact",
+      title: "Submit InnerLife Fact",
+      description: "Submit factual material into the Desktop-owned InnerLife inbox for later digestion.",
+      inputSchema: {
+        type: "object",
+        required: ["body"],
+        properties: {
+          agentId: { type: "string" },
+          agentTool: { type: "string" },
+          agentName: { type: "string" },
+          body: { type: "string" }
+        },
+        additionalProperties: false
+      }
+    },
+    {
+      name: "innerlife_submit_continuity",
+      title: "Submit InnerLife Continuity",
+      description: "Submit current Shared Line material into the Desktop-owned InnerLife inbox for later digestion.",
+      inputSchema: {
+        type: "object",
+        required: ["body"],
+        properties: {
+          agentId: { type: "string" },
+          agentTool: { type: "string" },
+          agentName: { type: "string" },
+          body: { type: "string" }
+        },
+        additionalProperties: false
+      }
+    },
+    {
+      name: "innerlife_pending_shares",
+      title: "List InnerLife Pending Shares",
+      description: "List Desktop-owned InnerLife share candidates.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          status: { type: "string" },
+          limit: { type: "number", minimum: 1, maximum: 100 }
+        },
+        additionalProperties: false
+      }
+    },
+    {
+      name: "innerlife_share_actions",
+      title: "List InnerLife Share Actions",
+      description: "List review, use, defer, and discard actions for InnerLife shares.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          shareId: { type: "string" },
+          limit: { type: "number", minimum: 1, maximum: 100 }
         },
         additionalProperties: false
       }
@@ -982,6 +1073,8 @@ function toolDefinitions() {
         type: "object",
         properties: {
           agentId: { type: "string" },
+          agentTool: { type: "string" },
+          agentName: { type: "string" },
           action: { type: "string", enum: ["enable", "pause"] },
           enabled: { type: "boolean" }
         },
@@ -996,6 +1089,8 @@ function toolDefinitions() {
         type: "object",
         properties: {
           agentId: { type: "string" },
+          agentTool: { type: "string" },
+          agentName: { type: "string" },
           force: { type: "boolean" }
         },
         additionalProperties: false
@@ -1272,11 +1367,19 @@ async function callToolBody(name, args = {}, paths, database) {
   if (name === "innerlife_session_end") {
     return textResult(await database.endInnerLifeSession(args.sessionId, args));
   }
+  if (name === "innerlife_sessions") {
+    return textResult({
+      sessions: await database.listInnerLifeSessions(args.agentId || process.env.CLARACORE_AGENT_ID || "codex", args.limit || 20)
+    });
+  }
+  if (name === "innerlife_status") {
+    return textResult(await database.getInnerLifeSnapshot());
+  }
   if (name === "innerlife_briefing") {
-    return textResult(await database.getInnerLifeBriefing(args.agentId || "my-agent"));
+    return textResult(await database.getInnerLifeBriefing(args.agentId || process.env.CLARACORE_AGENT_ID || "codex"));
   }
   if (name === "innerlife_doctor") {
-    return textResult(await database.getInnerLifeDoctor(args.agentId || "my-agent"));
+    return textResult(await database.getInnerLifeDoctor(args.agentId || process.env.CLARACORE_AGENT_ID || "codex"));
   }
   if (name === "innerlife_digest") {
     return textResult(await database.runInnerLifeDigest(args));
@@ -1290,11 +1393,33 @@ async function callToolBody(name, args = {}, paths, database) {
       innerLife: await database.getInnerLifeSnapshot()
     });
   }
+  if (name === "innerlife_submit_fact") {
+    return textResult({
+      inbox: await database.submitInnerLifeInbox({ ...args, agentId: args.agentId || process.env.CLARACORE_AGENT_ID || "codex", source: "fact", body: args.body }),
+      innerLife: await database.getInnerLifeSnapshot()
+    });
+  }
+  if (name === "innerlife_submit_continuity") {
+    return textResult({
+      inbox: await database.submitInnerLifeInbox({ ...args, agentId: args.agentId || process.env.CLARACORE_AGENT_ID || "codex", source: "continuity", body: args.body }),
+      innerLife: await database.getInnerLifeSnapshot()
+    });
+  }
+  if (name === "innerlife_pending_shares") {
+    return textResult({
+      shares: await database.listInnerLifeShares(args.status || "pending", args.limit || 20)
+    });
+  }
+  if (name === "innerlife_share_actions") {
+    return textResult({
+      actions: await database.listInnerLifeShareActions(args.shareId || null, args.limit || 20)
+    });
+  }
   if (name === "innerlife_mark_share") {
     return textResult(await database.markInnerLifeShare(args.id, args.action, args.reason || ""));
   }
   if (name === "innerlife_daemon_status") {
-    return textResult(await database.ensureInnerLifeDaemonState(args.agentId || "my-agent"));
+    return textResult(await database.ensureInnerLifeDaemonState(args.agentId || process.env.CLARACORE_AGENT_ID || "codex"));
   }
   if (name === "innerlife_daemon_set") {
     return textResult(await database.setInnerLifeDaemonState(args));
@@ -1308,7 +1433,7 @@ async function callToolBody(name, args = {}, paths, database) {
 async function callTool(name, args = {}) {
   const startedAt = Date.now();
   const { paths, database } = await openDatabase();
-  const agentId = String(args.agentId || process.env.CLARACORE_AGENT_ID || "my-agent").trim() || "my-agent";
+  const agentId = String(args.agentId || process.env.CLARACORE_AGENT_ID || "codex").trim() || "codex";
   try {
     const result = await callToolBody(name, args, paths, database);
     await database.recordGatewayTrace({
