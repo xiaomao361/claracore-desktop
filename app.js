@@ -86,21 +86,18 @@ const innerLifeEventCount = document.querySelector("#innerLifeEventCount");
 const innerLifeThoughtCount = document.querySelector("#innerLifeThoughtCount");
 const saveSettings = document.querySelector("#saveSettings");
 const settingsNotice = document.querySelector("#settingsNotice");
-const memoryTitleInput = document.querySelector("#memoryTitleInput");
-const memoryBodyInput = document.querySelector("#memoryBodyInput");
-const memoryLabelsInput = document.querySelector("#memoryLabelsInput");
-const memoryRestrictedInput = document.querySelector("#memoryRestrictedInput");
-const memoryNotice = document.querySelector("#memoryNotice");
-const saveMemory = document.querySelector("#saveMemory");
-const cancelMemoryEdit = document.querySelector("#cancelMemoryEdit");
 const memorySearchInput = document.querySelector("#memorySearchInput");
 const searchMemory = document.querySelector("#searchMemory");
 const memoryList = document.querySelector("#memoryList");
+const allMemoryList = document.querySelector("#allMemoryList");
 const memoryGraphSummary = document.querySelector("#memoryGraphSummary");
 const memoryGraph = document.querySelector("#memoryGraph");
 const deletedMemoryList = document.querySelector("#deletedMemoryList");
 const restrictedMemoryList = document.querySelector("#restrictedMemoryList");
 const archivedMemoryList = document.querySelector("#archivedMemoryList");
+const memoryAllLabelList = document.querySelector("#memoryAllLabelList");
+const memoryAllHint = document.querySelector("#memoryAllHint");
+const memoryRestrictedHint = document.querySelector("#memoryRestrictedHint");
 const memoryActiveCount = document.querySelector("#memoryActiveCount");
 const memoryDeletedCount = document.querySelector("#memoryDeletedCount");
 const memoryEmbeddedCount = document.querySelector("#memoryEmbeddedCount");
@@ -108,28 +105,8 @@ const memoryPendingEmbeddingCount = document.querySelector("#memoryPendingEmbedd
 const memoryRestrictedCount = document.querySelector("#memoryRestrictedCount");
 const memoryArchivedCount = document.querySelector("#memoryArchivedCount");
 const memoryLabelList = document.querySelector("#memoryLabelList");
-const memoryMaintenanceSummary = document.querySelector("#memoryMaintenanceSummary");
-const memoryMaintenanceList = document.querySelector("#memoryMaintenanceList");
-const memoryMaintenanceNotice = document.querySelector("#memoryMaintenanceNotice");
-const runMemoryMaintenance = document.querySelector("#runMemoryMaintenance");
-const memoryMergeSummary = document.querySelector("#memoryMergeSummary");
-const memoryMergeList = document.querySelector("#memoryMergeList");
-const memoryArchiveSummary = document.querySelector("#memoryArchiveSummary");
-const memoryArchiveList = document.querySelector("#memoryArchiveList");
-const memoryArchiveActionNotice = document.querySelector("#memoryArchiveActionNotice");
-const archiveDormantMemories = document.querySelector("#archiveDormantMemories");
-const memoryAliasInput = document.querySelector("#memoryAliasInput");
-const memoryCanonicalLabelInput = document.querySelector("#memoryCanonicalLabelInput");
-const saveMemoryAlias = document.querySelector("#saveMemoryAlias");
-const memoryAliasNotice = document.querySelector("#memoryAliasNotice");
-const memoryAliasList = document.querySelector("#memoryAliasList");
-const memoryRecordTypeInput = document.querySelector("#memoryRecordTypeInput");
-const memoryRecordTitleInput = document.querySelector("#memoryRecordTitleInput");
-const memoryRecordValueInput = document.querySelector("#memoryRecordValueInput");
-const memoryRecordNotice = document.querySelector("#memoryRecordNotice");
-const saveMemoryRecord = document.querySelector("#saveMemoryRecord");
-const memoryRecordStats = document.querySelector("#memoryRecordStats");
-const memoryRecordList = document.querySelector("#memoryRecordList");
+const memoryTabs = Array.from(document.querySelectorAll("[data-memory-tab]"));
+const memoryTabPanels = Array.from(document.querySelectorAll("[data-memory-panel]"));
 const sharedLineSummary = document.querySelector("#sharedLineSummary");
 const sharedLineUpdated = document.querySelector("#sharedLineUpdated");
 const sharedLineList = document.querySelector("#sharedLineList");
@@ -148,7 +125,7 @@ const copySharedLineResume = document.querySelector("#copySharedLineResume");
 const translations = {
   en: {
     "nav.home": "Home",
-    "nav.memory": "Memory",
+    "nav.memory": "Memoria",
     "nav.sharedLine": "Shared Line",
     "nav.innerLife": "InnerLife",
     "nav.data": "Data",
@@ -192,7 +169,7 @@ const translations = {
     "common.sqlite": "SQLite",
     "view.home.title": "ClaraCore",
     "view.home.subtitle": "Local Control Center",
-    "view.memory.title": "Memory",
+    "view.memory.title": "Memoria",
     "view.memory.subtitle": "Owned long-term facts, separate from chat flow.",
     "view.sharedLine.title": "Shared Line",
     "view.sharedLine.subtitle": "The current position that connected agents can resume from.",
@@ -237,12 +214,19 @@ const translations = {
     "home.backup.title": "Backup reminder",
     "home.backup.body": "Export memory and shared-line data before large local changes.",
     "home.backup.review": "Review data",
-    "memory.title": "Memory",
-    "memory.body": "Memoria keeps long-term factual records separate from chat flow.",
+    "memory.title": "Memoria",
+    "memory.body": "Agent-facing facts, recall, labels, and structured event streams in one local store.",
+    "memory.agentSurface": "Agent surface",
     "memory.store": "Store",
     "memory.policy": "Policy",
     "memory.factsFirst": "Facts first",
     "memory.preview": "Preview",
+    "memory.tab.search": "Search",
+    "memory.tab.labels": "Labels",
+    "memory.tab.graph": "Graph",
+    "memory.tab.all": "All",
+    "memory.tab.restricted": "Restricted",
+    "memory.tab.archive": "Archive",
     "memory.preview1": "Recent facts stay reviewable.",
     "memory.preview2": "Private data remains under the local ClaraCore folder.",
     "memory.preview3": "Search and cleanup controls will land behind confirmation.",
@@ -257,6 +241,8 @@ const translations = {
     "memory.form.deleted": "Memory deleted",
     "memory.form.restored": "Memory restored",
     "memory.form.saveFailed": "Could not save memory",
+    "memory.delete.confirm": "Delete this memory?",
+    "memory.factWrite.title": "Long-term facts",
     "memory.empty": "No memories yet.",
     "memory.deleted.empty": "No deleted memories.",
     "memory.deleted.title": "Deleted memories",
@@ -264,6 +250,10 @@ const translations = {
     "memory.archived.title": "Archived memories",
     "memory.restricted.empty": "No restricted memories.",
     "memory.restricted.title": "Restricted memories",
+    "memory.all.title": "All visible memories",
+    "memory.list.sample": "Showing {shown} of {total}",
+    "memory.lazy.openTab": "Open this view to load records.",
+    "memory.loadMore": "Load more",
     "memory.labels.title": "Labels",
     "memory.labels.empty": "No labels yet.",
     "memory.aliases.title": "Label aliases",
@@ -282,8 +272,13 @@ const translations = {
     "memory.stats.restricted": "Restricted",
     "memory.stats.archived": "Archived",
     "memory.records.title": "Structured records",
+    "memory.records.user": "User",
     "memory.records.type": "Type",
+    "memory.records.time": "Time",
+    "memory.records.timezone": "Timezone",
     "memory.records.name": "Name",
+    "memory.records.dedupe": "Dedupe key",
+    "memory.records.note": "Note",
     "memory.records.value": "Value JSON",
     "memory.records.save": "Save record",
     "memory.records.saved": "Record saved",
@@ -291,9 +286,15 @@ const translations = {
     "memory.records.invalidJson": "Value must be valid JSON",
     "memory.records.empty": "No structured records yet.",
     "memory.records.typesEmpty": "No record types yet.",
+    "memory.records.summary": "{count} records · {days} active days · {steps} steps",
     "memory.graph.title": "Memory graph",
     "memory.graph.empty": "No graph links yet.",
     "memory.graph.summary": "{nodes} nodes · {edges} links",
+    "memory.graph.primaryLayer": "Primary layer",
+    "memory.graph.restrictedLayer": "Restricted layer",
+    "memory.graph.zoomOut": "Zoom out",
+    "memory.graph.zoomIn": "Zoom in",
+    "memory.graph.fit": "Fit",
     "memory.graph.kind.memory": "Memory",
     "memory.graph.kind.label": "Label",
     "memory.graph.kind.shared_line": "Shared Line",
@@ -342,6 +343,7 @@ const translations = {
     "memory.search.source.vector": "Vector",
     "memory.search.source.keyword+vector": "Keyword + vector",
     "memory.search.score": "Match",
+    "memory.restricted.confirm": "View restricted memories? This section can contain private facts.",
     "memory.embedding.pending": "Embedding pending",
     "memory.embedding.ready": "Embedded",
     "memory.embedding.failed": "Embedding failed",
@@ -612,7 +614,7 @@ const translations = {
   },
   zh: {
     "nav.home": "首页",
-    "nav.memory": "记忆",
+    "nav.memory": "Memoria",
     "nav.sharedLine": "共同线",
     "nav.innerLife": "内在活动",
     "nav.data": "数据",
@@ -701,12 +703,19 @@ const translations = {
     "home.backup.title": "备份提醒",
     "home.backup.body": "做较大本机改动前，先导出记忆和共同线数据。",
     "home.backup.review": "查看数据",
-    "memory.title": "记忆",
-    "memory.body": "Memoria 保存长期事实记录，不混进聊天流程。",
+    "memory.title": "Memoria",
+    "memory.body": "给 agent 使用的事实、回召、标签和结构化流水都在这个本机存储里。",
+    "memory.agentSurface": "Agent 接口",
     "memory.store": "存储位置",
     "memory.policy": "策略",
     "memory.factsFirst": "事实优先",
     "memory.preview": "预览",
+    "memory.tab.search": "搜索",
+    "memory.tab.labels": "标签",
+    "memory.tab.graph": "图谱",
+    "memory.tab.all": "全部",
+    "memory.tab.restricted": "受限",
+    "memory.tab.archive": "归档",
     "memory.preview1": "近期事实保持可查看。",
     "memory.preview2": "私有数据留在本机 ClaraCore 文件夹里。",
     "memory.preview3": "搜索和清理控制会放在确认之后。",
@@ -721,6 +730,8 @@ const translations = {
     "memory.form.deleted": "记忆已删除",
     "memory.form.restored": "记忆已恢复",
     "memory.form.saveFailed": "记忆保存失败",
+    "memory.delete.confirm": "删除这条记忆？",
+    "memory.factWrite.title": "长期事实",
     "memory.empty": "还没有记忆。",
     "memory.deleted.empty": "没有已删除记忆。",
     "memory.deleted.title": "已删除记忆",
@@ -728,6 +739,10 @@ const translations = {
     "memory.archived.title": "已归档记忆",
     "memory.restricted.empty": "没有受限记忆。",
     "memory.restricted.title": "受限记忆",
+    "memory.all.title": "全部可见记忆",
+    "memory.list.sample": "显示 {shown} / {total}",
+    "memory.lazy.openTab": "打开这个视图后加载记录。",
+    "memory.loadMore": "加载更多",
     "memory.labels.title": "标签",
     "memory.labels.empty": "还没有标签。",
     "memory.aliases.title": "标签别名",
@@ -746,8 +761,13 @@ const translations = {
     "memory.stats.restricted": "受限",
     "memory.stats.archived": "已归档",
     "memory.records.title": "结构化记录",
+    "memory.records.user": "用户",
     "memory.records.type": "类型",
+    "memory.records.time": "时间",
+    "memory.records.timezone": "时区",
     "memory.records.name": "名称",
+    "memory.records.dedupe": "去重键",
+    "memory.records.note": "备注",
     "memory.records.value": "JSON 内容",
     "memory.records.save": "保存记录",
     "memory.records.saved": "记录已保存",
@@ -755,9 +775,15 @@ const translations = {
     "memory.records.invalidJson": "JSON 内容格式不正确",
     "memory.records.empty": "还没有结构化记录。",
     "memory.records.typesEmpty": "还没有记录类型。",
+    "memory.records.summary": "{count} 条流水 · {days} 个活跃日 · {steps} 步",
     "memory.graph.title": "记忆图谱",
     "memory.graph.empty": "还没有图谱关系。",
     "memory.graph.summary": "{nodes} 个节点 · {edges} 条关系",
+    "memory.graph.primaryLayer": "主要图层",
+    "memory.graph.restrictedLayer": "受限图层",
+    "memory.graph.zoomOut": "缩小",
+    "memory.graph.zoomIn": "放大",
+    "memory.graph.fit": "适配",
     "memory.graph.kind.memory": "记忆",
     "memory.graph.kind.label": "标签",
     "memory.graph.kind.shared_line": "共同线",
@@ -806,6 +832,7 @@ const translations = {
     "memory.search.source.vector": "向量匹配",
     "memory.search.source.keyword+vector": "普通 + 向量",
     "memory.search.score": "匹配度",
+    "memory.restricted.confirm": "查看受限记忆？这里可能包含私密事实。",
     "memory.embedding.pending": "待生成向量",
     "memory.embedding.ready": "向量已生成",
     "memory.embedding.failed": "向量失败",
@@ -1128,6 +1155,25 @@ const views = {
 
 let snapshot = null;
 let activeView = "home";
+let activeMemoryTab = "search";
+let memoryGraphZoom = 1;
+let memoryGraphPan = { x: 0, y: 0 };
+let memoryGraphState = null;
+let memoryGraphAnimation = null;
+let memoryGraphDrag = null;
+let activeMemoryGraphLayer = "primary";
+const loadedMemoryTabs = {
+  all: false,
+  restricted: false,
+  archive: false
+};
+const memoryPaging = {
+  pageSize: 20,
+  all: { loaded: 0 },
+  restricted: { loaded: 0 },
+  archived: { loaded: 0 },
+  deleted: { loaded: 0 }
+};
 let editingMemoryId = null;
 let renamingSharedLineId = null;
 let pendingRestoreBackupId = null;
@@ -1843,12 +1889,8 @@ function renderImportPreview() {
     .join("");
 }
 
-function renderMemoryResults(memories) {
-  if (memories.length === 0) {
-    memoryList.innerHTML = `<div class="endpoint-empty">${t("memory.empty")}</div>`;
-    return;
-  }
-  memoryList.innerHTML = memories
+function memoryItemsHtml(memories, action = "delete", itemClass = "") {
+  return memories
     .map((memory) => {
       const labels = (memory.labels || [])
         .map((label) => `<span>${escapeHtml(label)}</span>`)
@@ -1868,12 +1910,12 @@ function renderMemoryResults(memories) {
           ? `<div class="memory-search-rank"><span>${escapeHtml(sourceLabel)}</span><span>${escapeHtml(scoreLabel)}</span></div>`
           : "";
       return `
-        <article class="memory-item" data-memory-id="${escapeHtml(memory.id)}">
+        <article class="memory-item ${itemClass}" data-memory-id="${escapeHtml(memory.id)}">
           <strong>${escapeHtml(memory.title || t("memory.form.body"))}</strong>
           <p>${escapeHtml(memory.body)}</p>
           ${searchMeta}
           <div class="memory-meta">
-            <span>${escapeHtml(memory.created_at || "")}</span>
+            <span>${escapeHtml(memory.created_at || memory.updated_at || "")}</span>
             <div>${labels}</div>
           </div>
           <div class="memory-embedding ${escapeHtml(embeddingStatus)}">
@@ -1881,16 +1923,28 @@ function renderMemoryResults(memories) {
             ${embeddingDetail}
           </div>
           <div class="memory-actions">
-            <button class="secondary" data-memory-action="embed" data-memory-id="${escapeHtml(memory.id)}">${t("actions.embed")}</button>
-            <button class="secondary" data-memory-action="edit" data-memory-id="${escapeHtml(memory.id)}">${t("actions.edit")}</button>
-            <button class="secondary" data-memory-action="archive" data-memory-id="${escapeHtml(memory.id)}">${t("actions.archive")}</button>
-            <button class="secondary" data-memory-action="restrict" data-memory-id="${escapeHtml(memory.id)}">${t("actions.restrict")}</button>
-            <button class="secondary danger-button" data-memory-action="delete" data-memory-id="${escapeHtml(memory.id)}">${t("actions.delete")}</button>
+            ${action === "restore" ? `<button class="secondary" data-memory-action="restore" data-memory-id="${escapeHtml(memory.id)}">${t("actions.restore")}</button>` : ""}
+            ${action === "restore-archived" ? `<button class="secondary" data-memory-action="restore-archived" data-memory-id="${escapeHtml(memory.id)}">${t("actions.restore")}</button>` : ""}
+            ${action === "delete" ? `<button class="secondary danger-button" data-memory-action="delete" data-memory-id="${escapeHtml(memory.id)}">${t("actions.delete")}</button>` : ""}
+            ${action === "delete-restricted" ? `<button class="secondary danger-button" data-memory-action="delete-restricted" data-memory-id="${escapeHtml(memory.id)}">${t("actions.delete")}</button>` : ""}
           </div>
         </article>
       `;
     })
     .join("");
+}
+
+function renderMemoryResults(memories, target = memoryList, options = {}) {
+  if (memories.length === 0) {
+    target.innerHTML = `<div class="endpoint-empty">${t("memory.empty")}</div>`;
+    return;
+  }
+  const html = memoryItemsHtml(memories, options.action || "delete", options.itemClass || "");
+  if (options.append) {
+    target.insertAdjacentHTML("beforeend", html);
+  } else {
+    target.innerHTML = html;
+  }
 }
 
 function renderDeletedMemoryResults(memories) {
@@ -1939,8 +1993,6 @@ function renderRestrictedMemoryResults(memories) {
             <div>${labels}</div>
           </div>
           <div class="memory-actions">
-            <button class="secondary" data-memory-action="edit-restricted" data-memory-id="${escapeHtml(memory.id)}">${t("actions.edit")}</button>
-            <button class="secondary" data-memory-action="unrestrict" data-memory-id="${escapeHtml(memory.id)}">${t("actions.unrestrict")}</button>
             <button class="secondary danger-button" data-memory-action="delete-restricted" data-memory-id="${escapeHtml(memory.id)}">${t("actions.delete")}</button>
           </div>
         </article>
@@ -1976,7 +2028,314 @@ function renderArchivedMemoryResults(memories) {
     .join("");
 }
 
+function renderMemoryTabs() {
+  for (const tab of memoryTabs) {
+    const isActive = tab.dataset.memoryTab === activeMemoryTab;
+    tab.classList.toggle("active", isActive);
+    tab.setAttribute("aria-selected", isActive ? "true" : "false");
+  }
+  for (const panel of memoryTabPanels) {
+    panel.classList.toggle("active", panel.dataset.memoryPanel === activeMemoryTab);
+  }
+}
+
+function removeLoadMoreButton(kind) {
+  document.querySelector(`[data-load-more="${kind}"]`)?.remove();
+}
+
+function renderLoadMore(kind) {
+  const totalByKind = {
+    all: snapshot?.memoryStats?.activeCount ?? 0,
+    restricted: snapshot?.memoryStats?.restrictedCount ?? 0,
+    archived: snapshot?.memoryStats?.archivedCount ?? 0,
+    deleted: snapshot?.memoryStats?.deletedCount ?? 0
+  };
+  const loadedByKind = {
+    all: memoryPaging.all.loaded,
+    restricted: memoryPaging.restricted.loaded,
+    archived: memoryPaging.archived.loaded,
+    deleted: memoryPaging.deleted.loaded,
+    archive: Math.max(memoryPaging.archived.loaded, memoryPaging.deleted.loaded)
+  };
+  const total = kind === "archive" ? Math.max(totalByKind.archived, totalByKind.deleted) : totalByKind[kind];
+  const loaded = loadedByKind[kind] || 0;
+  const container =
+    kind === "all"
+      ? allMemoryList
+      : kind === "restricted"
+        ? restrictedMemoryList
+        : kind === "archive"
+          ? archivedMemoryList.parentElement
+          : null;
+  if (!container) return;
+  removeLoadMoreButton(kind);
+  if (loaded >= total) return;
+  container.insertAdjacentHTML(
+    "afterend",
+    `<button class="secondary load-more-button" data-load-more="${kind}">${t("memory.loadMore")}</button>`
+  );
+}
+
+async function loadMemoryTabData(tabName, options = {}) {
+  if (!snapshot) return;
+  const force = Boolean(options.force);
+  const append = Boolean(options.append);
+  if (tabName === "all" && (force || append || !loadedMemoryTabs.all)) {
+    const offset = append ? memoryPaging.all.loaded : 0;
+    const rows = await window.ClaraCoreDesktop.getMemories({ limit: memoryPaging.pageSize, offset });
+    snapshot.memories = append ? [...(snapshot.memories || []), ...rows] : rows;
+    memoryPaging.all.loaded = snapshot.memories.length;
+    loadedMemoryTabs.all = true;
+    if ((rows || []).length > 0) renderMemoryResults(rows || [], allMemoryList, { append });
+    memoryAllHint.textContent = t("memory.list.sample", {
+      shown: snapshot?.memories?.length || 0,
+      total: snapshot?.memoryStats?.activeCount ?? 0
+    });
+    renderLoadMore("all");
+  }
+  if (tabName === "restricted" && (force || append || !loadedMemoryTabs.restricted)) {
+    const offset = append ? memoryPaging.restricted.loaded : 0;
+    const rows = await window.ClaraCoreDesktop.getRestrictedMemories({ limit: memoryPaging.pageSize, offset });
+    snapshot.restrictedMemories = append ? [...(snapshot.restrictedMemories || []), ...rows] : rows;
+    memoryPaging.restricted.loaded = snapshot.restrictedMemories.length;
+    loadedMemoryTabs.restricted = true;
+    if ((rows || []).length > 0) renderMemoryResults(rows || [], restrictedMemoryList, { append, action: "delete-restricted", itemClass: "restricted" });
+    memoryRestrictedHint.textContent = t("memory.list.sample", {
+      shown: snapshot?.restrictedMemories?.length || 0,
+      total: snapshot?.memoryStats?.restrictedCount ?? 0
+    });
+    renderLoadMore("restricted");
+  }
+  if (tabName === "archive" && (force || append || !loadedMemoryTabs.archive)) {
+    const archivedOffset = append ? memoryPaging.archived.loaded : 0;
+    const deletedOffset = append ? memoryPaging.deleted.loaded : 0;
+    const [archived, deleted] = await Promise.all([
+      window.ClaraCoreDesktop.getArchivedMemories({ limit: memoryPaging.pageSize, offset: archivedOffset }),
+      window.ClaraCoreDesktop.getDeletedMemories({ limit: memoryPaging.pageSize, offset: deletedOffset })
+    ]);
+    snapshot.archivedMemories = append ? [...(snapshot.archivedMemories || []), ...archived] : archived;
+    snapshot.deletedMemories = append ? [...(snapshot.deletedMemories || []), ...deleted] : deleted;
+    memoryPaging.archived.loaded = snapshot.archivedMemories.length;
+    memoryPaging.deleted.loaded = snapshot.deletedMemories.length;
+    loadedMemoryTabs.archive = true;
+    if ((archived || []).length > 0) renderMemoryResults(archived || [], archivedMemoryList, { append, action: "restore-archived", itemClass: "archived" });
+    if ((deleted || []).length > 0) renderMemoryResults(deleted || [], deletedMemoryList, { append, action: "restore", itemClass: "deleted" });
+    renderLoadMore("archive");
+  }
+}
+
+function renderMemoryLabels(labels) {
+  if (!memoryAllLabelList) return;
+  if (labels.length === 0) {
+    memoryAllLabelList.innerHTML = `<div class="endpoint-empty">${t("memory.labels.empty")}</div>`;
+    return;
+  }
+  memoryAllLabelList.innerHTML = labels
+    .map(
+      (item) => `
+        <button class="label-row" data-memory-label="${escapeHtml(item.label)}">
+          <span>${escapeHtml(item.label)}</span>
+          <strong>${escapeHtml(item.count)}</strong>
+        </button>
+      `
+    )
+    .join("");
+}
+
+function graphHash(value) {
+  let hash = 2166136261;
+  const text = String(value || "");
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function computeGraphLayout(nodes, edges) {
+  const width = 1180;
+  const height = 650;
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const degree = new Map();
+  for (const edge of edges) {
+    degree.set(edge.from, (degree.get(edge.from) || 0) + 1);
+    degree.set(edge.to, (degree.get(edge.to) || 0) + 1);
+  }
+
+  const positions = new Map();
+  const labelNodes = nodes
+    .filter((node) => node.kind === "label")
+    .sort((left, right) => (degree.get(right.id) || 0) - (degree.get(left.id) || 0));
+  const memoryNodes = nodes.filter((node) => node.kind === "memory");
+  const otherNodes = nodes.filter((node) => node.kind !== "label" && node.kind !== "memory");
+
+  memoryNodes.forEach((node, index) => {
+    const seed = graphHash(node.id);
+    const angle = index * 2.399963229728653 + (seed % 1000) / 1000;
+    const radius = Math.sqrt((index + 1) / Math.max(1, memoryNodes.length)) * 245 + ((seed % 70) - 35);
+    positions.set(node.id, {
+      x: Math.max(24, Math.min(width - 24, centerX + Math.cos(angle) * radius * 1.38)),
+      y: Math.max(24, Math.min(height - 24, centerY + Math.sin(angle) * radius * 0.92)),
+      size: 2.5 + Math.min(2.5, (degree.get(node.id) || 1) / 6)
+    });
+  });
+
+  labelNodes.forEach((node, index) => {
+    const seed = graphHash(node.id);
+    const angle = index * 2.399963229728653 + (seed % 1000) / 700;
+    const radius = 95 + Math.sqrt((index + 1) / Math.max(1, labelNodes.length)) * 285 + ((seed % 80) - 40);
+    positions.set(node.id, {
+      x: Math.max(24, Math.min(width - 24, centerX + Math.cos(angle) * radius * 1.35)),
+      y: Math.max(24, Math.min(height - 24, centerY + Math.sin(angle) * radius * 0.86)),
+      size: 7 + Math.min(7, (degree.get(node.id) || 1) / 7)
+    });
+  });
+
+  otherNodes.forEach((node, index) => {
+    const angle = (index / Math.max(1, otherNodes.length)) * Math.PI * 2;
+    positions.set(node.id, {
+      x: centerX + Math.cos(angle) * 90,
+      y: centerY + Math.sin(angle) * 90,
+      size: 8
+    });
+  });
+
+  return { width, height, positions, degree };
+}
+
+function graphViewBox(width, height) {
+  const safeZoom = Math.max(1, Math.min(3, memoryGraphZoom));
+  const viewWidth = width / safeZoom;
+  const viewHeight = height / safeZoom;
+  const x = (width - viewWidth) / 2;
+  const y = (height - viewHeight) / 2;
+  return `${x.toFixed(1)} ${y.toFixed(1)} ${viewWidth.toFixed(1)} ${viewHeight.toFixed(1)}`;
+}
+
+function setMemoryGraphZoom(action) {
+  if (action === "in") {
+    memoryGraphZoom = Math.min(3, Number((memoryGraphZoom + 0.25).toFixed(2)));
+  } else if (action === "out") {
+    memoryGraphZoom = Math.max(1, Number((memoryGraphZoom - 0.25).toFixed(2)));
+  } else {
+    memoryGraphZoom = 1;
+    memoryGraphPan = { x: 0, y: 0 };
+  }
+  drawMemoryGraphCanvas();
+}
+
+async function setMemoryGraphLayer(layer) {
+  if (layer === activeMemoryGraphLayer) return;
+  if (layer === "restricted" && !window.confirm(t("memory.restricted.confirm"))) return;
+  if (layer === "restricted" && !snapshot?.restrictedMemoryGraph) {
+    snapshot.restrictedMemoryGraph = await window.ClaraCoreDesktop.getMemoryGraph({ limit: 1000, includeRestricted: true });
+  }
+  activeMemoryGraphLayer = layer === "restricted" ? "restricted" : "primary";
+  memoryGraphZoom = 1;
+  memoryGraphPan = { x: 0, y: 0 };
+  renderMemoryGraph();
+}
+
+function stopMemoryGraphAnimation() {
+  if (memoryGraphAnimation) {
+    cancelAnimationFrame(memoryGraphAnimation);
+    memoryGraphAnimation = null;
+  }
+}
+
+function drawMemoryGraphCanvas() {
+  if (!memoryGraphState) return;
+  const { canvas, nodes, edges, positions, width, height } = memoryGraphState;
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+  const targetWidth = Math.max(1, Math.floor(rect.width * pixelRatio));
+  const targetHeight = Math.max(1, Math.floor(rect.height * pixelRatio));
+  if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+  }
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+  ctx.clearRect(0, 0, rect.width, rect.height);
+
+  const fitScale = Math.min(rect.width / width, rect.height / height);
+  const scale = fitScale * memoryGraphZoom;
+  const offsetX = (rect.width - width * scale) / 2 + memoryGraphPan.x;
+  const offsetY = (rect.height - height * scale) / 2 + memoryGraphPan.y;
+  canvas.dataset.zoom = String(memoryGraphZoom);
+  canvas.dataset.panX = String(Math.round(memoryGraphPan.x));
+  canvas.dataset.panY = String(Math.round(memoryGraphPan.y));
+  const point = (position) => ({
+    x: offsetX + position.x * scale,
+    y: offsetY + position.y * scale,
+    r: Math.max(1.6, position.size * scale)
+  });
+  const now = performance.now();
+
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = "rgba(122, 148, 136, 0.22)";
+  ctx.beginPath();
+  for (const edge of edges) {
+    const from = positions.get(edge.from);
+    const to = positions.get(edge.to);
+    if (!from || !to) continue;
+    const a = point(from);
+    const b = point(to);
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+  }
+  ctx.stroke();
+
+  for (const node of nodes) {
+    const position = positions.get(node.id);
+    if (!position) continue;
+    const p = point(position);
+    const phase = ((now / 1000) + (graphHash(node.id) % 900) / 1000) * Math.PI * 2 / 2.8;
+    const pulse = 1 + Math.sin(phase) * 0.09;
+    const radius = p.r * pulse;
+    const isRestricted = node.sensitivity === "restricted";
+    const fill = node.kind === "label" ? "#c88934" : node.kind === "shared_line" ? "#28745a" : isRestricted ? "#a64036" : "#365f84";
+    if (isRestricted) {
+      ctx.beginPath();
+      ctx.fillStyle = "rgba(166, 64, 54, 0.14)";
+      ctx.arc(p.x, p.y, radius + 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.beginPath();
+    ctx.fillStyle = fill;
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.82)";
+    ctx.lineWidth = 1;
+    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  ctx.font = "9px Inter, ui-sans-serif, system-ui, sans-serif";
+  ctx.textBaseline = "middle";
+  for (const node of nodes) {
+    if (node.kind === "memory") continue;
+    const position = positions.get(node.id);
+    if (!position) continue;
+    const p = point(position);
+    const label = String(node.label || node.id);
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "rgba(251, 251, 248, 0.94)";
+    ctx.fillStyle = "#202421";
+    ctx.strokeText(label, p.x + p.r + 5, p.y);
+    ctx.fillText(label, p.x + p.r + 5, p.y);
+  }
+
+  memoryGraphAnimation = requestAnimationFrame(drawMemoryGraphCanvas);
+}
+
 function renderMemoryOverview() {
+  if (activeMemoryGraphLayer === "restricted" && !snapshot?.restrictedMemoryGraph) {
+    activeMemoryGraphLayer = "primary";
+    memoryGraphZoom = 1;
+    memoryGraphPan = { x: 0, y: 0 };
+  }
   const stats = snapshot?.memoryStats || {};
   memoryActiveCount.textContent = stats.activeCount ?? 0;
   memoryDeletedCount.textContent = stats.deletedCount ?? 0;
@@ -1993,42 +2352,31 @@ function renderMemoryOverview() {
       .map((item) => `<button class="tag-button" data-memory-label="${escapeHtml(item.label)}">${escapeHtml(item.label)} <span>${escapeHtml(item.count)}</span></button>`)
       .join("");
   }
-  renderDeletedMemoryResults(snapshot?.deletedMemories || []);
-  renderRestrictedMemoryResults(snapshot?.restrictedMemories || []);
-  renderArchivedMemoryResults(snapshot?.archivedMemories || []);
-  renderMemoryGraph();
-  renderMemoryMaintenance();
-  renderMemoryMergeSuggestions();
-  renderMemoryArchiveSuggestions();
-  renderMemoryAliases();
-  renderMemoryRecords();
-}
-
-function renderMemoryMaintenance() {
-  const report = snapshot?.memoryMaintenance || {};
-  const issues = report.issues || [];
-  memoryMaintenanceSummary.textContent =
-    report.status === "ok"
-      ? t("memory.maintenance.ok")
-      : t("memory.maintenance.needsRepair", { count: issues.reduce((sum, issue) => sum + (issue.count || 0), 0) });
-  if (issues.length === 0) {
-    memoryMaintenanceList.innerHTML = "";
-    return;
+  renderMemoryLabels(labels);
+  if (!loadedMemoryTabs.all) {
+    allMemoryList.innerHTML = `<div class="endpoint-empty">${t("memory.lazy.openTab")}</div>`;
   }
-  memoryMaintenanceList.innerHTML = issues
-    .map(
-      (issue) => `
-        <div class="maintenance-item">
-          <span>${escapeHtml(t(`memory.maintenance.${issue.code}`) || issue.code)}</span>
-          <strong>${escapeHtml(issue.count || 0)}</strong>
-        </div>
-      `
-    )
-    .join("");
+  memoryAllHint.textContent = t("memory.list.sample", {
+    shown: loadedMemoryTabs.all ? snapshot?.memories?.length || 0 : 0,
+    total: stats.activeCount ?? 0
+  });
+  memoryRestrictedHint.textContent = t("memory.list.sample", {
+    shown: loadedMemoryTabs.restricted ? snapshot?.restrictedMemories?.length || 0 : 0,
+    total: stats.restrictedCount ?? 0
+  });
+  if (!loadedMemoryTabs.restricted) {
+    restrictedMemoryList.innerHTML = `<div class="endpoint-empty">${t("memory.lazy.openTab")}</div>`;
+  }
+  if (!loadedMemoryTabs.archive) {
+    archivedMemoryList.innerHTML = `<div class="endpoint-empty">${t("memory.lazy.openTab")}</div>`;
+    deletedMemoryList.innerHTML = `<div class="endpoint-empty">${t("memory.lazy.openTab")}</div>`;
+  }
+  renderMemoryGraph();
+  renderMemoryTabs();
 }
 
 function renderMemoryGraph() {
-  const graph = snapshot?.memoryGraph || {};
+  const graph = activeMemoryGraphLayer === "restricted" ? snapshot?.restrictedMemoryGraph || {} : snapshot?.memoryGraph || {};
   const nodes = graph.nodes || [];
   const edges = graph.edges || [];
   memoryGraphSummary.textContent = t("memory.graph.summary", {
@@ -2036,154 +2384,42 @@ function renderMemoryGraph() {
     edges: edges.length
   });
   if (nodes.length === 0 || edges.length === 0) {
+    stopMemoryGraphAnimation();
+    memoryGraphState = null;
     memoryGraph.innerHTML = `<div class="endpoint-empty">${t("memory.graph.empty")}</div>`;
     return;
   }
-  const nodeById = new Map(nodes.map((node) => [node.id, node]));
-  memoryGraph.innerHTML = edges
-    .slice(0, 40)
-    .map((edge) => {
-      const from = nodeById.get(edge.from) || { label: edge.from, kind: "" };
-      const to = nodeById.get(edge.to) || { label: edge.to, kind: "" };
-      return `
-        <article class="graph-edge">
-          <span class="graph-node ${escapeHtml(from.kind || "")}">${escapeHtml(t(`memory.graph.kind.${from.kind}`) || from.kind)} · ${escapeHtml(from.label || "")}</span>
-          <span class="graph-link">${escapeHtml(t(`memory.graph.edge.${edge.kind}`) || edge.kind)}</span>
-          <span class="graph-node ${escapeHtml(to.kind || "")}">${escapeHtml(t(`memory.graph.kind.${to.kind}`) || to.kind)} · ${escapeHtml(to.label || "")}</span>
-        </article>
-      `;
-    })
-    .join("");
-}
-
-function renderMemoryMergeSuggestions() {
-  const report = snapshot?.memoryMergeSuggestions || {};
-  const suggestions = report.suggestions || [];
-  memoryMergeSummary.textContent = suggestions.length
-    ? t("memory.merge.count", { count: suggestions.length })
-    : t("memory.merge.empty");
-  if (suggestions.length === 0) {
-    memoryMergeList.innerHTML = "";
-    return;
-  }
-  memoryMergeList.innerHTML = suggestions
-    .map((suggestion) => {
-      const reasons = (suggestion.reasons || []).map((reason) => t(`memory.merge.${reason}`) || reason).join(" · ");
-      return `
-        <div class="maintenance-item merge-item">
-          <div>
-            <span>${escapeHtml(reasons)} · ${escapeHtml(Math.round((suggestion.score || 0) * 100))}%</span>
-            <strong>${escapeHtml(suggestion.target?.title || suggestion.target?.id || "-")}</strong>
-            <small>${escapeHtml(suggestion.source?.title || suggestion.source?.id || "-")}</small>
-          </div>
-          <button class="secondary" data-memory-merge-target="${escapeHtml(suggestion.target?.id || "")}" data-memory-merge-source="${escapeHtml(suggestion.source?.id || "")}">${t("memory.merge.action")}</button>
-        </div>
-      `;
-    })
-    .join("");
-}
-
-function renderMemoryArchiveSuggestions() {
-  const report = snapshot?.memoryArchiveSuggestions || {};
-  const suggestions = report.suggestions || [];
-  memoryArchiveSummary.textContent = suggestions.length
-    ? t("memory.archive.count", { count: suggestions.length })
-    : t("memory.archive.empty");
-  if (suggestions.length === 0) {
-    memoryArchiveList.innerHTML = "";
-    return;
-  }
-  memoryArchiveList.innerHTML = suggestions
-    .map(
-      (suggestion) => `
-        <div class="maintenance-item merge-item">
-          <div>
-            <span>${escapeHtml(t(`memory.archive.${suggestion.reason}`) || suggestion.reason || "")} · ${escapeHtml(suggestion.updatedAt || "")}</span>
-            <strong>${escapeHtml(suggestion.title || suggestion.id)}</strong>
-            <small>${escapeHtml(suggestion.bodyPreview || "")}</small>
-          </div>
-          <button class="secondary" data-memory-archive-id="${escapeHtml(suggestion.id || "")}">${t("actions.archive")}</button>
-        </div>
-      `
-    )
-    .join("");
-}
-
-function renderMemoryAliases() {
-  const aliases = snapshot?.memoryLabelAliases || [];
-  if (aliases.length === 0) {
-    memoryAliasList.innerHTML = `<span class="quiet">${t("memory.aliases.empty")}</span>`;
-    return;
-  }
-  memoryAliasList.innerHTML = aliases
-    .map(
-      (item) => `
-        <button class="tag-button alias-chip" data-memory-alias="${escapeHtml(item.alias)}">
-          ${escapeHtml(item.alias)} <span>${escapeHtml(item.canonicalLabel)}</span>
-        </button>
-      `
-    )
-    .join("");
-}
-
-function formatRecordValue(value) {
-  if (!value || typeof value !== "object") return "{}";
-  return JSON.stringify(value);
-}
-
-function renderMemoryRecords() {
-  const recordStats = snapshot?.memoryRecordStats || {};
-  const recordTypes = recordStats.types || [];
-  if (recordTypes.length === 0) {
-    memoryRecordStats.innerHTML = `<span class="quiet">${t("memory.records.typesEmpty")}</span>`;
-  } else {
-    memoryRecordStats.innerHTML = recordTypes
-      .slice(0, 8)
-      .map(
-        (item) =>
-          `<button class="tag-button" data-memory-record-type="${escapeHtml(item.recordType)}">${escapeHtml(item.recordType)} <span>${escapeHtml(item.count)}</span></button>`
-      )
-      .join("");
-  }
-  const records = snapshot?.memoryRecords || [];
-  if (records.length === 0) {
-    memoryRecordList.innerHTML = `<div class="endpoint-empty">${t("memory.records.empty")}</div>`;
-    return;
-  }
-  memoryRecordList.innerHTML = records
-    .slice(0, 10)
-    .map(
-      (record) => `
-        <article class="memory-item structured-record" data-memory-record-id="${escapeHtml(record.id)}">
-          <strong>${escapeHtml(record.title || record.recordType)}</strong>
-          <p>${escapeHtml(formatRecordValue(record.value))}</p>
-          <div class="memory-meta">
-            <span>${escapeHtml(record.occurredAt || "")}</span>
-            <div><span>${escapeHtml(record.recordType || "")}</span><span>${escapeHtml(record.source || "")}</span></div>
-          </div>
-        </article>
-      `
-    )
-    .join("");
-}
-
-function clearMemoryForm() {
-  editingMemoryId = null;
-  memoryTitleInput.value = "";
-  memoryBodyInput.value = "";
-  memoryLabelsInput.value = "";
-  memoryRestrictedInput.checked = false;
-  saveMemory.textContent = t("memory.form.save");
-}
-
-function fillMemoryForm(memory) {
-  editingMemoryId = memory.id;
-  memoryTitleInput.value = memory.title || "";
-  memoryBodyInput.value = memory.body || "";
-  memoryLabelsInput.value = (memory.labels || []).join(", ");
-  memoryRestrictedInput.checked = memory.sensitivity === "restricted";
-  saveMemory.textContent = t("memory.form.update");
-  memoryBodyInput.focus();
+  const { width, height, positions, degree } = computeGraphLayout(nodes, edges);
+  const positionedNodes = nodes.filter((node) => positions.has(node.id));
+  const positionedEdges = edges.filter((edge) => positions.has(edge.from) && positions.has(edge.to));
+  stopMemoryGraphAnimation();
+  memoryGraph.innerHTML = `
+    <div class="graph-toolbar">
+      <div>
+        <button class="graph-layer ${activeMemoryGraphLayer === "primary" ? "active" : ""}" data-graph-layer="primary">${escapeHtml(t("memory.graph.primaryLayer"))}</button>
+        <button class="graph-layer ${activeMemoryGraphLayer === "restricted" ? "active restricted" : ""}" data-graph-layer="restricted">${escapeHtml(t("memory.graph.restrictedLayer"))}</button>
+      </div>
+      <div class="graph-zoom-controls">
+        <button class="secondary" data-graph-zoom="out" aria-label="${escapeHtml(t("memory.graph.zoomOut"))}">−</button>
+        <button class="secondary" data-graph-zoom="fit">${escapeHtml(t("memory.graph.fit"))}</button>
+        <button class="secondary" data-graph-zoom="in" aria-label="${escapeHtml(t("memory.graph.zoomIn"))}">+</button>
+      </div>
+      <strong>${escapeHtml(t("memory.graph.summary", { nodes: nodes.length, edges: edges.length }))}</strong>
+    </div>
+    <div class="graph-canvas">
+      <canvas id="memoryGraphCanvas" data-node-count="${positionedNodes.length}" data-edge-count="${positionedEdges.length}" data-restricted-count="${positionedNodes.filter((node) => node.sensitivity === "restricted").length}" aria-label="${escapeHtml(t("memory.graph.title"))}"></canvas>
+    </div>
+  `;
+  memoryGraphState = {
+    canvas: document.querySelector("#memoryGraphCanvas"),
+    nodes: positionedNodes,
+    edges: positionedEdges,
+    positions,
+    degree,
+    width,
+    height
+  };
+  drawMemoryGraphCanvas();
 }
 
 function collectSettingsForm() {
@@ -2280,7 +2516,20 @@ function setLanguage(language) {
 
 async function refresh() {
   snapshot = await window.ClaraCoreDesktop.getRuntimeSnapshot();
+  loadedMemoryTabs.all = false;
+  loadedMemoryTabs.restricted = false;
+  loadedMemoryTabs.archive = false;
+  memoryPaging.all.loaded = 0;
+  memoryPaging.restricted.loaded = 0;
+  memoryPaging.archived.loaded = 0;
+  memoryPaging.deleted.loaded = 0;
+  removeLoadMoreButton("all");
+  removeLoadMoreButton("restricted");
+  removeLoadMoreButton("archive");
   renderSnapshot();
+  if (activeMemoryTab !== "search" && activeMemoryTab !== "labels" && activeMemoryTab !== "graph") {
+    loadMemoryTabData(activeMemoryTab).catch(console.error);
+  }
 }
 
 async function refreshResources() {
@@ -2294,12 +2543,6 @@ function scheduleRuntimeRefresh() {
     runtimeRefreshTimer = null;
     refresh().catch(console.error);
   }, 250);
-}
-
-async function processMemoryEmbeddingsAndRefresh() {
-  memoryNotice.textContent = t("memory.embedding.processing");
-  await window.ClaraCoreDesktop.processMemoryEmbeddings(5);
-  await refresh();
 }
 
 document.querySelectorAll("[data-view]").forEach((button) => {
@@ -2333,99 +2576,11 @@ saveSettings.addEventListener("click", async () => {
   }
 });
 
-saveMemory.addEventListener("click", async () => {
-  saveMemory.disabled = true;
-  memoryNotice.textContent = t("common.checking");
-  try {
-    const input = {
-      title: memoryTitleInput.value,
-      body: memoryBodyInput.value,
-      labels: memoryLabelsInput.value,
-      sensitivity: memoryRestrictedInput.checked ? "restricted" : "normal"
-    };
-    if (editingMemoryId) {
-      await window.ClaraCoreDesktop.updateMemory(editingMemoryId, input);
-    } else {
-      await window.ClaraCoreDesktop.createMemory(input);
-    }
-    const message = editingMemoryId ? t("memory.form.updated") : t("memory.form.saved");
-    clearMemoryForm();
-    await refresh();
-    await processMemoryEmbeddingsAndRefresh();
-    showCopyNotice(message, memoryNotice);
-  } catch (error) {
-    console.error(error);
-    memoryNotice.textContent = t("memory.form.saveFailed");
-  } finally {
-    saveMemory.disabled = false;
-  }
-});
-
-cancelMemoryEdit.addEventListener("click", () => {
-  clearMemoryForm();
-  memoryNotice.textContent = "";
-});
-
-saveMemoryAlias.addEventListener("click", async () => {
-  saveMemoryAlias.disabled = true;
-  memoryAliasNotice.textContent = t("common.checking");
-  try {
-    await window.ClaraCoreDesktop.createMemoryLabelAlias({
-      alias: memoryAliasInput.value,
-      canonicalLabel: memoryCanonicalLabelInput.value
-    });
-    memoryAliasInput.value = "";
-    memoryCanonicalLabelInput.value = "";
-    await refresh();
-    showCopyNotice(t("memory.aliases.saved"), memoryAliasNotice);
-  } catch (error) {
-    console.error(error);
-    memoryAliasNotice.textContent = t("memory.aliases.saveFailed");
-  } finally {
-    saveMemoryAlias.disabled = false;
-  }
-});
-
-saveMemoryRecord.addEventListener("click", async () => {
-  saveMemoryRecord.disabled = true;
-  memoryRecordNotice.textContent = t("common.checking");
-  try {
-    const valueText = memoryRecordValueInput.value.trim() || "{}";
-    let value;
-    try {
-      value = JSON.parse(valueText);
-    } catch (_error) {
-      memoryRecordNotice.textContent = t("memory.records.invalidJson");
-      return;
-    }
-    await window.ClaraCoreDesktop.createMemoryRecord({
-      recordType: memoryRecordTypeInput.value,
-      title: memoryRecordTitleInput.value,
-      value
-    });
-    memoryRecordTitleInput.value = "";
-    memoryRecordValueInput.value = "";
-    await refresh();
-    showCopyNotice(t("memory.records.saved"), memoryRecordNotice);
-  } catch (error) {
-    console.error(error);
-    memoryRecordNotice.textContent = t("memory.records.saveFailed");
-  } finally {
-    saveMemoryRecord.disabled = false;
-  }
-});
-
 searchMemory.addEventListener("click", async () => {
   const response = await window.ClaraCoreDesktop.searchMemories(memorySearchInput.value);
   const results = Array.isArray(response) ? response : response?.results || [];
   renderMemoryResults(results);
-  if (Array.isArray(response)) {
-    memoryNotice.textContent = "";
-  } else if (response?.error) {
-    memoryNotice.textContent = t("memory.search.fallback");
-  } else {
-    memoryNotice.textContent = t(`memory.search.${response?.mode || "list"}`) || "";
-  }
+  if (response?.error) showCopyNotice(t("memory.search.fallback"));
 });
 
 memorySearchInput.addEventListener("keydown", (event) => {
@@ -2434,193 +2589,128 @@ memorySearchInput.addEventListener("keydown", (event) => {
   }
 });
 
+function searchMemoryLabel(label) {
+  activeMemoryTab = "search";
+  renderMemoryTabs();
+  memorySearchInput.value = label || "";
+  searchMemory.click();
+}
+
+memoryTabs.forEach((tab) => {
+  tab.addEventListener("click", async () => {
+    const nextTab = tab.dataset.memoryTab || "search";
+    if (nextTab === "restricted" && activeMemoryTab !== "restricted" && !window.confirm(t("memory.restricted.confirm"))) {
+      renderMemoryTabs();
+      return;
+    }
+    activeMemoryTab = nextTab;
+    renderMemoryTabs();
+    try {
+      await loadMemoryTabData(nextTab);
+    } catch (error) {
+      console.error(error);
+      showCopyNotice(t("runtime.unavailable"));
+    }
+  });
+});
+
 memoryLabelList.addEventListener("click", (event) => {
   const button = event.target.closest("[data-memory-label]");
   if (!button) return;
-  memorySearchInput.value = button.dataset.memoryLabel || "";
-  searchMemory.click();
+  searchMemoryLabel(button.dataset.memoryLabel || "");
 });
 
-runMemoryMaintenance.addEventListener("click", async () => {
-  runMemoryMaintenance.disabled = true;
-  memoryMaintenanceNotice.textContent = t("common.checking");
-  try {
-    const result = await window.ClaraCoreDesktop.runMemoryMaintenance({ dryRun: false });
-    await refresh();
-    const actions = result.actions || [];
-    const actionText = actions
-      .map((action) => `${t(`memory.maintenance.${action.code}`) || action.code}: ${action.count}`)
-      .join(" · ");
-    showCopyNotice(actionText || t("memory.maintenance.done"), memoryMaintenanceNotice);
-  } catch (error) {
-    console.error(error);
-    memoryMaintenanceNotice.textContent = t("memory.maintenance.failed");
-  } finally {
-    runMemoryMaintenance.disabled = false;
-  }
-});
-
-memoryMergeList.addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-memory-merge-target]");
+memoryAllLabelList.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-memory-label]");
   if (!button) return;
-  const targetId = button.dataset.memoryMergeTarget;
-  const sourceId = button.dataset.memoryMergeSource;
-  if (!targetId || !sourceId) return;
-  if (!window.confirm(t("memory.merge.confirm"))) return;
-  button.disabled = true;
-  memoryMaintenanceNotice.textContent = t("common.checking");
-  try {
-    await window.ClaraCoreDesktop.mergeMemories({ targetId, sourceId });
-    await refresh();
-    showCopyNotice(t("memory.merge.done"), memoryMaintenanceNotice);
-  } catch (error) {
-    console.error(error);
-    memoryMaintenanceNotice.textContent = t("memory.merge.failed");
-  } finally {
-    button.disabled = false;
-  }
+  searchMemoryLabel(button.dataset.memoryLabel || "");
 });
 
-memoryArchiveList.addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-memory-archive-id]");
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-load-more]");
   if (!button) return;
-  const memoryId = button.dataset.memoryArchiveId;
-  if (!memoryId) return;
-  if (!window.confirm(t("memory.archive.confirm"))) return;
   button.disabled = true;
-  memoryArchiveActionNotice.textContent = t("common.checking");
-  try {
-    await window.ClaraCoreDesktop.archiveMemory(memoryId);
-    await refresh();
-    showCopyNotice(t("memory.archive.done"), memoryArchiveActionNotice);
-  } catch (error) {
-    console.error(error);
-    memoryArchiveActionNotice.textContent = t("memory.archive.failed");
-  } finally {
-    button.disabled = false;
-  }
-});
-
-archiveDormantMemories.addEventListener("click", async () => {
-  archiveDormantMemories.disabled = true;
-  memoryArchiveActionNotice.textContent = t("common.checking");
-  try {
-    const result = await window.ClaraCoreDesktop.archiveDormantMemories({
-      olderThanDays: 30,
-      limit: 10,
-      dryRun: false
+  loadMemoryTabData(button.dataset.loadMore, { append: true })
+    .catch((error) => {
+      console.error(error);
+      showCopyNotice(t("runtime.unavailable"));
+    })
+    .finally(() => {
+      button.disabled = false;
     });
-    await refresh();
-    showCopyNotice(`${t("memory.archive.done")}: ${result.archived || 0}`, memoryArchiveActionNotice);
-  } catch (error) {
-    console.error(error);
-    memoryArchiveActionNotice.textContent = t("memory.archive.failed");
-  } finally {
-    archiveDormantMemories.disabled = false;
+});
+
+memoryGraph.addEventListener("click", (event) => {
+  const zoomButton = event.target.closest("[data-graph-zoom]");
+  if (zoomButton) {
+    setMemoryGraphZoom(zoomButton.dataset.graphZoom || "fit");
+    return;
+  }
+  const layerButton = event.target.closest("[data-graph-layer]");
+  if (layerButton) {
+    setMemoryGraphLayer(layerButton.dataset.graphLayer || "primary").catch((error) => {
+      console.error(error);
+      showCopyNotice(t("runtime.unavailable"));
+    });
   }
 });
 
-memoryAliasList.addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-memory-alias]");
-  if (!button) return;
-  if (!window.confirm(t("memory.aliases.deleteConfirm"))) return;
-  button.disabled = true;
-  try {
-    await window.ClaraCoreDesktop.deleteMemoryLabelAlias(button.dataset.memoryAlias || "");
-    await refresh();
-    showCopyNotice(t("memory.aliases.deleted"), memoryAliasNotice);
-  } catch (error) {
-    console.error(error);
-    memoryAliasNotice.textContent = t("memory.aliases.saveFailed");
-  }
+memoryGraph.addEventListener("wheel", (event) => {
+  if (!event.target.closest(".graph-canvas")) return;
+  event.preventDefault();
+  setMemoryGraphZoom(event.deltaY < 0 ? "in" : "out");
 });
 
-memoryRecordStats.addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-memory-record-type]");
-  if (!button) return;
-  const response = await window.ClaraCoreDesktop.getMemoryRecords({
-    recordType: button.dataset.memoryRecordType || "",
-    limit: 20
-  });
-  snapshot = {
-    ...snapshot,
-    memoryRecords: response.records || [],
-    memoryRecordStats: response.stats || snapshot?.memoryRecordStats || {}
+memoryGraph.addEventListener("mousedown", (event) => {
+  if (!event.target.closest(".graph-canvas")) return;
+  memoryGraphDrag = {
+    x: event.clientX,
+    y: event.clientY,
+    startPan: { ...memoryGraphPan }
   };
-  renderMemoryRecords();
+  memoryGraph.classList.add("dragging");
 });
 
-memoryList.addEventListener("click", async (event) => {
+window.addEventListener("mousemove", (event) => {
+  if (!memoryGraphDrag) return;
+  memoryGraphPan = {
+    x: memoryGraphDrag.startPan.x + event.clientX - memoryGraphDrag.x,
+    y: memoryGraphDrag.startPan.y + event.clientY - memoryGraphDrag.y
+  };
+});
+
+window.addEventListener("mouseup", () => {
+  if (!memoryGraphDrag) return;
+  memoryGraphDrag = null;
+  memoryGraph.classList.remove("dragging");
+});
+
+async function handleMemoryListAction(event) {
   const button = event.target.closest("[data-memory-action]");
   if (!button) return;
   const memoryId = button.dataset.memoryId;
-  const memory = (snapshot?.memories || []).find((item) => item.id === memoryId);
-  if (button.dataset.memoryAction === "edit" && memory) {
-    fillMemoryForm(memory);
-    return;
-  }
-  if (button.dataset.memoryAction === "embed") {
-    button.disabled = true;
-    try {
-      await window.ClaraCoreDesktop.embedMemory(memoryId);
-      await refresh();
-      showCopyNotice(t("memory.embedding.saved"), memoryNotice);
-    } catch (error) {
-      console.error(error);
-      await refresh();
-      memoryNotice.textContent = t("memory.embedding.failed");
-    }
-    return;
-  }
   if (button.dataset.memoryAction === "delete") {
+    if (!window.confirm(t("memory.delete.confirm"))) return;
     button.disabled = true;
     await window.ClaraCoreDesktop.deleteMemory(memoryId);
-    if (editingMemoryId === memoryId) clearMemoryForm();
     await refresh();
-    showCopyNotice(t("memory.form.deleted"), memoryNotice);
-    return;
+    showCopyNotice(t("memory.form.deleted"));
   }
-  if (button.dataset.memoryAction === "archive") {
-    if (!window.confirm(t("memory.archive.confirm"))) return;
-    button.disabled = true;
-    await window.ClaraCoreDesktop.archiveMemory(memoryId);
-    if (editingMemoryId === memoryId) clearMemoryForm();
-    await refresh();
-    showCopyNotice(t("memory.archive.done"), memoryNotice);
-    return;
-  }
-  if (button.dataset.memoryAction === "restrict") {
-    button.disabled = true;
-    await window.ClaraCoreDesktop.restrictMemory(memoryId);
-    if (editingMemoryId === memoryId) clearMemoryForm();
-    await refresh();
-    showCopyNotice(t("memory.form.updated"), memoryNotice);
-  }
-});
+}
+
+memoryList.addEventListener("click", handleMemoryListAction);
+allMemoryList.addEventListener("click", handleMemoryListAction);
 
 restrictedMemoryList.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-memory-action]");
   if (!button) return;
   const memoryId = button.dataset.memoryId;
-  const memory = (snapshot?.restrictedMemories || []).find((item) => item.id === memoryId);
-  if (button.dataset.memoryAction === "edit-restricted" && memory) {
-    fillMemoryForm(memory);
-    return;
-  }
-  if (button.dataset.memoryAction === "unrestrict") {
-    button.disabled = true;
-    await window.ClaraCoreDesktop.unrestrictMemory(memoryId);
-    if (editingMemoryId === memoryId) clearMemoryForm();
-    await refresh();
-    showCopyNotice(t("memory.form.updated"), memoryNotice);
-    return;
-  }
   if (button.dataset.memoryAction === "delete-restricted") {
+    if (!window.confirm(t("memory.delete.confirm"))) return;
     button.disabled = true;
     await window.ClaraCoreDesktop.deleteMemory(memoryId);
-    if (editingMemoryId === memoryId) clearMemoryForm();
     await refresh();
-    showCopyNotice(t("memory.form.deleted"), memoryNotice);
+    showCopyNotice(t("memory.form.deleted"));
   }
 });
 
@@ -2631,10 +2721,10 @@ archivedMemoryList.addEventListener("click", async (event) => {
   try {
     await window.ClaraCoreDesktop.restoreArchivedMemory(button.dataset.memoryId);
     await refresh();
-    showCopyNotice(t("memory.archive.restoreDone"), memoryNotice);
+    showCopyNotice(t("memory.archive.restoreDone"));
   } catch (error) {
     console.error(error);
-    memoryNotice.textContent = t("memory.form.saveFailed");
+    showCopyNotice(t("memory.form.saveFailed"));
   }
 });
 
@@ -2645,10 +2735,10 @@ deletedMemoryList.addEventListener("click", async (event) => {
   try {
     await window.ClaraCoreDesktop.restoreMemory(button.dataset.memoryId);
     await refresh();
-    showCopyNotice(t("memory.form.restored"), memoryNotice);
+    showCopyNotice(t("memory.form.restored"));
   } catch (error) {
     console.error(error);
-    memoryNotice.textContent = t("memory.form.saveFailed");
+    showCopyNotice(t("memory.form.saveFailed"));
   }
 });
 
@@ -3268,6 +3358,7 @@ openGatewayFolder.addEventListener("click", () => {
 });
 
 function showCopyNotice(label, target = copyNotice) {
+  if (!target) return;
   target.textContent = label;
   window.setTimeout(() => {
     target.textContent = "";

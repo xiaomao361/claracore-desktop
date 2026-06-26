@@ -18,16 +18,24 @@ Agent-facing surfaces must cover the complete Memory capability set:
 - Structured records add/query/summary.
 - Safe restricted-content handling through explicit tools and UI sections.
 
-Human UI should cover the old Memoria Web UI's useful viewing and light-operation workflows:
+Human UI should cover the old Memoria Web UI's useful viewing and light-operation workflows, but it must not become the primary authoring or maintenance surface:
 
 - Overview and counts.
 - Search and recent memories.
-- Labels and aliases.
+- Labels.
 - Memory graph.
 - Active, restricted, deleted, and archived lists.
-- Structured records.
-- Maintenance, merge suggestions, archive suggestions.
+- Manual delete and restore.
 - Import/export and backup entry points.
+
+Deep operations remain agent/CLI/MCP or scheduled maintenance responsibilities:
+
+- Memory creation and updates.
+- Structured record writes and queries.
+- Label alias governance.
+- Maintenance repair.
+- Merge suggestions.
+- Dormant/archive suggestions.
 
 ## Safety Boundary
 
@@ -61,7 +69,61 @@ Remaining parity gaps:
 
 - Agent-facing MCP and CLI names now use `memoria`.
 - Generic structured record schemas are still broad outside `fitness` v1.
-- UI parity for structured records is still pending.
+- UI deliberately stays view-focused; structured records remain an agent/CLI/MCP surface until there is a concrete viewing need.
+
+## Desktop UI Status
+
+The current Desktop Memoria UI is view-focused and backed by the product database:
+
+- Search shows a small recent/search result set first.
+- The `All`, `Restricted`, and `Archive` tabs are lazy-loaded.
+- Memory lists use `limit + offset` pagination. Each load appends 20 rows and updates the visible count, for example `20 / 327`, `40 / 327`.
+- The `Restricted` tab requires explicit confirmation before loading restricted memories.
+- Deleted and archived memories are not loaded during the initial runtime snapshot.
+- Manual delete, deleted restore, and archived restore remain available.
+
+The Memory graph is rendered as a canvas, not thousands of SVG DOM nodes:
+
+- Primary graph is visible by default and excludes restricted memories.
+- Restricted graph requires confirmation and loads on demand.
+- The graph supports mouse-wheel zoom, fit reset, and drag panning.
+- Nodes have a light canvas-rendered pulse. This avoids Chromium tile memory pressure from large SVG node/edge trees.
+
+## Nightly Maintenance
+
+Desktop has its own Memoria maintenance path and does not call the old `services/memoria` runtime.
+
+The old reference command was:
+
+```bash
+conda run -n zhouwei python3 cli.py maintain nightly
+```
+
+Desktop uses the product-owned equivalent:
+
+```bash
+npm run memoria -- maintenance run
+```
+
+The Desktop scheduler runs Memoria maintenance at most once per local day. The default schedule is local 03:00, stored in product settings as:
+
+- `memory.maintenance.enabled`
+- `memory.maintenance.hour`
+- `memory.maintenance.last_run_date`
+
+Current nightly maintenance includes:
+
+- Requeue missing, failed, or stale embeddings for normal active memories.
+- Remove orphan memory labels.
+- Canonicalize labels that still use configured aliases.
+- Refresh primary and restricted Memory graph cache files under the Desktop runtime directory.
+
+Still pending from the old Memoria `maintain nightly` concept:
+
+- Dormant memory candidate reports.
+- Merge candidate review packets.
+- Conflict/outdated candidate reports.
+- A structured nightly JSON review artifact for external agents.
 
 ## Current First Step
 

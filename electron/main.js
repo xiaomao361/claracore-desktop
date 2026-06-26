@@ -23,10 +23,12 @@ const {
   ensureProductCore,
   ensureProductDirectories,
   exportProductMemoryArchive,
+  getProductMemories,
   getProductInnerLife,
   getProductImportPreview,
   getProductArchivedMemories,
   getProductMemoryArchiveSuggestions,
+  getProductDeletedMemories,
   getProductMemoryLabelAliases,
   getProductMemoryGraph,
   getProductMemoryMaintenance,
@@ -74,6 +76,8 @@ let trayLanguage = "en";
 let lastCpuSample = null;
 let innerLifeScheduler = null;
 let innerLifeSchedulerBusy = false;
+let memoryMaintenanceScheduler = null;
+let memoryMaintenanceSchedulerBusy = false;
 const appStartedAt = Date.now();
 
 if (isGatewayMode) {
@@ -361,6 +365,56 @@ function stopInnerLifeScheduler() {
   innerLifeScheduler = null;
 }
 
+function localDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+async function runMemoryMaintenanceScheduledTick() {
+  if (memoryMaintenanceSchedulerBusy || isQuitting) return;
+  memoryMaintenanceSchedulerBusy = true;
+  try {
+    const { database } = await ensureProductCore(app);
+    const settings = await database.getSettings();
+    if (settings["memory.maintenance.enabled"] === false) return;
+    const hour = Math.max(0, Math.min(23, Number.parseInt(String(settings["memory.maintenance.hour"] ?? 3), 10) || 3));
+    const now = new Date();
+    const today = localDateKey(now);
+    if (String(settings["memory.maintenance.last_run_date"] || "") === today) return;
+    if (now.getHours() < hour) return;
+    const result = await runProductMemoryMaintenance(app, { scheduled: true });
+    await saveProductSettings(app, { "memory.maintenance.last_run_date": today });
+    notifyRuntimeChanged("memory-maintenance-nightly", {
+      actions: result?.actions || [],
+      graphCache: result?.graphCache || null
+    });
+  } catch (error) {
+    console.error("Memoria maintenance scheduler failed:", error);
+    notifyRuntimeChanged("memory-maintenance-error", {
+      error: error.message || String(error)
+    });
+  } finally {
+    memoryMaintenanceSchedulerBusy = false;
+  }
+}
+
+function startMemoryMaintenanceScheduler() {
+  if (memoryMaintenanceScheduler) return;
+  memoryMaintenanceScheduler = setInterval(() => {
+    runMemoryMaintenanceScheduledTick().catch(console.error);
+  }, 60 * 1000);
+  if (typeof memoryMaintenanceScheduler.unref === "function") memoryMaintenanceScheduler.unref();
+  runMemoryMaintenanceScheduledTick().catch(console.error);
+}
+
+function stopMemoryMaintenanceScheduler() {
+  if (!memoryMaintenanceScheduler) return;
+  clearInterval(memoryMaintenanceScheduler);
+  memoryMaintenanceScheduler = null;
+}
+
 if (!isGatewayMode) {
   ipcMain.handle("claracore:getRuntimeSnapshot", () => getRuntimeSnapshot());
   ipcMain.handle("claracore:getResourceSnapshot", () => getResourceSnapshot());
@@ -405,11 +459,21 @@ if (!isGatewayMode) {
     if (typeof id !== "string") return false;
     return unrestrictProductMemory(app, id);
   });
-  ipcMain.handle("claracore:getRestrictedMemories", async (_event, limit) => {
-    return getProductRestrictedMemories(app, limit);
+  ipcMain.handle("claracore:getRestrictedMemories", async (_event, input) => {
+    if (input && typeof input === "object" && Array.isArray(input)) return false;
+    return getProductRestrictedMemories(app, input);
   });
-  ipcMain.handle("claracore:getArchivedMemories", async (_event, limit) => {
-    return getProductArchivedMemories(app, limit);
+  ipcMain.handle("claracore:getMemories", async (_event, input) => {
+    if (input && typeof input === "object" && Array.isArray(input)) return false;
+    return getProductMemories(app, input);
+  });
+  ipcMain.handle("claracore:getDeletedMemories", async (_event, input) => {
+    if (input && typeof input === "object" && Array.isArray(input)) return false;
+    return getProductDeletedMemories(app, input);
+  });
+  ipcMain.handle("claracore:getArchivedMemories", async (_event, input) => {
+    if (input && typeof input === "object" && Array.isArray(input)) return false;
+    return getProductArchivedMemories(app, input);
   });
   ipcMain.handle("claracore:getMemoryStats", async () => {
     return getProductMemoryStats(app);
@@ -659,6 +723,7 @@ if (!isGatewayMode) {
     createWindow();
     createTray();
     startInnerLifeScheduler();
+    startMemoryMaintenanceScheduler();
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -673,5 +738,6 @@ if (!isGatewayMode) {
   app.on("before-quit", () => {
     isQuitting = true;
     stopInnerLifeScheduler();
+    stopMemoryMaintenanceScheduler();
   });
 }

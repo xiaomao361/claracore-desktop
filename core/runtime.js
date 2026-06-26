@@ -124,6 +124,71 @@ function resolveProductPaths(app) {
   };
 }
 
+function memoryGraphCachePath(paths, includeRestricted = false) {
+  return path.join(paths.runtimeDir, includeRestricted ? "memoria-graph-restricted.json" : "memoria-graph-primary.json");
+}
+
+async function readMemoryGraphCache(paths, input = {}) {
+  if (input.force === true) return null;
+  const includeRestricted = Boolean(input.includeRestricted);
+  const cachePath = memoryGraphCachePath(paths, includeRestricted);
+  try {
+    const cache = JSON.parse(await fs.readFile(cachePath, "utf8"));
+    if (cache?.includeRestricted === includeRestricted && cache?.graph?.nodes?.length > 0 && cache?.graph?.edges?.length > 0) {
+      return {
+        ...cache.graph,
+        cache: {
+          path: cachePath,
+          generatedAt: cache.generatedAt,
+          includeRestricted
+        }
+      };
+    }
+  } catch (_error) {
+    return null;
+  }
+  return null;
+}
+
+async function writeMemoryGraphCache(paths, database, input = {}) {
+  const includeRestricted = Boolean(input.includeRestricted);
+  const limit = includeRestricted ? 1000 : 100;
+  const graph = await database.getMemoryGraph({ limit, includeRestricted });
+  const cachePath = memoryGraphCachePath(paths, includeRestricted);
+  await fs.writeFile(
+    cachePath,
+    JSON.stringify(
+      {
+        generatedAt: new Date().toISOString(),
+        includeRestricted,
+        limit,
+        graph
+      },
+      null,
+      2
+    )
+  );
+  return {
+    ...graph,
+    cache: {
+      path: cachePath,
+      generatedAt: new Date().toISOString(),
+      includeRestricted
+    }
+  };
+}
+
+async function refreshMemoryGraphCaches(paths, database) {
+  const [primary, restricted] = await Promise.all([
+    writeMemoryGraphCache(paths, database, { includeRestricted: false }),
+    writeMemoryGraphCache(paths, database, { includeRestricted: true })
+  ]);
+  return {
+    primary: primary.cache,
+    restricted: restricted.cache
+  };
+}
+
 function productModules() {
   return [
     {
@@ -266,12 +331,9 @@ async function buildProductSnapshot(app) {
   const configuration = await database.getConfiguration(paths);
   const databaseSummary = await database.getSummary();
   const memories = await database.listMemories(20);
-  const restrictedMemories = await database.listRestrictedMemories(20);
-  const deletedMemories = await database.listDeletedMemories(10);
-  const archivedMemories = await database.listArchivedMemories(10);
   const memoryStats = await database.getMemoryStats();
   const memoryLabelAliases = await database.listMemoryLabelAliases();
-  const memoryGraph = await database.getMemoryGraph({ limit: 30 });
+  const memoryGraph = await database.getMemoryGraph({ limit: 100 });
   const memoryMaintenance = await database.getMemoryMaintenanceReport();
   const memoryMergeSuggestions = await database.getMemoryMergeSuggestions({ limit: 5 });
   const memoryArchiveSuggestions = await database.getMemoryArchiveSuggestions({ limit: 5, olderThanDays: 30 });
@@ -302,9 +364,9 @@ async function buildProductSnapshot(app) {
     connections: productAgentSetup(app, paths, configuration),
     configuration,
     memories,
-    restrictedMemories,
-    deletedMemories,
-    archivedMemories,
+    restrictedMemories: [],
+    deletedMemories: [],
+    archivedMemories: [],
     memoryStats,
     memoryLabelAliases,
     memoryGraph,
@@ -436,18 +498,49 @@ async function searchProductMemories(app, query) {
   return database.searchMemories(query, 50);
 }
 
-async function getProductRestrictedMemories(app, limit = 20) {
-  const { database } = await ensureProductCore(app);
-  return database.listRestrictedMemories(limit);
+function normalizeListInput(input, fallbackLimit = 20) {
+  if (typeof input === "number" || typeof input === "string") {
+    return {
+      limit: Math.max(1, Number.parseInt(String(input), 10) || fallbackLimit),
+      offset: 0
+    };
+  }
+  return {
+    limit: Math.max(1, Number.parseInt(String(input?.limit || fallbackLimit), 10) || fallbackLimit),
+    offset: Math.max(0, Number.parseInt(String(input?.offset || 0), 10) || 0)
+  };
 }
 
-async function getProductArchivedMemories(app, limit = 20) {
+async function getProductMemories(app, input = {}) {
   const { database } = await ensureProductCore(app);
-  return database.listArchivedMemories(limit);
+  const paging = normalizeListInput(input, 20);
+  return database.listMemories(paging.limit, "", { offset: paging.offset });
+}
+
+async function getProductRestrictedMemories(app, input = {}) {
+  const { database } = await ensureProductCore(app);
+  const paging = normalizeListInput(input, 20);
+  return database.listRestrictedMemories(paging.limit, { offset: paging.offset });
+}
+
+async function getProductDeletedMemories(app, input = {}) {
+  const { database } = await ensureProductCore(app);
+  const paging = normalizeListInput(input, 20);
+  return database.listDeletedMemories(paging.limit, { offset: paging.offset });
+}
+
+async function getProductArchivedMemories(app, input = {}) {
+  const { database } = await ensureProductCore(app);
+  const paging = normalizeListInput(input, 20);
+  return database.listArchivedMemories(paging.limit, { offset: paging.offset });
 }
 
 async function getProductMemoryGraph(app, input = {}) {
-  const { database } = await ensureProductCore(app);
+  const paths = await ensureProductDirectories(app);
+  const database = await initializeProductDatabase(paths.databasePath);
+  if (input?.includeRestricted) {
+    return (await readMemoryGraphCache(paths, input || {})) || database.getMemoryGraph(input || {});
+  }
   return database.getMemoryGraph(input || {});
 }
 
@@ -457,8 +550,17 @@ async function getProductMemoryMaintenance(app) {
 }
 
 async function runProductMemoryMaintenance(app, input = {}) {
-  const { database } = await ensureProductCore(app);
-  return database.runMemoryMaintenance(input || {});
+  const paths = await ensureProductDirectories(app);
+  const database = await initializeProductDatabase(paths.databasePath);
+  const maintenance = await database.runMemoryMaintenance(input || {});
+  let graphCache = null;
+  if (input?.dryRun !== true) {
+    graphCache = await refreshMemoryGraphCaches(paths, database);
+  }
+  return {
+    ...maintenance,
+    graphCache
+  };
 }
 
 async function getProductMemoryMergeSuggestions(app, input = {}) {
@@ -756,7 +858,7 @@ async function readOldMemoriaRows(dbPath) {
     tables: [...tables],
     memories: await readTable("memories"),
     records: await readTable("records"),
-    labels: await readTable("memory_labels"),
+    labels: [...(await readTable("labels")), ...(await readTable("memory_labels"))],
     sources: await readTable("memory_sources")
   };
 }
@@ -814,7 +916,11 @@ async function importOldMemoriaIntoProduct(app, input = {}) {
       return;
     }
     const title = String(pickFirst(row, ["title", "name"], "") || "").trim();
-    const sensitivity = normalizeArchiveSensitivity(String(pickFirst(row, ["sensitivity"], "normal") || "normal"));
+    const oldPrivate = String(pickFirst(row, ["private"], "") || "").trim();
+    const sensitivity =
+      oldPrivate === "1" || oldPrivate.toLowerCase() === "true"
+        ? "restricted"
+        : normalizeArchiveSensitivity(String(pickFirst(row, ["sensitivity"], "normal") || "normal"));
     const status = normalizeArchiveStatus(String(pickFirst(row, ["status"], "active") || "active"));
     const createdAt = String(pickFirst(row, ["created_at", "createdAt", "timestamp", "occurred_at"], importedAt) || importedAt);
     const updatedAt = String(pickFirst(row, ["updated_at", "updatedAt"], createdAt) || createdAt);
@@ -847,8 +953,77 @@ async function importOldMemoriaIntoProduct(app, input = {}) {
     summary.labels.imported += rowLabels.length;
   };
 
+  const importRecordRow = async (row) => {
+    const oldId = String(pickFirst(row, ["id", "record_id"], "") || "").trim();
+    const userId = String(pickFirst(row, ["user_id", "userId"], "local-user") || "local-user").trim();
+    const recordType = String(pickFirst(row, ["record_type", "recordType", "type"], "") || "").trim().toLowerCase();
+    const occurredAt = String(pickFirst(row, ["occurred_at", "occurredAt", "timestamp"], importedAt) || importedAt).trim();
+    const value = safeJsonObject(pickFirst(row, ["data_json", "value_json", "value", "data"], "{}"), {});
+    if (!oldId || !userId || !recordType || !Object.keys(value).length) {
+      summary.records.skipped += 1;
+      return;
+    }
+    const id = stableImportId("old_memoria_record", oldId);
+    const existing = await database.query(`SELECT id FROM memory_records WHERE id = ${sqlString(id)} LIMIT 1;`);
+    if (existing.length) {
+      summary.records.skipped += 1;
+      return;
+    }
+    const dedupeKey = String(pickFirst(row, ["dedupe_key", "dedupeKey"], "") || "").trim();
+    if (dedupeKey) {
+      const duplicate = await database.query(`
+        SELECT id
+        FROM memory_records
+        WHERE user_id = ${sqlString(userId)}
+          AND record_type = ${sqlString(recordType)}
+          AND dedupe_key = ${sqlString(dedupeKey)}
+        LIMIT 1;
+      `);
+      if (duplicate.length) {
+        summary.records.skipped += 1;
+        return;
+      }
+    }
+    const localDate = String(pickFirst(row, ["local_date", "localDate"], occurredAt.slice(0, 10)) || occurredAt.slice(0, 10)).trim();
+    const timezone = String(pickFirst(row, ["timezone", "timezone_name", "timezoneName"], "Asia/Shanghai") || "Asia/Shanghai").trim();
+    const schemaVersion = Number.parseInt(String(pickFirst(row, ["schema_version", "schemaVersion"], 1) || 1), 10) || 1;
+    const note = String(pickFirst(row, ["note", "title"], "") || "").trim();
+    const source = String(pickFirst(row, ["source"], sourceId) || sourceId).trim();
+    const sourceAgent = String(pickFirst(row, ["source_agent", "sourceAgent"], "") || "").trim();
+    const sourceRunId = String(pickFirst(row, ["source_run_id", "sourceRunId"], "") || "").trim();
+    const createdAt = String(pickFirst(row, ["created_at", "createdAt"], importedAt) || importedAt).trim();
+    await database.exec(`
+      INSERT INTO memory_records (
+        id, user_id, record_type, title, value_json, occurred_at, local_date,
+        timezone, schema_version, note, source, source_agent, source_run_id,
+        dedupe_key, status, created_at, updated_at, metadata_json
+      )
+      VALUES (
+        ${sqlString(id)},
+        ${sqlString(userId)},
+        ${sqlString(recordType)},
+        ${sqlString(note || recordType)},
+        ${sqlString(JSON.stringify(value))},
+        ${sqlString(occurredAt)},
+        ${sqlString(localDate)},
+        ${sqlString(timezone)},
+        ${schemaVersion},
+        ${note ? sqlString(note) : "NULL"},
+        ${sqlString(source)},
+        ${sourceAgent ? sqlString(sourceAgent) : "NULL"},
+        ${sourceRunId ? sqlString(sourceRunId) : "NULL"},
+        ${dedupeKey ? sqlString(dedupeKey) : "NULL"},
+        'active',
+        ${sqlString(createdAt)},
+        ${sqlString(createdAt)},
+        ${sqlString(JSON.stringify({ oldId, importedFrom: "old_memoria" }))}
+      );
+    `);
+    summary.records.imported += 1;
+  };
+
   for (const row of old.memories) await importMemoryRow(row, "memories");
-  for (const row of old.records) await importMemoryRow(row, "records");
+  for (const row of old.records) await importRecordRow(row);
 
   const statAfter = await fs.stat(dbPath);
   summary.sourceMtimeUnchanged = statAfter.mtimeMs === statBefore.mtimeMs;
@@ -1590,12 +1765,14 @@ module.exports = {
   ensureProductCore,
   exportProductMemoryArchive,
   getProductMemoryStats,
+  getProductMemories,
   getProductMemoryLabelAliases,
   getProductMemoryRecords,
   getProductMemoryGraph,
   getProductMemoryMaintenance,
   getProductMemoryArchiveSuggestions,
   getProductMemoryMergeSuggestions,
+  getProductDeletedMemories,
   getProductArchivedMemories,
   getProductRestrictedMemories,
   getProductSharedLine,

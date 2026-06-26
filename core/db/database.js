@@ -11,6 +11,9 @@ const DEFAULT_SETTINGS = {
   "memory.embedding.model": "bge-m3",
   "memory.embedding.dimension": 1024,
   "memory.embedding.max_chars": 2000,
+  "memory.maintenance.enabled": true,
+  "memory.maintenance.hour": 3,
+  "memory.maintenance.last_run_date": "",
   "innerlife.enabled": false,
   "innerlife.provider": "disabled",
   "innerlife.light_model": "",
@@ -39,6 +42,9 @@ const WRITABLE_SETTINGS = new Set([
   "memory.embedding.model",
   "memory.embedding.dimension",
   "memory.embedding.max_chars",
+  "memory.maintenance.enabled",
+  "memory.maintenance.hour",
+  "memory.maintenance.last_run_date",
   "innerlife.enabled",
   "innerlife.provider",
   "innerlife.light_model",
@@ -124,6 +130,16 @@ function normalizeSettingValue(key, value) {
       throw new Error(`${key} must be a positive number.`);
     }
     return number;
+  }
+  if (key === "memory.maintenance.hour") {
+    const number = Number.parseInt(String(value), 10);
+    if (!Number.isFinite(number) || number < 0 || number > 23) {
+      throw new Error("memory.maintenance.hour must be between 0 and 23.");
+    }
+    return number;
+  }
+  if (key === "memory.maintenance.enabled") {
+    return value === true || value === "true";
   }
   if (key === "innerlife.enabled") {
     return value === true || value === "true";
@@ -765,7 +781,8 @@ class ProductDatabase {
   }
 
   async listMemories(limit = 20, search = "", options = {}) {
-    const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 20));
+    const safeLimit = Math.max(1, Math.min(1000, Number.parseInt(String(limit), 10) || 20));
+    const safeOffset = Math.max(0, Number.parseInt(String(options.offset || 0), 10) || 0);
     const query = String(search || "").trim();
     const includeRestricted = Boolean(options.includeRestricted);
     const searchClause = query
@@ -803,13 +820,14 @@ class ProductDatabase {
       ${searchClause}
       GROUP BY m.id
       ORDER BY m.created_at DESC
-      LIMIT ${safeLimit};
+      LIMIT ${safeLimit} OFFSET ${safeOffset};
     `);
     return normalizeSearchRows(rows);
   }
 
-  async listRestrictedMemories(limit = 20) {
+  async listRestrictedMemories(limit = 20, options = {}) {
     const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 20));
+    const safeOffset = Math.max(0, Number.parseInt(String(options.offset || 0), 10) || 0);
     const rows = await this.query(`
       SELECT
         m.id,
@@ -833,13 +851,14 @@ class ProductDatabase {
         AND m.sensitivity = 'restricted'
       GROUP BY m.id
       ORDER BY m.updated_at DESC, m.created_at DESC
-      LIMIT ${safeLimit};
+      LIMIT ${safeLimit} OFFSET ${safeOffset};
     `);
     return normalizeSearchRows(rows);
   }
 
-  async listDeletedMemories(limit = 20) {
+  async listDeletedMemories(limit = 20, options = {}) {
     const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 20));
+    const safeOffset = Math.max(0, Number.parseInt(String(options.offset || 0), 10) || 0);
     const rows = await this.query(`
       SELECT
         m.id,
@@ -862,13 +881,14 @@ class ProductDatabase {
       WHERE m.status = 'deleted'
       GROUP BY m.id
       ORDER BY m.updated_at DESC, m.created_at DESC
-      LIMIT ${safeLimit};
+      LIMIT ${safeLimit} OFFSET ${safeOffset};
     `);
     return normalizeSearchRows(rows);
   }
 
-  async listArchivedMemories(limit = 20) {
+  async listArchivedMemories(limit = 20, options = {}) {
     const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 20));
+    const safeOffset = Math.max(0, Number.parseInt(String(options.offset || 0), 10) || 0);
     const rows = await this.query(`
       SELECT
         m.id,
@@ -891,7 +911,7 @@ class ProductDatabase {
       WHERE m.status = 'archived'
       GROUP BY m.id
       ORDER BY m.updated_at DESC, m.created_at DESC
-      LIMIT ${safeLimit};
+      LIMIT ${safeLimit} OFFSET ${safeOffset};
     `);
     return normalizeSearchRows(rows);
   }
@@ -942,8 +962,9 @@ class ProductDatabase {
   }
 
   async getMemoryGraph(input = {}) {
-    const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(input.limit || 30), 10) || 30));
-    const memories = await this.listMemories(safeLimit, "", { includeRestricted: false });
+    const safeLimit = Math.max(1, Math.min(1000, Number.parseInt(String(input.limit || 30), 10) || 30));
+    const includeRestricted = Boolean(input.includeRestricted);
+    const memories = await this.listMemories(safeLimit, "", { includeRestricted });
     const memoryIds = memories.map((memory) => memory.id);
     const nodes = [];
     const edges = [];
@@ -967,6 +988,7 @@ class ProductDatabase {
       addNode({
         id: memoryNodeId,
         kind: "memory",
+        sensitivity: memory.sensitivity || "normal",
         label: memory.title || memory.body.slice(0, 48) || memory.id,
         refId: memory.id
       });
@@ -3362,6 +3384,9 @@ class ProductDatabase {
         model: settings["memory.embedding.model"] || "bge-m3",
         dimension: String(settings["memory.embedding.dimension"] || 1024),
         maxChars: String(settings["memory.embedding.max_chars"] || 2000),
+        maintenanceEnabled: settings["memory.maintenance.enabled"] !== false,
+        maintenanceHour: Number.parseInt(String(settings["memory.maintenance.hour"] ?? 3), 10) || 3,
+        maintenanceLastRunDate: settings["memory.maintenance.last_run_date"] || "",
         source: "claracore.db"
       },
       innerlife: {

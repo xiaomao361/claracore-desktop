@@ -37,8 +37,14 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   unrestrictMemory(id) {
     return ipcRenderer.invoke("claracore:unrestrictMemory", id);
   },
+  getMemories(limit) {
+    return ipcRenderer.invoke("claracore:getMemories", limit);
+  },
   getRestrictedMemories(limit) {
     return ipcRenderer.invoke("claracore:getRestrictedMemories", limit);
+  },
+  getDeletedMemories(limit) {
+    return ipcRenderer.invoke("claracore:getDeletedMemories", limit);
   },
   getArchivedMemories(limit) {
     return ipcRenderer.invoke("claracore:getArchivedMemories", limit);

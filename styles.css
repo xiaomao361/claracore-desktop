@@ -169,7 +169,7 @@ nav {
 
 .workspace {
   min-width: 0;
-  padding: 36px 30px 76px;
+  padding: 36px 30px 128px;
   overflow: auto;
 }
 
@@ -1330,6 +1330,54 @@ p {
   margin: 16px 0;
 }
 
+.memoria-workbench {
+  margin-bottom: 14px;
+}
+
+.memoria-grid {
+  align-items: start;
+  grid-template-columns: minmax(280px, 0.45fr) minmax(560px, 1fr);
+}
+
+.memoria-grid .memory-stats-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.memoria-status-strip {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(260px, 1.5fr) minmax(160px, 0.7fr);
+  gap: 10px;
+}
+
+.memoria-status-strip > div {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.memoria-status-strip span,
+.memoria-section > strong {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.memoria-status-strip strong {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memoria-section {
+  margin-top: 14px;
+}
+
 .check-row {
   min-height: 34px;
   display: inline-flex;
@@ -1347,6 +1395,98 @@ p {
 .memory-list {
   display: grid;
   gap: 10px;
+}
+
+.memoria-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.memoria-tabs button {
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.memoria-tabs button.active {
+  border-color: var(--green);
+  background: var(--green-bg);
+  color: var(--green);
+  font-weight: 650;
+}
+
+.memoria-tab-panel {
+  display: none;
+}
+
+.memoria-tab-panel.active {
+  display: block;
+}
+
+.memoria-tab-panel .memory-list,
+.label-table {
+  max-height: min(560px, calc(100vh - 390px));
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.section-heading-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.section-heading-line strong {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.load-more-button {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.label-table {
+  display: grid;
+  gap: 6px;
+}
+
+.label-row {
+  width: 100%;
+  min-height: 34px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+}
+
+.label-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.label-row strong {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .compact-list {
@@ -1395,12 +1535,31 @@ p {
   margin-top: 14px;
 }
 
+.compact-memory-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.compact-memory-form .wide-field,
+.compact-memory-form .settings-actions {
+  grid-column: 1 / -1;
+}
+
 .memory-labels div,
 .record-type-list {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
+}
+
+.record-summary {
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .structured-record-section > strong {
@@ -1470,9 +1629,168 @@ p {
 }
 
 .memory-graph {
-  display: grid;
-  gap: 7px;
-  margin-top: 8px;
+  margin-top: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  box-shadow: var(--shadow);
+}
+
+.graph-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.graph-toolbar > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.graph-layer {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-weight: 650;
+}
+
+.graph-layer.active {
+  border-color: var(--green);
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.graph-layer.restricted {
+  border-color: var(--red);
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+.graph-toolbar strong {
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.graph-zoom-controls {
+  margin-left: auto;
+}
+
+.graph-zoom-controls button {
+  min-width: 34px;
+  min-height: 30px;
+  padding: 4px 9px;
+}
+
+.graph-canvas {
+  min-height: 520px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background:
+    linear-gradient(rgba(40, 116, 90, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(40, 116, 90, 0.045) 1px, transparent 1px),
+    #fbfbf8;
+  background-size: 28px 28px;
+  cursor: grab;
+  user-select: none;
+}
+
+.memory-graph.dragging .graph-canvas {
+  cursor: grabbing;
+}
+
+.graph-canvas canvas {
+  width: 100%;
+  height: 620px;
+  display: block;
+}
+
+.graph-lines line {
+  stroke: #9eb2a9;
+  stroke-opacity: 0.32;
+  stroke-width: 1;
+  animation: graphLineIn 680ms ease-out both;
+}
+
+.graph-dot circle {
+  stroke: rgba(255, 255, 255, 0.72);
+  stroke-width: 1;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation:
+    graphNodeIn 520ms ease-out both,
+    graphNodePulse 2.8s ease-in-out infinite;
+  animation-delay: 0s, var(--pulse-delay, 0s);
+}
+
+.graph-dot.memory circle {
+  fill: var(--blue);
+}
+
+.graph-dot.memory.restricted circle {
+  fill: var(--red);
+  stroke: rgba(166, 64, 54, 0.28);
+  stroke-width: 3;
+}
+
+.graph-dot.label circle {
+  fill: #c88934;
+}
+
+.graph-dot.shared_line circle {
+  fill: var(--green);
+}
+
+.graph-dot text {
+  fill: var(--text);
+  font-size: 9px;
+  paint-order: stroke;
+  stroke: rgba(251, 251, 248, 0.92);
+  stroke-width: 4px;
+}
+
+@keyframes graphNodeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes graphNodePulse {
+  0%,
+  100% {
+    opacity: 0.88;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+}
+
+@keyframes graphLineIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .graph-edge {
@@ -1908,6 +2226,7 @@ summary {
 
   .topbar,
   .status-strip,
+  .memoria-status-strip,
   .screen-grid,
   .lower-grid {
     grid-template-columns: 1fr;
@@ -1934,6 +2253,10 @@ summary {
   }
 
   .memory-label-alias-section .memory-search {
+    grid-template-columns: 1fr;
+  }
+
+  .compact-memory-form {
     grid-template-columns: 1fr;
   }
 

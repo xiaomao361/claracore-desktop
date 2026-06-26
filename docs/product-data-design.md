@@ -330,10 +330,13 @@ Implemented:
 - Desktop can combine keyword search with local Ollama vector similarity when embeddings are ready.
 - Desktop search falls back to keyword results when Ollama is unavailable.
 - Desktop can mark a Memory as restricted and keep it out of normal list/search results.
-- Desktop has an explicit restricted Memory list and can restore restricted items to normal visibility.
-- Desktop can create and delete Memory label aliases.
+- Desktop has an explicit restricted Memory list behind a confirmation gate.
+- Desktop can create and delete Memory label aliases through agent-facing CLI/MCP surfaces.
 - Desktop canonicalizes Memory labels through aliases before saving records.
-- Desktop shows a bounded Memory graph of Memory-label links and Shared Line fact references.
+- Desktop shows a bounded canvas Memory graph of Memory-label links and Shared Line fact references.
+- Desktop Memory UI is view-focused: search, labels, graph, all memories, restricted memories, archived/deleted memories, and simple delete/restore.
+- Desktop Memory UI list tabs are lazy and paginated. All/restricted/archived/deleted records are loaded in 20-row batches with `limit + offset` and a `Load more` control.
+- Desktop Memory graph supports primary and restricted layers, drag panning, mouse-wheel zoom, and graph cache refresh during nightly maintenance.
 - Desktop can check and repair Memory maintenance issues for missing/stale/failed embedding state and alias labels.
 - Desktop can show conservative merge suggestions for active non-restricted Memory records.
 - Desktop can merge a source Memory into a target Memory, keep the target, soft-delete the source, combine labels, and requeue the target embedding.
@@ -366,6 +369,7 @@ Implemented:
 - Creating a label alias merges existing alias labels into the canonical label.
 - Memory graph reads from product-owned Memory labels and Shared Line `factsUsed` references.
 - Memory maintenance can requeue bad embedding state without calling Ollama directly, and can rewrite alias labels to canonical labels.
+- Memory nightly maintenance runs at most once per local day by Desktop scheduler and refreshes Memory graph cache files.
 - Memory merge suggestions are generated only from active non-restricted Memory records.
 - Memory merge is conservative: the target stays active, the source becomes deleted, and restricted records are blocked from merge.
 - Memory archive suggestions are generated only from active non-restricted Memory records older than the configured age threshold.
@@ -391,13 +395,14 @@ Validated:
 - Gateway MCP smoke test can initialize, list tools, create a Memory, update it, search it back, soft-delete it, restore it, and read stats from the same Desktop-owned SQLite database.
 - Gateway MCP smoke test can read `gateway_docs`, including current data directory and available tools.
 - Memory maintenance smoke test can detect seeded missing embedding state and seeded alias-label drift, dry-run without mutation, then repair both.
+- Memory UI smoke test verifies the view-focused UI, lazy/paginated lists, restricted-content confirmation, canvas graph controls, and delete/restore paths.
 - Memory merge smoke test can detect duplicate Memory records, merge them, preserve combined labels/body, and move the source to deleted records.
 - Memory archive smoke test can detect a dormant Memory, dry-run archive, archive it, verify it leaves normal search, then restore it.
 - Memory archive smoke test exports JSON, verifies archive shape, imports into a fresh product database, preserves deleted Memory state, restores structured records, and skips duplicate imports.
 - Bad Ollama configuration marks the Memory embedding as `failed` and stores the error message.
 - Automatic embedding processing succeeds when Ollama is available and fails visibly when the configured endpoint is unavailable.
 - This does not read or write old Memoria data.
-- `npm run test:phase2` verifies Memory create/search/update/delete/restore, restricted-content isolation, archive/restore, dormant archive suggestions, stats, labels, label search, label alias canonicalization, Memory graph, maintenance check/repair, merge suggestions/merge execution, portable JSON export/import, manual source, structured records, embedding failure visibility, product data isolation, Gateway docs, Gateway Memory tools, and the Desktop UI restore flow.
+- `npm run test:phase2` verifies Memory create/search/update/delete/restore, restricted-content isolation, archive/restore, dormant archive suggestions, stats, labels, label search, label alias canonicalization, Memory graph, maintenance check/repair, merge suggestions/merge execution, portable JSON export/import, manual source, structured records, embedding failure visibility, product data isolation, Gateway docs, Gateway Memory tools, and the Desktop UI viewing/deletion flow.
 
 Still next:
 

@@ -17,7 +17,7 @@
       </div>
       <nav aria-label="Primary">
         <button class="nav-item active" data-view="home" data-i18n="nav.home">Home</button>
-        <button class="nav-item" data-view="memory" data-i18n="nav.memory">Memory</button>
+        <button class="nav-item" data-view="memory" data-i18n="nav.memory">Memoria</button>
         <button class="nav-item" data-view="shared-line" data-i18n="nav.sharedLine">Shared Line</button>
         <button class="nav-item" data-view="innerlife" data-i18n="nav.innerLife">InnerLife</button>
         <button class="nav-item" data-view="data" data-i18n="nav.data">Data</button>
@@ -129,29 +129,26 @@
       </section>
 
       <section id="memoryView" class="view">
-        <div class="screen-grid">
-          <article class="panel main-panel">
-            <h2 data-i18n="memory.title">Memory</h2>
-            <p data-i18n="memory.body">Memoria keeps long-term factual records separate from chat flow.</p>
-            <div class="memory-form">
-              <label class="field"><span data-i18n="memory.form.title">Title</span><input id="memoryTitleInput" /></label>
-              <label class="field wide-field"><span data-i18n="memory.form.body">Fact</span><textarea id="memoryBodyInput" rows="5"></textarea></label>
-              <label class="field wide-field"><span data-i18n="memory.form.labels">Labels</span><input id="memoryLabelsInput" /></label>
-              <label class="check-row"><input id="memoryRestrictedInput" type="checkbox" /><span data-i18n="memory.form.restricted">Restricted content</span></label>
-              <div class="settings-actions">
-                <span id="memoryNotice" class="quiet" aria-live="polite"></span>
-                <button id="cancelMemoryEdit" class="secondary" data-i18n="actions.cancel">Cancel</button>
-                <button id="saveMemory" class="primary" data-i18n="memory.form.save">Save memory</button>
-              </div>
+        <div class="memoria-workbench">
+          <section class="memoria-status-strip">
+            <div>
+              <span data-i18n="memory.agentSurface">Agent surface</span>
+              <strong>CLI + MCP</strong>
             </div>
-            <div class="data-row">
+            <div>
               <span data-i18n="memory.store">Store</span>
               <strong id="memoryStore">Checking...</strong>
             </div>
-            <div class="data-row">
+            <div>
               <span data-i18n="memory.policy">Policy</span>
               <strong data-i18n="memory.factsFirst">Facts first</strong>
             </div>
+          </section>
+        </div>
+        <div class="screen-grid memoria-grid">
+          <article class="panel main-panel">
+            <h2 data-i18n="memory.title">Memory</h2>
+            <p data-i18n="memory.body">Memoria keeps long-term factual records separate from chat flow.</p>
             <div class="memory-stats-grid">
               <div><span data-i18n="memory.stats.active">Active</span><strong id="memoryActiveCount">0</strong></div>
               <div><span data-i18n="memory.stats.deleted">Deleted</span><strong id="memoryDeletedCount">0</strong></div>
@@ -164,80 +161,60 @@
               <strong data-i18n="memory.labels.title">Labels</strong>
               <div id="memoryLabelList"></div>
             </div>
-            <div class="memory-maintenance-section">
-              <strong data-i18n="memory.maintenance.title">Maintenance</strong>
-              <div id="memoryMaintenanceSummary" class="graph-summary"></div>
-              <div id="memoryMaintenanceList" class="maintenance-list"></div>
-              <div class="settings-actions">
-                <span id="memoryMaintenanceNotice" class="quiet" aria-live="polite"></span>
-                <button id="runMemoryMaintenance" class="secondary" data-i18n="memory.maintenance.run">Run maintenance</button>
-              </div>
-            </div>
-            <div class="memory-merge-section">
-              <strong data-i18n="memory.merge.title">Merge suggestions</strong>
-              <div id="memoryMergeSummary" class="graph-summary"></div>
-              <div id="memoryMergeList" class="maintenance-list"></div>
-            </div>
-            <div class="memory-archive-section">
-              <strong data-i18n="memory.archive.title">Archive suggestions</strong>
-              <div id="memoryArchiveSummary" class="graph-summary"></div>
-              <div id="memoryArchiveList" class="maintenance-list"></div>
-              <div class="settings-actions">
-                <span id="memoryArchiveActionNotice" class="quiet" aria-live="polite"></span>
-                <button id="archiveDormantMemories" class="secondary" data-i18n="memory.archive.run">Archive dormant</button>
-              </div>
-            </div>
-            <div class="memory-label-alias-section">
-              <strong data-i18n="memory.aliases.title">Label aliases</strong>
-              <div class="memory-search compact-form">
-                <input id="memoryAliasInput" data-i18n-placeholder="memory.aliases.aliasPlaceholder" placeholder="Alias" />
-                <input id="memoryCanonicalLabelInput" data-i18n-placeholder="memory.aliases.labelPlaceholder" placeholder="Canonical label" />
-                <button id="saveMemoryAlias" class="secondary" data-i18n="memory.aliases.save">Save alias</button>
-              </div>
-              <span id="memoryAliasNotice" class="quiet" aria-live="polite"></span>
-              <div id="memoryAliasList" class="record-type-list"></div>
-            </div>
-            <div class="structured-record-section">
-              <strong data-i18n="memory.records.title">Structured records</strong>
-              <div class="memory-form compact-memory-form">
-                <label class="field"><span data-i18n="memory.records.type">Type</span><input id="memoryRecordTypeInput" /></label>
-                <label class="field"><span data-i18n="memory.records.name">Name</span><input id="memoryRecordTitleInput" /></label>
-                <label class="field wide-field"><span data-i18n="memory.records.value">Value JSON</span><textarea id="memoryRecordValueInput" rows="4"></textarea></label>
-                <div class="settings-actions">
-                  <span id="memoryRecordNotice" class="quiet" aria-live="polite"></span>
-                  <button id="saveMemoryRecord" class="primary" data-i18n="memory.records.save">Save record</button>
-                </div>
-              </div>
-              <div id="memoryRecordStats" class="record-type-list"></div>
-              <div id="memoryRecordList" class="memory-list compact-list"></div>
-            </div>
           </article>
           <article class="panel">
             <div class="panel-heading">
-              <h2 data-i18n="memory.preview">Preview</h2>
+              <h2 data-i18n="memory.preview">Search and memories</h2>
             </div>
-            <div class="memory-search">
-              <input id="memorySearchInput" data-i18n-placeholder="memory.search.placeholder" placeholder="Search memory" />
-              <button id="searchMemory" class="secondary" data-i18n="actions.search">Search</button>
+            <div class="memoria-tabs" role="tablist" aria-label="Memoria views">
+              <button class="active" data-memory-tab="search" data-i18n="memory.tab.search">Search</button>
+              <button data-memory-tab="labels" data-i18n="memory.tab.labels">Labels</button>
+              <button data-memory-tab="graph" data-i18n="memory.tab.graph">Graph</button>
+              <button data-memory-tab="all" data-i18n="memory.tab.all">All</button>
+              <button data-memory-tab="restricted" data-i18n="memory.tab.restricted">Restricted</button>
+              <button data-memory-tab="archive" data-i18n="memory.tab.archive">Archive</button>
             </div>
-            <div id="memoryList" class="memory-list"></div>
-            <div class="memory-graph-section">
-              <strong data-i18n="memory.graph.title">Memory graph</strong>
-              <div id="memoryGraphSummary" class="graph-summary"></div>
-              <div id="memoryGraph" class="memory-graph"></div>
-            </div>
-            <div class="deleted-memory-section">
-              <strong data-i18n="memory.deleted.title">Deleted memories</strong>
-              <div id="deletedMemoryList" class="memory-list compact-list"></div>
-            </div>
-            <div class="deleted-memory-section">
-              <strong data-i18n="memory.restricted.title">Restricted memories</strong>
-              <div id="restrictedMemoryList" class="memory-list compact-list"></div>
-            </div>
-            <div class="deleted-memory-section">
-              <strong data-i18n="memory.archived.title">Archived memories</strong>
-              <div id="archivedMemoryList" class="memory-list compact-list"></div>
-            </div>
+            <section class="memoria-tab-panel active" data-memory-panel="search">
+              <div class="memory-search">
+                <input id="memorySearchInput" data-i18n-placeholder="memory.search.placeholder" placeholder="Search memory" />
+                <button id="searchMemory" class="secondary" data-i18n="actions.search">Search</button>
+              </div>
+              <div id="memoryList" class="memory-list"></div>
+            </section>
+            <section class="memoria-tab-panel" data-memory-panel="labels">
+              <div id="memoryAllLabelList" class="label-table"></div>
+            </section>
+            <section class="memoria-tab-panel" data-memory-panel="graph">
+              <div class="memory-graph-section">
+                <strong data-i18n="memory.graph.title">Memory graph</strong>
+                <div id="memoryGraphSummary" class="graph-summary"></div>
+                <div id="memoryGraph" class="memory-graph"></div>
+              </div>
+            </section>
+            <section class="memoria-tab-panel" data-memory-panel="all">
+              <div class="section-heading-line">
+                <strong data-i18n="memory.all.title">All visible memories</strong>
+                <span id="memoryAllHint"></span>
+              </div>
+              <div id="allMemoryList" class="memory-list"></div>
+            </section>
+            <section class="memoria-tab-panel" data-memory-panel="restricted">
+              <div class="section-heading-line">
+                <strong data-i18n="memory.restricted.title">Restricted memories</strong>
+                <span id="memoryRestrictedHint"></span>
+              </div>
+              <div id="restrictedMemoryList" class="memory-list"></div>
+            </section>
+            <section class="memoria-tab-panel" data-memory-panel="archive">
+              <div class="deleted-memory-section">
+                <strong data-i18n="memory.archived.title">Archived memories</strong>
+                <div id="archivedMemoryList" class="memory-list compact-list"></div>
+              </div>
+              <div class="deleted-memory-section">
+                <strong data-i18n="memory.deleted.title">Deleted memories</strong>
+                <div id="deletedMemoryList" class="memory-list compact-list"></div>
+              </div>
+            </section>
           </article>
         </div>
       </section>
