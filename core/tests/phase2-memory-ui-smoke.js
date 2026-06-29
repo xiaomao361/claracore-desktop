@@ -41,6 +41,18 @@ async function main() {
         body: "Label filtering should show related visible memories.",
         labels: "inspect"
       });
+      await window.ClaraCoreDesktop.createMemory({
+        title: "UI Memoria Clara agent fact",
+        body: "Agent filter should search Clara-owned memories.",
+        labels: "agent-filter",
+        agentId: "claude-code:clara"
+      });
+      await window.ClaraCoreDesktop.createMemory({
+        title: "UI Memoria Lara agent fact",
+        body: "Agent filter should hide other agent memories.",
+        labels: "agent-filter",
+        agentId: "hermes:lara"
+      });
       return { visible, restricted };
     });
     await page.evaluate(() => refresh());
@@ -79,6 +91,23 @@ async function main() {
     if ((await page.textContent("#memoryList")).includes("UI Memoria restricted fact")) {
       throw new Error("Memoria UI normal search showed restricted memory.");
     }
+
+    await page.selectOption("#memoryAgentFilter", "claude-code:clara");
+    await page.fill("#memorySearchInput", "agent filter");
+    await page.click("#searchMemory");
+    await page.waitForFunction(
+      () => {
+        const text = document.querySelector("#memoryList")?.textContent || "";
+        return text.includes("UI Memoria Clara agent fact") && !text.includes("UI Memoria Lara agent fact");
+      },
+      null,
+      { timeout: 15000 }
+    );
+    const filteredAgentText = await page.textContent("#memoryList");
+    if (filteredAgentText.includes("UI Memoria Lara agent fact")) {
+      throw new Error("Memoria UI agent search included another agent.");
+    }
+    await page.selectOption("#memoryAgentFilter", "");
 
     await page.click("[data-memory-tab='labels']");
     await page.waitForFunction(() => document.querySelector("#memoryAllLabelList")?.textContent.includes("inspect"), null, {
@@ -206,7 +235,7 @@ async function main() {
     if (!result.databasePath.startsWith(dataRoot)) {
       throw new Error(`Memoria UI wrote outside product data root: ${result.databasePath}`);
     }
-    if (result.activeCount !== 1 || result.deletedCount !== 1 || result.restrictedCount !== 1) {
+    if (result.activeCount !== 3 || result.deletedCount !== 1 || result.restrictedCount !== 1) {
       throw new Error(`Memoria UI counts mismatch: ${JSON.stringify(result)}`);
     }
     if (!result.labels.some((item) => item.label === "inspect" && item.count === 1)) {
@@ -218,7 +247,7 @@ async function main() {
     if (result.graphEdgeCount < 1 || result.graphNodeCount < 1) {
       throw new Error(`Memoria UI graph did not render expected label relation: ${JSON.stringify(result)}`);
     }
-    if (result.activeCounter !== "1" || result.deletedCounter !== "1") {
+    if (result.activeCounter !== "3" || result.deletedCounter !== "1") {
       throw new Error(`Memoria UI counter text mismatch: ${JSON.stringify(result)}`);
     }
 

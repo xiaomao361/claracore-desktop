@@ -124,11 +124,27 @@
   }
 
   .innerlife-share-list,
+  .backup-list,
   .innerlife-record-grid .compact-list,
   .shared-line-tab-panel.active {
     max-height: none;
     overflow: visible;
     padding-right: 0;
+  }
+
+  .backup-item-heading,
+  .backup-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .backup-actions button {
+    width: 100%;
+  }
+
+  .backup-meta-grid,
+  .backup-file-row {
+    grid-template-columns: 1fr;
   }
 
   .shared-line-detail-row {
@@ -160,6 +176,20 @@
   .daemon-control-panel {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .innerlife-panel-heading {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .innerlife-agent-filter {
+    justify-self: stretch;
+    width: 100%;
+  }
+
+  .innerlife-agent-filter select {
+    width: 100%;
   }
 
   .daemon-control-actions {

@@ -23,7 +23,6 @@ Expected status:
 - Product database: ready.
 - Gateway entry: ready.
 - Embedding setup: ready.
-- Old services: not controlled by Desktop.
 
 ## Agent Setup
 

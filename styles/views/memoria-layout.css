@@ -169,35 +169,7 @@
 }
 
 .label-table {
-  display: grid;
-  gap: 6px;
-}
-
-.label-row {
-  width: 100%;
-  min-height: 34px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 9px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--surface);
-  color: var(--text);
-  text-align: left;
-}
-
-.label-row span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.label-row strong {
-  color: var(--muted);
-  font-size: 12px;
+  display: block;
 }
 
 .compact-list {

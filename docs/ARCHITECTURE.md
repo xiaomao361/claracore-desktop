@@ -147,6 +147,16 @@ or scheduler-driven workflows should still protect their own product semantics;
 for example InnerLife daemon ticks are guarded so background scheduler ticks and
 manual UI ticks do not create duplicate share candidates.
 
+Multi-statement writes that must be atomic must wrap their SQL in an explicit
+`BEGIN; ... COMMIT;` block. The `exec()` helper runs multiple statements in
+one call but does not add an implicit transaction; partial writes will persist
+if an intermediate statement fails without a transaction boundary.
+
+`ensureProductCore` caches the initialized `ProductDatabase` instance at module
+level so schema initialization and migrations only run once per process. Do not
+call `initializeProductDatabase` directly from code that runs on every request
+or IPC handler; route through `ensureProductCore` instead.
+
 ## Gateway Boundary
 
 `core/gateway/mcp-server.js` is the agent-facing MCP surface.

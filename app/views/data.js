@@ -1,6 +1,10 @@
 function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, getSnapshot, refresh, showCopyNotice }) {
   let pendingRestoreBackupId = null;
 
+  function fileNameFromPath(value) {
+    return String(value || "").split(/[\\/]/).filter(Boolean).pop() || "";
+  }
+
   function renderBackups() {
     const backups = getSnapshot()?.backups || [];
     if (backups.length === 0) {
@@ -11,23 +15,32 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, getSnapshot,
       .map((backup) => {
         const manifestPath = backup.metadata?.manifestPath || "";
         const quickCheck = backup.metadata?.verification?.quickCheck || "";
+        const backupFile = fileNameFromPath(backup.path);
+        const manifestFile = fileNameFromPath(manifestPath);
         return `
           <div class="backup-item ${escapeHtml(backup.status || "")}" data-backup-id="${escapeHtml(backup.id || "")}">
             <div class="backup-item-heading">
               <div>
                 <strong>${escapeHtml(backup.created_at || "")}</strong>
-                <span>${escapeHtml(backup.status || "")}</span>
+                <span class="backup-status">${escapeHtml(backup.status || "")}</span>
               </div>
-              ${
-                backup.status === "verified"
-                  ? `<button class="secondary" data-backup-action="restore" data-backup-id="${escapeHtml(backup.id)}">${t("actions.restore")}</button>`
-                  : ""
-              }
-              <button class="secondary danger-button" data-backup-action="delete" data-backup-id="${escapeHtml(backup.id)}">${t("actions.delete")}</button>
+              <div class="backup-actions">
+                ${
+                  backup.status === "verified"
+                    ? `<button class="secondary" data-backup-action="restore" data-backup-id="${escapeHtml(backup.id)}">${t("actions.restore")}</button>`
+                    : ""
+                }
+                <button class="secondary danger-button" data-backup-action="delete" data-backup-id="${escapeHtml(backup.id)}">${t("actions.delete")}</button>
+              </div>
             </div>
-            <code>${escapeHtml(backup.path || "")}</code>
-            ${manifestPath ? `<small>${t("data.manifest")}: ${escapeHtml(manifestPath)}</small>` : ""}
-            ${quickCheck ? `<small>${t("data.quickCheck")}: ${escapeHtml(quickCheck)}</small>` : ""}
+            <div class="backup-file-row" title="${escapeHtml(backup.path || "")}">
+              <span>${escapeHtml(t("data.backupFile"))}</span>
+              <code>${escapeHtml(backupFile || backup.path || "")}</code>
+            </div>
+            <div class="backup-meta-grid">
+              ${manifestPath ? `<div title="${escapeHtml(manifestPath)}"><span>${t("data.manifest")}: </span><strong>${escapeHtml(manifestFile || manifestPath)}</strong></div>` : ""}
+              ${quickCheck ? `<div><span>${t("data.quickCheck")}: </span><strong>${escapeHtml(quickCheck)}</strong></div>` : ""}
+            </div>
           </div>
         `;
       })

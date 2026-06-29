@@ -133,20 +133,22 @@ function createClaraCoreHomeView(context) {
       const sharedLine = snapshot?.sharedLine || {};
       const lines = sharedLine.lines || [];
       const activeLines = lines.filter((line) => line.status !== "archived");
+      const archivedLines = sharedLine.archivedLines || [];
       return [
         [t("home.cognitive.activeLines"), String(activeLines.length)],
-        [t("home.cognitive.handoffs"), String((sharedLine.handoffs || []).length)],
-        [t("common.status"), sharedLine.currentPosition?.summary ? t("common.ready") : t("common.needsAttention")]
+        [t("sharedLine.stats.archived"), String(archivedLines.length)],
+        [t("sharedLine.stats.history"), String((sharedLine.history || []).length)]
       ];
     }
     if (module.id === "innerlife") {
       const innerLife = snapshot?.innerLife || {};
       const counts = innerLife.counts || {};
       const daemon = innerLife.daemon || {};
+      const daemonStatus = daemon.enabled ? (t(`innerLife.state.${daemon.status}`) || daemon.status || t("common.ready")) : t("common.paused");
       return [
         [t("module.innerlife.shares"), `${counts.pending_shares_count ?? 0} / ${counts.used_shares_count ?? 0}`],
         [t("module.innerlife.sessions"), `${counts.active_sessions_count ?? 0} / ${counts.ended_sessions_count ?? 0}`],
-        [t("module.innerlife.daemon"), daemon.enabled ? (daemon.status || t("common.ready")) : t("common.paused")]
+        [t("module.innerlife.daemon"), daemonStatus]
       ];
     }
     return [[t("common.status"), t("common.paused")]];
@@ -310,10 +312,16 @@ function createClaraCoreHomeView(context) {
     const maintenance = snapshot?.memoryMaintenance || {};
     if (maintenance.status && maintenance.status !== "ok") {
       const issue = (maintenance.issues || [])[0];
+      const issueKey = issue?.code ? `memory.maintenance.${issue.code}` : "";
       items.push({
         tone: "warn",
-        title: t("module.memoria.maintenance"),
-        detail: `${issue?.code || maintenance.status} ${issue?.count ?? ""}`.trim()
+        title: issueKey ? t(issueKey) : t("module.memoria.maintenance"),
+        detail: t("home.attention.memoryMaintenanceDetail", {
+          count: issue?.count ?? "",
+          action: t("memory.embedding.processPending")
+        }),
+        actionCommand: "memory-vectors",
+        actionLabel: t("home.attention.rebuildMemoryVectors")
       });
     }
 
@@ -361,6 +369,8 @@ function createClaraCoreHomeView(context) {
             <div>
               <strong>${escapeHtml(item.title)}</strong>
               <small>${escapeHtml(item.detail)}</small>
+              ${item.actionCommand ? `<button class="link-button attention-action" data-attention-action="${escapeHtml(item.actionCommand)}">${escapeHtml(item.actionLabel || t("actions.open"))}</button>` : ""}
+              ${item.actionView ? `<button class="link-button attention-action" data-view-target="${escapeHtml(item.actionView)}">${escapeHtml(item.actionLabel || t("actions.open"))}</button>` : ""}
             </div>
           </article>
         `
@@ -655,6 +665,30 @@ function createClaraCoreHomeView(context) {
     return metadata.action || metadata.backupId || metadata.path || event.createdAt || "";
   }
 
+  function eventMessage(event) {
+    const message = String(event.message || "").trim();
+    const knownMessages = {
+      "ClaraCore Desktop started": "home.events.message.desktopStarted",
+      "Processed pending Memory embedding batch": "home.events.message.memoryEmbeddingBatch",
+      "Processed all pending Memory embeddings": "home.events.message.memoryEmbeddingAll",
+      "Memoria maintenance completed": "home.events.message.memoriaMaintenance",
+      "Backup deleted": "home.events.message.backupDeleted",
+      "Product database imported from JSON": "home.events.message.productJsonImported"
+    };
+    return t(knownMessages[message] || "") || message || event.source || t("home.events.title");
+  }
+
+  function eventSource(event) {
+    const source = String(event.source || "").trim();
+    const knownSources = {
+      desktop: "home.events.source.desktop",
+      memoria: "home.events.source.memoria",
+      runtime: "home.events.source.runtime",
+      backup: "home.events.source.backup"
+    };
+    return t(knownSources[source] || "") || source;
+  }
+
   function renderEvents() {
     const snapshot = getSnapshot();
     if (!snapshot) return;
@@ -673,8 +707,8 @@ function createClaraCoreHomeView(context) {
       .map(
         (event) => `
           <li class="${escapeHtml(event.level || "info")}">
-            <strong>${escapeHtml(event.message || event.source || t("home.events.title"))}</strong>
-            <span>${escapeHtml(event.source || "")}${eventDetail(event) ? ` · ${escapeHtml(eventDetail(event))}` : ""}</span>
+            <strong>${escapeHtml(eventMessage(event))}</strong>
+            <span>${escapeHtml(eventSource(event))}${eventDetail(event) ? ` · ${escapeHtml(eventDetail(event))}` : ""}</span>
           </li>
         `
       )

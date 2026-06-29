@@ -97,8 +97,8 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   getMemoryRecords(input) {
     return ipcRenderer.invoke("claracore:getMemoryRecords", input);
   },
-  searchMemories(query) {
-    return ipcRenderer.invoke("claracore:searchMemories", query);
+  searchMemories(input) {
+    return ipcRenderer.invoke("claracore:searchMemories", input);
   },
   embedMemory(id) {
     return ipcRenderer.invoke("claracore:embedMemory", id);
@@ -135,6 +135,12 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   },
   getInnerLifeSessions(input) {
     return ipcRenderer.invoke("claracore:getInnerLifeSessions", input);
+  },
+  getInnerLifeDigestRuns(input) {
+    return ipcRenderer.invoke("claracore:getInnerLifeDigestRuns", input);
+  },
+  getInnerLifeInbox(input) {
+    return ipcRenderer.invoke("claracore:getInnerLifeInbox", input);
   },
   processInnerLifeOnce(input) {
     return ipcRenderer.invoke("claracore:processInnerLifeOnce", input);

@@ -2,12 +2,14 @@ function normalizeListInput(input, fallbackLimit = 20) {
   if (typeof input === "number" || typeof input === "string") {
     return {
       limit: Math.max(1, Number.parseInt(String(input), 10) || fallbackLimit),
-      offset: 0
+      offset: 0,
+      agentId: ""
     };
   }
   return {
     limit: Math.max(1, Number.parseInt(String(input?.limit || fallbackLimit), 10) || fallbackLimit),
-    offset: Math.max(0, Number.parseInt(String(input?.offset || 0), 10) || 0)
+    offset: Math.max(0, Number.parseInt(String(input?.offset || 0), 10) || 0),
+    agentId: String(input?.agentId || input?.agent_id || "").trim()
   };
 }
 
@@ -70,28 +72,33 @@ async function labelAliases(core) {
   return core.database.listMemoryLabelAliases();
 }
 
-async function search(core, query) {
-  return core.database.searchMemories(query, 50);
+async function search(core, input) {
+  if (typeof input === "string") return core.database.searchMemories(input, 50);
+  const query = String(input?.query || "").trim();
+  const limit = Math.max(1, Number.parseInt(String(input?.limit || 50), 10) || 50);
+  return core.database.searchMemories(query, limit, {
+    agentId: input?.agentId || input?.agent_id || ""
+  });
 }
 
 async function list(core, input = {}) {
   const paging = normalizeListInput(input, 20);
-  return core.database.listMemories(paging.limit, "", { offset: paging.offset });
+  return core.database.listMemories(paging.limit, "", { offset: paging.offset, agentId: paging.agentId });
 }
 
 async function restricted(core, input = {}) {
   const paging = normalizeListInput(input, 20);
-  return core.database.listRestrictedMemories(paging.limit, { offset: paging.offset });
+  return core.database.listRestrictedMemories(paging.limit, { offset: paging.offset, agentId: paging.agentId });
 }
 
 async function deleted(core, input = {}) {
   const paging = normalizeListInput(input, 20);
-  return core.database.listDeletedMemories(paging.limit, { offset: paging.offset });
+  return core.database.listDeletedMemories(paging.limit, { offset: paging.offset, agentId: paging.agentId });
 }
 
 async function archived(core, input = {}) {
   const paging = normalizeListInput(input, 20);
-  return core.database.listArchivedMemories(paging.limit, { offset: paging.offset });
+  return core.database.listArchivedMemories(paging.limit, { offset: paging.offset, agentId: paging.agentId });
 }
 
 async function maintenance(core) {

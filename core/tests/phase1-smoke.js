@@ -124,10 +124,6 @@ async function main() {
   ) {
     throw new Error("Saved InnerLife API key reference did not read back from SQLite.");
   }
-  const oldServices = snapshot.health.checks.find((check) => check.id === "old-services");
-  if (oldServices?.detail !== "not controlled by Desktop") {
-    throw new Error("Old services are not explicitly isolated in the runtime health check.");
-  }
   await database.recordRuntimeEvent({
     level: "info",
     source: "phase1-smoke",

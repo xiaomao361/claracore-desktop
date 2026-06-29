@@ -6,6 +6,14 @@ async function sessions(core, input = {}) {
   return core.database.listInnerLifeSessionsPage(input);
 }
 
+async function digestRuns(core, input = {}) {
+  return core.database.listInnerLifeDigestRunsPage(input);
+}
+
+async function inbox(core, input = {}) {
+  return core.database.listInnerLifeInboxPage(input);
+}
+
 async function doctor(core, agentId = "codex") {
   return core.database.getInnerLifeDoctor(agentId);
 }
@@ -84,11 +92,13 @@ module.exports = {
   checkShareTiming,
   converge,
   digest,
+  digestRuns,
   doctor,
   endSession,
   experiences,
   explore,
   history,
+  inbox,
   markShare,
   processOnce,
   reviewShare,

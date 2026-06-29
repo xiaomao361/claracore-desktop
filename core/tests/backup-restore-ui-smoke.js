@@ -42,7 +42,7 @@ async function main() {
     await page.click("#exportBackup");
     await page.waitForSelector("[data-backup-action='restore']", { timeout: 15000 });
     const backupText = await page.textContent("#backupList");
-    if (!backupText.includes("verified") || !backupText.includes("Quick check")) {
+    if (!backupText.includes("verified") || (!backupText.includes("Quick check") && !backupText.includes("快速检查"))) {
       throw new Error(`Backup list does not show verification: ${backupText}`);
     }
 

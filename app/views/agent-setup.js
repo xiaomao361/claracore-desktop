@@ -113,7 +113,7 @@ Use \`Authorization: Bearer <token>\` for HTTP requests. \`/agent/setup\` return
 
 - Gateway: available for status, unified context, Memory tools, Shared Line tools, and InnerLife tools
 - Memoria: available for fact storage, search, update, labels, archives, records, and maintenance
-- Shared Line: available for current position, active line, resume packet, and handoff
+- Shared Line: available for latest progress, active line, archived lines, compressed records, and resume packet
 - InnerLife: available for session lifecycle, inbox, digest, share timing, daemon controls, and Doctor guidance
 
 ## Troubleshooting

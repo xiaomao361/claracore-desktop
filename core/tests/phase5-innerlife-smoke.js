@@ -234,11 +234,6 @@ async function main() {
   if (snapshot.innerLife.counts.ended_sessions_count !== 1) {
     throw new Error("InnerLife ended session count should be 1.");
   }
-  const oldServices = snapshot.health.checks.find((check) => check.id === "old-services");
-  if (oldServices?.detail !== "not controlled by Desktop") {
-    throw new Error("Old services are not explicitly isolated in the runtime health check.");
-  }
-
   const { database } = await runtime.ensureProductCore(app);
   const rows = await database.query(`
     SELECT

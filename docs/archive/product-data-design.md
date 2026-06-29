@@ -335,7 +335,7 @@ Validated:
   - InnerLife provider: `disabled`
 - Agent setup output does not include old service paths.
 - Setting changes made in the UI persist to SQLite and read back after refresh.
-- `npm run test:phase1` verifies fresh database initialization, default settings, settings save/readback, secret references, product data isolation, and the old-services guard.
+- `npm run test:phase1` verifies fresh database initialization, default settings, settings save/readback, secret references, and product data isolation.
 - `npm run test:phase1` also opens the Desktop settings page, verifies the default database-backed values are visible, saves changed values through the UI, and reads them back from the product database.
 
 Still next:

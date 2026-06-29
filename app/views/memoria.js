@@ -4,6 +4,7 @@ function createClaraCoreMemoriaView(context) {
     t,
     getSnapshot,
     escapeHtml,
+    renderMarkdownPreview,
     refreshRuntimeSnapshotOnly,
     appendLiveLogLine,
     setEmbeddingProgress
@@ -69,12 +70,59 @@ function renderMemoryList() {
   renderMemoryResults(memories);
 }
 
+function renderMemoryBody(body) {
+  return renderMarkdownPreview ? renderMarkdownPreview(body) : `<p>${escapeHtml(body)}</p>`;
+}
+
+function renderMemoryLabelsInline(labels) {
+  return (labels || [])
+    .slice(0, 8)
+    .map((label) => `<span>${escapeHtml(label)}</span>`)
+    .join("");
+}
+
+function renderLabelOverview(labels) {
+  const visibleLabels = (labels || []).slice(0, 10);
+  if (visibleLabels.length === 0) {
+    memoryLabelList.innerHTML = `<span class="quiet">${t("memory.labels.empty")}</span>`;
+    return;
+  }
+  const maxCount = Math.max(...visibleLabels.map((item) => Number(item.count || 0)), 1);
+  memoryLabelList.innerHTML = `
+    <div class="label-overview-list">
+      ${visibleLabels
+        .map((item) => {
+          const count = Number(item.count || 0);
+          const strength = Math.max(12, Math.round((count / maxCount) * 100));
+          return `
+            <button class="label-overview-row" data-memory-label="${escapeHtml(item.label)}" style="--label-strength: ${strength}%">
+              <span class="label-overview-name">${escapeHtml(item.label)}</span>
+              <strong>${escapeHtml(count)}</strong>
+            </button>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function vectorMaintenanceCount(input = {}) {
+  const stats = input.stats || {};
+  const maintenance = input.maintenance || {};
+  const counts = maintenance.counts || {};
+  return (
+    Number(stats.pendingEmbeddingCount || 0) +
+    Number(stats.failedEmbeddingCount || 0) +
+    Number(counts.missingEmbeddings || 0) +
+    Number(counts.failedEmbeddings || 0) +
+    Number(counts.staleEmbeddings || 0)
+  );
+}
+
 function memoryItemsHtml(memories, action = "delete", itemClass = "") {
   return memories
     .map((memory) => {
-      const labels = (memory.labels || [])
-        .map((label) => `<span>${escapeHtml(label)}</span>`)
-        .join("");
+      const labels = renderMemoryLabelsInline(memory.labels || []);
       const embeddingStatus = memory.embedding_status || "pending";
       const embeddingLabel = t(`memory.embedding.${embeddingStatus}`) || embeddingStatus;
       const embeddingDetail = memory.embedding_error
@@ -92,7 +140,7 @@ function memoryItemsHtml(memories, action = "delete", itemClass = "") {
       return `
         <article class="memory-item ${itemClass}" data-memory-id="${escapeHtml(memory.id)}">
           <strong>${escapeHtml(memory.title || t("memory.form.body"))}</strong>
-          <p>${escapeHtml(memory.body)}</p>
+          ${renderMemoryBody(memory.body)}
           ${searchMeta}
           <div class="memory-meta">
             <span>${escapeHtml(memory.created_at || memory.updated_at || "")}</span>
@@ -134,13 +182,11 @@ function renderDeletedMemoryResults(memories) {
   }
   deletedMemoryList.innerHTML = memories
     .map((memory) => {
-      const labels = (memory.labels || [])
-        .map((label) => `<span>${escapeHtml(label)}</span>`)
-        .join("");
+      const labels = renderMemoryLabelsInline(memory.labels || []);
       return `
         <article class="memory-item deleted" data-memory-id="${escapeHtml(memory.id)}">
           <strong>${escapeHtml(memory.title || t("memory.form.body"))}</strong>
-          <p>${escapeHtml(memory.body)}</p>
+          ${renderMemoryBody(memory.body)}
           <div class="memory-meta">
             <span>${escapeHtml(memory.updated_at || memory.created_at || "")}</span>
             <div>${labels}</div>
@@ -161,13 +207,11 @@ function renderRestrictedMemoryResults(memories) {
   }
   restrictedMemoryList.innerHTML = memories
     .map((memory) => {
-      const labels = (memory.labels || [])
-        .map((label) => `<span>${escapeHtml(label)}</span>`)
-        .join("");
+      const labels = renderMemoryLabelsInline(memory.labels || []);
       return `
         <article class="memory-item restricted" data-memory-id="${escapeHtml(memory.id)}">
           <strong>${escapeHtml(memory.title || t("memory.form.body"))}</strong>
-          <p>${escapeHtml(memory.body)}</p>
+          ${renderMemoryBody(memory.body)}
           <div class="memory-meta">
             <span>${escapeHtml(memory.updated_at || memory.created_at || "")}</span>
             <div>${labels}</div>
@@ -188,13 +232,11 @@ function renderArchivedMemoryResults(memories) {
   }
   archivedMemoryList.innerHTML = memories
     .map((memory) => {
-      const labels = (memory.labels || [])
-        .map((label) => `<span>${escapeHtml(label)}</span>`)
-        .join("");
+      const labels = renderMemoryLabelsInline(memory.labels || []);
       return `
         <article class="memory-item archived" data-memory-id="${escapeHtml(memory.id)}">
           <strong>${escapeHtml(memory.title || t("memory.form.body"))}</strong>
-          <p>${escapeHtml(memory.body)}</p>
+          ${renderMemoryBody(memory.body)}
           <div class="memory-meta">
             <span>${escapeHtml(memory.updated_at || memory.created_at || "")}</span>
             <div>${labels}</div>
@@ -264,7 +306,7 @@ async function loadMemoryTabData(tabName, options = {}) {
   const append = Boolean(options.append);
   if (tabName === "all" && (force || append || !loadedMemoryTabs.all)) {
     const offset = append ? memoryPaging.all.loaded : 0;
-    const rows = await window.ClaraCoreDesktop.getMemories({ limit: memoryPaging.pageSize, offset });
+    const rows = await window.ClaraCoreDesktop.getMemories({ limit: memoryPaging.pageSize, offset, agentId: activeMemoryAgentFilter });
     snapshot.memories = append ? [...(snapshot.memories || []), ...rows] : rows;
     memoryPaging.all.loaded = snapshot.memories.length;
     loadedMemoryTabs.all = true;
@@ -277,7 +319,7 @@ async function loadMemoryTabData(tabName, options = {}) {
   }
   if (tabName === "restricted" && (force || append || !loadedMemoryTabs.restricted)) {
     const offset = append ? memoryPaging.restricted.loaded : 0;
-    const rows = await window.ClaraCoreDesktop.getRestrictedMemories({ limit: memoryPaging.pageSize, offset });
+    const rows = await window.ClaraCoreDesktop.getRestrictedMemories({ limit: memoryPaging.pageSize, offset, agentId: activeMemoryAgentFilter });
     snapshot.restrictedMemories = append ? [...(snapshot.restrictedMemories || []), ...rows] : rows;
     memoryPaging.restricted.loaded = snapshot.restrictedMemories.length;
     loadedMemoryTabs.restricted = true;
@@ -292,8 +334,8 @@ async function loadMemoryTabData(tabName, options = {}) {
     const archivedOffset = append ? memoryPaging.archived.loaded : 0;
     const deletedOffset = append ? memoryPaging.deleted.loaded : 0;
     const [archived, deleted] = await Promise.all([
-      window.ClaraCoreDesktop.getArchivedMemories({ limit: memoryPaging.pageSize, offset: archivedOffset }),
-      window.ClaraCoreDesktop.getDeletedMemories({ limit: memoryPaging.pageSize, offset: deletedOffset })
+      window.ClaraCoreDesktop.getArchivedMemories({ limit: memoryPaging.pageSize, offset: archivedOffset, agentId: activeMemoryAgentFilter }),
+      window.ClaraCoreDesktop.getDeletedMemories({ limit: memoryPaging.pageSize, offset: deletedOffset, agentId: activeMemoryAgentFilter })
     ]);
     snapshot.archivedMemories = append ? [...(snapshot.archivedMemories || []), ...archived] : archived;
     snapshot.deletedMemories = append ? [...(snapshot.deletedMemories || []), ...deleted] : deleted;
@@ -312,16 +354,47 @@ function renderMemoryLabels(labels) {
     memoryAllLabelList.innerHTML = `<div class="endpoint-empty">${t("memory.labels.empty")}</div>`;
     return;
   }
-  memoryAllLabelList.innerHTML = labels
-    .map(
-      (item) => `
-        <button class="label-row" data-memory-label="${escapeHtml(item.label)}">
-          <span>${escapeHtml(item.label)}</span>
-          <strong>${escapeHtml(item.count)}</strong>
-        </button>
-      `
-    )
-    .join("");
+  const visibleLabels = labels.slice(0, 80);
+  const featured = visibleLabels.slice(0, 4);
+  const rest = visibleLabels.slice(4);
+  const maxCount = Math.max(...visibleLabels.map((item) => Number(item.count || 0)), 1);
+  const labelTone = (label) => {
+    const text = String(label || "");
+    if (text.startsWith("agent") || text.startsWith("agent-id")) return "agent";
+    if (text.startsWith("系统:")) return "system";
+    if (text.startsWith("tool:")) return "tool";
+    if (text.startsWith("项目:") || text === "claracore") return "project";
+    return "default";
+  };
+  const strength = (count) => Math.max(10, Math.round((Number(count || 0) / maxCount) * 100));
+  memoryAllLabelList.innerHTML = `
+    <div class="label-board">
+      <div class="label-feature-grid">
+        ${featured
+          .map(
+            (item) => `
+              <button class="label-feature-card ${labelTone(item.label)}" data-memory-label="${escapeHtml(item.label)}" style="--label-strength: ${strength(item.count)}%">
+                <span>${escapeHtml(item.label)}</span>
+                <strong>${escapeHtml(item.count)}</strong>
+              </button>
+            `
+          )
+          .join("")}
+      </div>
+      <div class="label-mini-grid">
+        ${rest
+          .map(
+            (item) => `
+              <button class="label-mini-card ${labelTone(item.label)}" data-memory-label="${escapeHtml(item.label)}" style="--label-strength: ${strength(item.count)}%">
+                <span>${escapeHtml(item.label)}</span>
+                <strong>${escapeHtml(item.count)}</strong>
+              </button>
+            `
+          )
+          .join("")}
+      </div>
+    </div>
+  `;
 }
 
 function graphHash(value) {
@@ -412,7 +485,7 @@ async function setMemoryGraphLayer(layer) {
   if (layer === activeMemoryGraphLayer) return;
   if (layer === "restricted" && !window.confirm(t("memory.restricted.confirm"))) return;
   if (layer === "restricted" && !snapshot?.restrictedMemoryGraph) {
-    snapshot.restrictedMemoryGraph = await window.ClaraCoreDesktop.getMemoryGraph({ limit: 1000, includeRestricted: true });
+    snapshot.restrictedMemoryGraph = await window.ClaraCoreDesktop.getMemoryGraph({ limit: 1000, includeRestricted: true, force: true });
   }
   activeMemoryGraphLayer = layer === "restricted" ? "restricted" : "primary";
   memoryGraphZoom = 1;
@@ -429,7 +502,7 @@ function stopMemoryGraphAnimation() {
 
 function drawMemoryGraphCanvas() {
   if (!memoryGraphState) return;
-  const { canvas, nodes, edges, positions, width, height } = memoryGraphState;
+  const { canvas, nodes, edges, positions, degree, width, height } = memoryGraphState;
   if (!canvas) return;
   const rect = canvas.getBoundingClientRect();
   const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
@@ -456,58 +529,127 @@ function drawMemoryGraphCanvas() {
     r: Math.max(1.6, position.size * scale)
   });
   const now = performance.now();
+  const safeDegree = (nodeId) => Math.max(1, degree?.get(nodeId) || 1);
+  const nodeColor = (node) => {
+    if (node.kind === "label") return "#bd7f28";
+    if (node.kind === "shared_line") return "#28745a";
+    if (node.sensitivity === "restricted") return "#a64036";
+    return "#365f84";
+  };
+  const labelForNode = (node) => String(node.label || node.id || "");
+  const truncateCanvasText = (text, maxWidth) => {
+    const source = String(text || "");
+    if (ctx.measureText(source).width <= maxWidth) return source;
+    let next = source;
+    while (next.length > 3 && ctx.measureText(`${next}...`).width > maxWidth) {
+      next = next.slice(0, -1);
+    }
+    return `${next}...`;
+  };
+  const roundRect = (x, y, w, h, r) => {
+    const radius = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.arcTo(x + w, y, x + w, y + h, radius);
+    ctx.arcTo(x + w, y + h, x, y + h, radius);
+    ctx.arcTo(x, y + h, x, y, radius);
+    ctx.arcTo(x, y, x + w, y, radius);
+    ctx.closePath();
+  };
 
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = "rgba(122, 148, 136, 0.22)";
-  ctx.beginPath();
+  const background = ctx.createRadialGradient(rect.width * 0.55, rect.height * 0.44, 40, rect.width * 0.55, rect.height * 0.44, Math.max(rect.width, rect.height) * 0.72);
+  background.addColorStop(0, "rgba(232, 242, 235, 0.88)");
+  background.addColorStop(0.46, "rgba(250, 250, 247, 0.98)");
+  background.addColorStop(1, "rgba(244, 245, 239, 1)");
+  ctx.fillStyle = background;
+  ctx.fillRect(0, 0, rect.width, rect.height);
+
   for (const edge of edges) {
     const from = positions.get(edge.from);
     const to = positions.get(edge.to);
     if (!from || !to) continue;
     const a = point(from);
     const b = point(to);
+    const middleX = (a.x + b.x) / 2;
+    const middleY = (a.y + b.y) / 2;
+    const curve = Math.max(-22, Math.min(22, (a.x - b.x) * 0.035));
+    const alpha = Math.min(0.3, 0.055 + (safeDegree(edge.from) + safeDegree(edge.to)) / 700);
+    ctx.beginPath();
+    ctx.lineWidth = 0.75;
+    ctx.strokeStyle = `rgba(82, 107, 98, ${alpha})`;
     ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
+    ctx.quadraticCurveTo(middleX + curve, middleY - curve, b.x, b.y);
+    ctx.stroke();
   }
-  ctx.stroke();
 
   for (const node of nodes) {
     const position = positions.get(node.id);
     if (!position) continue;
     const p = point(position);
+    if (node.kind !== "memory") continue;
     const phase = ((now / 1000) + (graphHash(node.id) % 900) / 1000) * Math.PI * 2 / 2.8;
-    const pulse = 1 + Math.sin(phase) * 0.09;
+    const pulse = 1 + Math.sin(phase) * 0.06;
     const radius = p.r * pulse;
     const isRestricted = node.sensitivity === "restricted";
-    const fill = node.kind === "label" ? "#c88934" : node.kind === "shared_line" ? "#28745a" : isRestricted ? "#a64036" : "#365f84";
     if (isRestricted) {
       ctx.beginPath();
-      ctx.fillStyle = "rgba(166, 64, 54, 0.14)";
-      ctx.arc(p.x, p.y, radius + 4, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(166, 64, 54, 0.12)";
+      ctx.arc(p.x, p.y, radius + 3.5, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.beginPath();
-    ctx.fillStyle = fill;
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.82)";
+    ctx.fillStyle = isRestricted ? "rgba(166, 64, 54, 0.72)" : "rgba(54, 95, 132, 0.58)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
     ctx.lineWidth = 1;
     ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
   }
 
-  ctx.font = "9px Inter, ui-sans-serif, system-ui, sans-serif";
-  ctx.textBaseline = "middle";
-  for (const node of nodes) {
-    if (node.kind === "memory") continue;
+  const hubNodes = nodes
+    .filter((node) => node.kind !== "memory")
+    .sort((left, right) => safeDegree(left.id) - safeDegree(right.id));
+  for (const node of hubNodes) {
     const position = positions.get(node.id);
     if (!position) continue;
     const p = point(position);
-    const label = String(node.label || node.id);
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = "rgba(251, 251, 248, 0.94)";
+    const color = nodeColor(node);
+    const radius = Math.max(5, p.r * 0.72);
+    const phase = ((now / 1000) + (graphHash(node.id) % 1000) / 1000) * Math.PI * 2 / 3.6;
+    const halo = radius + 5 + Math.sin(phase) * 1.5;
+    ctx.beginPath();
+    ctx.fillStyle = node.kind === "label" ? "rgba(189, 127, 40, 0.13)" : "rgba(40, 116, 90, 0.13)";
+    ctx.arc(p.x, p.y, halo, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.fillStyle = color;
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.94)";
+    ctx.lineWidth = 1.4;
+    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  ctx.font = "600 10px Inter, ui-sans-serif, system-ui, sans-serif";
+  ctx.textBaseline = "middle";
+  for (const node of hubNodes) {
+    const position = positions.get(node.id);
+    if (!position) continue;
+    const p = point(position);
+    const label = truncateCanvasText(labelForNode(node), node.kind === "label" ? 106 : 132);
+    const textWidth = ctx.measureText(label).width;
+    const pillWidth = Math.min(148, textWidth + 18);
+    const pillHeight = 22;
+    const x = Math.min(rect.width - pillWidth - 8, Math.max(8, p.x + p.r + 7));
+    const y = Math.min(rect.height - pillHeight - 8, Math.max(8, p.y - pillHeight / 2));
+    roundRect(x, y, pillWidth, pillHeight, 11);
+    ctx.fillStyle = "rgba(255, 255, 252, 0.88)";
+    ctx.fill();
+    ctx.strokeStyle = node.kind === "label" ? "rgba(189, 127, 40, 0.28)" : "rgba(40, 116, 90, 0.28)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
     ctx.fillStyle = "#202421";
-    ctx.strokeText(label, p.x + p.r + 5, p.y);
-    ctx.fillText(label, p.x + p.r + 5, p.y);
+    ctx.fillText(label, x + 9, y + pillHeight / 2);
   }
 
   memoryGraphAnimation = requestAnimationFrame(drawMemoryGraphCanvas);
@@ -526,7 +668,7 @@ function renderMemoryOverview() {
   memoryEmbeddedCount.textContent = stats.embeddedCount ?? 0;
   memoryPendingEmbeddingCount.textContent = stats.pendingEmbeddingCount ?? 0;
   if (!memoryEmbeddingBatchRunning) {
-    const actionableEmbeddings = Number(stats.pendingEmbeddingCount || 0) + Number(stats.failedEmbeddingCount || 0);
+    const actionableEmbeddings = vectorMaintenanceCount({ stats, maintenance: snapshot?.memoryMaintenance || {} });
     processMemoryEmbeddings.disabled = actionableEmbeddings <= 0;
     if (actionableEmbeddings <= 0) memoryEmbeddingNotice.textContent = t("memory.embedding.nonePending");
     if (actionableEmbeddings <= 0) memoryEmbeddingProgressBar.style.width = "0%";
@@ -534,14 +676,16 @@ function renderMemoryOverview() {
   memoryRestrictedCount.textContent = stats.restrictedCount ?? 0;
   memoryArchivedCount.textContent = stats.archivedCount ?? 0;
   const labels = stats.labels || [];
-  if (labels.length === 0) {
-    memoryLabelList.innerHTML = `<span class="quiet">${t("memory.labels.empty")}</span>`;
-  } else {
-    memoryLabelList.innerHTML = labels
-      .slice(0, 12)
-      .map((item) => `<button class="tag-button" data-memory-label="${escapeHtml(item.label)}">${escapeHtml(item.label)} <span>${escapeHtml(item.count)}</span></button>`)
-      .join("");
-  }
+  const agentIds = labels
+    .map((item) => String(item.label || ""))
+    .filter((label) => label.startsWith("agent-id:"))
+    .map((label) => label.slice("agent-id:".length));
+  const fallbackAgentIds = labels
+    .map((item) => String(item.label || ""))
+    .filter((label) => label.startsWith("agent:"))
+    .map((label) => label.slice("agent:".length));
+  activeMemoryAgentFilter = renderAgentFilter(memoryAgentFilter, agentIds.length ? agentIds : fallbackAgentIds, activeMemoryAgentFilter);
+  renderLabelOverview(labels);
   renderMemoryLabels(labels);
   if (!loadedMemoryTabs.all) {
     allMemoryList.innerHTML = `<div class="endpoint-empty">${t("memory.lazy.openTab")}</div>`;
@@ -659,7 +803,12 @@ function renderMemoryGraph() {
     memoryEmbeddingBatchRunning = true;
     processMemoryEmbeddings.disabled = true;
     const snapshot = getSnapshot();
-    const progress = { total: Number(snapshot?.memoryStats?.pendingEmbeddingCount || 0), processed: 0, ready: 0, failed: 0 };
+    const progress = {
+      total: vectorMaintenanceCount({ stats: snapshot?.memoryStats || {}, maintenance: snapshot?.memoryMaintenance || {} }),
+      processed: 0,
+      ready: 0,
+      failed: 0
+    };
     appendLiveLogLine("memoria", "starting full embedding generation");
     try {
       let firstBatch = true;
@@ -687,9 +836,7 @@ function renderMemoryGraph() {
     } finally {
       memoryEmbeddingBatchRunning = false;
       const snapshot = getSnapshot();
-      const pending = Number(snapshot?.memoryStats?.pendingEmbeddingCount || 0);
-      const failed = Number(snapshot?.memoryStats?.failedEmbeddingCount || 0);
-      processMemoryEmbeddings.disabled = pending <= 0 && failed <= 0;
+      processMemoryEmbeddings.disabled = vectorMaintenanceCount({ stats: snapshot?.memoryStats || {}, maintenance: snapshot?.memoryMaintenance || {} }) <= 0;
     }
   }
 

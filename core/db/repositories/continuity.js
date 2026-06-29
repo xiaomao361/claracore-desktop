@@ -237,7 +237,10 @@ function installContinuityRepository(ProductDatabase, helpers) {
       const options = typeof input === "object" && input !== null ? input : { limit: input };
       const safeLimit = Math.max(1, Math.min(Number.parseInt(String(options.limit || 20), 10) || 20, 100));
       const agentId = String(options.agentId || options.agent_id || "").trim();
+      const status = String(options.status || "").trim();
       const filters = ["l.status != 'deleted'"];
+      if (status === "active") filters.push("l.status = 'active'");
+      if (status === "archived") filters.push("l.status = 'archived'");
       if (agentId && !options.allAgents) filters.push(`l.agent_id = ${sqlString(agentId)}`);
       const rows = await this.query(`
         SELECT
@@ -595,6 +598,26 @@ function installContinuityRepository(ProductDatabase, helpers) {
     }
     ,
 
+    async listContinuityAgentStates() {
+      const rows = await this.query(`
+        SELECT agent_id, communication_style, relationship_position, long_term_preferences_json,
+               boundaries_json, stable_patterns_json, notes, updated_at
+        FROM continuity_agent_state
+        ORDER BY updated_at DESC, agent_id ASC;
+      `);
+      return rows.map((row) => ({
+        agentId: row.agent_id || DEFAULT_AGENT_ID,
+        communicationStyle: row.communication_style || "",
+        relationshipPosition: row.relationship_position || "",
+        longTermPreferences: parseJson(row.long_term_preferences_json, []),
+        boundaries: parseJson(row.boundaries_json, []),
+        stablePatterns: parseJson(row.stable_patterns_json, []),
+        notes: row.notes || "",
+        updatedAt: row.updated_at || ""
+      }));
+    }
+    ,
+
     async updateContinuityAgentState(agentIdInput = DEFAULT_AGENT_ID, update = {}) {
       const agentId = await this.ensureContinuityAgentState(agentIdInput);
       const current = await this.getContinuityAgentState(agentId);
@@ -709,11 +732,13 @@ function installContinuityRepository(ProductDatabase, helpers) {
       const agentLineId = input?.lineId ? null : await this.findContinuityLineIdForAgent(input?.agentId || input?.agent_id || "");
       const currentPosition = await this.getCurrentPosition(input.lineId || agentLineId || null);
       const metadata = currentPosition.metadata || {};
-      const lines = await this.listContinuityLines({ limit: 20, agentId: input.agentId || input.agent_id || "", allAgents: true });
+      const lines = await this.listContinuityLines({ limit: 100, agentId: input.agentId || input.agent_id || "", allAgents: true, status: "active" });
+      const archivedLines = await this.listContinuityLines({ limit: 100, agentId: input.agentId || input.agent_id || "", allAgents: true, status: "archived" });
       const history = await this.listContinuityPositionHistory(5, currentPosition.lineId);
       const snapshots = await this.listContinuitySnapshots(5, currentPosition.lineId);
       const handoffs = await this.listContinuityHandoffs(3, currentPosition.lineId);
       const agentState = await this.getContinuityAgentState(currentPosition.agentId || DEFAULT_AGENT_ID);
+      const agentStates = await this.listContinuityAgentStates();
       const modelAdjustment = input.model ? await this.getContinuityModelAdjustment(input.model) : null;
       const sharedReality = {
         realityLine: metadata.realityLine || "",
@@ -765,12 +790,14 @@ function installContinuityRepository(ProductDatabase, helpers) {
         agentId: currentPosition.agentId,
         lineTitle: currentPosition.lineTitle,
         lines,
+        archivedLines,
         currentPosition,
         history,
         snapshots,
         handoffs,
         sharedReality,
         agentState,
+        agentStates,
         modelAdjustment,
         positionHistory,
         affectiveTrace,

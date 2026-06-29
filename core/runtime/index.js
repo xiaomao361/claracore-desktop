@@ -217,12 +217,6 @@ function buildHealthChecks(app, paths, configuration, databaseSummary, canWriteR
       level: configuration?.memoria?.provider === "ollama" && configuration?.memoria?.endpoint ? "ok" : "warn",
       labelKey: "health.embedding",
       detail: `${configuration?.memoria?.provider || "unknown"} ${configuration?.memoria?.model || ""}`.trim()
-    },
-    {
-      id: "old-services",
-      level: "ok",
-      labelKey: "health.oldServices",
-      detail: "not controlled by Desktop"
     }
   ];
   return {
@@ -236,29 +230,40 @@ function buildHealthChecks(app, paths, configuration, databaseSummary, canWriteR
 }
 
 async function buildProductSnapshot(app) {
-  const paths = await ensureProductDirectories(app);
-  const database = await initializeProductDatabase(paths.databasePath);
-  const configuration = await database.getConfiguration(paths);
-  const databaseSummary = await database.getSummary();
-  const memories = await database.listMemories(20);
-  const restrictedMemories = await database.listRestrictedMemories(20);
-  const deletedMemories = await database.listDeletedMemories(20);
-  const archivedMemories = await database.listArchivedMemories(20);
-  const memoryStats = await database.getMemoryStats();
-  const memoryLabelAliases = await database.listMemoryLabelAliases();
-  const memoryGraph = await database.getMemoryGraph({ limit: 100 });
-  const memoryMaintenance = await database.getMemoryMaintenanceReport();
-  const memoryMergeSuggestions = await database.getMemoryMergeSuggestions({ limit: 5 });
-  const memoryArchiveSuggestions = await database.getMemoryArchiveSuggestions({ limit: 5, olderThanDays: 30 });
-  const memoryRecords = await database.listMemoryRecords({ limit: 10 });
-  const memoryRecordStats = await database.getMemoryRecordStats();
-  const sharedLine = await database.getResumePacket();
-  const innerLife = await database.getInnerLifeSnapshot();
-  const gatewayTraces = await database.listGatewayTraces({ limit: 20 });
-  const runtimeEvents = await database.listRuntimeEvents({ limit: 50 });
-  const importPreview = await previewImportSources();
-  const backups = await database.listBackups(5);
-  const health = buildHealthChecks(app, paths, configuration, databaseSummary, await canWriteRuntimeProbe(paths));
+  const { paths, database } = await ensureProductCore(app);
+  const [configuration, databaseSummary] = await Promise.all([
+    database.getConfiguration(paths),
+    database.getSummary()
+  ]);
+  const [
+    memories, restrictedMemories, deletedMemories, archivedMemories,
+    memoryStats, memoryLabelAliases, memoryGraph, memoryMaintenance,
+    memoryMergeSuggestions, memoryArchiveSuggestions,
+    memoryRecords, memoryRecordStats,
+    sharedLine, innerLife, gatewayTraces, runtimeEvents, backups,
+    importPreview, canWriteProbe
+  ] = await Promise.all([
+    database.listMemories(20),
+    database.listRestrictedMemories(20),
+    database.listDeletedMemories(20),
+    database.listArchivedMemories(20),
+    database.getMemoryStats(),
+    database.listMemoryLabelAliases(),
+    database.getMemoryGraph({ limit: 100 }),
+    database.getMemoryMaintenanceReport(),
+    database.getMemoryMergeSuggestions({ limit: 5 }),
+    database.getMemoryArchiveSuggestions({ limit: 5, olderThanDays: 30 }),
+    database.listMemoryRecords({ limit: 10 }),
+    database.getMemoryRecordStats(),
+    database.getResumePacket(),
+    database.getInnerLifeSnapshot(),
+    database.listGatewayTraces({ limit: 20 }),
+    database.listRuntimeEvents({ limit: 50 }),
+    database.listBackups(5),
+    previewImportSources(),
+    canWriteRuntimeProbe(paths)
+  ]);
+  const health = buildHealthChecks(app, paths, configuration, databaseSummary, canWriteProbe);
   return {
     mode: process.env.CLARACORE_DESKTOP_DATA_DIR ? "custom-product-data" : "isolated-product-dev",
     productVersion: PRODUCT_VERSION,
@@ -304,13 +309,19 @@ async function buildProductSnapshot(app) {
   };
 }
 
+let _cachedDatabase = null;
+let _cachedDatabasePath = null;
+
 async function ensureProductCore(app) {
   const paths = await ensureProductDirectories(app);
-  const database = await initializeProductDatabase(paths.databasePath);
+  if (!_cachedDatabase || _cachedDatabasePath !== paths.databasePath) {
+    _cachedDatabase = await initializeProductDatabase(paths.databasePath);
+    _cachedDatabasePath = paths.databasePath;
+  }
   return {
     paths,
-    database,
-    summary: await database.getSummary()
+    database: _cachedDatabase,
+    summary: await _cachedDatabase.getSummary()
   };
 }
 
@@ -400,8 +411,8 @@ async function getProductMemoryLabelAliases(app) {
   return memoria.labelAliases(await ensureProductCore(app));
 }
 
-async function searchProductMemories(app, query) {
-  return memoria.search(await ensureProductCore(app), query);
+async function searchProductMemories(app, input) {
+  return memoria.search(await ensureProductCore(app), input);
 }
 
 async function getProductMemories(app, input = {}) {
@@ -514,7 +525,8 @@ async function processProductMemoryEmbeddings(app, input = 5) {
     const maintenance = await database.runMemoryMaintenance({});
     const results = [];
     let batches = 0;
-    while (batches < 1000) {
+    const deadline = Date.now() + 5 * 60 * 1000;
+    while (batches < 1000 && Date.now() < deadline) {
       const batch = await database.processPendingEmbeddings(options.batchSize);
       batches += 1;
       results.push(...(batch.results || []));
@@ -622,6 +634,14 @@ async function getProductInnerLife(app) {
 
 async function getProductInnerLifeSessions(app, input = {}) {
   return innerlife.sessions(await ensureProductCore(app), input);
+}
+
+async function getProductInnerLifeDigestRuns(app, input = {}) {
+  return innerlife.digestRuns(await ensureProductCore(app), input);
+}
+
+async function getProductInnerLifeInbox(app, input = {}) {
+  return innerlife.inbox(await ensureProductCore(app), input);
 }
 
 async function getProductInnerLifeDoctor(app, agentId = "codex") {
@@ -735,6 +755,8 @@ module.exports = {
   getProductGatewayContext,
   getProductInnerLife,
   getProductInnerLifeDoctor,
+  getProductInnerLifeDigestRuns,
+  getProductInnerLifeInbox,
   getProductInnerLifeSessions,
   getProductImportPreview,
   importProductDataJson,

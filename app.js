@@ -86,7 +86,9 @@ const {
   innerLifeSessionList,
   loadMoreInnerLifeSessions,
   innerLifeDigestList,
+  loadMoreInnerLifeDigestRuns,
   innerLifeInboxList,
+  loadMoreInnerLifeInbox,
   innerLifeShareCheckList,
   innerLifeShareList,
   innerLifeDaemonStatus,
@@ -137,14 +139,15 @@ const {
   sharedLineLineCount,
   sharedLineHistoryCount,
   sharedLineSnapshotCount,
-  sharedLineHandoffCount,
+  sharedLineArchivedCount,
   sharedLineDetailStatus,
   sharedLineNotice,
+  sharedLineAgentStatePanel,
   sharedLineMetadataPanel,
   sharedLineResume,
   sharedLineHistoryList,
   sharedLineSnapshotList,
-  sharedLineHandoffList,
+  sharedLineArchiveList,
   copySharedLineResume,
   sharedLineTabs,
   sharedLineTabPanels
@@ -159,6 +162,7 @@ const {
   splitListInput,
   formatSharedLineMetaValue,
   renderReadableText,
+  renderMarkdownPreview,
   itemAgentId: sharedItemAgentId,
   filterByAgent: sharedFilterByAgent,
   renderAgentFilter: sharedRenderAgentFilter
@@ -183,6 +187,10 @@ const rendererState = {
   activeInnerLifeAgentFilter: "",
   innerLifeSessionsLoading: false,
   innerLifeSessionTotals: {},
+  innerLifeDigestRunsLoading: false,
+  innerLifeDigestTotals: {},
+  innerLifeInboxLoading: false,
+  innerLifeInboxTotals: {},
   selectedSharedLineId: ""
 };
 let runtimeRefreshTimer = null;
@@ -212,6 +220,7 @@ const memoriaView = window.createClaraCoreMemoriaView({
   t,
   getSnapshot: () => snapshot,
   escapeHtml,
+  renderMarkdownPreview,
   refreshRuntimeSnapshotOnly,
   appendLiveLogLine,
   setEmbeddingProgress
@@ -581,8 +590,27 @@ document.querySelectorAll("[data-view]").forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.view));
 });
 
-document.querySelectorAll("[data-view-target]").forEach((button) => {
-  button.addEventListener("click", () => setView(button.dataset.viewTarget));
+document.addEventListener("click", (event) => {
+  const target = event.target.closest("[data-view-target]");
+  if (!target) return;
+  setView(target.dataset.viewTarget);
+});
+
+document.addEventListener("click", (event) => {
+  const target = event.target.closest("[data-attention-action]");
+  if (!target) return;
+  if (target.dataset.attentionAction === "memory-vectors") {
+    const previousText = target.textContent;
+    target.disabled = true;
+    target.textContent = t("memory.embedding.processing");
+    memoriaView
+      .processEmbeddings()
+      .then(() => refreshRuntimeSnapshotOnly())
+      .finally(() => {
+        target.disabled = false;
+        target.textContent = previousText;
+      });
+  }
 });
 
 copyAgentSetup.addEventListener("click", () => {
@@ -672,17 +700,24 @@ window.ClaraCoreDom.openSettingsDataRoot?.addEventListener("click", () => {
 });
 
 searchMemory.addEventListener("click", async () => {
-  const response = await window.ClaraCoreDesktop.searchMemories(memorySearchInput.value);
+  const selectedAgentId = memoryAgentFilter?.value || rendererState.activeMemoryAgentFilter || "";
+  rendererState.activeMemoryAgentFilter = selectedAgentId;
+  memoriaView.setActiveAgentFilter(selectedAgentId);
+  const response = await window.ClaraCoreDesktop.searchMemories({
+    query: memorySearchInput.value,
+    agentId: selectedAgentId
+  });
   const results = Array.isArray(response) ? response : response?.results || [];
-  renderMemoryResults(sharedFilterByAgent(results, rendererState.activeMemoryAgentFilter, memoryAgentId));
+  renderMemoryResults(results);
   if (response?.error) showCopyNotice(t("memory.search.fallback"));
 });
 
 memoryAgentFilter?.addEventListener("change", async () => {
   rendererState.activeMemoryAgentFilter = memoryAgentFilter.value || "";
   memoriaView.setActiveAgentFilter(rendererState.activeMemoryAgentFilter);
-  renderMemoryList();
-  if (memoriaView.getActiveTab() !== "search") {
+  if (memoriaView.getActiveTab() === "search") {
+    searchMemory.click();
+  } else {
     await loadMemoryTabData(memoriaView.getActiveTab(), { force: true });
   }
 });
@@ -725,6 +760,81 @@ loadMoreInnerLifeSessions?.addEventListener("click", async () => {
     console.error(error);
   } finally {
     rendererState.innerLifeSessionsLoading = false;
+    renderInnerLife();
+  }
+});
+
+loadMoreInnerLifeDigestRuns?.addEventListener("click", async () => {
+  if (!snapshot?.innerLife || rendererState.innerLifeDigestRunsLoading) return;
+  rendererState.innerLifeDigestRunsLoading = true;
+  renderInnerLife();
+  const agentId = rendererState.activeInnerLifeAgentFilter || "all";
+  const currentRuns = snapshot.innerLife.digestRuns || [];
+  const offset =
+    agentId === "all"
+      ? currentRuns.length
+      : currentRuns.filter((run) => sharedItemAgentId(run) === agentId).length;
+  try {
+    const page = await window.ClaraCoreDesktop.getInnerLifeDigestRuns({
+      agentId,
+      limit: 10,
+      offset
+    });
+    const existingIds = new Set(currentRuns.map((run) => run.id));
+    snapshot.innerLife.digestRuns = [
+      ...currentRuns,
+      ...(page.items || []).filter((run) => !existingIds.has(run.id))
+    ];
+    rendererState.innerLifeDigestTotals[agentId] = page.total ?? snapshot.innerLife.digestRuns.length;
+    if (agentId === "all") {
+      snapshot.innerLife.digestRunsPage = {
+        ...(snapshot.innerLife.digestRunsPage || {}),
+        total: page.total ?? snapshot.innerLife.digestRuns.length,
+        hasMore: Boolean(page.hasMore)
+      };
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    rendererState.innerLifeDigestRunsLoading = false;
+    renderInnerLife();
+  }
+});
+
+loadMoreInnerLifeInbox?.addEventListener("click", async () => {
+  if (!snapshot?.innerLife || rendererState.innerLifeInboxLoading) return;
+  rendererState.innerLifeInboxLoading = true;
+  renderInnerLife();
+  const agentId = rendererState.activeInnerLifeAgentFilter || "all";
+  const currentInbox = snapshot.innerLife.inbox || [];
+  const offset =
+    agentId === "all"
+      ? currentInbox.length
+      : currentInbox.filter((item) => sharedItemAgentId(item) === agentId).length;
+  try {
+    const page = await window.ClaraCoreDesktop.getInnerLifeInbox({
+      agentId,
+      status: "all",
+      limit: 10,
+      offset
+    });
+    const existingIds = new Set(currentInbox.map((item) => item.id));
+    snapshot.innerLife.inbox = [
+      ...currentInbox,
+      ...(page.items || []).filter((item) => !existingIds.has(item.id))
+    ];
+    rendererState.innerLifeInboxTotals[agentId] = page.total ?? snapshot.innerLife.inbox.length;
+    if (agentId === "all") {
+      snapshot.innerLife.inboxPage = {
+        ...(snapshot.innerLife.inboxPage || {}),
+        total: page.total ?? snapshot.innerLife.inbox.length,
+        hasMore: Boolean(page.hasMore)
+      };
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    rendererState.innerLifeInboxLoading = false;
     renderInnerLife();
   }
 });

@@ -72,6 +72,109 @@ function renderReadableText(value, icon = "•") {
   return parts.map((part) => `<span class="readable-line"><i>${escapeHtml(icon)}</i>${escapeHtml(part)}</span>`).join("");
 }
 
+function renderMarkdownInline(value) {
+  let html = escapeHtml(value);
+  html = html.replace(/`([^`]+)`/gu, "<code>$1</code>");
+  html = html.replace(/\*\*([^*]+)\*\*/gu, "<strong>$1</strong>");
+  html = html.replace(/__([^_]+)__/gu, "<strong>$1</strong>");
+  html = html.replace(/(^|[^*])\*([^*\n]+)\*/gu, "$1<em>$2</em>");
+  html = html.replace(/(^|[^_])_([^_\n]+)_/gu, "$1<em>$2</em>");
+  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gu, (_match, label, url) => {
+    const safeUrl = escapeHtml(url);
+    return `<a href="${safeUrl}" target="_blank" rel="noreferrer">${label}</a>`;
+  });
+  return html;
+}
+
+function renderMarkdownPreview(value) {
+  const text = String(value || "").replace(/\r/g, "").trim();
+  if (!text) return "";
+  const lines = text.split("\n");
+  const blocks = [];
+  let paragraph = [];
+  let list = null;
+  let quote = [];
+  let code = null;
+
+  const flushParagraph = () => {
+    if (paragraph.length === 0) return;
+    blocks.push(`<p>${paragraph.map(renderMarkdownInline).join("<br />")}</p>`);
+    paragraph = [];
+  };
+  const flushList = () => {
+    if (!list) return;
+    blocks.push(`<${list.type}>${list.items.map((item) => `<li>${renderMarkdownInline(item)}</li>`).join("")}</${list.type}>`);
+    list = null;
+  };
+  const flushQuote = () => {
+    if (quote.length === 0) return;
+    blocks.push(`<blockquote>${quote.map(renderMarkdownInline).join("<br />")}</blockquote>`);
+    quote = [];
+  };
+  const flushCode = () => {
+    if (!code) return;
+    blocks.push(`<pre><code>${escapeHtml(code.lines.join("\n"))}</code></pre>`);
+    code = null;
+  };
+  const flushLoose = () => {
+    flushParagraph();
+    flushList();
+    flushQuote();
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trimEnd();
+    if (/^```/u.test(line)) {
+      if (code) {
+        flushCode();
+      } else {
+        flushLoose();
+        code = { lines: [] };
+      }
+      continue;
+    }
+    if (code) {
+      code.lines.push(rawLine);
+      continue;
+    }
+    if (!line.trim()) {
+      flushLoose();
+      continue;
+    }
+    const heading = /^(#{1,4})\s+(.+)$/u.exec(line);
+    if (heading) {
+      flushLoose();
+      const level = Math.min(4, heading[1].length + 2);
+      blocks.push(`<h${level}>${renderMarkdownInline(heading[2])}</h${level}>`);
+      continue;
+    }
+    const quoteMatch = /^>\s?(.+)$/u.exec(line);
+    if (quoteMatch) {
+      flushParagraph();
+      flushList();
+      quote.push(quoteMatch[1]);
+      continue;
+    }
+    const unordered = /^[-*]\s+(.+)$/u.exec(line);
+    const ordered = /^\d+[.)]\s+(.+)$/u.exec(line);
+    if (unordered || ordered) {
+      flushParagraph();
+      flushQuote();
+      const type = unordered ? "ul" : "ol";
+      if (!list || list.type !== type) flushList();
+      if (!list) list = { type, items: [] };
+      list.items.push((unordered || ordered)[1]);
+      continue;
+    }
+    flushList();
+    flushQuote();
+    paragraph.push(line.trim());
+  }
+  flushCode();
+  flushLoose();
+  return `<div class="markdown-preview">${blocks.join("")}</div>`;
+}
+
 function itemAgentId(item) {
   return String(
     item?.agentId ||
@@ -108,6 +211,7 @@ window.ClaraCoreUtils = {
   formatSharedLineMetaValue,
   splitReadableText,
   renderReadableText,
+  renderMarkdownPreview,
   itemAgentId,
   filterByAgent,
   renderAgentFilter

@@ -250,9 +250,9 @@
       <section id="sharedLineView" class="view">
         <div class="shared-line-stats-grid">
           <div><span data-i18n="sharedLine.stats.lines">Lines</span><strong id="sharedLineLineCount">0</strong></div>
-          <div><span data-i18n="sharedLine.stats.history">History</span><strong id="sharedLineHistoryCount">0</strong></div>
+          <div><span data-i18n="sharedLine.stats.history">Compressed</span><strong id="sharedLineHistoryCount">0</strong></div>
           <div><span data-i18n="sharedLine.stats.snapshots">Snapshots</span><strong id="sharedLineSnapshotCount">0</strong></div>
-          <div><span data-i18n="sharedLine.stats.handoffs">Handoffs</span><strong id="sharedLineHandoffCount">0</strong></div>
+          <div><span data-i18n="sharedLine.stats.archived">Archived</span><strong id="sharedLineArchivedCount">0</strong></div>
         </div>
 
         <div class="shared-line-layout">
@@ -260,8 +260,8 @@
             <div class="shared-line-tabs" role="tablist" aria-label="Shared Line views">
               <button class="active" data-shared-line-tab="lines" data-i18n="sharedLine.tab.lines">Threads</button>
               <button data-shared-line-tab="snapshots" data-i18n="sharedLine.tab.snapshots">Snapshots</button>
-              <button data-shared-line-tab="handoffs" data-i18n="sharedLine.tab.handoffs">Handoffs</button>
               <button data-shared-line-tab="history" data-i18n="sharedLine.tab.history">History</button>
+              <button data-shared-line-tab="archive" data-i18n="sharedLine.tab.archive">Archive</button>
             </div>
             <section class="shared-line-tab-panel active" data-shared-line-panel="lines">
               <div class="section-heading-line">
@@ -271,6 +271,7 @@
                   <select id="sharedLineAgentFilter"></select>
                 </div>
               </div>
+              <div id="sharedLineAgentStatePanel" class="shared-line-detail-list"></div>
               <div id="sharedLineList" class="shared-line-history-list"></div>
             </section>
             <section class="shared-line-tab-panel" data-shared-line-panel="snapshots">
@@ -279,17 +280,17 @@
               </div>
               <div id="sharedLineSnapshotList" class="shared-line-history-list"></div>
             </section>
-            <section class="shared-line-tab-panel" data-shared-line-panel="handoffs">
-              <div class="section-heading-line">
-                <strong data-i18n="sharedLine.handoffs">Recent handoffs</strong>
-              </div>
-              <div id="sharedLineHandoffList" class="shared-line-handoff-list"></div>
-            </section>
             <section class="shared-line-tab-panel" data-shared-line-panel="history">
               <div class="section-heading-line">
                 <strong data-i18n="sharedLine.history">Recent history</strong>
               </div>
               <div id="sharedLineHistoryList" class="shared-line-history-list"></div>
+            </section>
+            <section class="shared-line-tab-panel" data-shared-line-panel="archive">
+              <div class="section-heading-line">
+                <strong data-i18n="sharedLine.archive">Archived lines</strong>
+              </div>
+              <div id="sharedLineArchiveList" class="shared-line-history-list"></div>
             </section>
           </article>
 
@@ -338,32 +339,37 @@
           </section>
           <div class="innerlife-layout">
             <article class="panel main-panel">
-            <div class="panel-heading">
-                <div>
-                  <h2>InnerLife</h2>
+              <div class="panel-heading innerlife-panel-heading">
+                <div class="innerlife-panel-copy">
+                  <h2 data-i18n="innerLife.mainTitle">In mind</h2>
                   <p data-i18n="innerLife.body">InnerLife is written and maintained by agents through MCP or CLI. This page only shows agent-scoped state.</p>
                 </div>
-                <div class="shared-line-filter">
-                  <span data-i18n="sharedLine.filter.agent">Agent</span>
+              </div>
+              <div class="section-heading-line innerlife-share-heading">
+                <div class="innerlife-share-heading-copy">
+                  <strong data-i18n="innerLife.shareQueue">Share queue</strong>
+                  <span data-i18n="innerLife.agentOwned">Agent-owned</span>
+                </div>
+                <div class="shared-line-filter innerlife-agent-filter">
+                  <span data-i18n="innerLife.agentLabel">Agent</span>
                   <select id="innerLifeAgentFilter"></select>
                 </div>
-              </div>
-              <div class="section-heading-line">
-                <strong data-i18n="innerLife.shareQueue">Share queue</strong>
-                <span data-i18n="innerLife.agentOwned">Agent-owned</span>
               </div>
               <div id="innerLifeShareList" class="innerlife-share-list"></div>
               <div class="innerlife-record-grid">
                 <section>
                   <h3 data-i18n="innerLife.history">History</h3>
+                  <p data-i18n="innerLife.historyBody">Raw inner changes and traces.</p>
                   <div id="innerLifeHistoryList" class="shared-line-history-list compact-list"></div>
                 </section>
                 <section>
                   <h3 data-i18n="innerLife.experiences">Experiences</h3>
+                  <p data-i18n="innerLife.experiencesBody">Things the agent has already lived through or used.</p>
                   <div id="innerLifeExperienceList" class="shared-line-history-list compact-list"></div>
                 </section>
                 <section>
                   <h3 data-i18n="innerLife.summaries">Summaries</h3>
+                  <p data-i18n="innerLife.summariesBody">Stable understandings distilled from prior activity.</p>
                   <div id="innerLifeSummaryList" class="shared-line-history-list compact-list"></div>
                 </section>
               </div>
@@ -391,19 +397,25 @@
               </article>
               <article class="panel">
                 <h2 data-i18n="innerLife.sessions">Sessions</h2>
+                <p class="innerlife-side-note" data-i18n="innerLife.sessionsBody">Conversation windows and their start/end reflections.</p>
                 <div id="innerLifeSessionList" class="shared-line-history-list"></div>
                 <button id="loadMoreInnerLifeSessions" class="secondary full" data-i18n="innerLife.loadMoreSessions">Load more sessions</button>
               </article>
               <article class="panel">
                 <h2 data-i18n="innerLife.digests">Digests</h2>
+                <p class="innerlife-side-note" data-i18n="innerLife.digestsBody">Digest runs that turn inbox and context into thoughts.</p>
                 <div id="innerLifeDigestList" class="shared-line-history-list"></div>
+                <button id="loadMoreInnerLifeDigestRuns" class="secondary full" data-i18n="innerLife.loadMoreDigests">Load more digests</button>
               </article>
               <article class="panel">
                 <h2 data-i18n="innerLife.inboxRecent">Recent inbox</h2>
+                <p class="innerlife-side-note" data-i18n="innerLife.inboxBody">Material waiting for or already consumed by InnerLife.</p>
                 <div id="innerLifeInboxList" class="shared-line-history-list"></div>
+                <button id="loadMoreInnerLifeInbox" class="secondary full" data-i18n="innerLife.loadMoreInbox">Load more inbox</button>
               </article>
               <article class="panel">
                 <h2 data-i18n="innerLife.timingChecks">Timing checks</h2>
+                <p class="innerlife-side-note" data-i18n="innerLife.timingBody">Checks for whether a thought fits the current conversation.</p>
                 <div id="innerLifeShareCheckList" class="shared-line-history-list"></div>
               </article>
             </aside>
@@ -421,6 +433,10 @@
             <div class="action-row danger"><span data-i18n="data.importProductJson">Import JSON</span><button id="importProductJson" class="secondary" data-i18n="actions.import">Import</button></div>
             <span id="productJsonNotice" class="quiet" aria-live="polite"></span>
             <span id="backupNotice" class="quiet" aria-live="polite"></span>
+            <div class="data-backup-section">
+              <h2 class="section-title" data-i18n="data.recentBackups">Recent backups</h2>
+              <div id="backupList" class="backup-list"></div>
+            </div>
             <div id="restoreConfirmPanel" class="restore-confirm-panel hidden">
               <p data-i18n="data.restorePrompt">Type RESTORE to confirm.</p>
               <div id="restorePreview" class="restore-preview"></div>
@@ -435,8 +451,6 @@
             <h2 data-i18n="data.location">Location</h2>
             <div class="snippet"><span data-i18n="data.dataRoot">Data root</span><code id="dataRootPath">Checking...</code></div>
             <button id="openBackupsFolder" class="secondary full" data-i18n="data.openBackupsFolder">Open backups folder</button>
-            <h2 class="section-title" data-i18n="data.recentBackups">Recent backups</h2>
-            <div id="backupList" class="backup-list"></div>
           </article>
         </div>
       </section>

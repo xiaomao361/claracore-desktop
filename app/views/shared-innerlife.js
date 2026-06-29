@@ -15,10 +15,11 @@ function createClaraCoreSharedInnerLifeView(context) {
   } = context;
   const {
     memoryAgentFilter, memoryList, sharedLineSummary, sharedLineUpdated, sharedLineList, sharedLineAgentFilter,
-    sharedLineLineCount, sharedLineHistoryCount, sharedLineSnapshotCount, sharedLineHandoffCount,
-    sharedLineDetailStatus, sharedLineMetadataPanel, sharedLineResume,
-    sharedLineHistoryList, sharedLineSnapshotList, sharedLineHandoffList, innerLifeAgentFilter, innerLifeSessionList,
-    loadMoreInnerLifeSessions, innerLifeDigestList, innerLifeInboxList, innerLifeShareCheckList, innerLifeShareList, innerLifeDaemonStatus,
+    sharedLineLineCount, sharedLineHistoryCount, sharedLineSnapshotCount, sharedLineArchivedCount,
+    sharedLineDetailStatus, sharedLineAgentStatePanel, sharedLineMetadataPanel, sharedLineResume,
+    sharedLineHistoryList, sharedLineSnapshotList, sharedLineArchiveList, innerLifeAgentFilter, innerLifeSessionList,
+    loadMoreInnerLifeSessions, innerLifeDigestList, loadMoreInnerLifeDigestRuns, innerLifeInboxList, loadMoreInnerLifeInbox,
+    innerLifeShareCheckList, innerLifeShareList, innerLifeDaemonStatus,
     innerLifeHistoryList, innerLifeExperienceList, innerLifeSummaryList,
     innerLifeDaemonToggle, innerLifeDaemonToggleLabel, innerLifeNextRun, innerLifeLastResult, innerLifeRecovery,
     innerLifeDoctorStatus, innerLifeDoctorList, innerLifePendingCount, innerLifeEventCount, innerLifeThoughtCount
@@ -50,9 +51,107 @@ function renderTraceValue(value) {
     .join("");
 }
 
-function renderSharedLineMetadata(metadata = {}, sharedLine = {}) {
-  const agentState = sharedLine.agentState || {};
-  const modelAdjustment = sharedLine.modelAdjustment || null;
+function previewInnerLifeText(value, maxLength = 180) {
+  const text = String(value || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join(" ");
+  return text.length > maxLength ? `${text.slice(0, maxLength).trim()}...` : text;
+}
+
+function innerLifeKindLabel(kind) {
+  const normalized = String(kind || "").toLowerCase();
+  if (normalized.includes("autonomous_experience")) return t("innerLife.kind.experience");
+  if (normalized.includes("explore")) return t("innerLife.kind.explore");
+  if (normalized.includes("converge") || normalized.includes("convergence")) return t("innerLife.kind.converge");
+  if (normalized.includes("summary")) return t("innerLife.kind.summary");
+  if (normalized.includes("digest") || normalized === "light" || normalized === "deep") return t("innerLife.kind.digest");
+  if (normalized.includes("session")) return t("innerLife.kind.session");
+  if (normalized.includes("share")) return t("innerLife.kind.share");
+  if (normalized.includes("source")) return t("innerLife.kind.source");
+  if (normalized.includes("question")) return t("innerLife.kind.question");
+  if (normalized.includes("insight")) return t("innerLife.kind.insight");
+  return kind || t("innerLife.kind.change");
+}
+
+function innerLifeStateLabel(status) {
+  const normalized = String(status || "").toLowerCase();
+  if (normalized === "pending") return t("innerLife.state.pending");
+  if (normalized === "processed") return t("innerLife.state.processed");
+  if (normalized === "used") return t("innerLife.state.used");
+  if (normalized === "unreviewed") return t("innerLife.state.unreviewed");
+  if (normalized === "completed") return t("innerLife.state.completed");
+  if (normalized === "active") return t("innerLife.state.active");
+  if (normalized === "ok") return t("innerLife.state.ok");
+  if (normalized === "healthy") return t("innerLife.state.healthy");
+  if (normalized === "warn") return t("innerLife.state.warn");
+  if (normalized === "error") return t("innerLife.state.error");
+  if (normalized === "info") return t("innerLife.state.info");
+  return status || "";
+}
+
+function innerLifeDoctorMessage(issue, doctor) {
+  const code = String(issue?.code || "").toLowerCase();
+  if (code === "healthy") return t("innerLife.doctor.healthyMessage");
+  if (code === "model_disabled") return t("innerLife.doctor.modelDisabledMessage");
+  if (code === "pending_inbox_paused") {
+    return t("innerLife.doctor.pendingInboxPausedMessage", { count: String(doctor?.counts?.pendingInbox || 0) });
+  }
+  return issue?.message || doctor?.summary || "";
+}
+
+function innerLifeDoctorAction(issue) {
+  const code = String(issue?.code || "").toLowerCase();
+  if (code === "healthy") return t("innerLife.doctor.healthyAction");
+  if (code === "model_disabled") return t("innerLife.doctor.modelDisabledAction");
+  if (code === "pending_inbox_paused") return t("innerLife.doctor.pendingInboxPausedAction");
+  if (code === "daemon_retrying") return t("innerLife.doctor.daemonRetryingAction");
+  return issue?.action || "";
+}
+
+function renderDetailGroups(target, groups, traceSource = {}) {
+  const visibleGroups = groups
+    .map((group) => ({
+      ...group,
+      rows: group.rows.map(([labelKey, value]) => [labelKey, formatSharedLineMetaValue(value)]).filter(([, value]) => value)
+    }))
+    .filter((group) => group.rows.length);
+
+  if (visibleGroups.length === 0) {
+    target.innerHTML = "";
+    return;
+  }
+  target.innerHTML = visibleGroups
+    .map(
+      (group) => `
+        <section class="shared-line-detail-group">
+          <h3>${escapeHtml(t(group.title))}</h3>
+          ${group.rows
+            .map(
+              ([labelKey, value]) => {
+                const rawKey = labelKey.endsWith("positionHistory")
+                  ? "positionHistory"
+                  : labelKey.endsWith("affectiveTrace")
+                    ? "affectiveTrace"
+                    : "";
+                const htmlValue = rawKey ? renderTraceValue(traceSource[rawKey]) || escapeHtml(value) : renderReadableText(value, "·") || escapeHtml(value);
+                return `
+                <div class="shared-line-detail-row">
+                  <span>${escapeHtml(t(labelKey))}</span>
+                  <p>${htmlValue}</p>
+                </div>
+              `;
+              }
+            )
+            .join("")}
+        </section>
+      `
+    )
+    .join("");
+}
+
+function renderSharedLineMetadata(metadata = {}) {
   const groups = [
     {
       title: "sharedLine.group.basic",
@@ -87,10 +186,25 @@ function renderSharedLineMetadata(metadata = {}, sharedLine = {}) {
         ["sharedLine.meta.positionHistory", metadata.positionHistory],
         ["sharedLine.meta.affectiveTrace", metadata.affectiveTrace]
       ]
-    },
+    }
+  ];
+  renderDetailGroups(sharedLineMetadataPanel, groups, metadata);
+}
+
+function renderSharedLineAgentState(sharedLine = {}, current = {}, agentIdOverride = "") {
+  const fallbackAgentId = current.agentId || sharedLine.agentId || current.metadata?.agentId || "";
+  const agentId = agentIdOverride || fallbackAgentId;
+  const agentState = (sharedLine.agentStates || []).find((item) => item.agentId === agentId) || (!agentIdOverride ? sharedLine.agentState : null) || {};
+  const modelAdjustment = sharedLine.modelAdjustment || null;
+  if (agentIdOverride && !agentState.agentId) {
+    sharedLineAgentStatePanel.innerHTML = "";
+    return;
+  }
+  const groups = [
     {
       title: "sharedLine.group.agentState",
       rows: [
+        ["sharedLine.meta.agent", agentId],
         ["sharedLine.meta.communicationStyle", agentState.communicationStyle],
         ["sharedLine.meta.relationshipPosition", agentState.relationshipPosition],
         ["sharedLine.meta.longTermPreferences", agentState.longTermPreferences],
@@ -110,43 +224,49 @@ function renderSharedLineMetadata(metadata = {}, sharedLine = {}) {
           ]
         : []
     }
-  ]
-    .map((group) => ({
-      ...group,
-      rows: group.rows.map(([labelKey, value]) => [labelKey, formatSharedLineMetaValue(value)]).filter(([, value]) => value)
-    }))
-    .filter((group) => group.rows.length);
+  ];
+  renderDetailGroups(sharedLineAgentStatePanel, groups);
+}
 
-  if (groups.length === 0) {
-    sharedLineMetadataPanel.innerHTML = "";
-    return;
+function renderSharedLineCards(lines) {
+  if (lines.length === 0) {
+    return "";
   }
-  sharedLineMetadataPanel.innerHTML = groups
-    .map(
-      (group) => `
-        <section class="shared-line-detail-group">
-          <h3>${escapeHtml(t(group.title))}</h3>
-          ${group.rows
-            .map(
-              ([labelKey, value]) => {
-                const rawKey = labelKey.endsWith("positionHistory")
-                  ? "positionHistory"
-                  : labelKey.endsWith("affectiveTrace")
-                    ? "affectiveTrace"
-                    : "";
-                const htmlValue = rawKey ? renderTraceValue(metadata[rawKey]) || escapeHtml(value) : renderReadableText(value, "·") || escapeHtml(value);
-                return `
-                <div class="shared-line-detail-row">
-                  <span>${escapeHtml(t(labelKey))}</span>
-                  <p>${htmlValue}</p>
-                </div>
-              `;
-              }
-            )
-            .join("")}
-        </section>
-      `
-    )
+  return lines
+    .map((line) => {
+      const isArchived = line.status === "archived";
+      const metadata = line.metadata || {};
+      const lineAgentId = line.agentId || metadata.agentId || "";
+      const metaChips = [
+        lineAgentId ? [t("sharedLine.meta.agent"), lineAgentId] : null,
+        metadata.mode ? [t("sharedLine.meta.mode"), metadata.mode] : null,
+        metadata.visibility ? [t("sharedLine.meta.visibility"), metadata.visibility] : null,
+        line.interpretationStatus ? [t("sharedLine.form.status"), line.interpretationStatus] : null,
+        metadata.userConfirmed ? ["", t("sharedLine.status.confirmed")] : null
+      ].filter(Boolean);
+      const selected = line.id === state.selectedSharedLineId;
+      const actionButtons = isArchived || line.id === "line_default"
+        ? ""
+        : `<button class="secondary danger-button" data-shared-line-action="archive" data-shared-line-id="${escapeHtml(line.id)}">${escapeHtml(t("actions.archive"))}</button>`;
+      return `
+        <article class="shared-line-card ${selected ? "active-line" : ""}" data-shared-line-action="select" data-shared-line-id="${escapeHtml(line.id)}" tabindex="0" role="button">
+          <div class="shared-line-card-head">
+            <strong>${escapeHtml(line.title || line.id)}</strong>
+            <span class="status-chip ${selected ? "status-active" : ""}">${selected ? "selected" : escapeHtml(line.status || "")}</span>
+          </div>
+          ${
+            metaChips.length
+              ? `<div class="shared-line-chip-row">${metaChips
+                  .map(([label, value]) => `<span>${escapeHtml(label ? `${label}: ${value}` : value)}</span>`)
+                  .join("")}</div>`
+              : ""
+          }
+          <p><b>${escapeHtml(t("sharedLine.current"))}</b>${renderReadableText(line.summary || t("sharedLine.currentEmpty"), "•")}</p>
+          ${metadata.nextStep ? `<p><b>${escapeHtml(t("sharedLine.meta.nextStep"))}</b>${renderReadableText(metadata.nextStep, "→")}</p>` : ""}
+          <div class="shared-line-card-actions">${actionButtons || `<span>${escapeHtml(t("sharedLine.readOnly"))}</span>`}</div>
+        </article>
+      `;
+    })
     .join("");
 }
 
@@ -163,18 +283,25 @@ function renderSharedLine() {
   const current = sharedLine?.currentPosition || {};
   const summary = current.summary || "";
   const lines = sharedLine?.lines || [];
+  const archivedLines = sharedLine?.archivedLines || [];
   const history = sharedLine?.history || [];
   const snapshots = sharedLine?.snapshots || [];
-  const handoffs = sharedLine?.handoffs || [];
   const activeLine = lines.find((line) => line.active) || {};
   state.selectedSharedLineId = sharedLine?.lineId || state.selectedSharedLineId || activeLine.id || "";
   sharedLineDetailStatus.textContent = current.interpretationStatus || activeLine.status || "active";
   sharedLineDetailStatus.className = `badge ${current.interpretationStatus === "confirmed" ? "ok" : "planned"}`;
-  sharedLineLineCount.textContent = lines.filter((line) => line.status !== "archived").length;
+  const activeLines = lines.filter((line) => line.status !== "archived");
+  sharedLineLineCount.textContent = activeLines.length;
   sharedLineHistoryCount.textContent = history.length;
   sharedLineSnapshotCount.textContent = snapshots.length;
-  sharedLineHandoffCount.textContent = handoffs.length;
-  const agentOptions = [...new Set(lines.map((line) => line.agentId || line.metadata?.agentId || "").filter(Boolean))].sort();
+  sharedLineArchivedCount.textContent = archivedLines.length;
+  const agentOptions = [
+    ...new Set([
+      ...activeLines.map((line) => line.agentId || line.metadata?.agentId || ""),
+      ...archivedLines.map((line) => line.agentId || line.metadata?.agentId || ""),
+      ...(sharedLine?.agentStates || []).map((item) => item.agentId || "")
+    ].filter(Boolean))
+  ].sort();
   if (state.activeSharedLineAgentFilter && !agentOptions.includes(state.activeSharedLineAgentFilter)) {
     state.activeSharedLineAgentFilter = "";
   }
@@ -184,52 +311,20 @@ function renderSharedLine() {
   ].join("");
   sharedLineAgentFilter.value = state.activeSharedLineAgentFilter;
   const visibleLines = state.activeSharedLineAgentFilter
-    ? lines.filter((line) => (line.agentId || line.metadata?.agentId || "") === state.activeSharedLineAgentFilter)
-    : lines;
-  if (visibleLines.length === 0) {
+    ? activeLines.filter((line) => (line.agentId || line.metadata?.agentId || "") === state.activeSharedLineAgentFilter)
+    : activeLines;
+  const visibleArchivedLines = state.activeSharedLineAgentFilter
+    ? archivedLines.filter((line) => (line.agentId || line.metadata?.agentId || "") === state.activeSharedLineAgentFilter)
+    : archivedLines;
+  renderSharedLineAgentState(sharedLine || {}, current, state.activeSharedLineAgentFilter);
+  const lineCards = renderSharedLineCards(visibleLines);
+  if (!lineCards) {
     sharedLineList.innerHTML = `<div class="endpoint-empty">${t("sharedLine.linesEmpty")}</div>`;
   } else {
-    sharedLineList.innerHTML = visibleLines
-      .map(
-        (line) => {
-          const isArchived = line.status === "archived";
-          const metadata = line.metadata || {};
-          const lineAgentId = line.agentId || metadata.agentId || "";
-          const metaChips = [
-            lineAgentId ? [t("sharedLine.meta.agent"), lineAgentId] : null,
-            metadata.mode ? [t("sharedLine.meta.mode"), metadata.mode] : null,
-            metadata.visibility ? [t("sharedLine.meta.visibility"), metadata.visibility] : null,
-            line.interpretationStatus ? [t("sharedLine.form.status"), line.interpretationStatus] : null,
-            metadata.userConfirmed ? ["", t("sharedLine.status.confirmed")] : null
-          ].filter(Boolean);
-          const selected = line.id === state.selectedSharedLineId;
-          const actionButtons = isArchived
-            ? ""
-            : line.id === "line_default"
-              ? ""
-              : `<button class="secondary danger-button" data-shared-line-action="archive" data-shared-line-id="${escapeHtml(line.id)}">${escapeHtml(t("actions.archive"))}</button>`;
-          return `
-          <article class="shared-line-card ${selected ? "active-line" : ""}" data-shared-line-action="select" data-shared-line-id="${escapeHtml(line.id)}" tabindex="0" role="button">
-            <div class="shared-line-card-head">
-              <strong>${escapeHtml(line.title || line.id)}</strong>
-              <span class="status-chip ${selected ? "status-active" : ""}">${selected ? "selected" : escapeHtml(line.status || "")}</span>
-            </div>
-            ${
-              metaChips.length
-                ? `<div class="shared-line-chip-row">${metaChips
-                    .map(([label, value]) => `<span>${escapeHtml(label ? `${label}: ${value}` : value)}</span>`)
-                    .join("")}</div>`
-                : ""
-            }
-            <p><b>${escapeHtml(t("sharedLine.current"))}</b>${renderReadableText(line.summary || t("sharedLine.currentEmpty"), "•")}</p>
-            ${metadata.nextStep ? `<p><b>${escapeHtml(t("sharedLine.meta.nextStep"))}</b>${renderReadableText(metadata.nextStep, "→")}</p>` : ""}
-            <div class="shared-line-card-actions">${actionButtons || `<span>${escapeHtml(t("sharedLine.readOnly"))}</span>`}</div>
-          </article>
-        `;
-        }
-      )
-      .join("");
+    sharedLineList.innerHTML = lineCards;
   }
+  const archivedCards = renderSharedLineCards(visibleArchivedLines);
+  sharedLineArchiveList.innerHTML = archivedCards || `<div class="endpoint-empty">${t("sharedLine.archiveEmpty")}</div>`;
   sharedLineSummary.innerHTML = renderReadableText(summary || t("sharedLine.currentEmpty"), "•");
   sharedLineUpdated.textContent = current.updatedAt || "";
   const currentMetadata = {
@@ -239,7 +334,7 @@ function renderSharedLine() {
     positionHistory: sharedLine.positionHistory || current.metadata?.positionHistory || [],
     affectiveTrace: sharedLine.affectiveTrace || current.metadata?.affectiveTrace || []
   };
-  renderSharedLineMetadata(currentMetadata, sharedLine || {});
+  renderSharedLineMetadata(currentMetadata);
   sharedLineResume.textContent = sharedLine?.text || "";
   if (history.length === 0) {
     sharedLineHistoryList.innerHTML = `<div class="endpoint-empty">${t("sharedLine.historyEmpty")}</div>`;
@@ -276,24 +371,6 @@ function renderSharedLine() {
             </div>
             <p>${renderReadableText(item.summary || "", "•") || escapeHtml(item.summary || "")}</p>
             <small>${escapeHtml(item.interpretationStatus || "draft")}</small>
-          </article>
-        `
-      )
-      .join("");
-  }
-  if (handoffs.length === 0) {
-    sharedLineHandoffList.innerHTML = `<div class="endpoint-empty">${t("sharedLine.handoffsEmpty")}</div>`;
-  } else {
-    sharedLineHandoffList.innerHTML = handoffs
-      .map(
-        (item) => `
-          <article class="shared-line-history-item">
-            <div>
-              <strong>${escapeHtml(item.objective || "")}</strong>
-              <span>${escapeHtml(item.createdAt || "")}</span>
-            </div>
-            ${item.nextStep ? `<p>${renderReadableText(item.nextStep, "→") || escapeHtml(item.nextStep)}</p>` : ""}
-            ${Array.isArray(item.openItems) && item.openItems.length ? `<small>${escapeHtml(item.openItems.join(", "))}</small>` : ""}
           </article>
         `
       )
@@ -345,11 +422,11 @@ function renderInnerLife() {
       (issue) => `
         <article class="shared-line-history-item">
           <div>
-            <strong>${escapeHtml(issue.level || "ok")}</strong>
+            <strong>${escapeHtml(innerLifeStateLabel(issue.level || "ok"))}</strong>
             <span>${escapeHtml(issue.code || "")}</span>
           </div>
-          <p>${escapeHtml(issue.message || "")}</p>
-          ${issue.action ? `<small>${escapeHtml(issue.action)}</small>` : ""}
+          <p>${escapeHtml(innerLifeDoctorMessage(issue, doctor))}</p>
+          ${innerLifeDoctorAction(issue) ? `<small>${escapeHtml(innerLifeDoctorAction(issue))}</small>` : ""}
         </article>
       `
     )
@@ -389,12 +466,15 @@ function renderInnerLife() {
       : t("innerLife.loadMoreSessions", { count: String(Math.max(0, sessionTotal - sessions.length)) });
   }
   const inboxItems = filterByAgent(innerLife.inbox || [], state.activeInnerLifeAgentFilter);
+  const inboxTotal =
+    state.activeInnerLifeAgentFilter && state.innerLifeInboxTotals?.[state.activeInnerLifeAgentFilter] !== undefined
+      ? state.innerLifeInboxTotals[state.activeInnerLifeAgentFilter]
+      : innerLife.inboxPage?.total ?? inboxItems.length;
   if (innerLifeInboxList) {
     if (inboxItems.length === 0) {
       innerLifeInboxList.innerHTML = `<div class="endpoint-empty">${t("innerLife.inboxEmpty")}</div>`;
     } else {
       innerLifeInboxList.innerHTML = inboxItems
-        .slice(0, 6)
         .map(
           (item) => `
             <article class="shared-line-history-item">
@@ -410,12 +490,23 @@ function renderInnerLife() {
         .join("");
     }
   }
+  if (loadMoreInnerLifeInbox) {
+    const canLoadMore = inboxItems.length < inboxTotal;
+    loadMoreInnerLifeInbox.hidden = !canLoadMore;
+    loadMoreInnerLifeInbox.disabled = Boolean(state.innerLifeInboxLoading);
+    loadMoreInnerLifeInbox.textContent = state.innerLifeInboxLoading
+      ? t("common.checking")
+      : t("innerLife.loadMoreInbox", { count: String(Math.max(0, inboxTotal - inboxItems.length)) });
+  }
   const digestRuns = filterByAgent(innerLife.digestRuns || [], state.activeInnerLifeAgentFilter);
+  const digestTotal =
+    state.activeInnerLifeAgentFilter && state.innerLifeDigestTotals?.[state.activeInnerLifeAgentFilter] !== undefined
+      ? state.innerLifeDigestTotals[state.activeInnerLifeAgentFilter]
+      : innerLife.digestRunsPage?.total ?? digestRuns.length;
   if (digestRuns.length === 0) {
     innerLifeDigestList.innerHTML = `<div class="endpoint-empty">${t("innerLife.digestEmpty")}</div>`;
   } else {
     innerLifeDigestList.innerHTML = digestRuns
-      .slice(0, 5)
       .map(
         (run) => `
           <article class="shared-line-history-item">
@@ -429,6 +520,14 @@ function renderInnerLife() {
         `
       )
       .join("");
+  }
+  if (loadMoreInnerLifeDigestRuns) {
+    const canLoadMore = digestRuns.length < digestTotal;
+    loadMoreInnerLifeDigestRuns.hidden = !canLoadMore;
+    loadMoreInnerLifeDigestRuns.disabled = Boolean(state.innerLifeDigestRunsLoading);
+    loadMoreInnerLifeDigestRuns.textContent = state.innerLifeDigestRunsLoading
+      ? t("common.checking")
+      : t("innerLife.loadMoreDigests", { count: String(Math.max(0, digestTotal - digestRuns.length)) });
   }
   const shareChecks = filterByAgent(innerLife.shareChecks || [], state.activeInnerLifeAgentFilter);
   if (shareChecks.length === 0) {
@@ -459,13 +558,13 @@ function renderInnerLife() {
         .slice(0, 6)
         .map(
           (item) => `
-            <article class="shared-line-history-item">
-              <div>
-                <strong>${escapeHtml(item.type || "")}</strong>
-                <span>${escapeHtml(item.createdAt || "")}</span>
+            <article class="innerlife-record-item">
+              <div class="innerlife-record-meta">
+                <strong>${escapeHtml(innerLifeKindLabel(item.type))}</strong>
+                <span>${escapeHtml(innerLifeStateLabel(item.status))}</span>
               </div>
-              <p>${escapeHtml(item.body || "")}</p>
-              <small>${escapeHtml(item.status || "")}</small>
+              <time>${escapeHtml(item.createdAt || "")}</time>
+              <p>${escapeHtml(previewInnerLifeText(item.body, 220))}</p>
             </article>
           `
         )
@@ -481,13 +580,13 @@ function renderInnerLife() {
         .slice(0, 5)
         .map(
           (item) => `
-            <article class="shared-line-history-item">
-              <div>
-                <strong>${escapeHtml(item.reviewStatus || "")}</strong>
-                <span>${escapeHtml(item.createdAt || "")}</span>
+            <article class="innerlife-record-item">
+              <div class="innerlife-record-meta">
+                <strong>${escapeHtml(innerLifeKindLabel(item.source || item.reviewStatus))}</strong>
+                <span>${escapeHtml(innerLifeStateLabel(item.reviewStatus))}</span>
               </div>
-              <p>${escapeHtml(item.body || "")}</p>
-              <small>${escapeHtml(item.shareId || item.source || "")}</small>
+              <time>${escapeHtml(item.createdAt || "")}</time>
+              <p>${escapeHtml(previewInnerLifeText(item.body, 220))}</p>
             </article>
           `
         )
@@ -503,12 +602,13 @@ function renderInnerLife() {
         .slice(0, 5)
         .map(
           (item) => `
-            <article class="shared-line-history-item">
-              <div>
-                <strong>${escapeHtml(item.mode || "")}</strong>
-                <span>${escapeHtml(item.completedAt || item.createdAt || "")}</span>
+            <article class="innerlife-record-item">
+              <div class="innerlife-record-meta">
+                <strong>${escapeHtml(innerLifeKindLabel(item.mode))}</strong>
+                <span>${escapeHtml(innerLifeKindLabel(item.source))}</span>
               </div>
-              <p>${escapeHtml((item.summary || "").split("\n").filter((line) => line.trim()).slice(0, 4).join("\n"))}</p>
+              <time>${escapeHtml(item.completedAt || item.createdAt || "")}</time>
+              <p>${escapeHtml(previewInnerLifeText(item.summary, 220))}</p>
             </article>
           `
         )
@@ -527,9 +627,10 @@ function renderInnerLife() {
       (share) => `
         <article class="innerlife-share" data-innerlife-share-id="${escapeHtml(share.id)}">
           <div>
-            <strong>${escapeHtml(share.created_at || "")}</strong>
-            <span>${escapeHtml(itemAgentId(share) || "")} · ${escapeHtml(share.status || "")}</span>
+            <strong>${escapeHtml(t("innerLife.thoughtBubble"))}</strong>
+            <span>${escapeHtml(itemAgentId(share) || "")} · ${escapeHtml(innerLifeStateLabel(share.status))}</span>
           </div>
+          <time>${escapeHtml(share.created_at || "")}</time>
           <pre>${escapeHtml(share.body || "")}</pre>
         </article>
       `

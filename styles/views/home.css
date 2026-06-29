@@ -445,6 +445,14 @@
   overflow-wrap: anywhere;
 }
 
+.attention-action {
+  margin-top: 8px;
+  padding: 0;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 680;
+}
+
 .module-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

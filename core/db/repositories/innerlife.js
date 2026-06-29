@@ -108,8 +108,9 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
     }
     ,
     
-    async listInnerLifeInbox(status = "pending", limit = 20) {
+    async listInnerLifeInbox(status = "pending", limit = 20, offset = 0) {
       const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 20));
+      const safeOffset = Math.max(0, Number.parseInt(String(offset), 10) || 0);
       const statusFilter = String(status || "pending").trim();
       const whereClause = statusFilter === "all" ? "" : `WHERE status = ${sqlString(statusFilter)}`;
       const rows = await this.query(`
@@ -117,7 +118,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         FROM innerlife_inbox
         ${whereClause}
         ORDER BY created_at DESC, id DESC
-        LIMIT ${safeLimit};
+        LIMIT ${safeLimit} OFFSET ${safeOffset};
       `);
       return rows.map((row) => ({
         id: row.id,
@@ -129,6 +130,56 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         processedAt: row.processed_at,
         metadata: parseJson(row.metadata_json, {})
       }));
+    }
+    ,
+
+    async countInnerLifeInbox(input = {}) {
+      const agentId = String(input.agentId || input.agent_id || "all").trim() || "all";
+      const status = String(input.status || "all").trim() || "all";
+      const clauses = [];
+      if (agentId !== "all") clauses.push(`agent_id = ${sqlString(agentId)}`);
+      if (status !== "all") clauses.push(`status = ${sqlString(status)}`);
+      const whereClause = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+      const rows = await this.query(`SELECT COUNT(*) AS count FROM innerlife_inbox ${whereClause};`);
+      return rows[0]?.count || 0;
+    }
+    ,
+
+    async listInnerLifeInboxPage(input = {}) {
+      const agentId = String(input.agentId || input.agent_id || "all").trim() || "all";
+      const status = String(input.status || "all").trim() || "all";
+      const limit = Math.max(1, Math.min(Number.parseInt(String(input.limit || 10), 10) || 10, 50));
+      const offset = Math.max(0, Number.parseInt(String(input.offset || 0), 10) || 0);
+      const clauses = [];
+      if (agentId !== "all") clauses.push(`agent_id = ${sqlString(agentId)}`);
+      if (status !== "all") clauses.push(`status = ${sqlString(status)}`);
+      const whereClause = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+      const rows = await this.query(`
+        SELECT id, agent_id, source, body, status, created_at, processed_at, metadata_json
+        FROM innerlife_inbox
+        ${whereClause}
+        ORDER BY created_at DESC, id DESC
+        LIMIT ${limit} OFFSET ${offset};
+      `);
+      const total = await this.countInnerLifeInbox({ agentId, status });
+      return {
+        agentId,
+        status,
+        items: rows.map((row) => ({
+          id: row.id,
+          agentId: row.agent_id,
+          source: row.source,
+          body: row.body,
+          status: row.status,
+          createdAt: row.created_at,
+          processedAt: row.processed_at,
+          metadata: parseJson(row.metadata_json, {})
+        })),
+        limit,
+        offset,
+        total,
+        hasMore: offset + rows.length < total
+      };
     }
     ,
     
@@ -365,8 +416,9 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
     }
     ,
     
-    async listInnerLifeDigestRuns(agentId = DEFAULT_AGENT_ID, limit = 10) {
+    async listInnerLifeDigestRuns(agentId = DEFAULT_AGENT_ID, limit = 10, offset = 0) {
       const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 10));
+      const safeOffset = Math.max(0, Number.parseInt(String(offset), 10) || 0);
       const agentFilter = String(agentId || DEFAULT_AGENT_ID).trim();
       const whereClause = agentFilter === "all" ? "" : `WHERE agent_id = ${sqlString(agentFilter)}`;
       const rows = await this.query(`
@@ -374,7 +426,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         FROM innerlife_digest_runs
         ${whereClause}
         ORDER BY created_at DESC, id DESC
-        LIMIT ${safeLimit};
+        LIMIT ${safeLimit} OFFSET ${safeOffset};
       `);
       return rows.map((row) => ({
         id: row.id,
@@ -387,6 +439,33 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         completedAt: row.completed_at,
         metadata: parseJson(row.metadata_json, {})
       }));
+    }
+    ,
+
+    async countInnerLifeDigestRuns(agentId = "all") {
+      const agentFilter = String(agentId || "all").trim();
+      const whereClause = agentFilter === "all" ? "" : `WHERE agent_id = ${sqlString(agentFilter)}`;
+      const rows = await this.query(`SELECT COUNT(*) AS count FROM innerlife_digest_runs ${whereClause};`);
+      return rows[0]?.count || 0;
+    }
+    ,
+
+    async listInnerLifeDigestRunsPage(input = {}) {
+      const agentId = String(input.agentId || input.agent_id || "all").trim() || "all";
+      const limit = Math.max(1, Math.min(Number.parseInt(String(input.limit || 10), 10) || 10, 50));
+      const offset = Math.max(0, Number.parseInt(String(input.offset || 0), 10) || 0);
+      const [items, total] = await Promise.all([
+        this.listInnerLifeDigestRuns(agentId, limit, offset),
+        this.countInnerLifeDigestRuns(agentId)
+      ]);
+      return {
+        agentId,
+        items,
+        limit,
+        offset,
+        total,
+        hasMore: offset + items.length < total
+      };
     }
     ,
     
@@ -422,8 +501,10 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       const recentShares = await this.listInnerLifeShares("all", 20);
       const sessionsPage = await this.listInnerLifeSessionsPage({ agentId: "all", limit: 10, offset: 0 });
       const sessions = sessionsPage.items;
-      const inbox = await this.listInnerLifeInbox("all", 20);
-      const digestRuns = await this.listInnerLifeDigestRuns("all", 10);
+      const inboxPage = await this.listInnerLifeInboxPage({ agentId: "all", status: "all", limit: 10, offset: 0 });
+      const inbox = inboxPage.items;
+      const digestRunsPage = await this.listInnerLifeDigestRunsPage({ agentId: "all", limit: 10, offset: 0 });
+      const digestRuns = digestRunsPage.items;
       const shareChecks = await this.listInnerLifeShareChecks(profile.agent_id, 10);
       const history = await this.getInnerLifeHistory("all", 20);
       const experiences = await this.listInnerLifeExperiences("all", 10);
@@ -460,7 +541,22 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
           hasMore: sessionsPage.hasMore
         },
         inbox,
+        inboxPage: {
+          agentId: inboxPage.agentId,
+          status: inboxPage.status,
+          limit: inboxPage.limit,
+          offset: inboxPage.offset,
+          total: inboxPage.total,
+          hasMore: inboxPage.hasMore
+        },
         digestRuns,
+        digestRunsPage: {
+          agentId: digestRunsPage.agentId,
+          limit: digestRunsPage.limit,
+          offset: digestRunsPage.offset,
+          total: digestRunsPage.total,
+          hasMore: digestRunsPage.hasMore
+        },
         shareChecks,
         history,
         experiences,

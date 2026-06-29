@@ -114,10 +114,6 @@ async function main() {
   if (!snapshot.data.databasePath.startsWith(dataRoot)) {
     throw new Error(`Shared Line database escaped product data root: ${snapshot.data.databasePath}`);
   }
-  const oldServices = snapshot.health.checks.find((check) => check.id === "old-services");
-  if (oldServices?.detail !== "not controlled by Desktop") {
-    throw new Error("Old services are not explicitly isolated in the runtime health check.");
-  }
   if (!snapshot.memoryGraph.nodes.some((node) => node.kind === "shared_line" && node.refId === "line_default")) {
     throw new Error(`Memory graph did not include Shared Line node: ${JSON.stringify(snapshot.memoryGraph)}`);
   }

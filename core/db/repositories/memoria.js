@@ -21,6 +21,20 @@ function installMemoriaRepository(ProductDatabase, helpers) {
     sqlString
   } = helpers;
 
+  function agentLabelClause(agentId, alias = "m") {
+    const normalized = resolveAgentIdentity(agentId || "").id;
+    if (!normalized) return "";
+    const agentLabel = normalized.includes(":") ? normalized.split(":").slice(1).join(":") : normalized;
+    const labels = [...new Set([`agent-id:${normalized}`, agentLabel ? `agent:${agentLabel}` : ""])].filter(Boolean);
+    return `
+      AND EXISTS (
+        SELECT 1 FROM memory_labels agent_filter
+        WHERE agent_filter.memory_id = ${alias}.id
+          AND agent_filter.label IN (${labels.map(sqlString).join(", ")})
+      )
+    `;
+  }
+
   Object.assign(ProductDatabase.prototype, {
     async canonicalizeMemoryLabels(labels) {
       const normalized = [...new Set(normalizeLabels(labels))];
@@ -55,18 +69,20 @@ function installMemoriaRepository(ProductDatabase, helpers) {
       if (!alias || !canonicalLabel) throw new Error("Alias and canonical label are required.");
       if (alias === canonicalLabel) throw new Error("Alias must be different from canonical label.");
       await this.exec(`
+        BEGIN;
         INSERT INTO memory_label_aliases (alias, canonical_label)
         VALUES (${sqlString(alias)}, ${sqlString(canonicalLabel)})
         ON CONFLICT(alias) DO UPDATE SET canonical_label = excluded.canonical_label;
-    
+
         INSERT INTO memory_labels (memory_id, label)
         SELECT memory_id, ${sqlString(canonicalLabel)}
         FROM memory_labels
         WHERE label = ${sqlString(alias)}
         ON CONFLICT(memory_id, label) DO NOTHING;
-    
+
         DELETE FROM memory_labels
         WHERE label = ${sqlString(alias)};
+        COMMIT;
       `);
       return {
         alias,
@@ -377,6 +393,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
       const safeOffset = Math.max(0, Number.parseInt(String(options.offset || 0), 10) || 0);
       const query = String(search || "").trim();
       const includeRestricted = Boolean(options.includeRestricted);
+      const agentClause = options.agentId || options.agent_id ? agentLabelClause(options.agentId || options.agent_id) : "";
       const searchClause = query
         ? `AND (
             m.title LIKE ${sqlString(likePattern(query))} ESCAPE '\\'
@@ -409,6 +426,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
         LEFT JOIN memory_embeddings e ON e.memory_id = m.id
         WHERE m.status = 'active'
         ${includeRestricted ? "" : "AND m.sensitivity != 'restricted'"}
+        ${agentClause}
         ${searchClause}
         GROUP BY m.id
         ORDER BY m.created_at DESC
@@ -421,6 +439,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
     async listRestrictedMemories(limit = 20, options = {}) {
       const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 20));
       const safeOffset = Math.max(0, Number.parseInt(String(options.offset || 0), 10) || 0);
+      const agentClause = options.agentId || options.agent_id ? agentLabelClause(options.agentId || options.agent_id) : "";
       const rows = await this.query(`
         SELECT
           m.id,
@@ -442,6 +461,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
         LEFT JOIN memory_embeddings e ON e.memory_id = m.id
         WHERE m.status = 'active'
           AND m.sensitivity = 'restricted'
+        ${agentClause}
         GROUP BY m.id
         ORDER BY m.updated_at DESC, m.created_at DESC
         LIMIT ${safeLimit} OFFSET ${safeOffset};
@@ -453,6 +473,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
     async listDeletedMemories(limit = 20, options = {}) {
       const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 20));
       const safeOffset = Math.max(0, Number.parseInt(String(options.offset || 0), 10) || 0);
+      const agentClause = options.agentId || options.agent_id ? agentLabelClause(options.agentId || options.agent_id) : "";
       const rows = await this.query(`
         SELECT
           m.id,
@@ -473,6 +494,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
         LEFT JOIN memory_labels l ON l.memory_id = m.id
         LEFT JOIN memory_embeddings e ON e.memory_id = m.id
         WHERE m.status = 'deleted'
+        ${agentClause}
         GROUP BY m.id
         ORDER BY m.updated_at DESC, m.created_at DESC
         LIMIT ${safeLimit} OFFSET ${safeOffset};
@@ -484,6 +506,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
     async listArchivedMemories(limit = 20, options = {}) {
       const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 20));
       const safeOffset = Math.max(0, Number.parseInt(String(options.offset || 0), 10) || 0);
+      const agentClause = options.agentId || options.agent_id ? agentLabelClause(options.agentId || options.agent_id) : "";
       const rows = await this.query(`
         SELECT
           m.id,
@@ -504,6 +527,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
         LEFT JOIN memory_labels l ON l.memory_id = m.id
         LEFT JOIN memory_embeddings e ON e.memory_id = m.id
         WHERE m.status = 'archived'
+        ${agentClause}
         GROUP BY m.id
         ORDER BY m.updated_at DESC, m.created_at DESC
         LIMIT ${safeLimit} OFFSET ${safeOffset};
@@ -679,7 +703,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
              JOIN memory_embeddings e ON e.memory_id = m.id
              WHERE m.status = 'active'
                AND m.sensitivity != 'restricted'
-               AND e.embedded_at < m.updated_at) AS stale_embedding_count,
+               AND datetime(e.embedded_at) < datetime(m.updated_at)) AS stale_embedding_count,
             (SELECT COUNT(*)
              FROM memory_labels l
              LEFT JOIN memories m ON m.id = l.memory_id
@@ -738,7 +762,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
           AND (
             e.memory_id IS NULL
             OR e.status = 'failed'
-            OR e.embedded_at < m.updated_at
+            OR datetime(e.embedded_at) < datetime(m.updated_at)
           )
         ORDER BY m.updated_at ASC, m.created_at ASC
         LIMIT 500;
@@ -1282,8 +1306,9 @@ function installMemoriaRepository(ProductDatabase, helpers) {
     }
     ,
     
-    async vectorMemoryCandidates(limit = 200) {
+    async vectorMemoryCandidates(limit = 200, options = {}) {
       const safeLimit = Math.max(1, Math.min(500, Number.parseInt(String(limit), 10) || 200));
+      const agentClause = options.agentId || options.agent_id ? agentLabelClause(options.agentId || options.agent_id) : "";
       const rows = await this.query(`
         SELECT
           m.id,
@@ -1308,6 +1333,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
           AND m.sensitivity != 'restricted'
           AND e.status = 'ready'
           AND e.vector_json IS NOT NULL
+          ${agentClause}
         GROUP BY m.id
         ORDER BY e.embedded_at DESC
         LIMIT ${safeLimit};
@@ -1327,12 +1353,18 @@ function installMemoriaRepository(ProductDatabase, helpers) {
         return {
           mode: "list",
           query: "",
-          results: await this.listMemories(Math.min(20, safeLimit), "", { includeRestricted }),
+          results: await this.listMemories(Math.min(20, safeLimit), "", {
+            includeRestricted,
+            agentId: options.agentId || options.agent_id || ""
+          }),
           error: null
         };
       }
     
-      const keywordResults = await this.listMemories(safeLimit, text, { includeRestricted });
+      const keywordResults = await this.listMemories(safeLimit, text, {
+        includeRestricted,
+        agentId: options.agentId || options.agent_id || ""
+      });
       const merged = new Map(
         keywordResults.map((memory) => [
           memory.id,
@@ -1346,7 +1378,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
     
       try {
         const { vector: queryVector } = await this.createEmbedding(text);
-        const candidates = await this.vectorMemoryCandidates(200);
+        const candidates = await this.vectorMemoryCandidates(200, { agentId: options.agentId || options.agent_id || "" });
         const vectorResults = candidates
           .map(({ vector, vector_json: _vectorJson, ...memory }) => ({
             ...memory,

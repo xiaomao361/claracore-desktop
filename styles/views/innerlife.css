@@ -46,15 +46,105 @@
   align-items: start;
 }
 
+.innerlife-panel-heading {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.innerlife-panel-copy {
+  min-width: 0;
+  max-width: 620px;
+}
+
+.innerlife-panel-copy h2 {
+  margin-bottom: 4px;
+}
+
+.innerlife-panel-copy p {
+  margin: 0;
+  max-width: 560px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.innerlife-agent-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  width: auto;
+}
+
+.innerlife-agent-filter span {
+  max-width: none;
+  line-height: 1.15;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.innerlife-agent-filter select {
+  width: 190px;
+  min-width: 0;
+}
+
 .innerlife-side {
   display: grid;
   gap: 16px;
+  min-width: 0;
   max-height: calc(100vh - 320px);
   overflow: auto;
+  overflow-x: hidden;
   padding-right: 4px;
   padding-bottom: 84px;
   position: sticky;
   top: 18px;
+}
+
+.innerlife-share-heading {
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.innerlife-share-heading-copy {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.innerlife-share-heading-copy strong,
+.innerlife-share-heading-copy span {
+  min-width: 0;
+}
+
+.innerlife-side .panel {
+  min-width: 0;
+}
+
+.innerlife-side .shared-line-history-list,
+.innerlife-side .shared-line-history-item {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.innerlife-side .shared-line-history-item > div {
+  min-width: 0;
+}
+
+.innerlife-side .shared-line-history-item strong,
+.innerlife-side .shared-line-history-item span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.innerlife-side .shared-line-history-item p,
+.innerlife-side .shared-line-history-item small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .innerlife-runtime-head {
@@ -215,37 +305,125 @@
 .innerlife-record-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 16px;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(43, 61, 52, 0.08);
 }
 
 .innerlife-record-grid section {
   min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 8px;
 }
 
 .innerlife-record-grid h3 {
-  margin: 0 0 8px;
-  color: var(--muted);
-  font-size: 12px;
+  margin: 0;
+  color: #465a51;
+  font-size: 13px;
   font-weight: 760;
   letter-spacing: 0;
-  text-transform: uppercase;
+}
+
+.innerlife-record-grid section > p {
+  margin: -4px 0 2px;
+  min-height: 34px;
+  color: var(--faint);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .innerlife-record-grid .compact-list {
-  max-height: 260px;
+  max-height: 300px;
   overflow: auto;
+  overflow-x: hidden;
   padding-right: 4px;
 }
 
+.innerlife-record-item {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid rgba(43, 61, 52, 0.1);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fffefa 0%, #fbfaf5 100%);
+  box-shadow: 0 6px 16px rgba(45, 36, 24, 0.04);
+}
+
+.innerlife-record-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  gap: 8px;
+}
+
+.innerlife-record-meta strong,
+.innerlife-record-meta span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.innerlife-record-meta strong {
+  color: #24392f;
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.innerlife-record-meta span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.innerlife-record-item time {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--faint);
+  font-size: 11px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.innerlife-record-item p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.48;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+}
+
 .innerlife-share {
+  position: relative;
   display: grid;
   gap: 11px;
-  padding: 14px;
-  border: 1px solid var(--border);
+  padding: 14px 14px 14px 18px;
+  border: 1px solid rgba(40, 116, 90, 0.16);
   border-radius: 8px;
-  background: #fffefa;
-  box-shadow: 0 8px 22px rgba(45, 36, 24, 0.05);
+  background:
+    linear-gradient(180deg, rgba(255, 254, 250, 0.98), rgba(247, 251, 247, 0.96)),
+    #fffefa;
+  box-shadow: 0 10px 24px rgba(45, 36, 24, 0.05);
+}
+
+.innerlife-share::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 0 999px 999px 0;
+  background: rgba(40, 116, 90, 0.48);
 }
 
 .innerlife-share.approved {
@@ -257,23 +435,53 @@
   display: flex;
   justify-content: space-between;
   gap: 10px;
+  min-width: 0;
   color: #647169;
   font-size: 12px;
   font-weight: 650;
 }
 
+.innerlife-share > div:first-child strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #23382f;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.innerlife-share > div:first-child span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.innerlife-share time {
+  overflow: hidden;
+  color: var(--faint);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .innerlife-share pre {
   margin: 0;
-  max-height: 280px;
+  max-height: 190px;
   overflow: auto;
-  padding: 11px 12px;
-  border: 1px solid rgba(43, 61, 52, 0.08);
-  border-radius: 8px;
-  background: rgba(250, 250, 247, 0.84);
+  padding: 0;
+  border: 0;
+  background: transparent;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font: 14px/1.62 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--text);
+}
+
+.innerlife-side-note {
+  margin: -4px 0 10px;
+  color: var(--faint);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .innerlife-share-actions {

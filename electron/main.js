@@ -32,7 +32,9 @@ const {
   getProductGatewayContext,
   getProductMemories,
   getProductInnerLife,
+  getProductInnerLifeDigestRuns,
   getProductImportPreview,
+  getProductInnerLifeInbox,
   getProductArchivedMemories,
   getProductMemoryArchiveSuggestions,
   getProductDeletedMemories,
@@ -779,9 +781,12 @@ if (!isGatewayMode) {
     if (input && (typeof input !== "object" || Array.isArray(input))) return false;
     return getProductMemoryRecords(app, input || {});
   });
-  ipcMain.handle("claracore:searchMemories", async (_event, query) => {
-    if (typeof query !== "string") return { mode: "list", query: "", results: [], error: null };
-    return searchProductMemories(app, query);
+  ipcMain.handle("claracore:searchMemories", async (_event, input) => {
+    if (typeof input === "string") return searchProductMemories(app, input);
+    if (input && (typeof input !== "object" || Array.isArray(input))) {
+      return { mode: "list", query: "", results: [], error: null };
+    }
+    return searchProductMemories(app, input || {});
   });
   ipcMain.handle("claracore:embedMemory", async (_event, id) => {
     if (typeof id !== "string") return false;
@@ -828,6 +833,14 @@ if (!isGatewayMode) {
   ipcMain.handle("claracore:getInnerLifeSessions", async (_event, input) => {
     if (input && (typeof input !== "object" || Array.isArray(input))) return false;
     return getProductInnerLifeSessions(app, input || {});
+  });
+  ipcMain.handle("claracore:getInnerLifeDigestRuns", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    return getProductInnerLifeDigestRuns(app, input || {});
+  });
+  ipcMain.handle("claracore:getInnerLifeInbox", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    return getProductInnerLifeInbox(app, input || {});
   });
   ipcMain.handle("claracore:processInnerLifeOnce", async (_event, input) => {
     if (input && (typeof input !== "object" || Array.isArray(input))) return false;
