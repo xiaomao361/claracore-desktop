@@ -42,6 +42,7 @@
       "app/**/*",
       "index.html",
       "styles.css",
+      "styles/**/*",
       "electron/**/*",
       "assets/**/*",
       "core/**/*",

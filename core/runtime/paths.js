@@ -10,7 +10,7 @@ function resolveDataRoot(app) {
   if (app.isPackaged) {
     return app.getPath("userData");
   }
-  return path.join(app.getPath("userData"), "dev");
+  return path.join(app.getPath("userData"), "data");
 }
 
 function resolveProductPaths(app) {
