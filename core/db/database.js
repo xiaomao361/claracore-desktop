@@ -360,10 +360,20 @@ class ProductDatabase {
     return this.getSummary();
   }
 
+  openConnection() {
+    const db = new this.sqlite.DatabaseSync(this.dbPath);
+    // WAL lets concurrent readers coexist with a single writer, and
+    // busy_timeout makes a contended writer wait instead of failing
+    // immediately with SQLITE_BUSY. Both are required for a long-running
+    // Gateway serving multiple agents against one product database.
+    db.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
+    return db;
+  }
+
   async exec(sql) {
     return withDatabaseLock(this.dbPath, async () => {
       if (this.sqlite?.DatabaseSync) {
-        const db = new this.sqlite.DatabaseSync(this.dbPath);
+        const db = this.openConnection();
         try {
           db.exec(sql);
         } finally {
@@ -378,7 +388,7 @@ class ProductDatabase {
   async query(sql) {
     return withDatabaseLock(this.dbPath, async () => {
       if (this.sqlite?.DatabaseSync) {
-        const db = new this.sqlite.DatabaseSync(this.dbPath);
+        const db = this.openConnection();
         try {
           return db.prepare(sql).all();
         } finally {
