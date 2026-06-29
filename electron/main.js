@@ -43,6 +43,7 @@ const {
   getProductMemoryStats,
   getProductRestrictedMemories,
   getProductSharedLine,
+  getProductInnerLifeSessions,
   importProductDataJson,
   importProductMemoryArchive,
   importOldContinuityIntoProduct,
@@ -737,6 +738,10 @@ if (!isGatewayMode) {
   });
   ipcMain.handle("claracore:getInnerLife", async () => {
     return getProductInnerLife(app);
+  });
+  ipcMain.handle("claracore:getInnerLifeSessions", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    return getProductInnerLifeSessions(app, input || {});
   });
   ipcMain.handle("claracore:processInnerLifeOnce", async (_event, input) => {
     if (input && (typeof input !== "object" || Array.isArray(input))) return false;

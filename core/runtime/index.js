@@ -614,6 +614,10 @@ async function getProductInnerLife(app) {
   return innerlife.snapshot(await ensureProductCore(app));
 }
 
+async function getProductInnerLifeSessions(app, input = {}) {
+  return innerlife.sessions(await ensureProductCore(app), input);
+}
+
 async function getProductInnerLifeDoctor(app, agentId = "codex") {
   return innerlife.doctor(await ensureProductCore(app), agentId);
 }
@@ -725,6 +729,7 @@ module.exports = {
   getProductGatewayContext,
   getProductInnerLife,
   getProductInnerLifeDoctor,
+  getProductInnerLifeSessions,
   getProductImportPreview,
   importProductDataJson,
   importProductMemoryArchive,

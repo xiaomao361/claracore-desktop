@@ -7,8 +7,7 @@ function createClaraCoreSettingsView(context) {
   const {
     memoriaProvider, memoriaEndpoint, memoriaModel, memoriaDimension, memoriaApiKey, memoriaSource, memoriaModelStatus,
     innerLifeBackend, innerLifeEndpoint, innerLifeLightModel, innerLifeDeepModel, innerLifePollSeconds, innerLifeApiKey,
-    innerLifeApiKeySummary, innerLifeSource, innerLifeModelStatus, settingsInnerLifeDaemonStatus, innerLifeDaemonControlPanel,
-    enableInnerLifeDaemon, pauseInnerLifeDaemon
+    innerLifeApiKeySummary, innerLifeSource, innerLifeModelStatus
   } = dom;
 
 function modelStatus(provider, hasModel = true) {
@@ -84,19 +83,6 @@ function renderSettings() {
   innerLifeModelStatus.textContent = innerLifeStatus.label;
   innerLifeModelStatus.className = innerLifeStatus.className;
   innerLifeModelStatus.title = innerLifeStatus.note;
-  const daemon = snapshot?.innerLife?.daemon || {};
-  if (settingsInnerLifeDaemonStatus) {
-    settingsInnerLifeDaemonStatus.textContent = daemon.enabled ? daemon.status || t("common.ready") : t("common.paused");
-  }
-  if (innerLifeDaemonControlPanel) {
-    innerLifeDaemonControlPanel.classList.toggle("is-enabled", Boolean(daemon.enabled) && daemon.status !== "error");
-    innerLifeDaemonControlPanel.classList.toggle("is-paused", !daemon.enabled || daemon.status === "paused");
-    innerLifeDaemonControlPanel.classList.toggle("is-error", daemon.status === "error");
-  }
-  if (enableInnerLifeDaemon && pauseInnerLifeDaemon) {
-    enableInnerLifeDaemon.disabled = Boolean(daemon.enabled) && daemon.status !== "paused";
-    pauseInnerLifeDaemon.disabled = !daemon.enabled || daemon.status === "paused";
-  }
 }
 
 function collectSettingsForm() {

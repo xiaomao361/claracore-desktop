@@ -391,71 +391,44 @@
             <div class="panel-heading">
                 <div>
                   <h2>InnerLife</h2>
-                  <p data-i18n="innerLife.body">Optional background reflection is available, but it should stay calm and explicit.</p>
+                  <p data-i18n="innerLife.body">InnerLife is written and maintained by agents through MCP or CLI. This page only shows agent-scoped state.</p>
                 </div>
                 <div class="shared-line-filter">
                   <span data-i18n="sharedLine.filter.agent">Agent</span>
                   <select id="innerLifeAgentFilter"></select>
                 </div>
               </div>
-              <span id="innerLifeNotice" class="quiet" aria-live="polite"></span>
-              <div class="innerlife-command-grid">
-                <button id="startInnerLifeSession" class="secondary" data-i18n="innerLife.startSession">Start session</button>
-                <button id="endInnerLifeSession" class="secondary" data-i18n="innerLife.endSession">End session</button>
-                <button id="runInnerLifeDigest" class="secondary" data-i18n="innerLife.runDigest">Run digest</button>
-                <button id="processInnerLifeOnce" class="primary" data-i18n="innerLife.processOnce">Process once</button>
-              </div>
-              <div class="innerlife-compose-grid">
-                <label class="shared-line-form">
-                  <span data-i18n="innerLife.sessionSummary">Session summary</span>
-                  <textarea id="innerLifeSessionSummary" rows="3" data-i18n-placeholder="innerLife.sessionSummaryPlaceholder" placeholder="What should InnerLife remember from this session?"></textarea>
-                </label>
-                <label class="shared-line-form">
-                  <span data-i18n="innerLife.inbox">Inbox</span>
-                  <textarea id="innerLifeInboxInput" rows="3" data-i18n-placeholder="innerLife.inboxPlaceholder" placeholder="Submit material for InnerLife to digest later."></textarea>
-                </label>
-              </div>
-              <div class="form-actions">
-                <button id="submitInnerLifeInbox" class="secondary" data-i18n="innerLife.submitInbox">Submit inbox</button>
-              </div>
-              <label class="shared-line-form">
-                <span data-i18n="innerLife.shareContext">Share context</span>
-                <textarea id="innerLifeShareContext" rows="2" data-i18n-placeholder="innerLife.shareContextPlaceholder" placeholder="What is happening now?"></textarea>
-              </label>
-              <div class="form-actions">
-                <button id="checkInnerLifeShareTiming" class="secondary" data-i18n="innerLife.checkTiming">Check share timing</button>
-              </div>
               <div class="section-heading-line">
                 <strong data-i18n="innerLife.shareQueue">Share queue</strong>
-                <span data-i18n="innerLife.reviewPolicy">Reviewed output only</span>
+                <span data-i18n="innerLife.agentOwned">Agent-owned</span>
               </div>
               <div id="innerLifeShareList" class="innerlife-share-list"></div>
             </article>
             <aside class="innerlife-side">
               <article class="panel">
-                <h2 data-i18n="innerLife.runtime">Runtime</h2>
+                <div class="innerlife-runtime-head">
+                  <div>
+                    <h2 data-i18n="innerLife.runtime">Runtime</h2>
+                    <p data-i18n="innerLife.daemonControlHint">Human-controlled local loop; agents own the content.</p>
+                  </div>
+                  <button id="innerLifeDaemonToggle" class="daemon-switch" type="button" aria-pressed="false">
+                    <span class="daemon-switch-track" aria-hidden="true"></span>
+                    <span id="innerLifeDaemonToggleLabel" data-i18n="innerLife.enableDaemon">Enable daemon</span>
+                  </button>
+                </div>
+                <span id="innerLifeDaemonNotice" class="quiet" aria-live="polite"></span>
                 <div class="metric-list">
                   <div><span data-i18n="innerLife.nextRun">Next run</span><strong id="innerLifeNextRun">-</strong></div>
                   <div><span data-i18n="innerLife.lastResult">Last result</span><strong id="innerLifeLastResult">-</strong></div>
                   <div><span data-i18n="innerLife.recovery">Recovery</span><strong id="innerLifeRecovery">-</strong></div>
                   <div><span data-i18n="innerLife.doctor">Doctor</span><strong id="innerLifeDoctorStatus">-</strong></div>
                 </div>
-                <div id="innerLifeDaemonControlPanel" class="daemon-control-panel">
-                  <div>
-                    <span data-i18n="settings.daemonStatus">Daemon status</span>
-                    <strong id="settingsInnerLifeDaemonStatus">paused</strong>
-                  </div>
-                  <div class="daemon-control-actions">
-                    <button id="enableInnerLifeDaemon" class="secondary" type="button" data-i18n="innerLife.enableDaemon">Enable daemon</button>
-                    <button id="pauseInnerLifeDaemon" class="secondary" type="button" data-i18n="innerLife.pauseDaemon">Pause daemon</button>
-                    <button id="tickInnerLifeDaemon" class="secondary" type="button" data-i18n="innerLife.tickDaemon">Run due tick</button>
-                  </div>
-                </div>
                 <div id="innerLifeDoctorList" class="shared-line-history-list"></div>
               </article>
               <article class="panel">
                 <h2 data-i18n="innerLife.sessions">Sessions</h2>
                 <div id="innerLifeSessionList" class="shared-line-history-list"></div>
+                <button id="loadMoreInnerLifeSessions" class="secondary full" data-i18n="innerLife.loadMoreSessions">Load more sessions</button>
               </article>
               <article class="panel">
                 <h2 data-i18n="innerLife.digests">Digests</h2>

@@ -127,6 +127,9 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   getInnerLife() {
     return ipcRenderer.invoke("claracore:getInnerLife");
   },
+  getInnerLifeSessions(input) {
+    return ipcRenderer.invoke("claracore:getInnerLifeSessions", input);
+  },
   processInnerLifeOnce(input) {
     return ipcRenderer.invoke("claracore:processInnerLifeOnce", input);
   },

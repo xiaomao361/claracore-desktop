@@ -73,28 +73,17 @@ const {
   copyInnerLifeApiKey,
   innerLifeSource,
   innerLifeModelStatus,
-  settingsInnerLifeDaemonStatus,
-  innerLifeDaemonControlPanel,
-  innerLifeNotice,
   innerLifeAgentFilter,
-  startInnerLifeSession,
-  endInnerLifeSession,
-  innerLifeSessionSummary,
-  innerLifeInboxInput,
-  submitInnerLifeInbox,
-  runInnerLifeDigest,
-  enableInnerLifeDaemon,
-  pauseInnerLifeDaemon,
-  tickInnerLifeDaemon,
-  innerLifeShareContext,
-  checkInnerLifeShareTiming,
   innerLifeSessionList,
+  loadMoreInnerLifeSessions,
   innerLifeDigestList,
   innerLifeInboxList,
   innerLifeShareCheckList,
-  processInnerLifeOnce,
   innerLifeShareList,
   innerLifeDaemonStatus,
+  innerLifeDaemonToggle,
+  innerLifeDaemonToggleLabel,
+  innerLifeDaemonNotice,
   innerLifeNextRun,
   innerLifeLastResult,
   innerLifeRecovery,
@@ -190,6 +179,8 @@ const rendererState = {
   activeSharedLineAgentFilter: "",
   activeMemoryAgentFilter: "",
   activeInnerLifeAgentFilter: "",
+  innerLifeSessionsLoading: false,
+  innerLifeSessionTotals: {},
   selectedSharedLineId: ""
 };
 let runtimeRefreshTimer = null;
@@ -460,19 +451,6 @@ async function refreshResources() {
   renderResourceSnapshot(resources);
 }
 
-function wait(ms) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
-
-async function tickInnerLifeDaemonWithRetry(input) {
-  let result = await window.ClaraCoreDesktop.tickInnerLifeDaemon(input);
-  for (let attempt = 0; result?.reason === "running" && attempt < 20; attempt += 1) {
-    await wait(250);
-    result = await window.ClaraCoreDesktop.tickInnerLifeDaemon(input);
-  }
-  return result;
-}
-
 function scheduleRuntimeRefresh() {
   if (runtimeRefreshTimer) return;
   runtimeRefreshTimer = window.setTimeout(() => {
@@ -549,6 +527,43 @@ memoryAgentFilter?.addEventListener("change", async () => {
 innerLifeAgentFilter?.addEventListener("change", () => {
   rendererState.activeInnerLifeAgentFilter = innerLifeAgentFilter.value || "";
   renderInnerLife();
+});
+
+loadMoreInnerLifeSessions?.addEventListener("click", async () => {
+  if (!snapshot?.innerLife || rendererState.innerLifeSessionsLoading) return;
+  rendererState.innerLifeSessionsLoading = true;
+  renderInnerLife();
+  const agentId = rendererState.activeInnerLifeAgentFilter || "all";
+  const currentSessions = snapshot.innerLife.sessions || [];
+  const offset =
+    agentId === "all"
+      ? currentSessions.length
+      : currentSessions.filter((session) => sharedItemAgentId(session) === agentId).length;
+  try {
+    const page = await window.ClaraCoreDesktop.getInnerLifeSessions({
+      agentId,
+      limit: 10,
+      offset
+    });
+    const existingIds = new Set(currentSessions.map((session) => session.id));
+    snapshot.innerLife.sessions = [
+      ...currentSessions,
+      ...(page.items || []).filter((session) => !existingIds.has(session.id))
+    ];
+    rendererState.innerLifeSessionTotals[agentId] = page.total ?? snapshot.innerLife.sessions.length;
+    if (agentId === "all") {
+      snapshot.innerLife.sessionsPage = {
+        ...(snapshot.innerLife.sessionsPage || {}),
+        total: page.total ?? snapshot.innerLife.sessions.length,
+        hasMore: Boolean(page.hasMore)
+      };
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    rendererState.innerLifeSessionsLoading = false;
+    renderInnerLife();
+  }
 });
 
 processMemoryEmbeddings.addEventListener("click", () => {
@@ -865,202 +880,6 @@ createSharedLineHandoff.addEventListener("click", async () => {
   }
 });
 
-startInnerLifeSession.addEventListener("click", async () => {
-  startInnerLifeSession.disabled = true;
-  innerLifeNotice.textContent = t("common.checking");
-  try {
-    await window.ClaraCoreDesktop.startInnerLifeSession({
-      agentId: "codex",
-      userId: "local-user",
-      host: "desktop",
-      externalSessionId: `desktop-${Date.now()}`
-    });
-    await refresh();
-    showCopyNotice(t("innerLife.sessionStarted"), innerLifeNotice);
-  } catch (error) {
-    console.error(error);
-    innerLifeNotice.textContent = t("innerLife.sessionFailed");
-  } finally {
-    startInnerLifeSession.disabled = false;
-  }
-});
-
-endInnerLifeSession.addEventListener("click", async () => {
-  endInnerLifeSession.disabled = true;
-  innerLifeNotice.textContent = t("common.checking");
-  try {
-    const sessions = snapshot?.innerLife?.sessions || [];
-    const activeSession = sessions.find((session) => session.status === "active");
-    if (!activeSession) throw new Error("No active InnerLife session.");
-    await window.ClaraCoreDesktop.endInnerLifeSession(activeSession.id, {
-      summary: innerLifeSessionSummary.value
-    });
-    innerLifeSessionSummary.value = "";
-    await refresh();
-    showCopyNotice(t("innerLife.sessionEnded"), innerLifeNotice);
-  } catch (error) {
-    console.error(error);
-    innerLifeNotice.textContent = t("innerLife.sessionFailed");
-  } finally {
-    endInnerLifeSession.disabled = false;
-  }
-});
-
-submitInnerLifeInbox.addEventListener("click", async () => {
-  submitInnerLifeInbox.disabled = true;
-  innerLifeNotice.textContent = t("common.checking");
-  try {
-    await window.ClaraCoreDesktop.submitInnerLifeInbox({
-      agentId: "codex",
-      source: "desktop",
-      body: innerLifeInboxInput.value
-    });
-    innerLifeInboxInput.value = "";
-    await refresh();
-    showCopyNotice(t("innerLife.inboxSubmitted"), innerLifeNotice);
-  } catch (error) {
-    console.error(error);
-    innerLifeNotice.textContent = t("innerLife.processFailed");
-  } finally {
-    submitInnerLifeInbox.disabled = false;
-  }
-});
-
-runInnerLifeDigest.addEventListener("click", async () => {
-  runInnerLifeDigest.disabled = true;
-  innerLifeNotice.textContent = t("common.checking");
-  try {
-    await window.ClaraCoreDesktop.runInnerLifeDigest({
-      mode: "manual",
-      prompt: innerLifeShareContext.value
-    });
-    showCopyNotice(t("innerLife.digestRan"), innerLifeNotice);
-    await refresh();
-  } catch (_error) {
-    innerLifeNotice.textContent = t("innerLife.processFailed");
-  } finally {
-    runInnerLifeDigest.disabled = false;
-  }
-});
-
-enableInnerLifeDaemon.addEventListener("click", async () => {
-  enableInnerLifeDaemon.disabled = true;
-  innerLifeNotice.textContent = t("common.checking");
-  try {
-    await window.ClaraCoreDesktop.setInnerLifeDaemon({ action: "enable" });
-    await refresh();
-    if ((snapshot?.innerLife?.counts?.pending_inbox_count || 0) > 0) {
-      await tickInnerLifeDaemonWithRetry({ force: true });
-      await refresh();
-    }
-    showCopyNotice(t("innerLife.daemonEnabled"), innerLifeNotice);
-  } catch (error) {
-    console.error(error);
-    innerLifeNotice.textContent = t("innerLife.daemonFailed");
-  } finally {
-    renderInnerLife();
-  }
-});
-
-pauseInnerLifeDaemon.addEventListener("click", async () => {
-  pauseInnerLifeDaemon.disabled = true;
-  innerLifeNotice.textContent = t("common.checking");
-  try {
-    await window.ClaraCoreDesktop.setInnerLifeDaemon({ action: "pause" });
-    await refresh();
-    showCopyNotice(t("innerLife.daemonPaused"), innerLifeNotice);
-  } catch (error) {
-    console.error(error);
-    innerLifeNotice.textContent = t("innerLife.daemonFailed");
-  } finally {
-    renderInnerLife();
-  }
-});
-
-tickInnerLifeDaemon.addEventListener("click", async () => {
-  tickInnerLifeDaemon.disabled = true;
-  innerLifeNotice.textContent = t("common.checking");
-  try {
-    await tickInnerLifeDaemonWithRetry({ force: true });
-    await refresh();
-    showCopyNotice(t("innerLife.daemonTicked"), innerLifeNotice);
-  } catch (error) {
-    console.error(error);
-    innerLifeNotice.textContent = t("innerLife.daemonFailed");
-  } finally {
-    tickInnerLifeDaemon.disabled = false;
-  }
-});
-
-checkInnerLifeShareTiming.addEventListener("click", async () => {
-  checkInnerLifeShareTiming.disabled = true;
-  innerLifeNotice.textContent = t("common.checking");
-  try {
-    await window.ClaraCoreDesktop.checkInnerLifeShareTiming({
-      context: innerLifeShareContext.value
-    });
-    showCopyNotice(t("innerLife.timingChecked"), innerLifeNotice);
-    await refresh();
-  } catch (_error) {
-    innerLifeNotice.textContent = t("innerLife.processFailed");
-  } finally {
-    checkInnerLifeShareTiming.disabled = false;
-  }
-});
-
-processInnerLifeOnce.addEventListener("click", async () => {
-  processInnerLifeOnce.disabled = true;
-  innerLifeNotice.textContent = t("common.checking");
-  try {
-    await window.ClaraCoreDesktop.processInnerLifeOnce({});
-    await refresh();
-    showCopyNotice(t("innerLife.generated"), innerLifeNotice);
-  } catch (error) {
-    console.error(error);
-    innerLifeNotice.textContent = t("innerLife.processFailed");
-  } finally {
-    processInnerLifeOnce.disabled = false;
-  }
-});
-
-innerLifeShareList.addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-innerlife-action]");
-  if (!button) return;
-  const shareId = button.dataset.innerlifeShareId;
-  const action = button.dataset.innerlifeAction;
-  if (!shareId || !action) return;
-  button.disabled = true;
-  innerLifeNotice.textContent = t("common.checking");
-  try {
-    if (action === "apply-memory") {
-      await window.ClaraCoreDesktop.applyInnerLifeShareToMemory(shareId);
-      await refresh();
-      showCopyNotice(t("innerLife.appliedMemory"), innerLifeNotice);
-      return;
-    }
-    if (action === "apply-shared-line") {
-      await window.ClaraCoreDesktop.applyInnerLifeShareToSharedLine(shareId);
-      await refresh();
-      showCopyNotice(t("innerLife.appliedSharedLine"), innerLifeNotice);
-      return;
-    }
-    if (["used", "deferred", "discarded"].includes(action)) {
-      await window.ClaraCoreDesktop.markInnerLifeShare(shareId, action);
-      await refresh();
-      showCopyNotice(t("innerLife.marked"), innerLifeNotice);
-      return;
-    }
-    await window.ClaraCoreDesktop.reviewInnerLifeShare(shareId, action);
-    await refresh();
-    showCopyNotice(action === "approve" ? t("innerLife.approved") : t("innerLife.rejected"), innerLifeNotice);
-  } catch (error) {
-    console.error(error);
-    innerLifeNotice.textContent = action.startsWith("apply-") ? t("innerLife.applyFailed") : t("innerLife.reviewFailed");
-  } finally {
-    button.disabled = false;
-  }
-});
-
 dataView.bindEvents();
 
 refreshButton.addEventListener("click", () => {
@@ -1079,6 +898,23 @@ toggleLogFollow.addEventListener("click", () => {
 
 clearLogs.addEventListener("click", () => {
   logsView.clear();
+});
+
+innerLifeDaemonToggle?.addEventListener("click", async () => {
+  const daemon = snapshot?.innerLife?.daemon || {};
+  const enabled = Boolean(daemon.enabled) && daemon.status !== "paused";
+  innerLifeDaemonToggle.disabled = true;
+  innerLifeDaemonNotice.textContent = t("common.checking");
+  try {
+    await window.ClaraCoreDesktop.setInnerLifeDaemon({ action: enabled ? "pause" : "enable" });
+    await refresh();
+    showCopyNotice(enabled ? t("innerLife.daemonPaused") : t("innerLife.daemonEnabled"), innerLifeDaemonNotice);
+  } catch (error) {
+    console.error(error);
+    innerLifeDaemonNotice.textContent = t("innerLife.daemonFailed");
+  } finally {
+    innerLifeDaemonToggle.disabled = false;
+  }
 });
 
 primaryAction.addEventListener("click", () => {

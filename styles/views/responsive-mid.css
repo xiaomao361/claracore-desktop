@@ -8,4 +8,13 @@
   .innerlife-command-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .innerlife-runtime-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .daemon-switch {
+    justify-content: start;
+  }
 }

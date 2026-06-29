@@ -18,9 +18,9 @@ function createClaraCoreSharedInnerLifeView(context) {
     sharedLineLineCount, sharedLineHistoryCount, sharedLineSnapshotCount, sharedLineHandoffCount, sharedLineTitleInput,
     sharedLineInput, sharedLineStatusInput, sharedLineFactsInput, sharedLineDetailStatus, sharedLineMetadataPanel, sharedLineResume,
     sharedLineHistoryList, sharedLineSnapshotList, sharedLineHandoffList, innerLifeAgentFilter, innerLifeSessionList,
-    innerLifeDigestList, innerLifeInboxList, innerLifeShareCheckList, innerLifeShareList, innerLifeDaemonStatus,
-    innerLifeNextRun, innerLifeLastResult, innerLifeRecovery, innerLifeDoctorStatus, innerLifeDoctorList, innerLifePendingCount,
-    innerLifeEventCount, innerLifeThoughtCount
+    loadMoreInnerLifeSessions, innerLifeDigestList, innerLifeInboxList, innerLifeShareCheckList, innerLifeShareList, innerLifeDaemonStatus,
+    innerLifeDaemonToggle, innerLifeDaemonToggleLabel, innerLifeNextRun, innerLifeLastResult, innerLifeRecovery,
+    innerLifeDoctorStatus, innerLifeDoctorList, innerLifePendingCount, innerLifeEventCount, innerLifeThoughtCount
   } = dom;
 
 function renderTraceValue(value) {
@@ -292,6 +292,16 @@ function renderInnerLife() {
   ];
   state.activeInnerLifeAgentFilter = renderAgentFilter(innerLifeAgentFilter, innerLifeAgentIds, state.activeInnerLifeAgentFilter);
   innerLifeDaemonStatus.textContent = daemon.status || "paused";
+  const daemonEnabled = Boolean(daemon.enabled) && daemon.status !== "paused";
+  if (innerLifeDaemonToggle) {
+    innerLifeDaemonToggle.classList.toggle("is-on", daemonEnabled);
+    innerLifeDaemonToggle.classList.toggle("is-error", daemon.status === "error");
+    innerLifeDaemonToggle.setAttribute("aria-pressed", daemonEnabled ? "true" : "false");
+    innerLifeDaemonToggle.title = daemonEnabled ? t("innerLife.pauseDaemon") : t("innerLife.enableDaemon");
+  }
+  if (innerLifeDaemonToggleLabel) {
+    innerLifeDaemonToggleLabel.textContent = daemonEnabled ? t("innerLife.pauseDaemon") : t("innerLife.enableDaemon");
+  }
   innerLifeNextRun.textContent = daemon.nextRunAt || "-";
   innerLifeLastResult.textContent = daemon.lastResult || daemon.lastError || "-";
   const retrySeconds = Number.parseInt(String(daemon.metadata?.retrySeconds || 0), 10) || 0;
@@ -318,21 +328,18 @@ function renderInnerLife() {
       `
     )
     .join("");
-  if (enableInnerLifeDaemon && pauseInnerLifeDaemon) {
-    enableInnerLifeDaemon.disabled = Boolean(daemon.enabled) && daemon.status !== "paused";
-    pauseInnerLifeDaemon.disabled = !daemon.enabled || daemon.status === "paused";
-  }
   innerLifePendingCount.textContent = counts.pending_shares_count ?? 0;
   innerLifeEventCount.textContent = counts.events_count ?? 0;
   innerLifeThoughtCount.textContent = counts.thoughts_count ?? 0;
   const sessions = filterByAgent(innerLife.sessions || [], state.activeInnerLifeAgentFilter);
-  const activeSession = sessions.find((session) => session.status === "active");
-  endInnerLifeSession.disabled = !activeSession;
+  const sessionTotal =
+    state.activeInnerLifeAgentFilter && state.innerLifeSessionTotals?.[state.activeInnerLifeAgentFilter] !== undefined
+      ? state.innerLifeSessionTotals[state.activeInnerLifeAgentFilter]
+      : innerLife.sessionsPage?.total ?? sessions.length;
   if (sessions.length === 0) {
     innerLifeSessionList.innerHTML = `<div class="endpoint-empty">${t("innerLife.sessionsEmpty")}</div>`;
   } else {
     innerLifeSessionList.innerHTML = sessions
-      .slice(0, 5)
       .map(
         (session) => `
           <article class="shared-line-history-item" data-innerlife-session-id="${escapeHtml(session.id)}">
@@ -346,6 +353,14 @@ function renderInnerLife() {
         `
       )
       .join("");
+  }
+  if (loadMoreInnerLifeSessions) {
+    const canLoadMore = sessions.length < sessionTotal;
+    loadMoreInnerLifeSessions.hidden = !canLoadMore;
+    loadMoreInnerLifeSessions.disabled = Boolean(state.innerLifeSessionsLoading);
+    loadMoreInnerLifeSessions.textContent = state.innerLifeSessionsLoading
+      ? t("common.checking")
+      : t("innerLife.loadMoreSessions", { count: String(Math.max(0, sessionTotal - sessions.length)) });
   }
   const inboxItems = filterByAgent(innerLife.inbox || [], state.activeInnerLifeAgentFilter);
   if (innerLifeInboxList) {
@@ -425,10 +440,6 @@ function renderInnerLife() {
             <span>${escapeHtml(itemAgentId(share) || "")} · ${escapeHtml(share.status || "")}</span>
           </div>
           <pre>${escapeHtml(share.body || "")}</pre>
-          <div class="innerlife-share-actions">
-            <button class="secondary" data-innerlife-action="approve" data-innerlife-share-id="${escapeHtml(share.id)}">${escapeHtml(t("actions.approve") || "Approve")}</button>
-            <button class="secondary danger-button" data-innerlife-action="reject" data-innerlife-share-id="${escapeHtml(share.id)}">${escapeHtml(t("actions.reject") || "Reject")}</button>
-          </div>
         </article>
       `
     )
@@ -442,13 +453,6 @@ function renderInnerLife() {
             <span>${escapeHtml(itemAgentId(share) || "")} · ${escapeHtml(share.updated_at || share.created_at || "")}</span>
           </div>
           <pre>${escapeHtml(share.body || "")}</pre>
-          <div class="innerlife-share-actions">
-            <button class="secondary" data-innerlife-action="used" data-innerlife-share-id="${escapeHtml(share.id)}">${escapeHtml(t("innerLife.markUsed") || "Used")}</button>
-            <button class="secondary" data-innerlife-action="deferred" data-innerlife-share-id="${escapeHtml(share.id)}">${escapeHtml(t("innerLife.markDeferred") || "Deferred")}</button>
-            <button class="secondary" data-innerlife-action="apply-memory" data-innerlife-share-id="${escapeHtml(share.id)}">${escapeHtml(t("innerLife.applyMemory") || "Apply to Memory")}</button>
-            <button class="secondary" data-innerlife-action="apply-shared-line" data-innerlife-share-id="${escapeHtml(share.id)}">${escapeHtml(t("innerLife.applySharedLine") || "Apply to Shared Line")}</button>
-            <button class="secondary danger-button" data-innerlife-action="discarded" data-innerlife-share-id="${escapeHtml(share.id)}">${escapeHtml(t("innerLife.markDiscarded") || "Discard")}</button>
-          </div>
         </article>
       `
     )

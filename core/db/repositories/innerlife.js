@@ -387,7 +387,8 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       const profile = await this.ensureInnerLifeProfile(DEFAULT_AGENT_ID);
       const pendingShares = await this.listInnerLifeShares("pending", 20);
       const recentShares = await this.listInnerLifeShares("all", 20);
-      const sessions = await this.listInnerLifeSessions("all", 10);
+      const sessionsPage = await this.listInnerLifeSessionsPage({ agentId: "all", limit: 10, offset: 0 });
+      const sessions = sessionsPage.items;
       const inbox = await this.listInnerLifeInbox("all", 20);
       const digestRuns = await this.listInnerLifeDigestRuns("all", 10);
       const shareChecks = await this.listInnerLifeShareChecks(profile.agent_id, 10);
@@ -415,6 +416,13 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         pendingShares,
         recentShares,
         sessions,
+        sessionsPage: {
+          agentId: sessionsPage.agentId,
+          limit: sessionsPage.limit,
+          offset: sessionsPage.offset,
+          total: sessionsPage.total,
+          hasMore: sessionsPage.hasMore
+        },
         inbox,
         digestRuns,
         shareChecks,
@@ -699,8 +707,21 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
     }
     ,
     
-    async listInnerLifeSessions(agentId = DEFAULT_AGENT_ID, limit = 20) {
+    async countInnerLifeSessions(agentId = "all") {
+      const agentFilter = String(agentId || "all").trim();
+      const whereClause = agentFilter === "all" ? "" : `WHERE agent_id = ${sqlString(agentFilter)}`;
+      const rows = await this.query(`
+        SELECT COUNT(*) AS count
+        FROM innerlife_sessions
+        ${whereClause};
+      `);
+      return rows[0]?.count || 0;
+    }
+    ,
+
+    async listInnerLifeSessions(agentId = DEFAULT_AGENT_ID, limit = 20, offset = 0) {
       const safeLimit = Math.max(1, Math.min(Number.parseInt(String(limit), 10) || 20, 100));
+      const safeOffset = Math.max(0, Number.parseInt(String(offset), 10) || 0);
       const agentFilter = String(agentId || DEFAULT_AGENT_ID).trim();
       const whereClause = agentFilter === "all" ? "" : `WHERE agent_id = ${sqlString(agentFilter)}`;
       const rows = await this.query(`
@@ -708,7 +729,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         FROM innerlife_sessions
         ${whereClause}
         ORDER BY started_at DESC, id DESC
-        LIMIT ${safeLimit};
+        LIMIT ${safeLimit} OFFSET ${safeOffset};
       `);
       return rows.map((row) => ({
         id: row.id,
@@ -723,6 +744,25 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         summary: row.summary || "",
         metadata: parseJson(row.metadata_json, {})
       }));
+    }
+    ,
+
+    async listInnerLifeSessionsPage(input = {}) {
+      const agentId = String(input.agentId || input.agent_id || "all").trim() || "all";
+      const limit = Math.max(1, Math.min(Number.parseInt(String(input.limit || 10), 10) || 10, 50));
+      const offset = Math.max(0, Number.parseInt(String(input.offset || 0), 10) || 0);
+      const [items, total] = await Promise.all([
+        this.listInnerLifeSessions(agentId, limit, offset),
+        this.countInnerLifeSessions(agentId)
+      ]);
+      return {
+        agentId,
+        items,
+        limit,
+        offset,
+        total,
+        hasMore: offset + items.length < total
+      };
     }
     ,
     

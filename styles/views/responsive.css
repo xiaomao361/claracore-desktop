@@ -91,6 +91,7 @@
     max-height: none;
     overflow: visible;
     padding-right: 0;
+    padding-bottom: 0;
     position: static;
   }
 

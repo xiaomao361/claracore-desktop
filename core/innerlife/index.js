@@ -2,6 +2,10 @@ async function snapshot(core) {
   return core.database.getInnerLifeSnapshot();
 }
 
+async function sessions(core, input = {}) {
+  return core.database.listInnerLifeSessionsPage(input);
+}
+
 async function doctor(core, agentId = "codex") {
   return core.database.getInnerLifeDoctor(agentId);
 }
@@ -61,6 +65,7 @@ module.exports = {
   digest,
   doctor,
   endSession,
+  sessions,
   markShare,
   processOnce,
   reviewShare,

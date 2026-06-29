@@ -1,21 +1,21 @@
 .innerlife-shell {
   display: grid;
-  gap: 16px;
+  gap: 18px;
 }
 
 .innerlife-status-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
 .innerlife-status-strip > div {
   min-width: 0;
-  padding: 14px 16px;
+  padding: 14px 16px 13px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
+  background: linear-gradient(180deg, #fffefa 0%, #f7f4ec 100%);
+  box-shadow: 0 10px 28px rgba(45, 36, 24, 0.06);
 }
 
 .innerlife-status-strip span,
@@ -24,21 +24,24 @@
 }
 
 .innerlife-status-strip span {
-  color: var(--muted);
   font-size: 12px;
+  font-weight: 650;
+  color: var(--muted);
+  text-transform: uppercase;
 }
 
 .innerlife-status-strip strong {
-  margin-top: 4px;
+  margin-top: 6px;
   overflow: hidden;
-  font-size: 20px;
+  color: #23382f;
+  font-size: 22px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .innerlife-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+  grid-template-columns: minmax(0, 1.18fr) minmax(340px, 0.82fr);
   gap: 16px;
   align-items: start;
 }
@@ -46,11 +49,136 @@
 .innerlife-side {
   display: grid;
   gap: 16px;
-  max-height: calc(100vh - 188px);
+  max-height: calc(100vh - 320px);
   overflow: auto;
   padding-right: 4px;
+  padding-bottom: 84px;
   position: sticky;
   top: 18px;
+}
+
+.innerlife-runtime-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.innerlife-runtime-head h2,
+.innerlife-runtime-head p {
+  margin: 0;
+}
+
+.innerlife-runtime-head p {
+  margin-top: 4px;
+  max-width: 260px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.daemon-switch {
+  display: inline-grid;
+  grid-template-columns: 40px minmax(92px, auto);
+  gap: 9px;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 10px 6px 7px;
+  border: 1px solid rgba(145, 101, 31, 0.28);
+  border-radius: 8px;
+  background: var(--amber-bg);
+  color: #5f451b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.metric-list {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.metric-list > div {
+  display: grid;
+  grid-template-columns: minmax(82px, 0.55fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  min-width: 0;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(43, 61, 52, 0.08);
+}
+
+.metric-list > div:last-child {
+  border-bottom: 0;
+}
+
+.metric-list span,
+.metric-list strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.metric-list span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.metric-list strong {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.daemon-switch:hover {
+  border-color: rgba(145, 101, 31, 0.46);
+}
+
+.daemon-switch:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.daemon-switch-track {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(145, 101, 31, 0.28);
+  transition: background 160ms ease;
+}
+
+.daemon-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fffefa;
+  box-shadow: 0 1px 3px rgba(30, 26, 18, 0.24);
+  transition: transform 160ms ease;
+}
+
+.daemon-switch.is-on {
+  border-color: rgba(40, 116, 90, 0.35);
+  background: var(--green-bg);
+  color: #1e5e49;
+}
+
+.daemon-switch.is-on .daemon-switch-track {
+  background: var(--green);
+}
+
+.daemon-switch.is-on .daemon-switch-track::after {
+  transform: translateX(16px);
+}
+
+.daemon-switch.is-error {
+  border-color: rgba(166, 64, 54, 0.36);
+  background: var(--red-bg);
+  color: #8b3129;
 }
 
 .innerlife-command-grid {
@@ -77,32 +205,45 @@
 
 .innerlife-share-list {
   display: grid;
-  gap: 10px;
-  max-height: calc(100vh - 470px);
-  margin-top: 10px;
+  gap: 12px;
+  max-height: calc(100vh - 365px);
+  margin-top: 12px;
   overflow: auto;
   padding-right: 4px;
 }
 
 .innerlife-share {
   display: grid;
-  gap: 10px;
-  padding: 12px;
+  gap: 11px;
+  padding: 14px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--surface);
+  background: #fffefa;
+  box-shadow: 0 8px 22px rgba(45, 36, 24, 0.05);
+}
+
+.innerlife-share.approved {
+  border-color: rgba(40, 116, 90, 0.28);
+  background: #f2f8f3;
 }
 
 .innerlife-share > div:first-child {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  color: var(--muted);
+  color: #647169;
   font-size: 12px;
+  font-weight: 650;
 }
 
 .innerlife-share pre {
   margin: 0;
+  max-height: 280px;
+  overflow: auto;
+  padding: 11px 12px;
+  border: 1px solid rgba(43, 61, 52, 0.08);
+  border-radius: 8px;
+  background: rgba(250, 250, 247, 0.84);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
