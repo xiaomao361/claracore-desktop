@@ -11,9 +11,11 @@ secondary settings page.
 
 Agent Access exposes both stdio MCP setup and a token-protected localhost HTTP
 Agent Gateway while the desktop app is running. The setup note should not show
-a LAN URL by default. LAN binding is intentionally off and should only become
-available through an explicit product mode with clear bind address, bearer
-token, token regeneration, and disable controls.
+a LAN URL by default. The localhost HTTP helper uses a runtime-assigned port;
+agents should read the current URL from Agent Access or `/agent/setup` for the
+current app session, not hard-code a port. LAN binding is intentionally off and
+should only become available through an explicit product mode with clear bind
+address, bearer token, token regeneration, and disable controls.
 
 ClaraCore Desktop is the local desktop manager for the first ClaraCore core package:
 
@@ -53,7 +55,9 @@ Included:
 - ClaraCore root detection
 - Product-owned SQLite data root under Desktop user data
 - Home, Memoria, Shared Line, InnerLife, Models, Data, Agent Setup, Settings, and Logs pages
-- Home dashboard with Gateway, Memoria, Shared Line, InnerLife, agent-view, and Gateway trace summaries
+- Home dashboard with Gateway, Memoria, Shared Line, InnerLife, agent-view, attention queue, and Gateway trace summaries
+- Home runtime board with a ClaraVision-inspired breathing core visualization; the orb color and rhythm reflect quiet, active, warning, and error runtime states
+- Gateway trace chain on Home that expands one priority call as `agent -> Desktop Gateway -> MCP tool -> result`, compresses additional calls into a recent list, and sends overflow review to Agent Access
 - Agent Setup page with MCP connection command, token-protected localhost HTTP Agent Gateway URLs, copyable config, CLI fallback notes, runtime paths, and recent Gateway activity
 - Desktop-owned Gateway stdio entry for Gateway context, Memoria, Shared Line, and InnerLife MCP tools
 - Memoria CLI for store, recall, get, update, tag, delete, restore, archive, import/export, records, and maintenance audit/run
@@ -71,7 +75,7 @@ Included:
 - Verified SQLite product backups with restore preview and safety-backup restore
 - Full product JSON export/import for portable ClaraCore Desktop data
 - Agent identity labels using `tool:agent` form, such as `claude-code:clara` and `hermes:lara`, with single-name agents such as `codex` supported
-- Settings page for language, theme, close-window behavior, local data paths, and read-only app/runtime details
+- Settings page for language, theme, motion preference, close-window behavior, local data paths, and read-only app/runtime details
 - Terminal-style runtime log view for maintenance and Gateway traces
 - Chinese and English UI switching
 - macOS menu bar / Windows tray entry

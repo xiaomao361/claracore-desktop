@@ -30,6 +30,8 @@ const {
   mcpCommand,
   mcpConfig,
   copyNotice,
+  agentIdentityList,
+  gatewayHandshakeList,
   httpEndpointList,
   gatewayTraceList,
   logTerminal,
@@ -136,23 +138,12 @@ const {
   sharedLineHistoryCount,
   sharedLineSnapshotCount,
   sharedLineHandoffCount,
-  sharedLineTitleInput,
-  createSharedLine,
-  sharedLineInput,
-  sharedLineStatusInput,
-  sharedLineFactsInput,
   sharedLineDetailStatus,
   sharedLineNotice,
-  saveSharedLine,
   sharedLineMetadataPanel,
   sharedLineResume,
   sharedLineHistoryList,
   sharedLineSnapshotList,
-  createSharedLineHandoff,
-  sharedLineHandoffObjective,
-  sharedLineHandoffCompleted,
-  sharedLineHandoffOpenItems,
-  sharedLineHandoffNextStep,
   sharedLineHandoffList,
   copySharedLineResume,
   sharedLineTabs,
@@ -187,7 +178,6 @@ let snapshot = null;
 let activeView = "home";
 let editingMemoryId = null;
 const rendererState = {
-  renamingSharedLineId: null,
   activeSharedLineAgentFilter: "",
   activeMemoryAgentFilter: "",
   activeInnerLifeAgentFilter: "",
@@ -901,36 +891,6 @@ deletedMemoryList.addEventListener("click", async (event) => {
   }
 });
 
-createSharedLine.addEventListener("click", async () => {
-  createSharedLine.disabled = true;
-  sharedLineNotice.textContent = t("common.checking");
-  try {
-    const result = rendererState.renamingSharedLineId
-      ? await window.ClaraCoreDesktop.renameSharedLine(rendererState.renamingSharedLineId, sharedLineTitleInput.value)
-      : await window.ClaraCoreDesktop.createSharedLine({
-          title: sharedLineTitleInput.value,
-          makeActive: true
-        });
-    snapshot.sharedLine = result.sharedLine;
-    const message = rendererState.renamingSharedLineId ? t("sharedLine.lineRenamed") : t("sharedLine.lineCreated");
-    rendererState.renamingSharedLineId = null;
-    sharedLineTitleInput.value = "";
-    renderSharedLine();
-    showCopyNotice(message, sharedLineNotice);
-  } catch (error) {
-    console.error(error);
-    sharedLineNotice.textContent = t("sharedLine.lineFailed");
-  } finally {
-    createSharedLine.disabled = false;
-  }
-});
-
-sharedLineTitleInput.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    createSharedLine.click();
-  }
-});
-
 sharedLineList.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-shared-line-action]");
   if (!button) return;
@@ -944,28 +904,13 @@ sharedLineList.addEventListener("click", async (event) => {
       rendererState.selectedSharedLineId = lineId;
       result = { sharedLine: await window.ClaraCoreDesktop.getSharedLine({ lineId }) };
       sharedLineNotice.textContent = "";
-    } else if (action === "activate") {
-      result = await window.ClaraCoreDesktop.activateSharedLine(lineId);
-      showCopyNotice(t("sharedLine.lineActivated"), sharedLineNotice);
-    } else if (action === "rename") {
-      rendererState.renamingSharedLineId = lineId;
-      sharedLineTitleInput.value = button.dataset.sharedLineTitle || "";
-      createSharedLine.textContent = t("sharedLine.renameLine");
-      sharedLineTitleInput.focus();
-      sharedLineNotice.textContent = "";
-      return;
     } else if (action === "archive") {
       if (!window.confirm(t("sharedLine.archiveConfirm"))) {
         sharedLineNotice.textContent = "";
         return;
       }
-      rendererState.renamingSharedLineId = null;
       result = await window.ClaraCoreDesktop.archiveSharedLine(lineId);
       showCopyNotice(t("sharedLine.lineArchived"), sharedLineNotice);
-    } else if (action === "restore") {
-      rendererState.renamingSharedLineId = null;
-      result = await window.ClaraCoreDesktop.restoreSharedLine(lineId, true);
-      showCopyNotice(t("sharedLine.lineRestored"), sharedLineNotice);
     }
     if (!result?.sharedLine) return;
     snapshot.sharedLine = result.sharedLine;
@@ -986,71 +931,8 @@ sharedLineList.addEventListener("keydown", (event) => {
   card.click();
 });
 
-saveSharedLine.addEventListener("click", async () => {
-  saveSharedLine.disabled = true;
-  sharedLineNotice.textContent = t("common.checking");
-  try {
-    const input = {
-      summary: sharedLineInput.value,
-      interpretationStatus: sharedLineStatusInput.value === "confirmed" ? "confirmed" : "draft",
-      factsUsed: splitListInput(sharedLineFactsInput.value)
-    };
-    let sharedLine;
-    try {
-      sharedLine = await window.ClaraCoreDesktop.saveSharedLine(input);
-    } catch (error) {
-      if (String(error?.message || "").includes("Confirmed Shared Line overwrite requires explicit confirmation")) {
-        if (!window.confirm(t("sharedLine.form.confirmOverwrite"))) throw error;
-        sharedLine = await window.ClaraCoreDesktop.saveSharedLine({
-          ...input,
-          confirmOverwrite: true
-        });
-      } else {
-        throw error;
-      }
-    }
-    snapshot.sharedLine = sharedLine;
-    renderSharedLine();
-    showCopyNotice(t("sharedLine.form.saved"), sharedLineNotice);
-  } catch (error) {
-    console.error(error);
-    sharedLineNotice.textContent = t("sharedLine.form.saveFailed");
-  } finally {
-    saveSharedLine.disabled = false;
-  }
-});
-
 copySharedLineResume.addEventListener("click", () => {
   copyValue(sharedLineResume.textContent, t("sharedLine.resumeCopied"), sharedLineNotice).catch(console.error);
-});
-
-createSharedLineHandoff.addEventListener("click", async () => {
-  createSharedLineHandoff.disabled = true;
-  sharedLineNotice.textContent = t("common.checking");
-  try {
-    const summary = sharedLineInput.value || snapshot?.sharedLine?.currentPosition?.summary || "";
-    const result = await window.ClaraCoreDesktop.createSharedLineHandoff({
-      objective: sharedLineHandoffObjective.value || summary || "Continue from the current Shared Line.",
-      completed: splitListInput(sharedLineHandoffCompleted.value),
-      openItems: splitListInput(sharedLineHandoffOpenItems.value),
-      nextStep:
-        sharedLineHandoffNextStep.value ||
-        (summary ? "Resume from this Shared Line and update it after the next meaningful step." : "Save a Shared Line position before continuing.")
-    });
-    snapshot.sharedLine = result.sharedLine;
-    sharedLineHandoffObjective.value = "";
-    sharedLineHandoffCompleted.value = "";
-    sharedLineHandoffOpenItems.value = "";
-    sharedLineHandoffNextStep.value = "";
-    renderSharedLine();
-    setSharedLineTab("lines");
-    showCopyNotice(t("sharedLine.handoffCreated"), sharedLineNotice);
-  } catch (error) {
-    console.error(error);
-    sharedLineNotice.textContent = t("sharedLine.handoffFailed");
-  } finally {
-    createSharedLineHandoff.disabled = false;
-  }
 });
 
 dataView.bindEvents();

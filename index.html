@@ -272,10 +272,6 @@
                 </div>
               </div>
               <div id="sharedLineList" class="shared-line-history-list"></div>
-              <div class="memory-search compact-form">
-                <input id="sharedLineTitleInput" data-i18n-placeholder="sharedLine.form.titlePlaceholder" placeholder="New line title" />
-                <button id="createSharedLine" class="secondary" data-i18n="sharedLine.createLine">Create line</button>
-              </div>
             </section>
             <section class="shared-line-tab-panel" data-shared-line-panel="snapshots">
               <div class="section-heading-line">
@@ -306,42 +302,16 @@
               <span id="sharedLineDetailStatus" class="badge ok">active</span>
             </div>
             <div class="shared-line-current">
-              <strong data-i18n="sharedLine.current">Current position</strong>
-              <p id="sharedLineSummary" data-i18n="sharedLine.currentEmpty">No current position saved yet.</p>
+              <strong data-i18n="sharedLine.current">Latest progress</strong>
+              <p id="sharedLineSummary" data-i18n="sharedLine.currentEmpty">No agent-written progress yet.</p>
             </div>
             <div id="sharedLineMetadataPanel" class="shared-line-detail-list"></div>
-            <div class="shared-line-readonly-form">
-              <textarea id="sharedLineInput" rows="3"></textarea>
-              <select id="sharedLineStatusInput">
-                <option value="draft" data-i18n="sharedLine.status.draft">Draft</option>
-                <option value="confirmed" data-i18n="sharedLine.status.confirmed">Confirmed</option>
-              </select>
-              <input id="sharedLineFactsInput" />
-              <span id="sharedLineNotice" class="quiet" aria-live="polite"></span>
-              <button id="saveSharedLine" class="primary" data-i18n="sharedLine.form.save">Save position</button>
-            </div>
             <div class="snippet">
               <span data-i18n="sharedLine.resume">Resume packet</span>
               <pre><code id="sharedLineResume">Checking...</code></pre>
             </div>
             <button id="copySharedLineResume" class="secondary full" data-i18n="sharedLine.copyResume">Copy resume packet</button>
-            <label class="field">
-              <span data-i18n="sharedLine.handoff.objective">Objective</span>
-              <input id="sharedLineHandoffObjective" data-i18n-placeholder="sharedLine.handoff.objectivePlaceholder" placeholder="Continue from the current Shared Line." />
-            </label>
-            <label class="field">
-              <span data-i18n="sharedLine.handoff.completed">Completed</span>
-              <input id="sharedLineHandoffCompleted" data-i18n-placeholder="sharedLine.handoff.listPlaceholder" placeholder="item one, item two" />
-            </label>
-            <label class="field">
-              <span data-i18n="sharedLine.handoff.openItems">Open items</span>
-              <input id="sharedLineHandoffOpenItems" data-i18n-placeholder="sharedLine.handoff.listPlaceholder" placeholder="item one, item two" />
-            </label>
-            <label class="field">
-              <span data-i18n="sharedLine.handoff.nextStep">Next step</span>
-              <textarea id="sharedLineHandoffNextStep" rows="3" data-i18n-placeholder="sharedLine.handoff.nextStepPlaceholder" placeholder="What should the next agent do first?"></textarea>
-            </label>
-            <button id="createSharedLineHandoff" class="primary full" data-i18n="sharedLine.createHandoff">Create handoff</button>
+            <span id="sharedLineNotice" class="quiet" aria-live="polite"></span>
           </article>
         </div>
       </section>
@@ -383,6 +353,20 @@
                 <span data-i18n="innerLife.agentOwned">Agent-owned</span>
               </div>
               <div id="innerLifeShareList" class="innerlife-share-list"></div>
+              <div class="innerlife-record-grid">
+                <section>
+                  <h3 data-i18n="innerLife.history">History</h3>
+                  <div id="innerLifeHistoryList" class="shared-line-history-list compact-list"></div>
+                </section>
+                <section>
+                  <h3 data-i18n="innerLife.experiences">Experiences</h3>
+                  <div id="innerLifeExperienceList" class="shared-line-history-list compact-list"></div>
+                </section>
+                <section>
+                  <h3 data-i18n="innerLife.summaries">Summaries</h3>
+                  <div id="innerLifeSummaryList" class="shared-line-history-list compact-list"></div>
+                </section>
+              </div>
             </article>
             <aside class="innerlife-side">
               <article class="panel">
@@ -488,7 +472,7 @@
             <div class="panel-heading">
               <div>
                 <h2 data-i18n="agentSetup.title">Agent Access</h2>
-                <p data-i18n="agentSetup.body">Copy this setup note into an agent so it can connect through the unified Gateway first.</p>
+                <p data-i18n="agentSetup.body">Give this brief to each agent so it can install ClaraCore access with its own identity.</p>
               </div>
               <span id="agentSetupNotice" class="quiet" aria-live="polite"></span>
             </div>
@@ -501,15 +485,20 @@
               <h2 data-i18n="agentSetup.actions">Actions</h2>
               <span id="copyNotice" class="quiet" aria-live="polite"></span>
             </div>
-            <button id="copyAgentSetup" class="secondary full" data-i18n="agentSetup.copy">Copy setup note</button>
+            <button id="copyAgentSetup" class="secondary full" data-i18n="agentSetup.copy">Copy agent install brief</button>
             <button class="secondary full" data-copy="mcp-command" data-i18n="connections.copyMcpCommand">Copy MCP command</button>
             <button class="secondary full" data-copy="mcp-config" data-i18n="connections.copyMcpConfig">Copy MCP config</button>
             <button id="openGatewayFolder" class="secondary full" data-i18n="connections.openGatewayFolder">Open runtime folder</button>
             <h2 class="section-title" data-i18n="agentSetup.connectionMode">Connection mode</h2>
             <ul class="plain-list">
-              <li data-i18n="agentSetup.modeMcp">Recommended now: stdio MCP config copied into the agent client.</li>
-              <li data-i18n="agentSetup.modeLan">LAN URL later: useful for phones or remote agents, but only with explicit HTTP Gateway, local/LAN binding, and token protection.</li>
+              <li data-i18n="agentSetup.modeResident">ClaraCore Desktop stays open as the local agent service.</li>
+              <li data-i18n="agentSetup.modeMcp">Agents connect through MCP and set their own CLARACORE_AGENT_ID.</li>
+              <li data-i18n="agentSetup.modeLan">Local HTTP helper is localhost-only, token-protected, and uses a runtime-assigned port.</li>
             </ul>
+            <h2 class="section-title" data-i18n="agentSetup.identityContract">Agent identity</h2>
+            <div id="agentIdentityList" class="endpoint-list"></div>
+            <h2 class="section-title" data-i18n="connections.handshakes">Connection tests</h2>
+            <div id="gatewayHandshakeList" class="endpoint-list"></div>
             <h2 class="section-title" data-i18n="connections.title">Connection details</h2>
             <div class="snippet">
               <span data-i18n="connections.mcpCommand">MCP command</span>

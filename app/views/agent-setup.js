@@ -2,6 +2,8 @@ function createClaraCoreAgentSetupView({ dom, t, getSnapshot, copyValue }) {
   function buildMarkdown() {
     const snapshot = getSnapshot();
     if (!snapshot?.connections) return t("common.checking");
+    const agentIdentity = snapshot.connections.agentIdentity || {};
+    const agentExamples = agentIdentity.examples || ["claude-code:clara", "codex", "hermes:lara"];
     const endpoints =
       (snapshot.connections.httpEndpoints || [])
         .map((endpoint) => {
@@ -21,16 +23,29 @@ Desktop owns the product Gateway, Memoria, Shared Line, and InnerLife state for 
 
 ## Agent Use Order
 
-1. Connect through the Gateway MCP config below.
-2. Call \`gateway_context\` first.
-3. Use exposed product Gateway tools for Memory, Shared Line, InnerLife, traces, diagnostics, import/export, and maintenance.
-4. Use CLI fallback only when MCP is unavailable or when a local recovery script needs it.
+1. Install ClaraCore Desktop as an MCP server in your own agent client.
+2. Set \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\` to your own stable agent id.
+3. Call \`claracore_connection_test\` with that same agent id.
+4. Call \`gateway_context\` first for the current working packet.
+5. Use exposed product Gateway tools for Memory, Shared Line, InnerLife, traces, diagnostics, import/export, and maintenance.
+6. Use CLI fallback only when MCP is unavailable or when a local recovery script needs it.
+
+## Agent Identity Contract
+
+\`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\` belongs to the calling agent. Do not share one id across agents.
+
+Recommended stable ids:
+
+${agentExamples.map((item) => `- \`${item}\``).join("\n")}
+
+If you are a new agent, choose one stable id before writing any data. Keep using it in every ClaraCore MCP call.
 
 ## Connection Mode
 
-- Current recommended path: stdio MCP, configured in the agent client with the JSON below.
-- Current URL path: Desktop also exposes a localhost HTTP Agent Gateway when the app is running.
-- Human copy step: copy this setup note, the MCP config, or a local URL with its bearer token into the agent client.
+- ClaraCore Desktop should stay open as the local agent service.
+- Current MCP path: stdio MCP, configured in the agent client with the JSON below.
+- Local helper URL: Desktop exposes a localhost HTTP Agent Gateway while the app is running. Its port is assigned at startup; use the current URL from Agent Access or \`/agent/setup\`, and do not hard-code the port.
+- Human copy step: this brief is for an agent to read and install itself. The MCP config is a fallback for manual setup.
 - LAN path: intentionally disabled by default. Do not bind this beyond localhost unless the user explicitly enables a token-protected LAN mode.
 
 ## Gateway MCP
@@ -41,7 +56,12 @@ ${snapshot.connections.mcpConfig}
 
 ## First Context Call
 
-After connecting, call \`gateway_context\` first. It returns the current Shared Line, recent Memory, InnerLife state, Doctor guidance, and recovery advice in one packet.
+After installing, call:
+
+1. \`claracore_connection_test\` with your stable \`agentId\`.
+2. \`gateway_context\`.
+
+\`gateway_context\` returns the current Shared Line, recent Memory, InnerLife state, Doctor guidance, and recovery advice in one packet.
 
 ## CLI Fallback
 
@@ -87,7 +107,7 @@ node core/cli.js innerlife inbox --agent codex --body "material to digest later"
 
 ${endpoints}
 
-Use \`Authorization: Bearer <token>\` for HTTP requests. \`/agent/setup\` returns this setup as JSON; \`/gateway/context\` returns the first context packet an agent should read.
+Use \`Authorization: Bearer <token>\` for HTTP requests. \`/agent/setup\` returns this setup as JSON; \`/gateway/context\` returns the first context packet an agent should read. HTTP is a helper surface; MCP remains the product tool contract.
 
 ## Product Surface
 

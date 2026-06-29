@@ -22,7 +22,10 @@ The Desktop runtime is Node/Electron.
 Agents should use Gateway MCP first, then CLI fallback when MCP is unavailable.
 When the Desktop app is running, Agent Access may also expose a
 token-protected localhost HTTP Agent Gateway for setup JSON and the first
-Gateway context packet. This HTTP surface binds to `127.0.0.1` by default.
+Gateway context packet. This HTTP surface binds to `127.0.0.1` by default and
+uses an OS-assigned runtime port. Do not document or depend on a fixed port;
+agents should read the current URL from Agent Access or `/agent/setup` each app
+session.
 
 Do not show or bind a LAN URL by default. A LAN Agent Gateway must be an
 explicit product mode with visible bind address, bearer token, token
@@ -64,6 +67,22 @@ New renderer work should go into a focused module, not into `app.js`.
 `styles.css` is an import entry. Shared and view-specific styles live under
 `styles/`; add new CSS near the view or component it serves instead of growing a
 single stylesheet again.
+
+The Home page is the operational board for the local agent runtime. It should
+make runtime state inspectable at a glance without becoming a generic settings
+page:
+
+- The runtime overview owns the breathing core visualization. Its color and
+  cadence derive from current snapshot state: quiet, active, warning, or error.
+- Motion must respect the Settings motion preference and system reduced-motion
+  preference. Disabling motion should leave a readable static state.
+- The Gateway trace panel should show one expanded priority call chain and keep
+  repeated calls compact. Priority is error first, then newest call. Additional
+  calls belong in a compressed recent list with overflow review through Agent
+  Access, not as repeated expanded JSON cards.
+- Chinese UI copy should stay Chinese except for protocol, format, runtime, or
+  actual tool names such as MCP, CLI, HTTP, JSON, SQLite, localhost, token,
+  Electron, Node, Chrome, and real agent/tool identifiers.
 
 ## Core Boundary
 

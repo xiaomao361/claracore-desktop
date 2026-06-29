@@ -404,6 +404,8 @@ async function handleHttpAgentRequest(request, response) {
       connectionMode: {
         current: "localhost-http-url",
         bind: httpAgentGateway.host,
+        port: httpAgentGateway.port,
+        portPolicy: "runtime-assigned; do not hard-code across app sessions",
         lan: "disabled-by-default"
       },
       auth: {

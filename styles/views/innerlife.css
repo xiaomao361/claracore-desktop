@@ -206,8 +206,34 @@
 .innerlife-share-list {
   display: grid;
   gap: 12px;
-  max-height: calc(100vh - 365px);
+  max-height: min(460px, calc(100vh - 420px));
   margin-top: 12px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.innerlife-record-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.innerlife-record-grid section {
+  min-width: 0;
+}
+
+.innerlife-record-grid h3 {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 760;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.innerlife-record-grid .compact-list {
+  max-height: 260px;
   overflow: auto;
   padding-right: 4px;
 }

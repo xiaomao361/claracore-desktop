@@ -144,12 +144,19 @@ function gatewayLaunchConfig(app, paths) {
 }
 
 function productAgentSetup(app, paths, configuration) {
-  const agentId = configuration?.gateway?.agentId || "codex";
   const launch = gatewayLaunchConfig(app, paths);
+  const agentIdentityExamples = ["claude-code:clara", "codex", "hermes:lara"];
   return {
     gatewayStatus: "available",
     mcpServerName: "claracore-desktop",
     mcpCommand: launch.displayCommand,
+    agentIdentity: {
+      envKey: "CLARACORE_AGENT_ID",
+      required: true,
+      owner: "calling agent",
+      examples: agentIdentityExamples,
+      note: "Each connected agent must set its own stable id. Do not reuse another agent id."
+    },
     mcpConfig: JSON.stringify(
       {
         mcpServers: {
@@ -158,7 +165,7 @@ function productAgentSetup(app, paths, configuration) {
             command: launch.command,
             args: launch.args,
             env: {
-              CLARACORE_AGENT_ID: agentId,
+              CLARACORE_AGENT_ID: "<agent-stable-id>",
               CLARACORE_DESKTOP_DATA_DIR: paths.dataRoot
             }
           }

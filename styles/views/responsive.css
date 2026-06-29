@@ -81,6 +81,26 @@
     grid-template-columns: 1fr;
   }
 
+  .trace-chain {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .trace-link {
+    width: 1px;
+    height: 14px;
+    margin-left: 18px;
+    background: linear-gradient(180deg, rgba(36, 138, 99, 0.2), rgba(36, 138, 99, 0.72));
+  }
+
+  .trace-link::after {
+    right: auto;
+    top: auto;
+    bottom: -1px;
+    left: 50%;
+    transform: translateX(-50%) rotate(135deg);
+  }
+
   .settings-grid {
     grid-template-columns: 1fr;
   }
@@ -104,6 +124,7 @@
   }
 
   .innerlife-share-list,
+  .innerlife-record-grid .compact-list,
   .shared-line-tab-panel.active {
     max-height: none;
     overflow: visible;

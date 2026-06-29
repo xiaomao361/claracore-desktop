@@ -1,6 +1,7 @@
 @media (max-width: 1180px) {
   .innerlife-layout,
-  .innerlife-compose-grid {
+  .innerlife-compose-grid,
+  .innerlife-record-grid {
     grid-template-columns: 1fr;
   }
 

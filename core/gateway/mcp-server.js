@@ -74,6 +74,21 @@ function toolDefinitions() {
       }
     },
     {
+      name: "claracore_connection_test",
+      title: "ClaraCore Connection Test",
+      description: "Verify that this agent can reach ClaraCore Desktop through MCP and record a visible handshake trace.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          agentId: {
+            type: "string",
+            description: "Stable id for the calling agent, for example claude-code:clara, codex, or hermes:lara."
+          }
+        },
+        additionalProperties: false
+      }
+    },
+    {
       name: "gateway_docs",
       title: "Gateway Docs",
       description: "Read agent-facing ClaraCore Desktop Gateway setup and fallback notes.",
@@ -1320,6 +1335,8 @@ async function callToolBody(name, args = {}, paths, database) {
             "# ClaraCore Desktop Gateway",
             "",
             "Use this MCP server as the single local entry for ClaraCore Desktop product data.",
+            "Each agent must set its own stable CLARACORE_AGENT_ID. Do not reuse another agent's id.",
+            "Recommended ids: claude-code:clara, codex, hermes:lara.",
             "",
             "## MCP Config",
             "",
@@ -1332,6 +1349,7 @@ async function callToolBody(name, args = {}, paths, database) {
                     command: launch.command,
                     args: launch.args,
                     env: {
+                      CLARACORE_AGENT_ID: "<agent-stable-id>",
                       CLARACORE_DESKTOP_DATA_DIR: paths.dataRoot
                     }
                   }
@@ -1346,6 +1364,10 @@ async function callToolBody(name, args = {}, paths, database) {
             "",
             ...toolDefinitions().map((tool) => `- ${tool.name}: ${tool.description}`),
             "",
+            "## Verify The Connection",
+            "",
+            "After installing the MCP config, call claracore_connection_test with your stable agentId. Desktop records that call as a visible handshake in Agent Access.",
+            "",
             "## CLI Fallback",
             "",
             launch.displayCommand,
@@ -1357,6 +1379,30 @@ async function callToolBody(name, args = {}, paths, database) {
         }
       ]
     };
+  }
+  if (name === "claracore_connection_test") {
+    const agentId = String(args.agentId || process.env.CLARACORE_AGENT_ID || "codex").trim() || "codex";
+    const summary = await database.getSummary();
+    const configuration = await database.getConfiguration(paths);
+    return textResult({
+      ok: true,
+      agentId,
+      transport: "stdio",
+      server: SERVER_INFO,
+      dataRoot: paths.dataRoot,
+      database: {
+        initialized: Boolean(summary.initialized),
+        path: paths.databasePath
+      },
+      modules: {
+        gateway: "available",
+        memoria: summary.memories_count > 0 ? "ready" : "empty",
+        continuity: summary.continuity_lines_count > 0 ? "ready" : "empty",
+        innerlife: configuration?.innerlife?.daemon?.status || "paused"
+      },
+      timestamp: new Date().toISOString(),
+      next: "Call gateway_context to read the current agent packet."
+    });
   }
   if (name === "gateway_context") {
     return textResult(await database.getGatewayContext(args));

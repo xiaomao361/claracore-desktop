@@ -25,6 +25,8 @@ function createClaraCoreHomeView(context) {
     healthList,
     mcpCommand,
     mcpConfig,
+    agentIdentityList,
+    gatewayHandshakeList,
     gatewayTraceList,
     httpEndpointList
   } = dom;
@@ -441,6 +443,129 @@ function createClaraCoreHomeView(context) {
     };
   }
 
+  function truncateTraceText(value, maxLength = 150) {
+    const text = String(value || "").replace(/\s+/g, " ").trim();
+    if (!text) return "";
+    return text.length > maxLength ? `${text.slice(0, maxLength - 1)}...` : text;
+  }
+
+  function traceResponseText(trace) {
+    const raw = trace.error || trace.responseSummary || "";
+    const parsed = safeJsonObject(raw, null);
+    if (parsed) {
+      const parts = [];
+      if (Object.prototype.hasOwnProperty.call(parsed, "ok")) {
+        parts.push(parsed.ok ? t("home.trace.resultOk") : t("home.trace.resultError"));
+      }
+      if (parsed.transport) parts.push(`${t("home.trace.transport")} ${parsed.transport}`);
+      if (parsed.server?.name) parts.push(parsed.server.name);
+      if (parsed.modules) {
+        const modules = Object.entries(parsed.modules)
+          .slice(0, 4)
+          .map(([key, value]) => `${key}:${value}`)
+          .join(" / ");
+        if (modules) parts.push(modules);
+      }
+      if (parsed.database?.initialized !== undefined) {
+        parts.push(parsed.database.initialized ? t("home.trace.databaseReady") : t("home.trace.databasePending"));
+      }
+      if (parts.length) return truncateTraceText(parts.join(" · "));
+    }
+    return truncateTraceText(raw);
+  }
+
+  function traceRequestText(trace) {
+    const request = trace.request && typeof trace.request === "object" ? trace.request : {};
+    const entries = Object.entries(request).filter(([key, value]) => key !== "agentId" && value !== undefined && value !== null && String(value) !== "");
+    if (!entries.length) return t("home.trace.noRequest");
+    return truncateTraceText(
+      entries
+        .slice(0, 3)
+        .map(([key, value]) => `${key}=${typeof value === "object" ? JSON.stringify(value) : String(value)}`)
+        .join(" · "),
+      90
+    );
+  }
+
+  function renderTraceFlow(trace) {
+    const status = trace.status === "error" ? "error" : "ok";
+    const statusText = status === "error" ? t("home.trace.statusError") : t("home.trace.statusOk");
+    const agentId = trace.agentId || t("home.trace.unknownAgent");
+    const toolName = trace.toolName || t("home.trace.unknownTool");
+    const responseText = traceResponseText(trace) || (status === "error" ? t("home.trace.resultError") : t("home.trace.resultOk"));
+    return `
+      <article class="home-trace-flow ${escapeHtml(status)}">
+        <header class="trace-flow-head">
+          <div>
+            <strong>${escapeHtml(toolName)}</strong>
+            <span>${escapeHtml(agentId)}</span>
+          </div>
+          <code>${escapeHtml(statusText)} · ${escapeHtml(String(trace.durationMs ?? 0))}ms</code>
+        </header>
+        <div class="trace-chain" aria-label="${escapeHtml(t("home.trace.chain"))}">
+          <div class="trace-node agent">
+            <span class="trace-node-dot"></span>
+            <small>${escapeHtml(t("home.trace.agent"))}</small>
+            <strong>${escapeHtml(agentId)}</strong>
+          </div>
+          <span class="trace-link"></span>
+          <div class="trace-node gateway">
+            <span class="trace-node-dot"></span>
+            <small>${escapeHtml(t("home.trace.gateway"))}</small>
+            <strong>${escapeHtml(t("home.trace.desktopGateway"))}</strong>
+          </div>
+          <span class="trace-link"></span>
+          <div class="trace-node tool">
+            <span class="trace-node-dot"></span>
+            <small>${escapeHtml(t("home.trace.tool"))}</small>
+            <strong>${escapeHtml(toolName)}</strong>
+          </div>
+          <span class="trace-link"></span>
+          <div class="trace-node result ${escapeHtml(status)}">
+            <span class="trace-node-dot"></span>
+            <small>${escapeHtml(t("home.trace.result"))}</small>
+            <strong>${escapeHtml(statusText)}</strong>
+          </div>
+        </div>
+        <div class="trace-flow-detail">
+          <div>
+            <span>${escapeHtml(t("home.trace.request"))}</span>
+            <strong>${escapeHtml(traceRequestText(trace))}</strong>
+          </div>
+          <div>
+            <span>${escapeHtml(t("home.trace.response"))}</span>
+            <strong>${escapeHtml(responseText)}</strong>
+          </div>
+        </div>
+        <small class="trace-flow-time">${escapeHtml(trace.createdAt || "")}</small>
+      </article>
+    `;
+  }
+
+  function traceTimeValue(trace) {
+    const value = Date.parse(trace.createdAt || "");
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  function tracePriority(trace) {
+    return trace.status === "error" ? 1 : 0;
+  }
+
+  function traceCompactRow(trace) {
+    const status = trace.status === "error" ? "error" : "ok";
+    const statusText = status === "error" ? t("home.trace.statusError") : t("home.trace.statusOk");
+    return `
+      <article class="trace-compact-row ${escapeHtml(status)}">
+        <span class="trace-compact-dot"></span>
+        <div>
+          <strong>${escapeHtml(trace.toolName || t("home.trace.unknownTool"))}</strong>
+          <small>${escapeHtml(trace.agentId || t("home.trace.unknownAgent"))}</small>
+        </div>
+        <code>${escapeHtml(statusText)} · ${escapeHtml(String(trace.durationMs ?? 0))}ms</code>
+      </article>
+    `;
+  }
+
   function renderHomeDashboard() {
     const snapshot = getSnapshot();
     if (!snapshot) return;
@@ -472,24 +597,34 @@ function createClaraCoreHomeView(context) {
       )
       .join("");
 
-    const traces = [...(snapshot.gatewayTraces || [])].sort((a, b) => (a.status === "error" ? -1 : 0) - (b.status === "error" ? -1 : 0));
+    const traces = [...(snapshot.gatewayTraces || [])].sort((a, b) => {
+      const priorityDiff = tracePriority(b) - tracePriority(a);
+      if (priorityDiff) return priorityDiff;
+      return traceTimeValue(b) - traceTimeValue(a);
+    });
     if (!traces.length) {
       homeTraceList.innerHTML = `<div class="endpoint-empty">${escapeHtml(t("home.trace.empty"))}</div>`;
     } else {
-      homeTraceList.innerHTML = traces
-        .slice(0, 5)
-        .map(
-          (trace) => `
-            <article class="home-trace-row ${escapeHtml(trace.status || "")}">
-              <div>
-                <strong>${escapeHtml(trace.toolName || "unknown")}</strong>
-                <span>${escapeHtml(trace.error || trace.responseSummary || "")}</span>
-              </div>
-              <code>${escapeHtml(trace.status || "ok")} · ${escapeHtml(String(trace.durationMs ?? 0))}ms</code>
-            </article>
-          `
-        )
-        .join("");
+      const featuredTrace = traces[0];
+      const compactTraces = traces.slice(1, 5);
+      const hiddenCount = Math.max(0, traces.length - 5);
+      homeTraceList.innerHTML = `
+        ${renderTraceFlow(featuredTrace)}
+        ${
+          compactTraces.length
+            ? `
+              <section class="trace-compact-list">
+                <div class="trace-compact-heading">
+                  <span>${escapeHtml(t("home.trace.recent"))}</span>
+                  <strong>${escapeHtml(t("home.trace.showing", { shown: compactTraces.length + 1, total: traces.length }))}</strong>
+                </div>
+                ${compactTraces.map((trace) => traceCompactRow(trace)).join("")}
+              </section>
+            `
+            : ""
+        }
+        ${hiddenCount ? `<div class="trace-more">${escapeHtml(t("home.trace.more", { count: hiddenCount }))}</div>` : ""}
+      `;
     }
   }
 
@@ -551,7 +686,42 @@ function createClaraCoreHomeView(context) {
     if (!snapshot?.connections) return;
     mcpCommand.textContent = snapshot.connections.mcpCommand;
     mcpConfig.textContent = snapshot.connections.mcpConfig;
+    const identity = snapshot.connections.agentIdentity || {};
+    const examples = identity.examples || [];
+    if (agentIdentityList) {
+      agentIdentityList.innerHTML = `
+        <div class="endpoint-card">
+          <div>
+            <strong>${escapeHtml(identity.envKey || "CLARACORE_AGENT_ID")}</strong>
+            <code>${escapeHtml(examples.join(" · ") || "<agent-stable-id>")}</code>
+            <span>${escapeHtml(t("agentSetup.identityBody"))}</span>
+          </div>
+        </div>
+      `;
+    }
     const traces = snapshot.gatewayTraces || [];
+    const handshakes = traces.filter((trace) => trace.toolName === "claracore_connection_test");
+    if (gatewayHandshakeList) {
+      if (handshakes.length === 0) {
+        gatewayHandshakeList.innerHTML = `<div class="endpoint-empty">${t("connections.noHandshakes")}</div>`;
+      } else {
+        gatewayHandshakeList.innerHTML = handshakes
+          .slice(0, 5)
+          .map(
+            (trace) => `
+              <div class="endpoint-card trace-card ${escapeHtml(trace.status || "")}">
+                <div>
+                  <strong>${escapeHtml(trace.agentId || "")}</strong>
+                  <code>${escapeHtml(trace.status || "")} · ${escapeHtml(String(trace.durationMs ?? 0))}ms</code>
+                  <span>${escapeHtml(trace.error || trace.responseSummary || t("connections.handshakeOk"))}</span>
+                  <small>${escapeHtml(trace.createdAt || "")}</small>
+                </div>
+              </div>
+            `
+          )
+          .join("");
+      }
+    }
     if (traces.length === 0) {
       gatewayTraceList.innerHTML = `<div class="endpoint-empty">${t("connections.noGatewayTraces")}</div>`;
     } else {

@@ -425,6 +425,9 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       const inbox = await this.listInnerLifeInbox("all", 20);
       const digestRuns = await this.listInnerLifeDigestRuns("all", 10);
       const shareChecks = await this.listInnerLifeShareChecks(profile.agent_id, 10);
+      const history = await this.getInnerLifeHistory("all", 20);
+      const experiences = await this.listInnerLifeExperiences("all", 10);
+      const summaries = await this.listInnerLifeSummaries("all", 10);
       const daemon = await this.ensureInnerLifeDaemonState(profile.agent_id);
       const rows = await this.query(`
         SELECT
@@ -459,6 +462,9 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         inbox,
         digestRuns,
         shareChecks,
+        history,
+        experiences,
+        summaries,
         daemon,
         doctor: await this.getInnerLifeDoctor(profile.agent_id)
       };
@@ -1141,7 +1147,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 20));
       const agentFilter = String(agentId || DEFAULT_AGENT_ID).trim();
       const agentWhereClause = agentFilter === "all" ? "" : `AND s.agent_id = ${sqlString(agentFilter)}`;
-      const rows = await this.query(`
+      const shareRows = await this.query(`
         SELECT t.id, t.body, t.review_status, t.created_at, s.agent_id, s.id AS share_id
         FROM innerlife_thoughts t
         JOIN innerlife_shares s ON s.thought_id = t.id
@@ -1149,18 +1155,86 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         ORDER BY t.created_at DESC, t.id DESC
         LIMIT ${safeLimit};
       `);
-      return rows.map((row) => ({
-        id: row.id,
-        agentId: row.agent_id,
-        shareId: row.share_id,
-        body: row.body,
-        reviewStatus: row.review_status,
-        createdAt: row.created_at
-      }));
+      const eventWhereClause = agentFilter === "all" ? "" : `AND agent_id = ${sqlString(agentFilter)}`;
+      const eventRows = await this.query(`
+        SELECT id, agent_id, kind, body, status, created_at
+        FROM innerlife_events
+        WHERE kind IN ('autonomous_experience', 'explore') ${eventWhereClause}
+        ORDER BY created_at DESC, id DESC
+        LIMIT ${safeLimit};
+      `);
+      return [
+        ...shareRows.map((row) => ({
+          id: row.id,
+          agentId: row.agent_id,
+          shareId: row.share_id,
+          body: row.body,
+          reviewStatus: row.review_status,
+          createdAt: row.created_at,
+          source: "share"
+        })),
+        ...eventRows.map((row) => ({
+          id: row.id,
+          agentId: row.agent_id,
+          shareId: "",
+          body: row.body,
+          reviewStatus: row.status,
+          createdAt: row.created_at,
+          source: row.kind
+        }))
+      ]
+        .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+        .slice(0, safeLimit);
     }
     ,
 
     async listInnerLifeSummaries(agentId = DEFAULT_AGENT_ID, limit = 10) {
+      const safeLimit = Math.max(1, Math.min(50, Number.parseInt(String(limit), 10) || 10));
+      const agentFilter = String(agentId || DEFAULT_AGENT_ID).trim();
+      const whereClause = agentFilter === "all"
+        ? "WHERE summary != ''"
+        : `WHERE summary != '' AND agent_id = ${sqlString(agentFilter)}`;
+      const digestRows = await this.query(`
+        SELECT id, agent_id, mode, summary, created_at, completed_at
+        FROM innerlife_digest_runs
+        ${whereClause}
+        ORDER BY created_at DESC, id DESC
+        LIMIT ${safeLimit};
+      `);
+      const eventWhereClause = agentFilter === "all" ? "" : `AND agent_id = ${sqlString(agentFilter)}`;
+      const eventRows = await this.query(`
+        SELECT id, agent_id, kind, body, created_at
+        FROM innerlife_events
+        WHERE (kind LIKE 'summary:%' OR kind IN ('converge', 'convergence_run')) ${eventWhereClause}
+        ORDER BY created_at DESC, id DESC
+        LIMIT ${safeLimit};
+      `);
+      return [
+        ...digestRows.map((row) => ({
+          id: row.id,
+          agentId: row.agent_id,
+          mode: row.mode,
+          summary: row.summary,
+          createdAt: row.created_at,
+          completedAt: row.completed_at,
+          source: "digest"
+        })),
+        ...eventRows.map((row) => ({
+          id: row.id,
+          agentId: row.agent_id,
+          mode: row.kind,
+          summary: row.body,
+          createdAt: row.created_at,
+          completedAt: row.created_at,
+          source: "event"
+        }))
+      ]
+        .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+        .slice(0, safeLimit);
+    }
+    ,
+
+    async listInnerLifeDigestSummaries(agentId = DEFAULT_AGENT_ID, limit = 10) {
       const safeLimit = Math.max(1, Math.min(50, Number.parseInt(String(limit), 10) || 10));
       const agentFilter = String(agentId || DEFAULT_AGENT_ID).trim();
       const whereClause = agentFilter === "all"

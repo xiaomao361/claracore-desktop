@@ -109,6 +109,11 @@ function usage() {
       "innerlife share-check [--share-id <id>] [--session-id <id>] [--context <text>]",
       "innerlife mark-share --id <id> --action used|deferred|discarded [--reason <text>]",
       "innerlife share-actions [--share-id <id>] [--limit N]",
+      "innerlife history [--agent <id>] [--limit N]",
+      "innerlife experiences [--agent <id>] [--limit N]",
+      "innerlife summaries [--agent <id>] [--limit N]",
+      "innerlife explore [--agent <id>] [--prompt <text>]",
+      "innerlife converge [--agent <id>]",
       "innerlife daemon status|enable|pause|tick [--force]"
     ]
   };
@@ -437,6 +442,35 @@ async function runMemoryCommand(app, command, subcommand, options) {
         actions: await database.listInnerLifeShareActions(options["share-id"] || options.shareId || null, Number.parseInt(String(options.limit || 20), 10) || 20)
       };
     }
+    if (subcommand === "history") {
+      const { database } = await runtime.ensureProductCore(app);
+      return {
+        history: await database.getInnerLifeHistory(agentId, Number.parseInt(String(options.limit || 20), 10) || 20)
+      };
+    }
+    if (subcommand === "experiences") {
+      const { database } = await runtime.ensureProductCore(app);
+      return {
+        experiences: await database.listInnerLifeExperiences(agentId, Number.parseInt(String(options.limit || 20), 10) || 20)
+      };
+    }
+    if (subcommand === "summaries") {
+      const { database } = await runtime.ensureProductCore(app);
+      return {
+        summaries: await database.listInnerLifeSummaries(agentId, Number.parseInt(String(options.limit || 10), 10) || 10)
+      };
+    }
+    if (subcommand === "explore") {
+      const { database } = await runtime.ensureProductCore(app);
+      return database.exploreInnerLife({
+        agentId,
+        prompt: options.prompt || ""
+      });
+    }
+    if (subcommand === "converge") {
+      const { database } = await runtime.ensureProductCore(app);
+      return database.convergeInnerLife({ agentId });
+    }
     if (subcommand === "daemon") {
       const action = options.daemonAction || options.action || "status";
       if (action === "status") {
@@ -447,7 +481,7 @@ async function runMemoryCommand(app, command, subcommand, options) {
       if (action === "tick") return runtime.tickProductInnerLifeDaemon(app, { agentId, force: Boolean(options.force) });
       throw new Error("innerlife daemon requires status, enable, pause, or tick.");
     }
-    throw new Error("innerlife requires status, doctor, briefing, sessions, session-start, session-end, inbox, submit-fact, submit-continuity, digest, process-once, pending, share-check, mark-share, share-actions, or daemon.");
+    throw new Error("innerlife requires status, doctor, briefing, sessions, session-start, session-end, inbox, submit-fact, submit-continuity, digest, process-once, pending, share-check, mark-share, share-actions, history, experiences, summaries, explore, converge, or daemon.");
   }
   throw new Error(`Unknown command: ${command || ""}`);
 }
