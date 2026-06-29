@@ -443,16 +443,50 @@ class ProductDatabase {
     for (const [column, sql] of currentPositionAdditions) {
       if (!currentPositionColumns.has(column)) await this.exec(sql);
     }
+    const continuityLineColumns = new Set((await this.query("PRAGMA table_info(continuity_lines);")).map((row) => row.name));
+    const continuityLineAdditions = [
+      ["agent_id", "ALTER TABLE continuity_lines ADD COLUMN agent_id TEXT NOT NULL DEFAULT 'codex';"]
+    ];
+    for (const [column, sql] of continuityLineAdditions) {
+      if (!continuityLineColumns.has(column)) await this.exec(sql);
+    }
     await this.exec(`
       UPDATE memory_records
       SET local_date = substr(occurred_at, 1, 10)
       WHERE local_date = '';
+
+      UPDATE continuity_lines
+      SET agent_id = 'codex'
+      WHERE agent_id IS NULL OR agent_id = '';
 
       CREATE INDEX IF NOT EXISTS idx_memory_records_user_type_time
       ON memory_records(user_id, record_type, occurred_at DESC);
 
       CREATE INDEX IF NOT EXISTS idx_memory_records_user_local_date
       ON memory_records(user_id, local_date);
+
+      CREATE INDEX IF NOT EXISTS idx_continuity_lines_agent_status_updated
+      ON continuity_lines(agent_id, status, updated_at DESC);
+
+      CREATE TABLE IF NOT EXISTS continuity_agent_state (
+        agent_id TEXT PRIMARY KEY,
+        communication_style TEXT NOT NULL DEFAULT '',
+        relationship_position TEXT NOT NULL DEFAULT '',
+        long_term_preferences_json TEXT NOT NULL DEFAULT '[]',
+        boundaries_json TEXT NOT NULL DEFAULT '[]',
+        stable_patterns_json TEXT NOT NULL DEFAULT '[]',
+        notes TEXT NOT NULL DEFAULT '',
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS continuity_model_adjustments (
+        model TEXT PRIMARY KEY,
+        forbidden_phrases_json TEXT NOT NULL DEFAULT '[]',
+        forbidden_patterns_json TEXT NOT NULL DEFAULT '[]',
+        inject_prompt TEXT NOT NULL DEFAULT '',
+        updated_by TEXT NOT NULL DEFAULT 'desktop',
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
 
       CREATE UNIQUE INDEX IF NOT EXISTS idx_memory_records_dedupe
       ON memory_records(user_id, record_type, dedupe_key)
@@ -757,6 +791,71 @@ class ProductDatabase {
         schedule: settings["backup.schedule"] || "manual"
       }
     };
+  }
+
+  async chatCompletion(input = {}) {
+    const provider = String(input.provider || "").trim().toLowerCase();
+    const baseUrl = String(input.baseUrl || "").trim().replace(/\/+$/, "");
+    const model = String(input.model || "").trim();
+    const apiKey = String(input.apiKey || "").trim();
+    const system = String(input.system || "").trim();
+    const prompt = String(input.prompt || "").trim();
+    const timeoutMs = Number.parseInt(String(input.timeoutMs || 60000), 10) || 60000;
+    if (!baseUrl) throw new Error("InnerLife chat base URL is required.");
+    if (!model) throw new Error("InnerLife chat model is required.");
+    if (!prompt) throw new Error("InnerLife chat prompt is required.");
+    const messages = [];
+    if (system) messages.push({ role: "system", content: system });
+    messages.push({ role: "user", content: prompt });
+    if (provider === "ollama") {
+      const response = await postJson(
+        `${baseUrl}/api/chat`,
+        { model, messages, stream: false },
+        { errorPrefix: "Ollama chat", timeoutMs }
+      );
+      const text = String(response?.message?.content || "").trim();
+      if (!text) throw new Error("Ollama chat returned no content.");
+      return text;
+    }
+    if (provider === "openai-compatible") {
+      const endpoint = baseUrl.endsWith("/v1")
+        ? `${baseUrl}/chat/completions`
+        : `${baseUrl}/v1/chat/completions`;
+      const headers = apiKey ? { Authorization: `Bearer ${apiKey}` } : {};
+      const response = await postJson(
+        endpoint,
+        { model, messages },
+        { headers, errorPrefix: "OpenAI-compatible chat endpoint", timeoutMs }
+      );
+      const text = String(response?.choices?.[0]?.message?.content || "").trim();
+      if (!text) throw new Error("OpenAI-compatible chat endpoint returned no content.");
+      return text;
+    }
+    throw new Error(`InnerLife chat provider '${provider || "disabled"}' is not implemented.`);
+  }
+
+  async innerLifeGenerate(input = {}) {
+    const settings = await this.getSettings();
+    const provider = String(settings["innerlife.provider"] || "disabled").trim().toLowerCase();
+    if (!provider || provider === "disabled") return null;
+    const baseUrl = settings["innerlife.base_url"] || "http://127.0.0.1:11434";
+    const tier = String(input.tier || "light").trim().toLowerCase();
+    const lightModel = String(settings["innerlife.light_model"] || "").trim();
+    const deepModel = String(settings["innerlife.deep_model"] || "").trim();
+    const model = tier === "deep" ? deepModel || lightModel : lightModel || deepModel;
+    if (!model) return null;
+    const secrets = await this.getSecretRefs();
+    const apiKeyRef = secrets["innerlife.llm.api_key"]?.ref || "";
+    const apiKey = apiKeyRef.startsWith("env:") ? process.env[apiKeyRef.slice(4)] || "" : apiKeyRef;
+    return this.chatCompletion({
+      provider,
+      baseUrl,
+      model,
+      apiKey,
+      system: input.system,
+      prompt: input.prompt,
+      timeoutMs: input.timeoutMs
+    });
   }
 
   async getSummary() {

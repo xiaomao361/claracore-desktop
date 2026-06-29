@@ -1,5 +1,7 @@
 @media (max-width: 1120px) {
+  .home-hero-board,
   .home-dashboard-grid,
+  .home-activity-grid,
   .module-grid,
   .lower-grid,
   .system-grid {
@@ -12,6 +14,10 @@
 
   .cognitive-system-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-runtime-body {
+    grid-template-columns: 1fr;
   }
 
   .status-rail {
@@ -48,7 +54,9 @@
   .status-strip,
   .memoria-status-strip,
   .shared-line-status-strip,
+  .home-hero-board,
   .home-dashboard-grid,
+  .home-activity-grid,
   .cognitive-system-grid,
   .shared-line-layout,
   .screen-grid,
@@ -66,6 +74,10 @@
   }
 
   .module-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-runtime-strip {
     grid-template-columns: 1fr;
   }
 

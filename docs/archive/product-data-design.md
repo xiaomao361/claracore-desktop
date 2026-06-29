@@ -534,6 +534,15 @@ Implemented:
 - The current position, next step, history, snapshots, handoff next step, position trace, and affective trace are rendered as readable rows instead of raw long text blocks.
 - The right-side detail panel groups imported fields into basic info, progress, boundary, and trace sections.
 - Chinese UI names the human-facing Memory navigation/page as `记忆`, while keeping `Memoria` as the technical module name where appropriate.
+- Desktop Shared Line now has first-class `continuity_lines.agent_id` for agent-scoped line listing and agent default selection.
+- CLI and Gateway MCP `shared_line_update` accept shared-reality fields: `realityLine`, `entryPosture`, `confirmedGround`, `provisionalRead`, `boundaryNotes`, and `misreadRisks`.
+- CLI and Gateway MCP `shared_line_update` accept affective trace inputs: `affectiveTone`, `affectiveValence`, `affectiveSignals`, `affectiveIntensity`, `affectiveStability`, `affectiveNote`, and `affectiveNeedsReview`.
+- Desktop resume packets include `sharedReality`, `positionHistory`, and `affectiveTrace` alongside the text packet.
+- Interpretation status accepts both Desktop statuses (`draft`, `confirmed`) and Python Continuity statuses (`active`, `needs_review`, `stale`, `closed`).
+- Desktop has Continuity-specific `continuity_agent_state` storage and Gateway/CLI read-write access for communication style, relationship position, preferences, boundaries, stable patterns, and notes.
+- Desktop has `continuity_model_adjustments` storage and Gateway/CLI list/get/set/delete access for per-model forbidden phrases, forbidden patterns, and injected prompt guidance.
+- Old Continuity `agent_state` and `model_adjustments.json` are copied into Desktop-owned Continuity tables during old-data import.
+- Shared Line resume packets include `agentState` and optional `modelAdjustment` when a model is requested.
 
 Validated:
 
@@ -542,12 +551,14 @@ Validated:
 - Imported old thread metadata was backfilled into `current_positions.metadata_json`.
 - Shared Line card selection was corrected so `getSharedLine({ lineId })` refreshes the selected detail panel.
 - `npm run check` passes after the UI and documentation updates.
+- `npm run check` passes after the Shared Line core parity update for agent id, shared-reality metadata, affective trace append, and expanded MCP/CLI inputs.
+- `npm run check` passes after adding Continuity agent state and model adjustment tables, CLI/MCP tools, import mapping, and resume-packet inclusion.
 - Smoke tests were intentionally not run for this checkpoint.
 
 Still next:
 
-- Decide whether any legacy Continuity fields should become first-class columns instead of metadata-only fields.
-- Add richer agent identity display if multiple agent naming schemes appear in imported data.
+- Decide whether shared-reality fields should remain metadata-backed or become first-class columns after daily Claude/Hermes usage.
+- Add arc compaction/archive behavior for long `positionHistory` and `affectiveTrace`.
 - Keep human editing minimal unless a real correction workflow appears.
 
 ## Phase 4 Checkpoint

@@ -844,7 +844,8 @@ function createImportRuntime({ createProductBackup, ensureProductCore, productVe
       handoffs: await readTable("continuity_handoffs"),
       sessionThreads: await readTable("session_threads"),
       legacyHandoffs: await readTable("handoffs"),
-      stateSnapshots: await readTable("state_snapshots")
+      stateSnapshots: await readTable("state_snapshots"),
+      agentState: await readTable("agent_state")
     };
   }
   
@@ -866,6 +867,8 @@ function createImportRuntime({ createProductBackup, ensureProductCore, productVe
       lines: { imported: 0, skipped: 0 },
       positions: { imported: 0, skipped: 0 },
       handoffs: { imported: 0, skipped: 0 },
+      agentState: { imported: 0, skipped: 0 },
+      modelAdjustments: { imported: 0, skipped: 0 },
       sourceMtimeUnchanged: false,
       sourceSizeUnchanged: false
     };
@@ -879,8 +882,8 @@ function createImportRuntime({ createProductBackup, ensureProductCore, productVe
       const existing = await database.query(`SELECT id FROM continuity_lines WHERE id = ${sqlString(fallbackLineId)} LIMIT 1;`);
       if (!existing.length) {
         await database.exec(`
-          INSERT INTO continuity_lines (id, title, status, created_at, updated_at)
-          VALUES (${sqlString(fallbackLineId)}, 'Imported Shared Line', 'active', ${sqlString(importedAt)}, ${sqlString(importedAt)});
+          INSERT INTO continuity_lines (id, agent_id, title, status, created_at, updated_at)
+          VALUES (${sqlString(fallbackLineId)}, 'codex', 'Imported Shared Line', 'active', ${sqlString(importedAt)}, ${sqlString(importedAt)});
         `);
         importedLineIds.push(fallbackLineId);
       }
@@ -903,11 +906,12 @@ function createImportRuntime({ createProductBackup, ensureProductCore, productVe
       }
       const title = String(pickFirst(row, ["title", "name", "label", "topic"], "Imported Shared Line") || "Imported Shared Line").trim();
       const status = normalizeContinuityStatus(pickFirst(row, ["status"], "active"));
+      const agentId = String(pickFirst(row, ["agent_id", "agentId"], "codex") || "codex").trim() || "codex";
       const createdAt = String(pickFirst(row, ["created_at", "createdAt", "created"], importedAt) || importedAt);
       const updatedAt = String(pickFirst(row, ["updated_at", "updatedAt", "modified_at", "last_active_at"], createdAt) || createdAt);
       await database.exec(`
-        INSERT INTO continuity_lines (id, title, status, created_at, updated_at)
-        VALUES (${sqlString(id)}, ${sqlString(title)}, ${sqlString(status)}, ${sqlString(createdAt)}, ${sqlString(updatedAt)});
+        INSERT INTO continuity_lines (id, agent_id, title, status, created_at, updated_at)
+        VALUES (${sqlString(id)}, ${sqlString(agentId)}, ${sqlString(title)}, ${sqlString(status)}, ${sqlString(createdAt)}, ${sqlString(updatedAt)});
       `);
       importedLineIds.push(id);
       summary.lines.imported += 1;
@@ -1006,6 +1010,48 @@ function createImportRuntime({ createProductBackup, ensureProductCore, productVe
         VALUES (${sqlString(snapshotId)}, ${sqlString(lineId)}, ${sqlString(positionId)}, ${sqlString(summaryText)}, 'draft', '[]', 'old-state-snapshot-import', ${sqlString(createdAt)});
       `);
       summary.positions.imported += 1;
+    }
+
+    for (const row of old.agentState) {
+      const agentId = String(pickFirst(row, ["id", "agent_id", "agentId"], "codex") || "codex").trim() || "codex";
+      const existing = await database.query(`SELECT agent_id FROM continuity_agent_state WHERE agent_id = ${sqlString(agentId)} LIMIT 1;`);
+      if (existing.length) {
+        summary.agentState.skipped += 1;
+        continue;
+      }
+      await database.updateContinuityAgentState(agentId, {
+        communicationStyle: pickFirst(row, ["communication_style", "communicationStyle"], ""),
+        relationshipPosition: pickFirst(row, ["relationship_position", "relationshipPosition"], ""),
+        longTermPreferences: safeJsonArray(pickFirst(row, ["long_term_preferences", "longTermPreferences"], "[]")),
+        boundaries: safeJsonArray(pickFirst(row, ["boundaries"], "[]")),
+        stablePatterns: safeJsonArray(pickFirst(row, ["stable_patterns", "stablePatterns"], "[]")),
+        notes: pickFirst(row, ["notes"], "")
+      });
+      summary.agentState.imported += 1;
+    }
+
+    const modelAdjustmentsPath = path.join(path.dirname(dbPath), "model_adjustments.json");
+    try {
+      const modelAdjustmentsRaw = await fs.readFile(modelAdjustmentsPath, "utf8");
+      const modelAdjustments = JSON.parse(modelAdjustmentsRaw);
+      const models = modelAdjustments?.models && typeof modelAdjustments.models === "object" ? modelAdjustments.models : {};
+      for (const [model, entry] of Object.entries(models)) {
+        const existing = await database.getContinuityModelAdjustment(model);
+        if (existing) {
+          summary.modelAdjustments.skipped += 1;
+          continue;
+        }
+        await database.setContinuityModelAdjustment({
+          model,
+          forbiddenPhrases: Array.isArray(entry?.forbidden_phrases) ? entry.forbidden_phrases : [],
+          forbiddenPatterns: Array.isArray(entry?.forbidden_patterns) ? entry.forbidden_patterns : [],
+          injectPrompt: entry?.inject_prompt || "",
+          updatedBy: entry?.updated_by || "old-continuity-import"
+        });
+        summary.modelAdjustments.imported += 1;
+      }
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
     }
   
     const statAfter = await fs.stat(dbPath);

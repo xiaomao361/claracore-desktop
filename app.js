@@ -175,6 +175,7 @@ const {
 
 let currentLanguage = localStorage.getItem("claracore.language") || "en";
 let currentTheme = localStorage.getItem("claracore.theme") || "system";
+let currentMotion = localStorage.getItem("claracore.motion") || "system";
 let currentCloseBehavior = localStorage.getItem("claracore.window.closeBehavior") || "hide";
 
 function t(key, values = {}) {
@@ -385,11 +386,18 @@ function resolvedTheme() {
   return window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "dark" : "light";
 }
 
+function resolvedMotion() {
+  if (currentMotion === "on" || currentMotion === "off") return currentMotion;
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "off" : "on";
+}
+
 function getAppearancePreferences() {
   return {
     language: currentLanguage,
     theme: currentTheme,
     resolvedTheme: resolvedTheme(),
+    motion: currentMotion,
+    resolvedMotion: resolvedMotion(),
     closeBehavior: currentCloseBehavior
   };
 }
@@ -397,11 +405,19 @@ function getAppearancePreferences() {
 function applyTheme() {
   document.body.dataset.theme = resolvedTheme();
   document.body.dataset.themePreference = currentTheme;
+  document.body.dataset.motion = resolvedMotion();
+  document.body.dataset.motionPreference = currentMotion;
 }
 
 function setTheme(theme) {
   currentTheme = ["system", "light", "dark"].includes(theme) ? theme : "system";
   localStorage.setItem("claracore.theme", currentTheme);
+  applyTheme();
+}
+
+function setMotion(motion) {
+  currentMotion = ["system", "on", "off"].includes(motion) ? motion : "system";
+  localStorage.setItem("claracore.motion", currentMotion);
   applyTheme();
 }
 
@@ -462,13 +478,13 @@ function renderTopbarStatus() {
 
 function renderSnapshot() {
   if (brandVersion) brandVersion.textContent = `Desktop v${snapshot.productVersion || "-"}`;
-  runtimeMode.textContent = formatMode(snapshot.mode);
-  rootPath.textContent = snapshot.root;
-  dataLocation.textContent = snapshot.data.root;
-  dataHint.textContent = snapshot.data.databasePresent ? t("runtime.databaseReady") : t("runtime.databaseNotCreated");
+  if (runtimeMode) runtimeMode.textContent = formatMode(snapshot.mode);
+  if (rootPath) rootPath.textContent = snapshot.root;
+  if (dataLocation) dataLocation.textContent = snapshot.data.root;
+  if (dataHint) dataHint.textContent = snapshot.data.databasePresent ? t("runtime.databaseReady") : t("runtime.databaseNotCreated");
   dataRootPath.textContent = snapshot.data.root;
   memoryStore.textContent = snapshot.data.databasePath;
-  memoryStoreShort.textContent = snapshot.data.databasePresent ? t("common.found") : t("common.notCreated");
+  if (memoryStoreShort) memoryStoreShort.textContent = snapshot.data.databasePresent ? t("common.found") : t("common.notCreated");
   renderTopbarStatus();
   renderModules(snapshot.modules);
   renderHomeDashboard();
@@ -647,6 +663,7 @@ saveAppearanceSettings?.addEventListener("click", async () => {
     const preferences = collectAppearanceSettingsForm();
     setLanguage(preferences.language);
     setTheme(preferences.theme);
+    setMotion(preferences.motion);
     setWindowCloseBehavior(preferences.closeBehavior);
     renderSettings();
     showCopyNotice(t("settings.appearanceSaved"), appearanceSettingsNotice);
@@ -1122,21 +1139,21 @@ httpEndpointList.addEventListener("click", (event) => {
   }
 });
 
-openDevelopmentPlan.addEventListener("click", () => {
+openDevelopmentPlan?.addEventListener("click", () => {
   if (snapshot?.plans?.productReset) {
     window.ClaraCoreDesktop.openPath(snapshot.plans.productReset);
   }
 });
 
-openDesignPlan.addEventListener("click", () => {
+openDesignPlan?.addEventListener("click", () => {
   if (snapshot?.plans?.v02Legacy) {
     window.ClaraCoreDesktop.openPath(snapshot.plans.v02Legacy);
   }
 });
 
 refresh().catch((error) => {
-  runtimeMode.textContent = t("runtime.unavailable");
-  rootPath.textContent = t("runtime.unableSnapshot");
+  if (runtimeMode) runtimeMode.textContent = t("runtime.unavailable");
+  if (rootPath) rootPath.textContent = t("runtime.unableSnapshot");
 });
 
 refreshResources().catch((error) => {
@@ -1155,6 +1172,12 @@ window.ClaraCoreDesktop.setLanguage(currentLanguage).catch(console.error);
 setWindowCloseBehavior(currentCloseBehavior);
 window.matchMedia?.("(prefers-color-scheme: dark)")?.addEventListener("change", () => {
   if (currentTheme === "system") {
+    applyTheme();
+    renderSettings();
+  }
+});
+window.matchMedia?.("(prefers-reduced-motion: reduce)")?.addEventListener("change", () => {
+  if (currentMotion === "system") {
     applyTheme();
     renderSettings();
   }

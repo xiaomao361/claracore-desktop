@@ -1,5 +1,38 @@
 const innerLifeTickLocks = new Map();
 
+const IL_SYSTEM = {
+  digest:
+    "You are the inner digestion layer of an AI agent. Quietly digest the material below into a short, honest internal understanding. Do not make decisions for the user and do not share automatically. Write in the agent's own first-person voice.",
+  explore:
+    "You are the autonomous exploration layer of an AI agent. From the material below, freely surface threads worth attention. Prefer open questions over conclusions. Write in the agent's own first-person voice.",
+  converge:
+    "You are the convergence layer of an AI agent. Consolidate the pending shares and recent thoughts below into the single most important thread, without discarding the others. Write in the agent's own first-person voice.",
+  process:
+    "You are the inner review layer of an AI agent. Calmly review the current state below and propose a single reviewable share candidate. Do not act, only reflect. Write in the agent's own first-person voice.",
+  session:
+    "You are the inner afterthought layer of an AI agent. Based on the session summary below, write a short reviewable afterthought worth revisiting later. Write in the agent's own first-person voice."
+};
+
+// Try a model-backed generation; fall back to the template text when InnerLife
+// has no model configured or the model call fails. Never throw: a degraded
+// model must not break the reviewable-output pipeline.
+async function generateOrTemplate(self, { tier, system, prompt, template }) {
+  try {
+    const text = await self.innerLifeGenerate({ tier, system, prompt });
+    if (text) {
+      return { body: text, source: "model", tier };
+    }
+  } catch (error) {
+    return {
+      body: `${template}\n\n[InnerLife model fallback: ${error.message || String(error)}]`,
+      source: "fallback",
+      tier,
+      error: error.message || String(error)
+    };
+  }
+  return { body: template, source: "template", tier };
+}
+
 function installInnerLifeRepository(ProductDatabase, helpers) {
   const {
     DEFAULT_AGENT_ID,
@@ -559,7 +592,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       const memoryLines = memories.map((memory) => `- ${memory.title || memory.body.slice(0, 80)}`).join("\n") || "- No recent Memory records.";
       const inboxLines = inboxItems.map((item) => `- ${item.source}: ${item.body}`).join("\n") || "- No pending inbox items.";
       const currentPosition = resumePacket.currentPosition.summary || "No Shared Line position saved yet.";
-      const summary = [
+      const template = [
         "InnerLife digest",
         "",
         `Mode: ${mode}`,
@@ -573,6 +606,13 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         "",
         `Operator prompt: ${prompt || "Digest current state without sharing automatically."}`
       ].join("\n");
+      const generated = await generateOrTemplate(this, {
+        tier: mode === "deep" ? "deep" : "light",
+        system: IL_SYSTEM.digest,
+        prompt: template,
+        template
+      });
+      const summary = generated.body;
       await this.exec(`
         INSERT INTO innerlife_digest_runs (id, agent_id, mode, status, input_json, summary, completed_at, metadata_json)
         VALUES (
@@ -587,10 +627,12 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
             lineId: resumePacket.lineId,
             positionId: resumePacket.currentPosition.positionId,
             memoryIds: memories.map((memory) => memory.id),
-            inboxIds: inboxItems.map((item) => item.id)
+            inboxIds: inboxItems.map((item) => item.id),
+            generationSource: generated.source,
+            generationTier: generated.tier
           })}
         );
-    
+
         INSERT INTO innerlife_events (id, agent_id, kind, body, status, metadata_json)
         VALUES (
           ${sqlString(eventId)},
@@ -823,7 +865,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       const thoughtId = newId("inner_thought");
       const shareId = newId("inner_share");
       const inboxId = newId("inner_inbox");
-      const body = [
+      const template = [
         "Session afterthought",
         "",
         `Session: ${id}`,
@@ -831,6 +873,13 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         "",
         "Review before sharing or applying this anywhere."
       ].join("\n");
+      const generated = await generateOrTemplate(this, {
+        tier: "light",
+        system: IL_SYSTEM.session,
+        prompt: template,
+        template
+      });
+      const body = generated.body;
       await this.exec(`
         UPDATE innerlife_sessions
         SET status = 'ended',
@@ -887,7 +936,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       const memoryLines = memories.map((memory) => `- ${memory.title || memory.body.slice(0, 80)}`).join("\n") || "- No recent Memory records.";
       const inboxLines = inboxItems.map((item) => `- ${item.source}: ${item.body}`).join("\n") || "- No pending inbox items.";
       const position = resumePacket.currentPosition.summary || "No Shared Line position saved yet.";
-      const body = [
+      const template = [
         "Manual InnerLife review",
         "",
         `Current position: ${position}`,
@@ -900,6 +949,13 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         "",
         `Operator prompt: ${prompt || "Review current state calmly and propose only a reviewed share candidate."}`
       ].join("\n");
+      const generated = await generateOrTemplate(this, {
+        tier: "light",
+        system: IL_SYSTEM.process,
+        prompt: template,
+        template
+      });
+      const body = generated.body;
       await this.exec(`
         INSERT INTO innerlife_events (id, agent_id, kind, body, status, metadata_json)
         VALUES (
@@ -1059,6 +1115,200 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
     }
     ,
     
+    async getInnerLifeHistory(agentId = DEFAULT_AGENT_ID, limit = 20) {
+      const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 20));
+      const agentFilter = String(agentId || DEFAULT_AGENT_ID).trim();
+      const whereClause = agentFilter === "all" ? "" : `WHERE agent_id = ${sqlString(agentFilter)}`;
+      const rows = await this.query(`
+        SELECT id, agent_id, kind AS type, body, status, created_at
+        FROM innerlife_events
+        ${whereClause}
+        ORDER BY created_at DESC, id DESC
+        LIMIT ${safeLimit};
+      `);
+      return rows.map((row) => ({
+        id: row.id,
+        agentId: row.agent_id,
+        type: row.type,
+        body: row.body,
+        status: row.status,
+        createdAt: row.created_at
+      }));
+    }
+    ,
+
+    async listInnerLifeExperiences(agentId = DEFAULT_AGENT_ID, limit = 20) {
+      const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 20));
+      const agentFilter = String(agentId || DEFAULT_AGENT_ID).trim();
+      const agentWhereClause = agentFilter === "all" ? "" : `AND s.agent_id = ${sqlString(agentFilter)}`;
+      const rows = await this.query(`
+        SELECT t.id, t.body, t.review_status, t.created_at, s.agent_id, s.id AS share_id
+        FROM innerlife_thoughts t
+        JOIN innerlife_shares s ON s.thought_id = t.id
+        WHERE s.status = 'used' ${agentWhereClause}
+        ORDER BY t.created_at DESC, t.id DESC
+        LIMIT ${safeLimit};
+      `);
+      return rows.map((row) => ({
+        id: row.id,
+        agentId: row.agent_id,
+        shareId: row.share_id,
+        body: row.body,
+        reviewStatus: row.review_status,
+        createdAt: row.created_at
+      }));
+    }
+    ,
+
+    async listInnerLifeSummaries(agentId = DEFAULT_AGENT_ID, limit = 10) {
+      const safeLimit = Math.max(1, Math.min(50, Number.parseInt(String(limit), 10) || 10));
+      const agentFilter = String(agentId || DEFAULT_AGENT_ID).trim();
+      const whereClause = agentFilter === "all"
+        ? "WHERE summary != ''"
+        : `WHERE summary != '' AND agent_id = ${sqlString(agentFilter)}`;
+      const rows = await this.query(`
+        SELECT id, agent_id, mode, summary, created_at, completed_at
+        FROM innerlife_digest_runs
+        ${whereClause}
+        ORDER BY created_at DESC, id DESC
+        LIMIT ${safeLimit};
+      `);
+      return rows.map((row) => ({
+        id: row.id,
+        agentId: row.agent_id,
+        mode: row.mode,
+        summary: row.summary,
+        createdAt: row.created_at,
+        completedAt: row.completed_at
+      }));
+    }
+    ,
+
+    async exploreInnerLife(input = {}) {
+      const agentId = resolveAgentIdentity(input || {}).id;
+      const profile = await this.ensureInnerLifeProfile(agentId);
+      const prompt = String(input.prompt || "").trim();
+      const memories = await this.listMemories(5);
+      const recentThoughts = await this.query(`
+        SELECT body, created_at FROM innerlife_thoughts
+        ORDER BY created_at DESC LIMIT 5;
+      `);
+      const memoryLines = memories.map((m) => `- ${m.title || m.body.slice(0, 80)}`).join("\n") || "- No recent Memory records.";
+      const thoughtLines = recentThoughts.map((t) => `- ${t.body.slice(0, 80)}`).join("\n") || "- No recent thoughts.";
+      const template = [
+        "InnerLife autonomous exploration",
+        "",
+        "Recent Memory context:",
+        memoryLines,
+        "",
+        "Recent thoughts:",
+        thoughtLines,
+        "",
+        `Exploration prompt: ${prompt || "Explore freely — surface what deserves attention without forcing a conclusion."}`
+      ].join("\n");
+      const generated = await generateOrTemplate(this, {
+        tier: "light",
+        system: IL_SYSTEM.explore,
+        prompt: template,
+        template
+      });
+      const body = generated.body;
+      const eventId = newId("inner_event");
+      const thoughtId = newId("inner_thought");
+      const shareId = newId("inner_share");
+      await this.exec(`
+        INSERT INTO innerlife_events (id, agent_id, kind, body, status, metadata_json)
+        VALUES (
+          ${sqlString(eventId)},
+          ${sqlString(profile.agent_id)},
+          'explore',
+          ${sqlString(prompt || "autonomous exploration")},
+          'processed',
+          ${jsonSql({ memoryIds: memories.map((m) => m.id), generationSource: generated.source, generationTier: generated.tier })}
+        );
+
+        INSERT INTO innerlife_thoughts (id, event_id, body, review_status)
+        VALUES (${sqlString(thoughtId)}, ${sqlString(eventId)}, ${sqlString(body)}, 'unreviewed');
+
+        INSERT INTO innerlife_shares (id, agent_id, thought_id, status, body)
+        VALUES (${sqlString(shareId)}, ${sqlString(profile.agent_id)}, ${sqlString(thoughtId)}, 'pending', ${sqlString(body)});
+      `);
+      return {
+        eventId,
+        thoughtId,
+        share: await this.getInnerLifeShare(shareId),
+        snapshot: await this.getInnerLifeSnapshot()
+      };
+    }
+    ,
+
+    async convergeInnerLife(input = {}) {
+      const agentId = resolveAgentIdentity(input || {}).id;
+      const profile = await this.ensureInnerLifeProfile(agentId);
+      const pendingShares = await this.listInnerLifeShares("pending", 10);
+      const agentPendingShares = pendingShares.filter((s) => s.agent_id === profile.agent_id);
+      const recentThoughts = await this.query(`
+        SELECT body, created_at FROM innerlife_thoughts
+        ORDER BY created_at DESC LIMIT 5;
+      `);
+      if (agentPendingShares.length === 0 && recentThoughts.length === 0) {
+        return {
+          converged: false,
+          reason: "Nothing to converge — no pending shares or recent thoughts.",
+          snapshot: await this.getInnerLifeSnapshot()
+        };
+      }
+      const shareLines = agentPendingShares.map((s) => `- ${s.body.slice(0, 100)}`).join("\n") || "- No pending shares.";
+      const thoughtLines = recentThoughts.map((t) => `- ${t.body.slice(0, 80)}`).join("\n") || "- No recent thoughts.";
+      const template = [
+        "InnerLife convergence",
+        "",
+        `Active pending shares: ${agentPendingShares.length}`,
+        shareLines,
+        "",
+        "Recent thought context:",
+        thoughtLines,
+        "",
+        "Converged: surface the most important thread without discarding others."
+      ].join("\n");
+      const generated = await generateOrTemplate(this, {
+        tier: "deep",
+        system: IL_SYSTEM.converge,
+        prompt: template,
+        template
+      });
+      const body = generated.body;
+      const eventId = newId("inner_event");
+      const thoughtId = newId("inner_thought");
+      const shareId = newId("inner_share");
+      await this.exec(`
+        INSERT INTO innerlife_events (id, agent_id, kind, body, status, metadata_json)
+        VALUES (
+          ${sqlString(eventId)},
+          ${sqlString(profile.agent_id)},
+          'converge',
+          'convergence',
+          'processed',
+          ${jsonSql({ pendingShareIds: agentPendingShares.map((s) => s.id), generationSource: generated.source, generationTier: generated.tier })}
+        );
+
+        INSERT INTO innerlife_thoughts (id, event_id, body, review_status)
+        VALUES (${sqlString(thoughtId)}, ${sqlString(eventId)}, ${sqlString(body)}, 'unreviewed');
+
+        INSERT INTO innerlife_shares (id, agent_id, thought_id, status, body)
+        VALUES (${sqlString(shareId)}, ${sqlString(profile.agent_id)}, ${sqlString(thoughtId)}, 'pending', ${sqlString(body)});
+      `);
+      return {
+        converged: true,
+        eventId,
+        thoughtId,
+        share: await this.getInnerLifeShare(shareId),
+        pendingShareCount: agentPendingShares.length,
+        snapshot: await this.getInnerLifeSnapshot()
+      };
+    }
+    ,
+
     async applyInnerLifeShareToSharedLine(id) {
       const share = await this.getInnerLifeShare(id);
       if (share.status !== "approved") {

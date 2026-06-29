@@ -18,11 +18,14 @@ the internal/domain name and old-service import lineage.
 ## Data Surface
 
 - `continuity_lines`: named shared-line tracks.
+- `continuity_lines.agent_id`: first-class agent ownership for agent-scoped line listing and default line selection.
 - `current_positions`: one current position per line.
-- `current_positions.metadata_json`: legacy Continuity metadata used by Desktop review surfaces, such as agent, mode, visibility, interpretation boundary, and trace fields.
+- `current_positions.metadata_json`: shared-reality and legacy Continuity metadata used by Desktop review surfaces and agent resume packets, such as mode, visibility, next step, state summary, current interpretation, shared reality fields, boundary fields, position history, and affective trace.
 - `continuity_position_history`: append-only saved position history.
 - `continuity_snapshots`: append-only snapshots, including confirmed-overwrite checkpoints.
 - `continuity_handoffs`: handoff records for agent resume.
+- `continuity_agent_state`: Continuity-specific agent style, relationship position, preferences, boundaries, stable patterns, and notes.
+- `continuity_model_adjustments`: per-model negative adjustments used by resume packets.
 
 ## Desktop UI
 
@@ -32,7 +35,7 @@ The Shared Line view supports:
 - view-first line browsing without activating or reordering the clicked line,
 - right-side detail review for the selected line; selection is a UI focus state, not the agent-active line,
 - agent filtering for imported and agent-authored lines,
-- current position, `draft` / `confirmed` status, and fact-reference review,
+- current position, `draft` / `confirmed` / `active` / `needs_review` / `stale` / `closed` status, and fact-reference review,
 - formatted current position and trace display so old raw text is split into readable rows,
 - legacy Continuity fields such as agent, visibility, mode, next step, state summary, current interpretation, shared reality line, entry posture, confirmed ground, provisional read, boundary notes, misread risks, position history, and affective trace,
 - recent history and snapshot review,
@@ -55,6 +58,8 @@ Current importer support:
 - writes initial imported state into history and snapshots,
 - reads old `handoffs` into `continuity_handoffs`,
 - reads old `state_snapshots` into `continuity_snapshots`,
+- reads old `agent_state` into `continuity_agent_state`,
+- reads old `model_adjustments.json` into `continuity_model_adjustments`,
 - creates a product backup before import.
 
 The old database remains an import source only.
@@ -63,15 +68,42 @@ The old database remains an import source only.
 
 Use `node core/cli.js shared-line <command>`:
 
-- `get [--line-id <id>]`
-- `list [--limit N]`
-- `create --title <text> [--no-activate]`
+- `get [--line-id <id>] [--agent-id <id>] [--full-arc]`
+- `list [--limit N] [--agent-id <id>] [--all-agents]`
+- `create --title <text> [--agent-id <id>] [--no-activate]`
 - `activate --line-id <id>`
 - `rename --line-id <id> --title <text>`
 - `archive --line-id <id>`
 - `restore --line-id <id> [--activate]`
-- `update --summary <text> [--line-id <id>] [--status draft|confirmed] [--facts-used a,b] [--confirm-overwrite]`
+- `update --summary <text> [--line-id <id>] [--agent-id <id>] [--status draft|confirmed|active|needs_review|stale|closed] [--facts-used a,b] [--reality-line <text>] [--confirmed-ground <text>] [--provisional-read <text>] [--boundary-notes <text>] [--misread-risks <text>] [--affective-tone <text>] [--confirm-overwrite]`
 - `handoff [--line-id <id>] [--objective <text>] [--completed a,b] [--open-items a,b] [--next-step <text>]`
+- `agent-state [--agent-id <id>] [--communication-style <text>] [--relationship-position <text>] [--long-term-preferences a,b] [--boundaries a,b] [--stable-patterns a,b] [--notes <text>]`
+- `model-adjust list|get|set|delete [--model <name>] [--forbidden-phrases a,b] [--forbidden-patterns a,b] [--inject-prompt <text>]`
+- `compact [--line-id <id>] [--keep-trace N] [--keep-history N]`
+
+The agent-facing CLI/MCP surface now accepts the old Continuity shared-reality and affective fields as formal inputs. They are persisted in `current_positions.metadata_json` and included in resume packets. Continuity-specific `agent_state` and `model_adjustments` are product-owned tables and are also included in resume packets.
+
+## Arc Lifecycle
+
+The affective trace and position history are managed arcs, not unbounded logs:
+
+- **Momentary readings are transient.** An affective node with
+  `stability: momentary` is not persisted into the trace and does not alter
+  shared reality. It is a passing signal, not a recorded position.
+- **Consecutive duplicates are de-duplicated.** An affective node identical to
+  the previous one (tone, valence, intensity, signals) is not appended again.
+- **Persisted arcs are capped.** The stored trace and position history are each
+  capped (currently 50 nodes). When over the cap, oldest non-protected nodes are
+  dropped first. Affective nodes flagged `needs_review` are protected and always
+  kept.
+- **Resume packets are truncated by default.** `getResumePacket` /
+  `shared_line_get` returns only the most recent nodes (currently 5 each) plus
+  protected nodes, and reports `arcMeta` with totals and truncation flags. Pass
+  `fullArc: true` to get the complete arc.
+- **Compaction is explicit.** `shared_line_compact` trims the persisted trace and
+  history to a requested length while keeping protected nodes. It only rewrites
+  the metadata arcs; summary, interpretation status, history, and snapshots are
+  untouched, so it cannot bypass the confirmed-position overwrite guard.
 
 ## Gateway
 
@@ -86,3 +118,12 @@ Gateway exposes the same product-owned surface through:
 - `shared_line_restore`
 - `shared_line_update`
 - `shared_line_handoff_create`
+- `shared_line_agent_state`
+- `shared_line_model_adjustment_list`
+- `shared_line_model_adjustment_get`
+- `shared_line_model_adjustment_set`
+- `shared_line_model_adjustment_delete`
+- `shared_line_compact`
+
+`shared_line_get` accepts `fullArc` to return the complete affective trace and
+position history instead of the default truncated arc.

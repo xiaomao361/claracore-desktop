@@ -16,12 +16,35 @@ Desktop currently owns:
 - Session start/end records.
 - Briefing generation from Shared Line, Memory, pending shares, and inbox.
 - Digest runs and share candidate generation.
+- Autonomous exploration and convergence into reviewable share candidates.
+- Internal change history, formed experiences, and stable summaries.
 - Pending share lifecycle records.
 - Share timing checks against current context.
 - Daemon enable/pause/tick state, scheduler behavior, and recovery doctor.
 - Backup-gated copy import from the old InnerLife v2 database.
 - Model provider, endpoint, model names, API key references, and loop cadence
   configured from the Desktop Models page.
+
+## Model-Backed Generation
+
+Digest, manual process-once, exploration, convergence, and session-end
+afterthoughts run through the configured InnerLife model when one is set, and
+fall back to a deterministic template otherwise. Generation is tiered: `digest`
+follows its `mode` (deep mode uses the deep model), `converge` uses the deep
+model, and the rest use the light model.
+
+Each generated record stores `generationSource` in its metadata:
+
+- `model`: produced by the configured InnerLife model.
+- `template`: provider is `disabled` or no model name is configured.
+- `fallback`: a model was configured but the call failed; the template body is
+  kept and tagged with `[InnerLife model fallback: <error>]`.
+
+Model failures never throw out of the generation step, so a degraded or
+unreachable model produces a clearly tagged reviewable share instead of breaking
+the daemon tick or session lifecycle. The model client supports `ollama`
+(`/api/chat`) and `openai-compatible` (`/v1/chat/completions`) providers, reusing
+the same secret-ref pattern as Memory embeddings (`innerlife.llm.api_key`).
 
 The Desktop InnerLife page is intentionally inspect-oriented. Agents create and
 update InnerLife state through Gateway MCP or CLI fallback. Humans can inspect
@@ -58,6 +81,11 @@ Useful MCP tools include:
 - `innerlife_submit_fact`
 - `innerlife_submit_continuity`
 - `innerlife_digest`
+- `innerlife_explore`
+- `innerlife_converge`
+- `innerlife_history`
+- `innerlife_experiences`
+- `innerlife_summaries`
 - `innerlife_share_check`
 - `innerlife_pending_shares`
 - `innerlife_share_actions`

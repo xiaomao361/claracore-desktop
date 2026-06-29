@@ -106,6 +106,7 @@ CREATE TABLE IF NOT EXISTS memory_records (
 
 CREATE TABLE IF NOT EXISTS continuity_lines (
   id TEXT PRIMARY KEY,
+  agent_id TEXT NOT NULL DEFAULT 'codex',
   title TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'active',
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -156,6 +157,26 @@ CREATE TABLE IF NOT EXISTS continuity_handoffs (
   next_step TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (line_id) REFERENCES continuity_lines(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS continuity_agent_state (
+  agent_id TEXT PRIMARY KEY,
+  communication_style TEXT NOT NULL DEFAULT '',
+  relationship_position TEXT NOT NULL DEFAULT '',
+  long_term_preferences_json TEXT NOT NULL DEFAULT '[]',
+  boundaries_json TEXT NOT NULL DEFAULT '[]',
+  stable_patterns_json TEXT NOT NULL DEFAULT '[]',
+  notes TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS continuity_model_adjustments (
+  model TEXT PRIMARY KEY,
+  forbidden_phrases_json TEXT NOT NULL DEFAULT '[]',
+  forbidden_patterns_json TEXT NOT NULL DEFAULT '[]',
+  inject_prompt TEXT NOT NULL DEFAULT '',
+  updated_by TEXT NOT NULL DEFAULT 'desktop',
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS innerlife_profiles (

@@ -700,11 +700,14 @@ function toolDefinitions() {
     {
       name: "shared_line_get",
       title: "Get Shared Line",
-      description: "Read the current ClaraCore Desktop shared position and resume packet.",
+      description: "Read the current ClaraCore Desktop shared position and resume packet. By default the affective trace and position history are truncated to the most recent nodes plus protected (needs-review) nodes; pass fullArc to get the complete arc.",
       inputSchema: {
         type: "object",
         properties: {
-          lineId: { type: "string" }
+          lineId: { type: "string" },
+          agentId: { type: "string" },
+          model: { type: "string" },
+          fullArc: { type: "boolean" }
         },
         additionalProperties: false
       }
@@ -715,7 +718,11 @@ function toolDefinitions() {
       description: "List ClaraCore Desktop Shared Lines and identify the active line.",
       inputSchema: {
         type: "object",
-        properties: {},
+        properties: {
+          agentId: { type: "string" },
+          allAgents: { type: "boolean" },
+          limit: { type: "integer", minimum: 1, maximum: 100 }
+        },
         additionalProperties: false
       }
     },
@@ -728,6 +735,7 @@ function toolDefinitions() {
         required: ["title"],
         properties: {
           title: { type: "string" },
+          agentId: { type: "string" },
           makeActive: { type: "boolean" }
         },
         additionalProperties: false
@@ -795,15 +803,18 @@ function toolDefinitions() {
         type: "object",
         required: ["summary"],
         properties: {
+          agentId: { type: "string" },
+          allAgents: { type: "boolean" },
           summary: {
             type: "string"
           },
           lineId: {
             type: "string"
           },
+          model: { type: "string" },
           interpretationStatus: {
             type: "string",
-            enum: ["draft", "confirmed"]
+            enum: ["draft", "confirmed", "active", "needs_review", "stale", "closed"]
           },
           factsUsed: {
             type: "array",
@@ -811,6 +822,32 @@ function toolDefinitions() {
               type: "string"
             }
           },
+          visibility: { type: "string", enum: ["private", "shared"] },
+          mode: { type: "string" },
+          nextStep: { type: "string" },
+          stateSummary: { type: "string" },
+          currentInterpretation: { type: "string" },
+          userConfirmed: { type: "boolean" },
+          realityLine: { type: "string" },
+          entryPosture: { type: "string" },
+          confirmedGround: { type: "string" },
+          provisionalRead: { type: "string" },
+          boundaryNotes: { type: "string" },
+          misreadRisks: { type: "string" },
+          tags: {
+            type: "array",
+            items: { type: "string" }
+          },
+          affectiveTone: { type: "string" },
+          affectiveValence: { type: "string", enum: ["positive", "negative", "mixed", "neutral", "unclear"] },
+          affectiveSignals: {
+            type: "array",
+            items: { type: "string" }
+          },
+          affectiveIntensity: { type: "string", enum: ["low", "medium", "high"] },
+          affectiveStability: { type: "string", enum: ["momentary", "session", "confirmed"] },
+          affectiveNote: { type: "string" },
+          affectiveNeedsReview: { type: "boolean" },
           confirmOverwrite: {
             type: "boolean"
           }
@@ -846,6 +883,89 @@ function toolDefinitions() {
           nextStep: {
             type: "string"
           }
+        },
+        additionalProperties: false
+      }
+    },
+    {
+      name: "shared_line_agent_state",
+      title: "Shared Line Agent State",
+      description: "Read or update Continuity agent state for communication style, relationship position, preferences, boundaries, and stable patterns.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          agentId: { type: "string" },
+          update: {
+            type: "object",
+            properties: {
+              communicationStyle: { type: "string" },
+              relationshipPosition: { type: "string" },
+              longTermPreferences: { type: "array", items: { type: "string" } },
+              boundaries: { type: "array", items: { type: "string" } },
+              stablePatterns: { type: "array", items: { type: "string" } },
+              notes: { type: "string" }
+            },
+            additionalProperties: false
+          }
+        },
+        additionalProperties: false
+      }
+    },
+    {
+      name: "shared_line_model_adjustment_list",
+      title: "List Shared Line Model Adjustments",
+      description: "List model-specific negative adjustments used in Shared Line resume packets.",
+      inputSchema: { type: "object", properties: {}, additionalProperties: false }
+    },
+    {
+      name: "shared_line_model_adjustment_get",
+      title: "Get Shared Line Model Adjustment",
+      description: "Read model-specific negative adjustments for one model.",
+      inputSchema: {
+        type: "object",
+        required: ["model"],
+        properties: { model: { type: "string" } },
+        additionalProperties: false
+      }
+    },
+    {
+      name: "shared_line_model_adjustment_set",
+      title: "Set Shared Line Model Adjustment",
+      description: "Create or update model-specific negative adjustments used in Shared Line resume packets.",
+      inputSchema: {
+        type: "object",
+        required: ["model"],
+        properties: {
+          model: { type: "string" },
+          forbiddenPhrases: { type: "array", items: { type: "string" } },
+          forbiddenPatterns: { type: "array", items: { type: "string" } },
+          injectPrompt: { type: "string" },
+          updatedBy: { type: "string" }
+        },
+        additionalProperties: false
+      }
+    },
+    {
+      name: "shared_line_model_adjustment_delete",
+      title: "Delete Shared Line Model Adjustment",
+      description: "Delete model-specific negative adjustments.",
+      inputSchema: {
+        type: "object",
+        required: ["model"],
+        properties: { model: { type: "string" } },
+        additionalProperties: false
+      }
+    },
+    {
+      name: "shared_line_compact",
+      title: "Compact Shared Line Arc",
+      description: "Compact a ClaraCore Desktop Shared Line by trimming its stored affective trace and position history to the most recent nodes. Protected needs-review affective nodes are always kept. Summary, interpretation status, history, and snapshots are not touched.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          lineId: { type: "string" },
+          keepTrace: { type: "integer", minimum: 0, maximum: 200 },
+          keepHistory: { type: "integer", minimum: 0, maximum: 200 }
         },
         additionalProperties: false
       }
@@ -1096,6 +1216,74 @@ function toolDefinitions() {
         },
         additionalProperties: false
       }
+    },
+    {
+      name: "innerlife_history",
+      title: "InnerLife History",
+      description: "List recent Desktop-owned InnerLife internal change events (digest, explore, converge, session_end).",
+      inputSchema: {
+        type: "object",
+        properties: {
+          agentId: { type: "string" },
+          limit: { type: "number", minimum: 1, maximum: 100 }
+        },
+        additionalProperties: false
+      }
+    },
+    {
+      name: "innerlife_experiences",
+      title: "InnerLife Experiences",
+      description: "List Desktop-owned InnerLife experiences — shares that were used and represent formed outputs.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          agentId: { type: "string" },
+          limit: { type: "number", minimum: 1, maximum: 100 }
+        },
+        additionalProperties: false
+      }
+    },
+    {
+      name: "innerlife_summaries",
+      title: "InnerLife Summaries",
+      description: "List stable Desktop-owned InnerLife digest summaries.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          agentId: { type: "string" },
+          limit: { type: "number", minimum: 1, maximum: 50 }
+        },
+        additionalProperties: false
+      }
+    },
+    {
+      name: "innerlife_explore",
+      title: "Explore InnerLife",
+      description: "Trigger autonomous Desktop-owned InnerLife exploration — surfaces what deserves attention from Memory and recent thoughts, creates a reviewable share candidate.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          agentId: { type: "string" },
+          agentTool: { type: "string" },
+          agentName: { type: "string" },
+          prompt: { type: "string" }
+        },
+        additionalProperties: false
+      }
+    },
+    {
+      name: "innerlife_converge",
+      title: "Converge InnerLife",
+      description: "Consolidate active Desktop-owned InnerLife pending shares and recent thoughts into a single converged share candidate.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          agentId: { type: "string" },
+          agentTool: { type: "string" },
+          agentName: { type: "string" }
+        },
+        additionalProperties: false
+      }
     }
   ];
 }
@@ -1313,7 +1501,7 @@ async function callToolBody(name, args = {}, paths, database) {
   }
   if (name === "shared_line_list") {
     return textResult({
-      lines: await database.listContinuityLines(100)
+      lines: await database.listContinuityLines(args)
     });
   }
   if (name === "shared_line_create") {
@@ -1353,13 +1541,40 @@ async function callToolBody(name, args = {}, paths, database) {
   }
   if (name === "shared_line_update") {
     await database.saveCurrentPosition(args);
-    return textResult(await database.getResumePacket({ lineId: args.lineId }));
+    return textResult(await database.getResumePacket({ lineId: args.lineId, agentId: args.agentId, model: args.model }));
   }
   if (name === "shared_line_handoff_create") {
     const handoff = await database.createContinuityHandoff(args);
     return textResult({
       handoff,
       sharedLine: await database.getResumePacket({ lineId: args.lineId })
+    });
+  }
+  if (name === "shared_line_agent_state") {
+    const agentId = args.agentId || process.env.CLARACORE_AGENT_ID || "codex";
+    return textResult({
+      agentState: args.update
+        ? await database.updateContinuityAgentState(agentId, args.update)
+        : await database.getContinuityAgentState(agentId)
+    });
+  }
+  if (name === "shared_line_model_adjustment_list") {
+    return textResult({ models: await database.listContinuityModelAdjustments() });
+  }
+  if (name === "shared_line_model_adjustment_get") {
+    return textResult({ modelAdjustment: await database.getContinuityModelAdjustment(args.model) });
+  }
+  if (name === "shared_line_model_adjustment_set") {
+    return textResult({ modelAdjustment: await database.setContinuityModelAdjustment(args) });
+  }
+  if (name === "shared_line_model_adjustment_delete") {
+    return textResult(await database.deleteContinuityModelAdjustment(args.model));
+  }
+  if (name === "shared_line_compact") {
+    const result = await database.compactContinuityLine(args);
+    return textResult({
+      compact: result,
+      sharedLine: await database.getResumePacket({ lineId: result.lineId })
     });
   }
   if (name === "innerlife_session_start") {
@@ -1427,6 +1642,27 @@ async function callToolBody(name, args = {}, paths, database) {
   }
   if (name === "innerlife_daemon_tick") {
     return textResult(await database.tickInnerLifeDaemon(args));
+  }
+  if (name === "innerlife_history") {
+    return textResult({
+      history: await database.getInnerLifeHistory(args.agentId || process.env.CLARACORE_AGENT_ID || "codex", args.limit || 20)
+    });
+  }
+  if (name === "innerlife_experiences") {
+    return textResult({
+      experiences: await database.listInnerLifeExperiences(args.agentId || process.env.CLARACORE_AGENT_ID || "codex", args.limit || 20)
+    });
+  }
+  if (name === "innerlife_summaries") {
+    return textResult({
+      summaries: await database.listInnerLifeSummaries(args.agentId || process.env.CLARACORE_AGENT_ID || "codex", args.limit || 10)
+    });
+  }
+  if (name === "innerlife_explore") {
+    return textResult(await database.exploreInnerLife(args));
+  }
+  if (name === "innerlife_converge") {
+    return textResult(await database.convergeInnerLife(args));
   }
   throw new Error(`Unknown tool: ${name}`);
 }

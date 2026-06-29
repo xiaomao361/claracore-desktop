@@ -92,8 +92,10 @@ one-off tasks, not the default user-facing flow.
 Domain behavior belongs in:
 
 - `core/memoria`: facts, labels, search, records, maintenance, archive
-- `core/continuity`: Shared Line, position history, handoff
-- `core/innerlife`: sessions, inbox, digest, share timing, daemon state
+- `core/continuity`: Shared Line, position history, handoff, agent state, model
+  adjustments, shared-reality/affective arc lifecycle (cap, truncation, compaction)
+- `core/innerlife`: sessions, inbox, digest, exploration, convergence,
+  model-backed generation, share timing, daemon state
 
 Runtime modules may compose multiple domains for product workflows, such as
 snapshots, backup-gated imports, or archive export. They should not become the

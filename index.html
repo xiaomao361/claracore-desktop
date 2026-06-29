@@ -47,20 +47,52 @@
       </header>
 
       <section id="homeView" class="view active-view">
-        <section id="moduleGrid" class="module-grid" aria-live="polite"></section>
-
-        <section class="home-dashboard-grid" aria-label="Home overview">
-          <article class="panel home-cognitive-panel">
+        <section class="home-hero-board" aria-label="Runtime dashboard">
+          <article id="homeRuntimePanel" class="panel home-runtime-panel">
+            <div class="home-runtime-field" aria-hidden="true"></div>
             <div class="panel-heading">
               <div>
-                <h2 data-i18n="home.cognitive.title">Cognitive Snapshot</h2>
-                <p class="quiet" data-i18n="home.cognitive.body">Cross-system health and current cognitive load.</p>
+                <h2 data-i18n="home.runtime.title">Runtime Overview</h2>
+                <p id="homeRuntimeDetail" class="quiet">Checking local core...</p>
               </div>
-              <span id="homeCognitiveUpdated" class="quiet">Checking...</span>
+              <span id="homeRuntimeStatus" class="runtime-state">Checking</span>
             </div>
-            <div id="homeCognitiveSystems" class="cognitive-system-grid"></div>
+            <div class="home-runtime-body">
+              <div class="home-orb-stage" aria-hidden="true">
+                <div class="home-orb">
+                  <span class="orb-ring ring-one"></span>
+                  <span class="orb-ring ring-two"></span>
+                  <span class="orb-core"></span>
+                  <span class="orb-node node-one"></span>
+                  <span class="orb-node node-two"></span>
+                  <span class="orb-node node-three"></span>
+                  <span class="orb-node node-four"></span>
+                  <span class="orb-signal signal-one"></span>
+                  <span class="orb-signal signal-two"></span>
+                  <span class="orb-signal signal-three"></span>
+                  <span class="orb-particle particle-one"></span>
+                  <span class="orb-particle particle-two"></span>
+                  <span class="orb-particle particle-three"></span>
+                  <span class="orb-particle particle-four"></span>
+                </div>
+              </div>
+              <div id="homeRuntimeStrip" class="home-runtime-strip"></div>
+            </div>
           </article>
 
+          <article class="panel home-attention-panel">
+            <div class="panel-heading">
+              <div>
+                <h2 data-i18n="home.attention.title">Attention</h2>
+                <p class="quiet" data-i18n="home.attention.body">Only items that need human review.</p>
+              </div>
+              <span id="homeAttentionSummary" class="quiet">Checking...</span>
+            </div>
+            <div id="homeAttentionList" class="home-attention-list"></div>
+          </article>
+        </section>
+
+        <section class="home-dashboard-grid" aria-label="Home overview">
           <article class="panel home-agent-panel">
             <div class="panel-heading">
               <div>
@@ -83,38 +115,18 @@
           </article>
         </section>
 
-        <section class="system-grid">
-          <article class="panel compact-panel">
-            <div class="panel-heading">
-              <h2 data-i18n="home.model.title">Model & Provider</h2>
-              <button class="icon-button" aria-label="Model settings" data-i18n-aria-label="home.model.settings">Settings</button>
+        <section class="panel home-module-board">
+          <div class="panel-heading">
+            <div>
+              <h2 data-i18n="home.modules.title">Core Modules</h2>
+              <p class="quiet" data-i18n="home.modules.body">Compact readiness for the agent runtime.</p>
             </div>
-            <div class="kv-row"><span data-i18n="home.model.provider">Provider</span><strong data-i18n="home.model.localProvider">Local provider</strong></div>
-            <div class="kv-row"><span data-i18n="home.model.model">Model</span><strong data-i18n="home.model.configuredOutside">Configured outside app</strong></div>
-            <div class="kv-row"><span data-i18n="home.model.mode">Mode</span><strong id="runtimeMode">Checking...</strong></div>
-            <button class="link-button" data-view-target="models" data-i18n="home.model.edit">Edit models</button>
-          </article>
-
-          <article class="panel compact-panel">
-            <h2 data-i18n="home.dataLocation.title">Data Location</h2>
-            <div class="kv-row"><span data-i18n="home.dataLocation.root">Root</span><strong id="dataLocation">Checking...</strong></div>
-            <div class="kv-row"><span>Memoria</span><strong id="memoryStoreShort">Checking...</strong></div>
-            <div class="kv-row"><span data-i18n="common.status">Status</span><strong id="dataHint">Data stays on this machine.</strong></div>
-            <button class="link-button" data-view-target="data" data-i18n="home.dataLocation.openControls">Open data controls</button>
-          </article>
-
-          <article class="panel compact-panel">
-            <h2 data-i18n="home.importExport.title">Import / Export</h2>
-            <div class="kv-row"><span data-i18n="home.importExport.lastImport">Last import</span><strong data-i18n="common.notTracked">Not tracked yet</strong></div>
-            <div class="kv-row"><span data-i18n="home.importExport.lastExport">Last export</span><strong data-i18n="common.notTracked">Not tracked yet</strong></div>
-            <div class="split-actions">
-              <button class="secondary" data-view-target="data" data-i18n="actions.import">Import</button>
-              <button class="secondary" data-view-target="data" data-i18n="actions.export">Export</button>
-            </div>
-          </article>
+            <span id="homeCognitiveUpdated" class="quiet">Checking...</span>
+          </div>
+          <section id="moduleGrid" class="module-grid" aria-live="polite"></section>
         </section>
 
-        <section class="lower-grid">
+        <section class="home-activity-grid">
           <article class="panel">
             <div class="panel-heading">
               <h2 data-i18n="health.title">First-run check</h2>
@@ -129,29 +141,6 @@
               <span class="quiet" data-i18n="home.events.localOnly">Local only</span>
             </div>
             <ol id="eventList" class="event-list"></ol>
-          </article>
-
-          <article class="panel">
-            <div class="panel-heading">
-              <h2 data-i18n="home.agentConnection.title">Agent connection</h2>
-              <span class="quiet">Gateway</span>
-            </div>
-            <div class="snippet">
-              <span>APP_ROOT</span>
-              <code id="rootPath">Checking...</code>
-            </div>
-            <div class="shortcut-row">
-              <button id="openDevelopmentPlan" class="secondary" data-i18n="home.agentConnection.developmentPlan">Development plan</button>
-              <button id="openDesignPlan" class="secondary" data-i18n="home.agentConnection.designPlan">Design plan</button>
-            </div>
-          </article>
-
-          <article class="panel reminder">
-            <div>
-              <h2 data-i18n="home.backup.title">Backup reminder</h2>
-              <p data-i18n="home.backup.body">Export memory and shared-line data before large local changes.</p>
-            </div>
-            <button class="secondary" data-view-target="data" data-i18n="home.backup.review">Review data</button>
           </article>
         </section>
       </section>
@@ -687,6 +676,14 @@
                       <option value="dark" data-i18n="settings.themeDark">Dark</option>
                     </select>
                   </label>
+                  <label class="field">
+                    <span data-i18n="settings.motion">Motion</span>
+                    <select id="settingsMotion">
+                      <option value="system" data-i18n="settings.motionSystem">Follow system</option>
+                      <option value="on" data-i18n="settings.motionOn">On</option>
+                      <option value="off" data-i18n="settings.motionOff">Off</option>
+                    </select>
+                  </label>
                 </div>
               </section>
 
@@ -746,6 +743,7 @@
               <div><span data-i18n="settings.closeBehavior">Close window</span><strong id="settingsCloseBehaviorSummary">-</strong></div>
               <div><span data-i18n="settings.trayStatus">Tray</span><strong id="settingsTrayStatus">-</strong></div>
               <div><span data-i18n="settings.currentTheme">Theme</span><strong id="settingsThemeSummary">-</strong></div>
+              <div><span data-i18n="settings.currentMotion">Motion</span><strong id="settingsMotionSummary">-</strong></div>
               <div><span data-i18n="settings.electronVersion">Electron</span><strong id="settingsElectronVersion">-</strong></div>
               <div><span data-i18n="settings.nodeVersion">Node</span><strong id="settingsNodeVersion">-</strong></div>
             </div>

@@ -7,13 +7,174 @@ function installContinuityRepository(ProductDatabase, helpers) {
     resolveAgentIdentity,
     sqlString
   } = helpers;
+  const VALID_INTERPRETATION_STATUSES = new Set(["draft", "confirmed", "active", "needs_review", "stale", "closed"]);
+  // Persisted arc caps keep current_positions.metadata_json from growing without
+  // bound across many captures. Resume caps keep the resume packet small unless
+  // the caller explicitly asks for the full arc.
+  const MAX_AFFECTIVE_TRACE = 50;
+  const MAX_POSITION_HISTORY = 50;
+  const RESUME_TRACE_LIMIT = 5;
+  const RESUME_HISTORY_LIMIT = 5;
+
+  // An affective node is "protected" when it still needs review: it must survive
+  // capping and resume truncation so a flagged emotional reading is never lost.
+  function isProtectedAffective(node) {
+    return Boolean(node && node.needs_review);
+  }
+
+  function isSameAffective(left, right) {
+    if (!left || !right) return false;
+    return (
+      String(left.tone || "") === String(right.tone || "") &&
+      String(left.valence || "") === String(right.valence || "") &&
+      String(left.intensity || "") === String(right.intensity || "") &&
+      (Array.isArray(left.signals) ? left.signals.join("|") : "") ===
+        (Array.isArray(right.signals) ? right.signals.join("|") : "")
+    );
+  }
+
+  // Cap a persisted arc to a maximum length while always keeping protected
+  // nodes. Older non-protected nodes are dropped first.
+  function capArc(arr, max, isProtected = () => false) {
+    if (!Array.isArray(arr) || arr.length <= max) return Array.isArray(arr) ? arr : [];
+    const protectedNodes = arr.filter((node) => isProtected(node));
+    const rest = arr.filter((node) => !isProtected(node));
+    const keepRest = Math.max(0, max - protectedNodes.length);
+    const trimmedRest = rest.slice(rest.length - keepRest);
+    // Preserve original order: walk source, keep node if protected or in trimmedRest.
+    const restSet = new Set(trimmedRest);
+    return arr.filter((node) => isProtected(node) || restSet.has(node));
+  }
+
+  // Truncate an arc for a resume packet: keep protected nodes plus the most
+  // recent `limit` nodes, preserving order.
+  function truncateArc(arr, limit, isProtected = () => false) {
+    if (!Array.isArray(arr)) return { items: [], total: 0, truncated: false };
+    if (arr.length <= limit) return { items: arr, total: arr.length, truncated: false };
+    const recent = new Set(arr.slice(arr.length - limit));
+    const items = arr.filter((node) => isProtected(node) || recent.has(node));
+    return { items, total: arr.length, truncated: items.length < arr.length };
+  }
+  const SHARED_REALITY_FIELDS = [
+    ["agentId", ["agentId", "agent_id"]],
+    ["visibility", ["visibility"]],
+    ["mode", ["mode"]],
+    ["nextStep", ["nextStep", "next_step"]],
+    ["stateSummary", ["stateSummary", "state_summary"]],
+    ["currentInterpretation", ["currentInterpretation", "current_interpretation"]],
+    ["userConfirmed", ["userConfirmed", "user_confirmed"]],
+    ["realityLine", ["realityLine", "reality_line"]],
+    ["entryPosture", ["entryPosture", "entry_posture"]],
+    ["confirmedGround", ["confirmedGround", "confirmed_ground"]],
+    ["provisionalRead", ["provisionalRead", "provisional_read"]],
+    ["boundaryNotes", ["boundaryNotes", "boundary_notes"]],
+    ["misreadRisks", ["misreadRisks", "misread_risks"]],
+    ["sourceSession", ["sourceSession", "source_session"]],
+    ["notes", ["notes"]]
+  ];
+
+  function firstDefined(input, keys) {
+    for (const key of keys) {
+      if (Object.prototype.hasOwnProperty.call(input || {}, key) && input[key] !== undefined) return input[key];
+    }
+    return undefined;
+  }
+
+  function cleanList(value) {
+    if (Array.isArray(value)) return value.map((item) => String(item || "").trim()).filter(Boolean);
+    if (value === undefined || value === null || value === "") return undefined;
+    return String(value)
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  function normalizeInterpretationStatus(value) {
+    const status = String(value || "draft").trim();
+    return VALID_INTERPRETATION_STATUSES.has(status) ? status : "draft";
+  }
+
+  function buildAffectiveNode(input = {}) {
+    const tone = firstDefined(input, ["affectiveTone", "affective_tone"]);
+    const note = firstDefined(input, ["affectiveNote", "affective_note"]);
+    if (!tone && !note) return null;
+    return {
+      time: new Date().toISOString(),
+      tone: String(tone || ""),
+      valence: String(firstDefined(input, ["affectiveValence", "affective_valence"]) || "unclear"),
+      signals: cleanList(firstDefined(input, ["affectiveSignals", "affective_signals"])) || [],
+      intensity: String(firstDefined(input, ["affectiveIntensity", "affective_intensity"]) || "medium"),
+      stability: String(firstDefined(input, ["affectiveStability", "affective_stability"]) || "session"),
+      source: String(firstDefined(input, ["actor", "source"]) || "desktop"),
+      note: String(note || ""),
+      needs_review: Boolean(firstDefined(input, ["affectiveNeedsReview", "affective_needs_review"]) || false)
+    };
+  }
+
+  function buildContinuityMetadata(input = {}, current = {}) {
+    const currentMetadata = current?.metadata && typeof current.metadata === "object" ? current.metadata : {};
+    const explicitMetadata = input?.metadata && typeof input.metadata === "object" && !Array.isArray(input.metadata) ? input.metadata : {};
+    const metadata = { ...currentMetadata, ...explicitMetadata };
+    for (const [targetKey, sourceKeys] of SHARED_REALITY_FIELDS) {
+      const value = firstDefined(input, sourceKeys);
+      if (value !== undefined) {
+        metadata[targetKey] = typeof value === "boolean" ? value : String(value || "").trim();
+      }
+    }
+    const tags = cleanList(firstDefined(input, ["tags"]));
+    if (tags) metadata.tags = tags;
+    const positionHistory = firstDefined(input, ["positionHistory", "position_history", "emotionalArc", "emotional_arc"]);
+    if (Array.isArray(positionHistory)) metadata.positionHistory = positionHistory;
+    const affectiveTrace = firstDefined(input, ["affectiveTrace", "affective_trace"]);
+    if (Array.isArray(affectiveTrace)) {
+      metadata.affectiveTrace = capArc(affectiveTrace, MAX_AFFECTIVE_TRACE, isProtectedAffective);
+    }
+    const affNode = buildAffectiveNode(input);
+    // momentary readings are transient: they must not be persisted into the arc
+    // or alter shared reality. Same-as-previous readings are de-duplicated.
+    if (affNode && affNode.stability !== "momentary") {
+      const trace = Array.isArray(metadata.affectiveTrace) ? metadata.affectiveTrace : [];
+      const last = trace[trace.length - 1];
+      if (!isSameAffective(last, affNode)) {
+        metadata.affectiveTrace = capArc([...trace, affNode], MAX_AFFECTIVE_TRACE, isProtectedAffective);
+      }
+    }
+    const summary = String(input?.summary || "").trim();
+    if (current?.summary && summary && current.summary !== summary) {
+      const ph = Array.isArray(metadata.positionHistory) ? metadata.positionHistory : [];
+      metadata.positionHistory = capArc(
+        [
+          ...ph,
+          {
+            time: current.updatedAt || new Date().toISOString(),
+            position: current.summary,
+            source: String(input?.source || "desktop")
+          }
+        ],
+        MAX_POSITION_HISTORY
+      );
+    }
+    return metadata;
+  }
+
+  function normalizeModelAdjustmentRow(row) {
+    if (!row) return null;
+    return {
+      model: row.model,
+      forbiddenPhrases: parseJson(row.forbidden_phrases_json, []),
+      forbiddenPatterns: parseJson(row.forbidden_patterns_json, []),
+      injectPrompt: row.inject_prompt || "",
+      updatedBy: row.updated_by || "desktop",
+      updatedAt: row.updated_at || ""
+    };
+  }
 
   Object.assign(ProductDatabase.prototype, {
     async ensureDefaultContinuityLine() {
       const lineId = "line_default";
       await this.exec(`
-        INSERT INTO continuity_lines (id, title, status)
-        VALUES (${sqlString(lineId)}, 'Default Shared Line', 'active')
+        INSERT INTO continuity_lines (id, agent_id, title, status)
+        VALUES (${sqlString(lineId)}, ${sqlString(DEFAULT_AGENT_ID)}, 'Default Shared Line', 'active')
         ON CONFLICT(id) DO UPDATE SET
           status = 'active',
           updated_at = CURRENT_TIMESTAMP;
@@ -54,14 +215,34 @@ function installContinuityRepository(ProductDatabase, helpers) {
       return rows[0].id;
     }
     ,
+
+    async findContinuityLineIdForAgent(agentIdInput = "") {
+      const agentId = String(agentIdInput || "").trim();
+      if (!agentId) return null;
+      await this.ensureDefaultContinuityLine();
+      const rows = await this.query(`
+        SELECT id
+        FROM continuity_lines
+        WHERE agent_id = ${sqlString(agentId)} AND status = 'active'
+        ORDER BY updated_at DESC, created_at DESC
+        LIMIT 1;
+      `);
+      return rows[0]?.id || null;
+    }
+    ,
     
-    async listContinuityLines(limit = 20) {
+    async listContinuityLines(input = 20) {
       await this.ensureDefaultContinuityLine();
       const activeLineId = await this.getActiveContinuityLineId();
-      const safeLimit = Math.max(1, Math.min(Number.parseInt(String(limit), 10) || 20, 100));
+      const options = typeof input === "object" && input !== null ? input : { limit: input };
+      const safeLimit = Math.max(1, Math.min(Number.parseInt(String(options.limit || 20), 10) || 20, 100));
+      const agentId = String(options.agentId || options.agent_id || "").trim();
+      const filters = ["l.status != 'deleted'"];
+      if (agentId && !options.allAgents) filters.push(`l.agent_id = ${sqlString(agentId)}`);
       const rows = await this.query(`
         SELECT
           l.id,
+          l.agent_id,
           l.title,
           l.status,
           l.created_at,
@@ -72,7 +253,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
           p.updated_at AS position_updated_at
         FROM continuity_lines l
         LEFT JOIN current_positions p ON p.line_id = l.id
-        WHERE l.status != 'deleted'
+        WHERE ${filters.join(" AND ")}
         ORDER BY
           CASE WHEN l.id = ${sqlString(activeLineId)} THEN 0 ELSE 1 END,
           l.updated_at DESC,
@@ -81,6 +262,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
       `);
       return rows.map((row) => ({
         id: row.id,
+        agentId: row.agent_id || DEFAULT_AGENT_ID,
         title: row.title || "Shared Line",
         status: row.status || "active",
         active: row.id === activeLineId,
@@ -98,9 +280,10 @@ function installContinuityRepository(ProductDatabase, helpers) {
       const title = String(input.title || "").trim();
       if (!title) throw new Error("Shared Line title is required.");
       const id = String(input.id || newId("line")).trim();
+      const identity = resolveAgentIdentity(input || {});
       await this.exec(`
-        INSERT INTO continuity_lines (id, title, status)
-        VALUES (${sqlString(id)}, ${sqlString(title)}, 'active');
+        INSERT INTO continuity_lines (id, agent_id, title, status)
+        VALUES (${sqlString(id)}, ${sqlString(identity.id)}, ${sqlString(title)}, 'active');
       `);
       if (input.makeActive !== false) {
         await this.setActiveContinuityLine(id);
@@ -191,6 +374,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
       const rows = await this.query(`
         SELECT
           l.id AS line_id,
+          l.agent_id,
           l.title AS line_title,
           l.status AS line_status,
           p.id AS position_id,
@@ -208,6 +392,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
       const row = rows[0] || {};
       return {
         lineId,
+        agentId: row.agent_id || DEFAULT_AGENT_ID,
         lineTitle: row.line_title || "Default Shared Line",
         lineStatus: row.line_status || "active",
         positionId: row.position_id || "position_default",
@@ -221,13 +406,12 @@ function installContinuityRepository(ProductDatabase, helpers) {
     ,
     
     async saveCurrentPosition(input) {
-      const lineId = await this.resolveContinuityLineId(input?.lineId || null);
+      const agentLineId = input?.lineId ? null : await this.findContinuityLineIdForAgent(input?.agentId || input?.agent_id || "");
+      const lineId = await this.resolveContinuityLineId(input?.lineId || agentLineId || null);
       const positionId = `position_${lineId}`;
       const summary = String(input?.summary || "").trim();
       if (!summary) throw new Error("Current position summary is required.");
-      const status = ["draft", "confirmed"].includes(String(input?.interpretationStatus || "").trim())
-        ? String(input.interpretationStatus).trim()
-        : "draft";
+      const status = normalizeInterpretationStatus(input?.interpretationStatus || input?.interpretation_status || "draft");
       const factsUsed = Array.isArray(input?.factsUsed) ? input.factsUsed.map((item) => String(item).trim()).filter(Boolean) : [];
       const source = String(input?.source || "desktop").trim() || "desktop";
       const current = await this.getCurrentPosition(lineId);
@@ -246,9 +430,10 @@ function installContinuityRepository(ProductDatabase, helpers) {
       const historyId = newId("position_history");
       const snapshotId = newId("position_snapshot");
       const snapshotReason = changesConfirmedPosition ? "confirmed_overwrite" : "save";
+      const metadata = buildContinuityMetadata(input || {}, current);
       await this.exec(`
         INSERT INTO current_positions (id, line_id, summary, interpretation_status, facts_used_json, metadata_json, updated_at)
-        VALUES (${sqlString(positionId)}, ${sqlString(lineId)}, ${sqlString(summary)}, ${sqlString(status)}, ${jsonSql(factsUsed)}, ${jsonSql(input?.metadata || {})}, CURRENT_TIMESTAMP)
+        VALUES (${sqlString(positionId)}, ${sqlString(lineId)}, ${sqlString(summary)}, ${sqlString(status)}, ${jsonSql(factsUsed)}, ${jsonSql(metadata)}, CURRENT_TIMESTAMP)
         ON CONFLICT(id) DO UPDATE SET
           summary = excluded.summary,
           interpretation_status = excluded.interpretation_status,
@@ -266,6 +451,14 @@ function installContinuityRepository(ProductDatabase, helpers) {
         SET updated_at = CURRENT_TIMESTAMP
         WHERE id = ${sqlString(lineId)};
       `);
+      if (metadata.agentId) {
+        await this.exec(`
+          UPDATE continuity_lines
+          SET agent_id = ${sqlString(metadata.agentId)},
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = ${sqlString(lineId)};
+        `);
+      }
       return this.getCurrentPosition(lineId);
     }
     ,
@@ -367,6 +560,129 @@ function installContinuityRepository(ProductDatabase, helpers) {
       return this.getContinuityHandoff(id);
     }
     ,
+
+    async ensureContinuityAgentState(agentIdInput = DEFAULT_AGENT_ID) {
+      const identity = resolveAgentIdentity({ agentId: agentIdInput });
+      await this.exec(`
+        INSERT INTO continuity_agent_state (agent_id)
+        VALUES (${sqlString(identity.id)})
+        ON CONFLICT(agent_id) DO NOTHING;
+      `);
+      return identity.id;
+    }
+    ,
+
+    async getContinuityAgentState(agentIdInput = DEFAULT_AGENT_ID) {
+      const agentId = await this.ensureContinuityAgentState(agentIdInput);
+      const rows = await this.query(`
+        SELECT agent_id, communication_style, relationship_position, long_term_preferences_json,
+               boundaries_json, stable_patterns_json, notes, updated_at
+        FROM continuity_agent_state
+        WHERE agent_id = ${sqlString(agentId)}
+        LIMIT 1;
+      `);
+      const row = rows[0] || {};
+      return {
+        agentId,
+        communicationStyle: row.communication_style || "",
+        relationshipPosition: row.relationship_position || "",
+        longTermPreferences: parseJson(row.long_term_preferences_json, []),
+        boundaries: parseJson(row.boundaries_json, []),
+        stablePatterns: parseJson(row.stable_patterns_json, []),
+        notes: row.notes || "",
+        updatedAt: row.updated_at || ""
+      };
+    }
+    ,
+
+    async updateContinuityAgentState(agentIdInput = DEFAULT_AGENT_ID, update = {}) {
+      const agentId = await this.ensureContinuityAgentState(agentIdInput);
+      const current = await this.getContinuityAgentState(agentId);
+      const next = {
+        communicationStyle: firstDefined(update, ["communicationStyle", "communication_style"]) ?? current.communicationStyle,
+        relationshipPosition: firstDefined(update, ["relationshipPosition", "relationship_position"]) ?? current.relationshipPosition,
+        longTermPreferences: cleanList(firstDefined(update, ["longTermPreferences", "long_term_preferences"])) ?? current.longTermPreferences,
+        boundaries: cleanList(firstDefined(update, ["boundaries"])) ?? current.boundaries,
+        stablePatterns: cleanList(firstDefined(update, ["stablePatterns", "stable_patterns"])) ?? current.stablePatterns,
+        notes: firstDefined(update, ["notes"]) ?? current.notes
+      };
+      await this.exec(`
+        UPDATE continuity_agent_state
+        SET communication_style = ${sqlString(next.communicationStyle)},
+            relationship_position = ${sqlString(next.relationshipPosition)},
+            long_term_preferences_json = ${jsonSql(next.longTermPreferences)},
+            boundaries_json = ${jsonSql(next.boundaries)},
+            stable_patterns_json = ${jsonSql(next.stablePatterns)},
+            notes = ${sqlString(next.notes)},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE agent_id = ${sqlString(agentId)};
+      `);
+      return this.getContinuityAgentState(agentId);
+    }
+    ,
+
+    async listContinuityModelAdjustments() {
+      const rows = await this.query(`
+        SELECT model, forbidden_phrases_json, forbidden_patterns_json, inject_prompt, updated_by, updated_at
+        FROM continuity_model_adjustments
+        ORDER BY model ASC;
+      `);
+      return rows.map(normalizeModelAdjustmentRow).filter(Boolean);
+    }
+    ,
+
+    async getContinuityModelAdjustment(modelInput = "") {
+      const model = String(modelInput || "").trim();
+      if (!model) return null;
+      const rows = await this.query(`
+        SELECT model, forbidden_phrases_json, forbidden_patterns_json, inject_prompt, updated_by, updated_at
+        FROM continuity_model_adjustments
+        WHERE model = ${sqlString(model)}
+        LIMIT 1;
+      `);
+      return normalizeModelAdjustmentRow(rows[0]);
+    }
+    ,
+
+    async setContinuityModelAdjustment(input = {}) {
+      const model = String(input.model || "").trim();
+      if (!model) throw new Error("Model is required.");
+      const existing = (await this.getContinuityModelAdjustment(model)) || {};
+      const forbiddenPhrases = cleanList(firstDefined(input, ["forbiddenPhrases", "forbidden_phrases"])) ?? existing.forbiddenPhrases ?? [];
+      const forbiddenPatterns = cleanList(firstDefined(input, ["forbiddenPatterns", "forbidden_patterns"])) ?? existing.forbiddenPatterns ?? [];
+      const injectPrompt = firstDefined(input, ["injectPrompt", "inject_prompt"]) ?? existing.injectPrompt ?? "";
+      const updatedBy = String(input.updatedBy || input.updated_by || input.actor || "desktop").trim() || "desktop";
+      await this.exec(`
+        INSERT INTO continuity_model_adjustments (
+          model, forbidden_phrases_json, forbidden_patterns_json, inject_prompt, updated_by, updated_at
+        )
+        VALUES (
+          ${sqlString(model)},
+          ${jsonSql(forbiddenPhrases)},
+          ${jsonSql(forbiddenPatterns)},
+          ${sqlString(injectPrompt)},
+          ${sqlString(updatedBy)},
+          CURRENT_TIMESTAMP
+        )
+        ON CONFLICT(model) DO UPDATE SET
+          forbidden_phrases_json = excluded.forbidden_phrases_json,
+          forbidden_patterns_json = excluded.forbidden_patterns_json,
+          inject_prompt = excluded.inject_prompt,
+          updated_by = excluded.updated_by,
+          updated_at = CURRENT_TIMESTAMP;
+      `);
+      return this.getContinuityModelAdjustment(model);
+    }
+    ,
+
+    async deleteContinuityModelAdjustment(modelInput = "") {
+      const model = String(modelInput || "").trim();
+      if (!model) throw new Error("Model is required.");
+      const existing = await this.getContinuityModelAdjustment(model);
+      await this.exec(`DELETE FROM continuity_model_adjustments WHERE model = ${sqlString(model)};`);
+      return { deleted: Boolean(existing), model };
+    }
+    ,
     
     async getContinuityHandoff(id) {
       const rows = await this.query(`
@@ -390,11 +706,43 @@ function installContinuityRepository(ProductDatabase, helpers) {
     ,
     
     async getResumePacket(input = {}) {
-      const currentPosition = await this.getCurrentPosition(input.lineId || null);
-      const lines = await this.listContinuityLines(20);
+      const agentLineId = input?.lineId ? null : await this.findContinuityLineIdForAgent(input?.agentId || input?.agent_id || "");
+      const currentPosition = await this.getCurrentPosition(input.lineId || agentLineId || null);
+      const metadata = currentPosition.metadata || {};
+      const lines = await this.listContinuityLines({ limit: 20, agentId: input.agentId || input.agent_id || "", allAgents: true });
       const history = await this.listContinuityPositionHistory(5, currentPosition.lineId);
       const snapshots = await this.listContinuitySnapshots(5, currentPosition.lineId);
       const handoffs = await this.listContinuityHandoffs(3, currentPosition.lineId);
+      const agentState = await this.getContinuityAgentState(currentPosition.agentId || DEFAULT_AGENT_ID);
+      const modelAdjustment = input.model ? await this.getContinuityModelAdjustment(input.model) : null;
+      const sharedReality = {
+        realityLine: metadata.realityLine || "",
+        entryPosture: metadata.entryPosture || "",
+        confirmedGround: metadata.confirmedGround || "",
+        provisionalRead: metadata.provisionalRead || "",
+        boundaryNotes: metadata.boundaryNotes || "",
+        misreadRisks: metadata.misreadRisks || "",
+        currentInterpretation: metadata.currentInterpretation || "",
+        userConfirmed: Boolean(metadata.userConfirmed)
+      };
+      const fullArc = input.fullArc === true || input.full_arc === true;
+      const allPositionHistory = Array.isArray(metadata.positionHistory) ? metadata.positionHistory : [];
+      const allAffectiveTrace = Array.isArray(metadata.affectiveTrace) ? metadata.affectiveTrace : [];
+      const truncatedHistory = fullArc
+        ? { items: allPositionHistory, total: allPositionHistory.length, truncated: false }
+        : truncateArc(allPositionHistory, RESUME_HISTORY_LIMIT);
+      const truncatedTrace = fullArc
+        ? { items: allAffectiveTrace, total: allAffectiveTrace.length, truncated: false }
+        : truncateArc(allAffectiveTrace, RESUME_TRACE_LIMIT, isProtectedAffective);
+      const positionHistory = truncatedHistory.items;
+      const affectiveTrace = truncatedTrace.items;
+      const arcMeta = {
+        fullArc,
+        positionHistoryTotal: truncatedHistory.total,
+        positionHistoryTruncated: truncatedHistory.truncated,
+        affectiveTraceTotal: truncatedTrace.total,
+        affectiveTraceTruncated: truncatedTrace.truncated
+      };
       const nextStep = currentPosition.summary
         ? "Resume from the current shared position and ask before overwriting it."
         : "No shared position has been saved yet.";
@@ -404,19 +752,38 @@ function installContinuityRepository(ProductDatabase, helpers) {
       const handoffText = handoffs.length
         ? handoffs.map((item, index) => `${index + 1}. ${item.objective} -> ${item.nextStep} (${item.createdAt})`).join("\n")
         : "(none)";
+      const sharedRealityText = [
+        sharedReality.realityLine ? `Reality line: ${sharedReality.realityLine}` : "",
+        sharedReality.confirmedGround ? `Confirmed ground: ${sharedReality.confirmedGround}` : "",
+        sharedReality.provisionalRead ? `Provisional read: ${sharedReality.provisionalRead}` : "",
+        sharedReality.boundaryNotes ? `Boundary notes: ${sharedReality.boundaryNotes}` : "",
+        sharedReality.misreadRisks ? `Misread risks: ${sharedReality.misreadRisks}` : "",
+        sharedReality.entryPosture ? `Entry posture: ${sharedReality.entryPosture}` : ""
+      ].filter(Boolean).join("\n") || "(none)";
       return {
         lineId: currentPosition.lineId,
+        agentId: currentPosition.agentId,
         lineTitle: currentPosition.lineTitle,
         lines,
         currentPosition,
         history,
         snapshots,
         handoffs,
+        sharedReality,
+        agentState,
+        modelAdjustment,
+        positionHistory,
+        affectiveTrace,
+        arcMeta,
         nextStep,
         text: [
           `Shared Line: ${currentPosition.lineTitle}`,
+          `Agent: ${currentPosition.agentId}`,
           `Current position: ${currentPosition.summary || "(empty)"}`,
           `Interpretation status: ${currentPosition.interpretationStatus}`,
+          `Shared reality:\n${sharedRealityText}`,
+          agentState.communicationStyle ? `Agent style: ${agentState.communicationStyle}` : "",
+          modelAdjustment ? `Model adjustment (${modelAdjustment.model}): ${modelAdjustment.injectPrompt || "(no prompt)"}` : "",
           `Updated at: ${currentPosition.updatedAt || "(not saved)"}`,
           `Recent history:\n${historyText}`,
           `Recent handoffs:\n${handoffText}`,
@@ -426,6 +793,38 @@ function installContinuityRepository(ProductDatabase, helpers) {
     }
     ,
     
+    async compactContinuityLine(input = {}) {
+      const lineId = await this.resolveContinuityLineId(input?.lineId || null);
+      const positionId = `position_${lineId}`;
+      const current = await this.getCurrentPosition(lineId);
+      const metadata = current?.metadata && typeof current.metadata === "object" ? { ...current.metadata } : {};
+      const keepTrace = Math.max(0, Number.parseInt(String(input?.keepTrace ?? input?.keep_trace ?? 20), 10) || 0);
+      const keepHistory = Math.max(0, Number.parseInt(String(input?.keepHistory ?? input?.keep_history ?? 20), 10) || 0);
+      const beforeTrace = Array.isArray(metadata.affectiveTrace) ? metadata.affectiveTrace : [];
+      const beforeHistory = Array.isArray(metadata.positionHistory) ? metadata.positionHistory : [];
+      const afterTrace = capArc(beforeTrace, keepTrace, isProtectedAffective);
+      const afterHistory = capArc(beforeHistory, keepHistory);
+      metadata.affectiveTrace = afterTrace;
+      metadata.positionHistory = afterHistory;
+      // Compact only rewrites the metadata arcs; it does not touch summary,
+      // interpretation status, history, or snapshots, so it cannot bypass the
+      // confirmed-position overwrite guard.
+      await this.exec(`
+        UPDATE current_positions
+        SET metadata_json = ${jsonSql(metadata)},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${sqlString(positionId)};
+      `);
+      return {
+        lineId,
+        affectiveTrace: { before: beforeTrace.length, after: afterTrace.length, removed: beforeTrace.length - afterTrace.length },
+        positionHistory: { before: beforeHistory.length, after: afterHistory.length, removed: beforeHistory.length - afterHistory.length },
+        protectedAffective: beforeTrace.filter(isProtectedAffective).length,
+        currentPosition: await this.getCurrentPosition(lineId)
+      };
+    }
+    ,
+
     async getGatewayContext(input = {}) {
       const identity = resolveAgentIdentity(input || {});
       const agentId = identity.id;

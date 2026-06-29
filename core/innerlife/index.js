@@ -58,20 +58,45 @@ async function applyShareToSharedLine(core, id) {
   return core.database.applyInnerLifeShareToSharedLine(id);
 }
 
+async function history(core, input = {}) {
+  return core.database.getInnerLifeHistory(input?.agentId, input?.limit);
+}
+
+async function experiences(core, input = {}) {
+  return core.database.listInnerLifeExperiences(input?.agentId, input?.limit);
+}
+
+async function summaries(core, input = {}) {
+  return core.database.listInnerLifeSummaries(input?.agentId, input?.limit);
+}
+
+async function explore(core, input) {
+  return core.database.exploreInnerLife(input);
+}
+
+async function converge(core, input) {
+  return core.database.convergeInnerLife(input);
+}
+
 module.exports = {
   applyShareToMemory,
   applyShareToSharedLine,
   checkShareTiming,
+  converge,
   digest,
   doctor,
   endSession,
-  sessions,
+  experiences,
+  explore,
+  history,
   markShare,
   processOnce,
   reviewShare,
+  sessions,
   setDaemon,
   snapshot,
   startSession,
   submitInbox,
+  summaries,
   tickDaemon
 };

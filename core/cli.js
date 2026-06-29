@@ -82,15 +82,18 @@ function usage() {
       "record add --type <type> --data <json> [--title <text>] [--occurred-at <iso>] [--user-id <id>] [--timezone <tz>] [--dedupe-key <key>] [--note <text>]",
       "record query [--user-id <id>] [--type <type>] [--local-date YYYY-MM-DD] [--start <iso>] [--end <iso>] [--limit N] [--offset N]",
       "record summary [--user-id <id>] [--type fitness] [--local-date YYYY-MM-DD] [--start <iso>] [--end <iso>]",
-      "shared-line get [--line-id <id>]",
-      "shared-line list [--limit N]",
-      "shared-line create --title <text> [--no-activate]",
+      "shared-line get [--line-id <id>] [--agent-id <id>] [--full-arc]",
+      "shared-line list [--limit N] [--agent-id <id>] [--all-agents]",
+      "shared-line create --title <text> [--agent-id <id>] [--no-activate]",
       "shared-line activate --line-id <id>",
       "shared-line rename --line-id <id> --title <text>",
       "shared-line archive --line-id <id>",
       "shared-line restore --line-id <id> [--activate]",
-      "shared-line update --summary <text> [--line-id <id>] [--status draft|confirmed] [--facts-used a,b] [--confirm-overwrite]",
+      "shared-line update --summary <text> [--line-id <id>] [--agent-id <id>] [--status draft|confirmed|active|needs_review|stale|closed] [--facts-used a,b] [--reality-line <text>] [--confirmed-ground <text>] [--provisional-read <text>] [--boundary-notes <text>] [--misread-risks <text>] [--affective-tone <text>] [--confirm-overwrite]",
       "shared-line handoff [--line-id <id>] [--objective <text>] [--completed a,b] [--open-items a,b] [--next-step <text>]",
+      "shared-line agent-state [--agent-id <id>] [--communication-style <text>] [--relationship-position <text>] [--long-term-preferences a,b] [--boundaries a,b] [--stable-patterns a,b] [--notes <text>]",
+      "shared-line model-adjust list|get|set|delete [--model <name>] [--forbidden-phrases a,b] [--forbidden-patterns a,b] [--inject-prompt <text>]",
+      "shared-line compact [--line-id <id>] [--keep-trace N] [--keep-history N]",
       "innerlife status",
       "innerlife doctor [--agent <id>]",
       "innerlife briefing [--agent <id>]",
@@ -242,17 +245,22 @@ async function runMemoryCommand(app, command, subcommand, options) {
   }
   if (command === "shared-line") {
     if (subcommand === "get") {
-      return { sharedLine: await runtime.getProductSharedLine(app, { lineId: options["line-id"] || options.lineId }) };
+      return { sharedLine: await runtime.getProductSharedLine(app, { lineId: options["line-id"] || options.lineId, agentId: options["agent-id"] || options.agentId, model: options.model, fullArc: Boolean(options["full-arc"] || options.fullArc) }) };
     }
     if (subcommand === "list") {
       const { database } = await runtime.ensureProductCore(app);
       return {
-        lines: await database.listContinuityLines(Number.parseInt(String(options.limit || 20), 10) || 20)
+        lines: await database.listContinuityLines({
+          limit: Number.parseInt(String(options.limit || 20), 10) || 20,
+          agentId: options["agent-id"] || options.agentId,
+          allAgents: Boolean(options["all-agents"])
+        })
       };
     }
     if (subcommand === "create") {
       return runtime.createProductSharedLine(app, {
         title: requireOption(options, "title"),
+        agentId: options["agent-id"] || options.agentId,
         makeActive: !Boolean(options["no-activate"])
       });
     }
@@ -275,6 +283,27 @@ async function runMemoryCommand(app, command, subcommand, options) {
           summary: requireOption(options, "summary"),
           interpretationStatus: options.status || options["interpretation-status"] || "draft",
           factsUsed: splitLabels(options["facts-used"] || options.factsUsed),
+          agentId: options["agent-id"] || options.agentId,
+          visibility: options.visibility,
+          mode: options.mode,
+          nextStep: options["next-step"] || options.nextStep,
+          stateSummary: options["state-summary"] || options.stateSummary,
+          currentInterpretation: options["current-interpretation"] || options.currentInterpretation,
+          userConfirmed: Boolean(options["user-confirmed"] || options.userConfirmed),
+          realityLine: options["reality-line"] || options.realityLine,
+          entryPosture: options["entry-posture"] || options.entryPosture,
+          confirmedGround: options["confirmed-ground"] || options.confirmedGround,
+          provisionalRead: options["provisional-read"] || options.provisionalRead,
+          boundaryNotes: options["boundary-notes"] || options.boundaryNotes,
+          misreadRisks: options["misread-risks"] || options.misreadRisks,
+          affectiveTone: options["affective-tone"] || options.affectiveTone,
+          affectiveValence: options["affective-valence"] || options.affectiveValence,
+          affectiveSignals: options["affective-signals"] || options.affectiveSignals,
+          affectiveIntensity: options["affective-intensity"] || options.affectiveIntensity,
+          affectiveStability: options["affective-stability"] || options.affectiveStability,
+          affectiveNote: options["affective-note"] || options.affectiveNote,
+          affectiveNeedsReview: Boolean(options["affective-needs-review"] || options.affectiveNeedsReview),
+          tags: splitLabels(options.tags),
           confirmOverwrite: Boolean(options["confirm-overwrite"])
         })
       };
@@ -288,7 +317,51 @@ async function runMemoryCommand(app, command, subcommand, options) {
         nextStep: options["next-step"] || options.nextStep || ""
       });
     }
-    throw new Error("shared-line requires get, list, create, activate, rename, archive, restore, update, or handoff.");
+    if (subcommand === "agent-state") {
+      const { database } = await runtime.ensureProductCore(app);
+      const agentId = options["agent-id"] || options.agentId || process.env.CLARACORE_AGENT_ID || "codex";
+      const update = {
+        communicationStyle: options["communication-style"] || options.communicationStyle,
+        relationshipPosition: options["relationship-position"] || options.relationshipPosition,
+        longTermPreferences: splitLabels(options["long-term-preferences"] || options.longTermPreferences),
+        boundaries: splitLabels(options.boundaries),
+        stablePatterns: splitLabels(options["stable-patterns"] || options.stablePatterns),
+        notes: options.notes
+      };
+      const hasUpdate = Object.values(update).some((value) => (Array.isArray(value) ? value.length > 0 : value !== undefined && value !== ""));
+      return {
+        agentState: hasUpdate ? await database.updateContinuityAgentState(agentId, update) : await database.getContinuityAgentState(agentId)
+      };
+    }
+    if (subcommand === "model-adjust") {
+      const { database } = await runtime.ensureProductCore(app);
+      const action = options.daemonAction || options.action || "list";
+      if (action === "list") return { models: await database.listContinuityModelAdjustments() };
+      if (action === "get") return { modelAdjustment: await database.getContinuityModelAdjustment(requireOption(options, "model")) };
+      if (action === "set") {
+        return {
+          modelAdjustment: await database.setContinuityModelAdjustment({
+            model: requireOption(options, "model"),
+            forbiddenPhrases: splitLabels(options["forbidden-phrases"] || options.forbiddenPhrases),
+            forbiddenPatterns: splitLabels(options["forbidden-patterns"] || options.forbiddenPatterns),
+            injectPrompt: options["inject-prompt"] || options.injectPrompt || "",
+            updatedBy: options.actor || "cli"
+          })
+        };
+      }
+      if (action === "delete") return await database.deleteContinuityModelAdjustment(requireOption(options, "model"));
+      throw new Error("shared-line model-adjust requires list, get, set, or delete.");
+    }
+    if (subcommand === "compact") {
+      const { database } = await runtime.ensureProductCore(app);
+      const compact = await database.compactContinuityLine({
+        lineId: options["line-id"] || options.lineId,
+        keepTrace: options["keep-trace"] ?? options.keepTrace,
+        keepHistory: options["keep-history"] ?? options.keepHistory
+      });
+      return { compact, sharedLine: await database.getResumePacket({ lineId: compact.lineId }) };
+    }
+    throw new Error("shared-line requires get, list, create, activate, rename, archive, restore, update, handoff, agent-state, model-adjust, or compact.");
   }
   if (command === "innerlife") {
     const agentId = options.agent || options.agentId || process.env.CLARACORE_AGENT_ID || "codex";

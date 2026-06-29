@@ -8,8 +8,8 @@ function createClaraCoreSettingsView(context) {
     memoriaProvider, memoriaEndpoint, memoriaModel, memoriaApiKey, memoriaModelStatus,
     innerLifeBackend, innerLifeEndpoint, innerLifeLightModel, innerLifeDeepModel, innerLifePollSeconds, innerLifeApiKey,
     innerLifeApiKeySummary, innerLifeModelStatus,
-    settingsLanguage, settingsTheme, settingsCloseBehavior, settingsCloseBehaviorSummary, settingsTrayStatus,
-    settingsThemeSummary, settingsDataStatus, settingsDataRoot, settingsPathSummary, settingsPathDetails,
+    settingsLanguage, settingsTheme, settingsMotion, settingsCloseBehavior, settingsCloseBehaviorSummary, settingsTrayStatus,
+    settingsThemeSummary, settingsMotionSummary, settingsDataStatus, settingsDataRoot, settingsPathSummary, settingsPathDetails,
     settingsAppVersion, settingsRuntimeMode, settingsDatabaseState, settingsElectronVersion, settingsNodeVersion,
     settingsAppRoot, settingsChromeVersion
   } = dom;
@@ -164,6 +164,7 @@ function renderAppearanceSettings() {
   const preferences = getAppearancePreferences();
   setInputValue(settingsLanguage, preferences.language);
   setInputValue(settingsTheme, preferences.theme);
+  setInputValue(settingsMotion, preferences.motion);
   setInputValue(settingsCloseBehavior, preferences.closeBehavior);
   if (settingsCloseBehaviorSummary) {
     settingsCloseBehaviorSummary.textContent =
@@ -174,6 +175,9 @@ function renderAppearanceSettings() {
   }
   if (settingsThemeSummary) {
     settingsThemeSummary.textContent = t(`settings.theme.${preferences.resolvedTheme}`);
+  }
+  if (settingsMotionSummary) {
+    settingsMotionSummary.textContent = t(`settings.motion.${preferences.resolvedMotion}`);
   }
   renderDataPaths();
   renderAbout();
@@ -198,6 +202,7 @@ function collectAppearanceSettingsForm() {
   return {
     language: settingsLanguage.value,
     theme: settingsTheme.value,
+    motion: settingsMotion.value,
     closeBehavior: settingsCloseBehavior.value
   };
 }
