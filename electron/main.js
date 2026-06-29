@@ -662,6 +662,10 @@ function stopMemoryMaintenanceScheduler() {
   memoryMaintenanceScheduler = null;
 }
 
+function isPlainObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
 if (!isGatewayMode) {
   ipcMain.handle("claracore:getRuntimeSnapshot", () => getRuntimeSnapshot());
   ipcMain.handle("claracore:getResourceSnapshot", () => getResourceSnapshot());
@@ -672,16 +676,16 @@ if (!isGatewayMode) {
     return result;
   });
   ipcMain.handle("claracore:saveSettings", async (_event, updates) => {
-    if (!updates || typeof updates !== "object" || Array.isArray(updates)) return false;
+    if (!isPlainObject(updates)) return false;
     return saveProductSettings(app, updates);
   });
   ipcMain.handle("claracore:listModels", async (_event, input) => listConfiguredModels(input));
   ipcMain.handle("claracore:createMemory", async (_event, input) => {
-    if (!input || typeof input !== "object" || Array.isArray(input)) return false;
+    if (!isPlainObject(input)) return false;
     return createProductMemory(app, input);
   });
   ipcMain.handle("claracore:updateMemory", async (_event, id, input) => {
-    if (typeof id !== "string" || !input || typeof input !== "object" || Array.isArray(input)) return false;
+    if (typeof id !== "string" || !isPlainObject(input)) return false;
     return updateProductMemory(app, id, input);
   });
   ipcMain.handle("claracore:deleteMemory", async (_event, id) => {
@@ -732,7 +736,7 @@ if (!isGatewayMode) {
     return getProductMemoryStats(app);
   });
   ipcMain.handle("claracore:createMemoryLabelAlias", async (_event, input) => {
-    if (!input || typeof input !== "object" || Array.isArray(input)) return false;
+    if (!isPlainObject(input)) return false;
     return createProductMemoryLabelAlias(app, input);
   });
   ipcMain.handle("claracore:deleteMemoryLabelAlias", async (_event, alias) => {
@@ -758,7 +762,7 @@ if (!isGatewayMode) {
     return getProductMemoryMergeSuggestions(app, input || {});
   });
   ipcMain.handle("claracore:mergeMemories", async (_event, input) => {
-    if (!input || typeof input !== "object" || Array.isArray(input)) return false;
+    if (!isPlainObject(input)) return false;
     const result = await mergeProductMemories(app, input);
     notifyRuntimeChanged("memory-merge");
     return result;
@@ -774,7 +778,7 @@ if (!isGatewayMode) {
     return result;
   });
   ipcMain.handle("claracore:createMemoryRecord", async (_event, input) => {
-    if (!input || typeof input !== "object" || Array.isArray(input)) return false;
+    if (!isPlainObject(input)) return false;
     return createProductMemoryRecord(app, input);
   });
   ipcMain.handle("claracore:getMemoryRecords", async (_event, input) => {
@@ -800,11 +804,11 @@ if (!isGatewayMode) {
     return getProductSharedLine(app, input || {});
   });
   ipcMain.handle("claracore:saveSharedLine", async (_event, input) => {
-    if (!input || typeof input !== "object" || Array.isArray(input)) return false;
+    if (!isPlainObject(input)) return false;
     return saveProductSharedLine(app, input);
   });
   ipcMain.handle("claracore:createSharedLine", async (_event, input) => {
-    if (!input || typeof input !== "object" || Array.isArray(input)) return false;
+    if (!isPlainObject(input)) return false;
     return createProductSharedLine(app, input);
   });
   ipcMain.handle("claracore:activateSharedLine", async (_event, lineId) => {
@@ -855,7 +859,7 @@ if (!isGatewayMode) {
     return checkProductInnerLifeShareTiming(app, input || {});
   });
   ipcMain.handle("claracore:setInnerLifeDaemon", async (_event, input) => {
-    if (!input || typeof input !== "object" || Array.isArray(input)) return false;
+    if (!isPlainObject(input)) return false;
     const result = await setProductInnerLifeDaemon(app, input);
     notifyRuntimeChanged("innerlife-daemon");
     return result;
@@ -874,7 +878,7 @@ if (!isGatewayMode) {
     return startProductInnerLifeSession(app, input || {});
   });
   ipcMain.handle("claracore:submitInnerLifeInbox", async (_event, input) => {
-    if (!input || typeof input !== "object" || Array.isArray(input)) return false;
+    if (!isPlainObject(input)) return false;
     return submitProductInnerLifeInbox(app, input);
   });
   ipcMain.handle("claracore:endInnerLifeSession", async (_event, sessionId, input) => {

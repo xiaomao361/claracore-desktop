@@ -26,7 +26,7 @@ function createClaraCoreMemoriaView(context) {
   let activeMemoryGraphLayer = "primary";
   let memoryEmbeddingBatchRunning = false;
   let activeMemoryAgentFilter = "";
-  const loadedMemoryTabs = { all: false, restricted: false, archive: false };
+  const loadedMemoryTabs = { all: false, restricted: false, archive: false, graph: false };
   const memoryPaging = { pageSize: 20, all: { loaded: 0 }, restricted: { loaded: 0 }, archived: { loaded: 0 }, deleted: { loaded: 0 } };
   let snapshot = null;
 
@@ -345,6 +345,11 @@ async function loadMemoryTabData(tabName, options = {}) {
     if ((archived || []).length > 0) renderMemoryResults(filterByAgent(archived || [], activeMemoryAgentFilter, memoryAgentId), archivedMemoryList, { append, action: "restore-archived", itemClass: "archived" });
     if ((deleted || []).length > 0) renderMemoryResults(filterByAgent(deleted || [], activeMemoryAgentFilter, memoryAgentId), deletedMemoryList, { append, action: "restore", itemClass: "deleted" });
     renderLoadMore("archive");
+  }
+  if (tabName === "graph" && (force || !loadedMemoryTabs.graph)) {
+    snapshot.memoryGraph = await window.ClaraCoreDesktop.getMemoryGraph({ limit: 100 });
+    loadedMemoryTabs.graph = true;
+    renderMemoryGraph();
   }
 }
 
@@ -761,6 +766,7 @@ function renderMemoryGraph() {
     loadedMemoryTabs.all = false;
     loadedMemoryTabs.restricted = false;
     loadedMemoryTabs.archive = false;
+    loadedMemoryTabs.graph = false;
     memoryPaging.all.loaded = 0;
     memoryPaging.restricted.loaded = 0;
     memoryPaging.archived.loaded = 0;
