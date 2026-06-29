@@ -5,7 +5,12 @@ function resolveDataRoot(app) {
   if (process.env.CLARACORE_DESKTOP_DATA_DIR) {
     return path.resolve(process.env.CLARACORE_DESKTOP_DATA_DIR);
   }
-  return path.join(app.getPath("userData"), "product-dev");
+  // packaged: userData = ~/Library/Application Support/ClaraCore Desktop  (clean root)
+  // dev: append "dev" so local dev data doesn't pollute production path
+  if (app.isPackaged) {
+    return app.getPath("userData");
+  }
+  return path.join(app.getPath("userData"), "dev");
 }
 
 function resolveProductPaths(app) {
