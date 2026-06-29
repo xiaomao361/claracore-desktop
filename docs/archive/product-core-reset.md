@@ -92,7 +92,7 @@ apps/claracore-desktop/
   electron/             # Electron main/preload process
   core/                 # Product core logic
     db/                 # Unified SQLite schema and migrations
-    memory/             # Memory domain logic
+    memoria/            # Memoria domain logic
     continuity/         # Shared-line/current-position domain logic
     innerlife/          # InnerLife domain logic
     gateway/            # Agent-facing MCP/HTTP entry owned by Desktop

@@ -1,5 +1,14 @@
 # Product Configuration
 
-Product-owned configuration logic will live here.
+Product-owned configuration logic lives here.
 
-Settings should be stored in the Desktop product data directory and eventually in `claracore.db` or platform-appropriate secure storage for secrets.
+`index.js` owns:
+
+- default product settings
+- writable setting keys
+- setting normalization and validation
+- the default agent id
+
+Settings are persisted in the Desktop-owned `claracore.db`. Secrets remain
+stored as secret references/status rows rather than raw values in normal
+configuration output.

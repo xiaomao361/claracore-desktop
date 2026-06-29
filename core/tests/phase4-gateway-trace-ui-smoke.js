@@ -44,8 +44,8 @@ async function main() {
       }
     });
     const page = await app.firstWindow();
-    await page.waitForSelector("[data-view='connections']", { timeout: 15000 });
-    await page.click("[data-view='connections']");
+    await page.waitForSelector("[data-view='agent-setup']", { timeout: 15000 });
+    await page.click("[data-view='agent-setup']");
     await page.waitForFunction(
       () =>
         document.querySelector("#gatewayTraceList")?.textContent.includes("gateway_context") &&

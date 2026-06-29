@@ -556,7 +556,7 @@ Implemented:
 - Gateway exposes `gateway_context`, an assembled agent packet containing Shared Line, recent Memory, InnerLife state, Doctor guidance, and old-service safety guidance.
 - Gateway records tool-call traces in `gateway_traces`.
 - Gateway exposes `gateway_trace_list` for recent successful and failed tool calls.
-- Connections page shows recent Gateway traces as the first trace-viewer baseline.
+- Agent Setup page shows recent Gateway traces as the first trace-viewer baseline.
 - Agent Setup tells agents to call `gateway_context` first after connecting.
 - Home page shows a first-run check for data directory write access, database, Gateway entry, embedding setup, and old-service isolation.
 
@@ -572,7 +572,7 @@ Validated:
 - `npm run dist:mac` creates `dist/ClaraCore-Desktop-0.1.0-arm64.dmg`.
 - Generated DMG mounts successfully and contains `ClaraCore Desktop.app`.
 - Packaged app includes the ClaraCore icon assets instead of default Electron icons.
-- `npm run test:phase4` verifies the development Agent Setup MCP config, active product data root, complete Gateway tool list, Gateway docs, status output, `gateway_context`, Gateway trace recording for success/failure, Connections-page trace rendering, and old-service isolation text.
+- `npm run test:phase4` verifies the development Agent Setup MCP config, active product data root, complete Gateway tool list, Gateway docs, status output, `gateway_context`, Gateway trace recording for success/failure, Agent Setup trace rendering, and old-service isolation text.
 - `npm run test:phase4:packaged` rebuilds the packaged app and verifies the app executable works with `--gateway` for Gateway docs, `gateway_context`, `gateway_trace_list`, Memory tools, Shared Line tools, and product data isolation.
 
 Still next:

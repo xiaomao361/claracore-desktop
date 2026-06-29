@@ -1,0 +1,178 @@
+.settings-roadmap-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.settings-roadmap-card {
+  display: grid;
+  gap: 8px;
+  min-height: 128px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fafaf7;
+}
+
+.settings-roadmap-card h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.settings-roadmap-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.settings-roadmap-card span {
+  align-self: end;
+  justify-self: start;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.timeline {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.timeline div {
+  position: relative;
+  padding-left: 24px;
+}
+
+.timeline span {
+  position: absolute;
+  left: 0;
+  top: 2px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--blue);
+  border-radius: 50%;
+  background: var(--blue-bg);
+}
+
+.timeline strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.state-card {
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid #dfd1b9;
+  border-radius: 8px;
+  background: #fbf4e6;
+}
+
+.state-card strong {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.toggle-row,
+.field {
+  display: grid;
+  gap: 7px;
+  margin-top: 13px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.toggle-row {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 8px 10px;
+}
+
+.field textarea {
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.copy-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.copy-field .secondary {
+  min-height: 36px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.daemon-control-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fafaf7;
+}
+
+.daemon-control-panel.is-enabled {
+  border-color: rgba(40, 116, 90, 0.32);
+  background: var(--green-bg);
+}
+
+.daemon-control-panel.is-paused {
+  border-color: rgba(145, 101, 31, 0.28);
+  background: var(--amber-bg);
+}
+
+.daemon-control-panel.is-error {
+  border-color: rgba(166, 64, 54, 0.34);
+  background: var(--red-bg);
+}
+
+.daemon-control-panel span,
+.daemon-control-panel strong {
+  display: block;
+}
+
+.daemon-control-panel span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.daemon-control-panel strong {
+  margin-top: 3px;
+  color: var(--text);
+}
+
+.daemon-control-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.settings-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}

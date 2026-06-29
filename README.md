@@ -9,20 +9,37 @@ ClaraCore Desktop is the local desktop manager for the first ClaraCore core pack
 
 It is not a chat client and does not include a primary chat model. The desktop app is meant to make the local core visible, configurable, and eventually manageable without starting every service by hand.
 
+## Active Development Docs
+
+Read these before adding new features:
+
+- [Architecture](docs/ARCHITECTURE.md): current runtime, renderer, core, database,
+  Gateway, and documentation boundaries.
+- [Cleanup Plan](docs/CLEANUP_PLAN.md): active technical-debt cleanup order before
+  feature expansion.
+- Module boundary notes:
+  - [Renderer modules](app/README.md)
+  - [Runtime](core/runtime/README.md)
+  - [Database repositories](core/db/repositories/README.md)
+  - [Memoria](core/memoria/README.md)
+  - [Continuity / Shared Line](core/continuity/README.md)
+  - [InnerLife](core/innerlife/README.md)
+  - [Gateway](core/gateway/README.md)
+
 ## Current Status
 
 The current version is a working desktop shell with a product-owned local data
-store, Desktop-native Memoria, Shared Line, InnerLife, and a separate Models
-surface for model and daemon configuration.
+store, Desktop-native Memoria, Shared Line, InnerLife, a Desktop-owned Gateway,
+and a separate Models surface for model configuration.
 
 Included:
 
 - Electron desktop app
 - ClaraCore root detection
 - Product-owned SQLite data root under Desktop user data
-- Home, Memoria, Shared Line, InnerLife, Models, Data, Connections, Settings, and Logs pages
+- Home, Memoria, Shared Line, InnerLife, Models, Data, Agent Setup, Settings, and Logs pages
 - Home dashboard with Gateway, Memoria, Shared Line, InnerLife, agent-view, and Gateway trace summaries
-- MCP connection command and copyable config
+- Agent Setup page with MCP connection command, copyable config, CLI fallback notes, runtime paths, and recent Gateway activity
 - Desktop-owned Gateway stdio entry for Gateway context, Memoria, Shared Line, and InnerLife MCP tools
 - Memoria CLI for store, recall, get, update, tag, delete, restore, archive, import/export, records, and maintenance audit/run
 - View-focused Memoria UI for search, graph, labels, all memories, restricted memories, archive/delete review, and manual delete/restore
@@ -32,7 +49,8 @@ Included:
 - View-focused Shared Line UI for line browsing, agent filtering, current position, metadata, history, snapshots, handoffs, and resume packet review; selecting a line only changes the reviewed detail, not the agent-active line
 - Desktop-owned InnerLife storage, agent profiles, inbox, sessions, events, thoughts, shares, digest runs, and daemon state
 - Agent-managed InnerLife access through Gateway MCP and CLI fallback; the Desktop UI is primarily for inspection and runtime control
-- Models page for Memoria embedding configuration, InnerLife model configuration, secret references, loop cadence, and InnerLife daemon enable/pause/tick
+- Models page for Memoria embedding configuration, InnerLife model configuration, secret references, and loop cadence
+- InnerLife runtime panel for daemon enable/pause/tick, doctor status, pending shares, inbox, sessions, and digest review
 - Copy-based import for old Continuity data into Desktop-owned Shared Line tables
 - Backup-gated import preview for old Memoria, Continuity, and InnerLife data
 - Backup-gated copy import for old Memoria, Continuity, and InnerLife data
@@ -80,11 +98,54 @@ Check JavaScript syntax:
 npm run check
 ```
 
+Run the full smoke suite:
+
+```bash
+npm run test:smoke
+```
+
+Useful narrower smoke gates:
+
+```bash
+npm run test:phase5
+npm run test:backup
+npm run test:import-preview
+```
+
 Start the desktop app:
 
 ```bash
 npm run start
 ```
+
+Start the Desktop-owned MCP Gateway directly:
+
+```bash
+npm run gateway
+```
+
+Use the CLI fallback:
+
+```bash
+node core/cli.js --help
+```
+
+## Current Code Layout
+
+The app has no renderer build step. `index.html` loads classic scripts.
+
+- `app.js`: renderer orchestration, refresh flow, and event wiring
+- `app/`: DOM bindings, i18n, view registry, pure helpers, and focused view modules
+- `styles.css`: CSS import entry
+- `styles/`: shared and view-specific CSS
+- `electron/`: Electron main process, preload bridge, IPC, tray, and schedulers
+- `core/runtime/`: public runtime facade, paths, backup/restore, and import workflows
+- `core/db/`: schema, migrations, database adapter, settings, events, traces, and repositories
+- `core/memoria/`: Desktop Memoria domain facade
+- `core/continuity/`: Shared Line domain facade
+- `core/innerlife/`: InnerLife domain facade
+- `core/gateway/`: stdio MCP server for agents
+- `core/tests/`: smoke and UI smoke coverage
 
 ## Current Gateway Direction
 
@@ -97,13 +158,12 @@ ideas, but its service Web UI launcher/supervisor model is not the Desktop
 product target. Product-visible summaries now belong on the Desktop Home page,
 and repeatable operations should be exposed through the Desktop-owned Gateway.
 
-## v0.2 Direction
+## Development Rules
 
-The next version should move from display to real local control:
-
-- Package a macOS app.
-- Keep the Desktop-owned Gateway as the primary agent MCP contract.
-- Use or import existing ClaraCore data safely.
-- Show real service health, not just module file presence.
-- Provide agent-ready MCP config for the Desktop-managed Gateway.
-- Show useful startup and service logs.
+- Keep `Memoria`, `Shared Line`, and `InnerLife` as separate product domains.
+- New renderer work goes under `app/views/` or another focused `app/` module.
+- New product behavior goes through a domain facade before it reaches runtime.
+- New persistence work belongs in a repository or explicit migration.
+- Old Python services are reference implementations and import sources, not
+  the normal Desktop runtime.
+- Before pushing architecture or runtime changes, run `npm run test:smoke`.

@@ -1,0 +1,11 @@
+@media (max-width: 1180px) {
+  .innerlife-layout,
+  .innerlife-compose-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .innerlife-status-strip,
+  .innerlife-command-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

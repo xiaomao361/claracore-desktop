@@ -18,16 +18,15 @@
         </div>
       </div>
       <nav aria-label="Primary">
-        <button class="nav-item active" data-view="home" data-i18n="nav.home">Home</button>
-        <button class="nav-item" data-view="memory" data-i18n="nav.memory">Memoria</button>
-        <button class="nav-item" data-view="shared-line" data-i18n="nav.sharedLine">Shared Line</button>
-        <button class="nav-item" data-view="innerlife" data-i18n="nav.innerLife">InnerLife</button>
-        <button class="nav-item" data-view="data" data-i18n="nav.data">Data</button>
-        <button class="nav-item" data-view="connections" data-i18n="nav.connections">Connections</button>
-        <button class="nav-item" data-view="logs" data-i18n="nav.logs">Logs</button>
-        <button class="nav-item" data-view="agent-setup" data-i18n="nav.agentSetup">Agent Setup</button>
-        <button class="nav-item" data-view="models" data-i18n="nav.models">Models</button>
-        <button class="nav-item" data-view="settings" data-i18n="nav.settings">Settings</button>
+        <button class="nav-item active" data-view="home"><span class="nav-icon nav-icon-home"></span><span data-i18n="nav.home">Home</span></button>
+        <button class="nav-item" data-view="memory"><span class="nav-icon nav-icon-memory"></span><span data-i18n="nav.memory">Memoria</span></button>
+        <button class="nav-item" data-view="shared-line"><span class="nav-icon nav-icon-shared-line"></span><span data-i18n="nav.sharedLine">Shared Line</span></button>
+        <button class="nav-item" data-view="innerlife"><span class="nav-icon nav-icon-innerlife"></span><span data-i18n="nav.innerLife">InnerLife</span></button>
+        <button class="nav-item" data-view="data"><span class="nav-icon nav-icon-data"></span><span data-i18n="nav.data">Data</span></button>
+        <button class="nav-item" data-view="logs"><span class="nav-icon nav-icon-logs"></span><span data-i18n="nav.logs">Logs</span></button>
+        <button class="nav-item" data-view="agent-setup"><span class="nav-icon nav-icon-agent"></span><span data-i18n="nav.agentSetup">Agent Access</span></button>
+        <button class="nav-item" data-view="models"><span class="nav-icon nav-icon-models"></span><span data-i18n="nav.models">Models</span></button>
+        <button class="nav-item" data-view="settings"><span class="nav-icon nav-icon-settings"></span><span data-i18n="nav.settings">Settings</span></button>
       </nav>
       <div class="sidebar-footer">
         <span class="mini-label" data-i18n="footer.label">Local ownership</span>
@@ -87,7 +86,7 @@
                 <h2 data-i18n="home.trace.title">Gateway Trace</h2>
                 <p class="quiet" data-i18n="home.trace.body">Recent MCP calls through the Desktop-owned Gateway.</p>
               </div>
-              <button class="link-button" data-view-target="connections" data-i18n="home.trace.openConnections">Open connections</button>
+              <button class="link-button" data-view-target="agent-setup" data-i18n="home.trace.openConnections">Open Agent Access</button>
             </div>
             <div id="homeTraceList" class="home-trace-list"></div>
           </article>
@@ -293,7 +292,7 @@
                 </div>
               </div>
               <div id="sharedLineList" class="shared-line-history-list"></div>
-              <div class="memory-search compact-form hidden">
+              <div class="memory-search compact-form">
                 <input id="sharedLineTitleInput" data-i18n-placeholder="sharedLine.form.titlePlaceholder" placeholder="New line title" />
                 <button id="createSharedLine" class="secondary" data-i18n="sharedLine.createLine">Create line</button>
               </div>
@@ -331,13 +330,13 @@
               <p id="sharedLineSummary" data-i18n="sharedLine.currentEmpty">No current position saved yet.</p>
             </div>
             <div id="sharedLineMetadataPanel" class="shared-line-detail-list"></div>
-            <div class="shared-line-readonly-form hidden">
-              <textarea id="sharedLineInput" rows="3" readonly></textarea>
-              <select id="sharedLineStatusInput" disabled>
+            <div class="shared-line-readonly-form">
+              <textarea id="sharedLineInput" rows="3"></textarea>
+              <select id="sharedLineStatusInput">
                 <option value="draft" data-i18n="sharedLine.status.draft">Draft</option>
                 <option value="confirmed" data-i18n="sharedLine.status.confirmed">Confirmed</option>
               </select>
-              <input id="sharedLineFactsInput" readonly />
+              <input id="sharedLineFactsInput" />
               <span id="sharedLineNotice" class="quiet" aria-live="polite"></span>
               <button id="saveSharedLine" class="primary" data-i18n="sharedLine.form.save">Save position</button>
             </div>
@@ -346,23 +345,23 @@
               <pre><code id="sharedLineResume">Checking...</code></pre>
             </div>
             <button id="copySharedLineResume" class="secondary full" data-i18n="sharedLine.copyResume">Copy resume packet</button>
-            <label class="field hidden">
+            <label class="field">
               <span data-i18n="sharedLine.handoff.objective">Objective</span>
               <input id="sharedLineHandoffObjective" data-i18n-placeholder="sharedLine.handoff.objectivePlaceholder" placeholder="Continue from the current Shared Line." />
             </label>
-            <label class="field hidden">
+            <label class="field">
               <span data-i18n="sharedLine.handoff.completed">Completed</span>
               <input id="sharedLineHandoffCompleted" data-i18n-placeholder="sharedLine.handoff.listPlaceholder" placeholder="item one, item two" />
             </label>
-            <label class="field hidden">
+            <label class="field">
               <span data-i18n="sharedLine.handoff.openItems">Open items</span>
               <input id="sharedLineHandoffOpenItems" data-i18n-placeholder="sharedLine.handoff.listPlaceholder" placeholder="item one, item two" />
             </label>
-            <label class="field hidden">
+            <label class="field">
               <span data-i18n="sharedLine.handoff.nextStep">Next step</span>
               <textarea id="sharedLineHandoffNextStep" rows="3" data-i18n-placeholder="sharedLine.handoff.nextStepPlaceholder" placeholder="What should the next agent do first?"></textarea>
             </label>
-            <button id="createSharedLineHandoff" class="primary full hidden" data-i18n="sharedLine.createHandoff">Create handoff</button>
+            <button id="createSharedLineHandoff" class="primary full" data-i18n="sharedLine.createHandoff">Create handoff</button>
           </article>
         </div>
       </section>
@@ -399,14 +398,14 @@
                   <select id="innerLifeAgentFilter"></select>
                 </div>
               </div>
-              <span id="innerLifeNotice" class="quiet hidden" aria-live="polite"></span>
-              <div class="innerlife-command-grid hidden">
+              <span id="innerLifeNotice" class="quiet" aria-live="polite"></span>
+              <div class="innerlife-command-grid">
                 <button id="startInnerLifeSession" class="secondary" data-i18n="innerLife.startSession">Start session</button>
                 <button id="endInnerLifeSession" class="secondary" data-i18n="innerLife.endSession">End session</button>
                 <button id="runInnerLifeDigest" class="secondary" data-i18n="innerLife.runDigest">Run digest</button>
                 <button id="processInnerLifeOnce" class="primary" data-i18n="innerLife.processOnce">Process once</button>
               </div>
-              <div class="innerlife-compose-grid hidden">
+              <div class="innerlife-compose-grid">
                 <label class="shared-line-form">
                   <span data-i18n="innerLife.sessionSummary">Session summary</span>
                   <textarea id="innerLifeSessionSummary" rows="3" data-i18n-placeholder="innerLife.sessionSummaryPlaceholder" placeholder="What should InnerLife remember from this session?"></textarea>
@@ -416,14 +415,14 @@
                   <textarea id="innerLifeInboxInput" rows="3" data-i18n-placeholder="innerLife.inboxPlaceholder" placeholder="Submit material for InnerLife to digest later."></textarea>
                 </label>
               </div>
-              <div class="form-actions hidden">
+              <div class="form-actions">
                 <button id="submitInnerLifeInbox" class="secondary" data-i18n="innerLife.submitInbox">Submit inbox</button>
               </div>
-              <label class="shared-line-form hidden">
+              <label class="shared-line-form">
                 <span data-i18n="innerLife.shareContext">Share context</span>
                 <textarea id="innerLifeShareContext" rows="2" data-i18n-placeholder="innerLife.shareContextPlaceholder" placeholder="What is happening now?"></textarea>
               </label>
-              <div class="form-actions hidden">
+              <div class="form-actions">
                 <button id="checkInnerLifeShareTiming" class="secondary" data-i18n="innerLife.checkTiming">Check share timing</button>
               </div>
               <div class="section-heading-line">
@@ -440,6 +439,17 @@
                   <div><span data-i18n="innerLife.lastResult">Last result</span><strong id="innerLifeLastResult">-</strong></div>
                   <div><span data-i18n="innerLife.recovery">Recovery</span><strong id="innerLifeRecovery">-</strong></div>
                   <div><span data-i18n="innerLife.doctor">Doctor</span><strong id="innerLifeDoctorStatus">-</strong></div>
+                </div>
+                <div id="innerLifeDaemonControlPanel" class="daemon-control-panel">
+                  <div>
+                    <span data-i18n="settings.daemonStatus">Daemon status</span>
+                    <strong id="settingsInnerLifeDaemonStatus">paused</strong>
+                  </div>
+                  <div class="daemon-control-actions">
+                    <button id="enableInnerLifeDaemon" class="secondary" type="button" data-i18n="innerLife.enableDaemon">Enable daemon</button>
+                    <button id="pauseInnerLifeDaemon" class="secondary" type="button" data-i18n="innerLife.pauseDaemon">Pause daemon</button>
+                    <button id="tickInnerLifeDaemon" class="secondary" type="button" data-i18n="innerLife.tickDaemon">Run due tick</button>
+                  </div>
                 </div>
                 <div id="innerLifeDoctorList" class="shared-line-history-list"></div>
               </article>
@@ -501,36 +511,6 @@
         </div>
       </section>
 
-      <section id="connectionsView" class="view">
-        <div class="screen-grid">
-          <article class="panel main-panel">
-            <h2 data-i18n="connections.title">Connections</h2>
-            <p data-i18n="connections.body">External agents connect through the local gateway instead of owning the data layer.</p>
-            <div class="snippet">
-              <span data-i18n="connections.mcpCommand">MCP command</span>
-              <code id="mcpCommand">Checking...</code>
-            </div>
-            <div class="snippet large">
-              <span data-i18n="connections.mcpConfig">MCP config</span>
-              <pre><code id="mcpConfig">Checking...</code></pre>
-            </div>
-          </article>
-          <article class="panel">
-            <div class="panel-heading">
-              <h2 data-i18n="connections.shortcuts">Shortcuts</h2>
-              <span id="copyNotice" class="quiet" aria-live="polite"></span>
-            </div>
-            <button class="secondary full" data-copy="mcp-command" data-i18n="connections.copyMcpCommand">Copy MCP command</button>
-            <button class="secondary full" data-copy="mcp-config" data-i18n="connections.copyMcpConfig">Copy MCP config</button>
-            <button id="openGatewayFolder" class="secondary full" data-i18n="connections.openGatewayFolder">Open gateway folder</button>
-            <h2 class="section-title" data-i18n="connections.agentActivity">Agent activity</h2>
-            <div id="gatewayTraceList" class="endpoint-list"></div>
-            <h2 class="section-title" data-i18n="connections.httpEndpoints">HTTP endpoints</h2>
-            <div id="httpEndpointList" class="endpoint-list"></div>
-          </article>
-        </div>
-      </section>
-
       <section id="logsView" class="view">
         <div class="logs-grid">
           <article class="panel main-panel log-terminal-panel">
@@ -544,6 +524,12 @@
                 <button id="toggleLogFollow" class="secondary active" data-i18n="logs.follow">Follow</button>
               </div>
             </div>
+            <div class="log-status-strip">
+              <div><span data-i18n="logs.runtimeEvents">Runtime events</span><strong id="logRuntimeCount">0</strong></div>
+              <div><span data-i18n="logs.gatewayTraces">Gateway traces</span><strong id="logGatewayCount">0</strong></div>
+              <div><span data-i18n="logs.visibleLines">Visible lines</span><strong id="logLineCount">0</strong></div>
+              <div><span data-i18n="logs.lastRefresh">Last refresh</span><strong id="logLastRefresh">-</strong></div>
+            </div>
             <pre id="logTerminal" class="log-terminal" aria-live="polite"></pre>
           </article>
         </div>
@@ -554,7 +540,7 @@
           <article class="panel main-panel">
             <div class="panel-heading">
               <div>
-                <h2 data-i18n="agentSetup.title">Agent Setup</h2>
+                <h2 data-i18n="agentSetup.title">Agent Access</h2>
                 <p data-i18n="agentSetup.body">Copy this setup note into an agent so it can connect through the unified Gateway first.</p>
               </div>
               <span id="agentSetupNotice" class="quiet" aria-live="polite"></span>
@@ -564,9 +550,27 @@
             </div>
           </article>
           <article class="panel">
-            <h2 data-i18n="agentSetup.actions">Actions</h2>
+            <div class="panel-heading">
+              <h2 data-i18n="agentSetup.actions">Actions</h2>
+              <span id="copyNotice" class="quiet" aria-live="polite"></span>
+            </div>
             <button id="copyAgentSetup" class="secondary full" data-i18n="agentSetup.copy">Copy setup note</button>
-            <button class="secondary full" data-view-target="connections" data-i18n="agentSetup.openConnections">Open connection details</button>
+            <button class="secondary full" data-copy="mcp-command" data-i18n="connections.copyMcpCommand">Copy MCP command</button>
+            <button class="secondary full" data-copy="mcp-config" data-i18n="connections.copyMcpConfig">Copy MCP config</button>
+            <button id="openGatewayFolder" class="secondary full" data-i18n="connections.openGatewayFolder">Open runtime folder</button>
+            <h2 class="section-title" data-i18n="connections.title">Connection details</h2>
+            <div class="snippet">
+              <span data-i18n="connections.mcpCommand">MCP command</span>
+              <code id="mcpCommand">Checking...</code>
+            </div>
+            <div class="snippet large">
+              <span data-i18n="connections.mcpConfig">MCP config</span>
+              <pre><code id="mcpConfig">Checking...</code></pre>
+            </div>
+            <h2 class="section-title" data-i18n="connections.agentActivity">Agent activity</h2>
+            <div id="gatewayTraceList" class="endpoint-list"></div>
+            <h2 class="section-title" data-i18n="connections.httpEndpoints">HTTP endpoints</h2>
+            <div id="httpEndpointList" class="endpoint-list"></div>
             <h2 class="section-title" data-i18n="agentSetup.includes">Includes</h2>
             <ul class="plain-list">
               <li data-i18n="agentSetup.includeGateway">Gateway MCP config</li>
@@ -652,17 +656,6 @@
                   </label>
                   <label class="field wide-field"><span data-i18n="settings.source">Source</span><input id="innerLifeSource" readonly /></label>
                 </div>
-                <div id="innerLifeDaemonControlPanel" class="daemon-control-panel">
-                  <div>
-                    <span data-i18n="settings.daemonStatus">Daemon status</span>
-                    <strong id="settingsInnerLifeDaemonStatus">paused</strong>
-                  </div>
-                  <div class="daemon-control-actions">
-                    <button id="enableInnerLifeDaemon" class="secondary" type="button" data-i18n="innerLife.enableDaemon">Enable daemon</button>
-                    <button id="pauseInnerLifeDaemon" class="secondary" type="button" data-i18n="innerLife.pauseDaemon">Pause daemon</button>
-                    <button id="tickInnerLifeDaemon" class="secondary" type="button" data-i18n="innerLife.tickDaemon">Run due tick</button>
-                  </div>
-                </div>
               </section>
             </div>
             <div class="settings-actions">
@@ -726,7 +719,7 @@
             <h2 data-i18n="settings.shortcutsTitle">Shortcuts</h2>
             <button class="secondary full" data-view-target="models" data-i18n="settings.openModels">Open Models</button>
             <button class="secondary full" data-view-target="data" data-i18n="settings.openData">Open Data</button>
-            <button class="secondary full" data-view-target="agent-setup" data-i18n="settings.openAgentSetup">Open Agent Setup</button>
+            <button class="secondary full" data-view-target="agent-setup" data-i18n="settings.openAgentSetup">Open Agent Access</button>
           </article>
         </div>
       </section>
@@ -741,6 +734,17 @@
       <span><span data-i18n="monitor.localTime">Local time</span>: <strong id="monitorTime">--</strong></span>
     </footer>
 
+    <script src="./app/dom.js"></script>
+    <script src="./app/i18n.js"></script>
+    <script src="./app/view-registry.js"></script>
+    <script src="./app/utils.js"></script>
+    <script src="./app/views/agent-setup.js"></script>
+    <script src="./app/views/data.js"></script>
+    <script src="./app/views/home.js"></script>
+    <script src="./app/views/logs.js"></script>
+    <script src="./app/views/memoria.js"></script>
+    <script src="./app/views/settings.js"></script>
+    <script src="./app/views/shared-innerlife.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>

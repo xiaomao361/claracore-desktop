@@ -113,7 +113,7 @@ Old product capabilities:
 
 Desktop status:
 
-- Implemented: product-owned stdio MCP, status, unified Gateway context packet, Gateway tool-call trace recording/listing, Connections-page trace viewer, Memory tools, Shared Line tools, handoff tool, InnerLife lifecycle tools, InnerLife daemon status/set/tick tools, InnerLife doctor tool, setup docs, packaged `--gateway` path.
+- Implemented: product-owned stdio MCP, status, unified Gateway context packet, Gateway tool-call trace recording/listing, Agent Setup trace viewer, Memory tools, Shared Line tools, handoff tool, InnerLife lifecycle tools, InnerLife daemon status/set/tick tools, InnerLife doctor tool, setup docs, packaged `--gateway` path.
 - Missing: service registry/supervisor, local HTTP endpoints, cognitive overview, fuller agent view, optional external providers.
 
 ## Product Priority

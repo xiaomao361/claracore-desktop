@@ -4,6 +4,9 @@ Desktop-owned shared-line and current-position logic.
 
 This module uses the product database at `claracore.db`. Existing Continuity data under old ClaraCore service paths is treated as an import source only; Desktop must not mutate it directly.
 
+In the Desktop product, the user-facing surface is Shared Line. Continuity is
+the internal/domain name and old-service import lineage.
+
 ## Product Boundary
 
 - Shared Line stores the current resumable position.

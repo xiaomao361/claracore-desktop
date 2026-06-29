@@ -18,20 +18,26 @@ Desktop currently owns:
 - Digest runs and share candidate generation.
 - Pending share lifecycle records.
 - Share timing checks against current context.
-- Daemon enable/pause/tick state and recovery doctor.
+- Daemon enable/pause/tick state, scheduler behavior, and recovery doctor.
 - Backup-gated copy import from the old InnerLife v2 database.
 - Model provider, endpoint, model names, API key references, and loop cadence
   configured from the Desktop Models page.
 
 The Desktop InnerLife page is intentionally inspect-oriented. Agents create and
 update InnerLife state through Gateway MCP or CLI fallback. Humans can inspect
-state and operate daemon controls from Models, but the page should not become a
-manual workflow surface for writing thoughts, reviewing shares, or applying
-InnerLife output into other modules.
+state and operate daemon controls from the InnerLife runtime panel, but the page
+should not become a manual workflow surface for writing thoughts, reviewing
+shares, or applying InnerLife output into other modules.
 
 InnerLife output is product state until an agent explicitly writes Memory or
 Shared Line through the corresponding product tools. The UI does not auto-apply
 shares into Memory or Shared Line.
+
+Daemon ticks can be triggered by the background scheduler or by the UI. The
+runtime guards same-agent ticks so concurrent scheduler and manual activity do
+not generate duplicate share candidates. Enabling the daemon while inbox items
+are pending may immediately process that inbox instead of waiting for the next
+interval.
 
 Agent IDs should use the product identity shape `tool:agent`, for example
 `claude-code:clara` or `hermes:lara`. A single tool/name such as `codex` is also

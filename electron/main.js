@@ -717,7 +717,17 @@ if (!isGatewayMode) {
   }));
 
   app.whenReady().then(async () => {
-    await ensureProductCore(app);
+    const { database } = await ensureProductCore(app);
+    await database.recordRuntimeEvent({
+      level: "info",
+      source: "desktop",
+      message: "ClaraCore Desktop started",
+      metadata: {
+        version: app.getVersion(),
+        packaged: app.isPackaged,
+        platform: process.platform
+      }
+    });
     createWindow();
     createTray();
     startInnerLifeScheduler();

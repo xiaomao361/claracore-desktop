@@ -1,0 +1,272 @@
+  display: block;
+  color: #4f5752;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.snippet pre {
+  max-height: 260px;
+  margin: 0;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.badge {
+  justify-self: end;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 720;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.ok {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.missing {
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+.optional,
+.paused,
+.planned {
+  background: var(--amber-bg);
+  color: var(--amber);
+}
+
+.lower-grid,
+.screen-grid,
+.system-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.8fr);
+  gap: 12px;
+}
+
+.lower-grid {
+  grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.95fr) minmax(260px, 0.75fr);
+}
+
+.system-grid {
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr) minmax(0, 1fr);
+  margin-bottom: 16px;
+}
+
+.panel {
+  min-width: 0;
+  padding: 16px;
+}
+
+.compact-panel {
+  min-height: 172px;
+}
+
+.panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.panel-heading h2 {
+  margin-bottom: 0;
+}
+
+.quiet {
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.icon-button {
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: transparent;
+}
+
+.icon-button::before {
+  content: "";
+  display: block;
+  width: 12px;
+  height: 12px;
+  margin: 0 auto;
+  border: 2px solid var(--muted);
+  border-radius: 50%;
+}
+
+.kv-row {
+  display: grid;
+  grid-template-columns: 0.72fr minmax(0, 1fr);
+  gap: 12px;
+  padding: 5px 0;
+}
+
+.kv-row span {
+  color: var(--muted);
+}
+
+.kv-row strong {
+  min-width: 0;
+  font-weight: 520;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.link-button {
+  margin-top: 8px;
+  border: 0;
+  background: transparent;
+  color: #1b62ad;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 520;
+}
+
+.split-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.event-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.event-list li {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.55fr) minmax(0, 1fr);
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.event-list li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.event-list strong {
+  font-size: 13px;
+}
+
+.event-list span {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.health-list {
+  display: grid;
+  gap: 10px;
+}
+
+.health-summary.ok {
+  color: var(--green);
+}
+
+.health-summary.warn {
+  color: var(--orange);
+}
+
+.health-summary.error {
+  color: var(--red);
+}
+
+.health-item {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fafaf7;
+}
+
+.health-dot {
+  width: 9px;
+  height: 9px;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: var(--orange);
+}
+
+.health-item.ok .health-dot {
+  background: var(--green);
+}
+
+.health-item.error .health-dot {
+  background: var(--red);
+}
+
+.health-item strong,
+.health-item small {
+  display: block;
+}
+
+.health-item small {
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.snippet {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f8f8f4;
+}
+
+.snippet span {
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.snippet.large {
+  margin-bottom: 0;
+}
+
+.doc-preview {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f8f8f4;
+}
+
+.doc-preview pre {
+  max-height: 520px;
+  margin: 0;
+  overflow: auto;
+  padding: 14px;
+  white-space: pre-wrap;
+}
+
+.doc-preview code {
+  color: #38403b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.section-title {
+  margin-top: 18px;
+}

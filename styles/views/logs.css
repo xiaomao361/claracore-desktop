@@ -1,0 +1,50 @@
+.logs-grid {
+  display: block;
+}
+
+.log-terminal-panel {
+  min-height: calc(100vh - 130px);
+}
+
+.log-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.log-toolbar .active {
+  border-color: rgba(54, 133, 92, 0.5);
+  color: var(--text);
+}
+
+.log-status-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.log-status-strip div {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.log-status-strip span,
+.log-status-strip strong {
+  display: block;
+}
+
+.log-status-strip span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.log-status-strip strong {
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
