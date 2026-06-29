@@ -14,7 +14,7 @@
         <img class="brand-mark" src="./assets/brand/claracore-mark-flat.svg" alt="" />
         <div>
           <strong>ClaraCore</strong>
-          <span>Desktop v0.1</span>
+          <span id="brandVersion">Desktop</span>
         </div>
       </div>
       <nav aria-label="Primary">
@@ -28,10 +28,6 @@
         <button class="nav-item" data-view="models"><span class="nav-icon nav-icon-models"></span><span data-i18n="nav.models">Models</span></button>
         <button class="nav-item" data-view="settings"><span class="nav-icon nav-icon-settings"></span><span data-i18n="nav.settings">Settings</span></button>
       </nav>
-      <div class="sidebar-footer">
-        <span class="mini-label" data-i18n="footer.label">Local ownership</span>
-        <strong data-i18n="footer.value">Portable core</strong>
-      </div>
     </aside>
 
     <main class="workspace">
@@ -41,17 +37,12 @@
           <p id="viewSubtitle">Local control center for ClaraCore services and data.</p>
         </div>
         <div class="status-rail" aria-label="Summary">
-          <span><b class="dot ok-dot"></b><span data-i18n="status.coreReady">Core ready</span></span>
-          <span><b class="screen-dot"></b><span data-i18n="status.localMode">Local mode</span></span>
-          <span><b class="stack-dot"></b><span data-i18n="status.dataSafe">Data safe</span></span>
+          <span><b id="topbarHealthIcon" class="dot ok-dot"></b><span id="topbarHealthLabel" data-i18n="status.healthChecking">Health checking</span></span>
+          <span><b class="stack-dot"></b><span id="topbarDataLabel" data-i18n="status.dataChecking">Data checking</span></span>
         </div>
         <div class="topbar-actions">
-          <div class="language-switch" role="group" aria-label="Language">
-            <button class="language-option active" data-language="en">EN</button>
-            <button class="language-option" data-language="zh">中文</button>
-          </div>
-          <button id="refreshButton" class="secondary" data-i18n="actions.refresh">Refresh</button>
-          <button id="primaryAction" class="primary" data-i18n="data.location">Location</button>
+          <button id="refreshButton" class="secondary" data-i18n="actions.refreshStatus">Update status</button>
+          <button id="primaryAction" class="primary" data-i18n="data.openDataDir">Open data folder</button>
         </div>
       </header>
 
@@ -584,8 +575,15 @@
                     </select>
                   </label>
                   <label class="field"><span data-i18n="settings.endpoint">Endpoint</span><input id="memoriaEndpoint" /></label>
-                  <label class="field"><span data-i18n="settings.embeddingModel">Embedding model</span><input id="memoriaModel" /></label>
-                  <label class="field"><span data-i18n="settings.dimension">Dimension</span><input id="memoriaDimension" type="number" min="1" step="1" /></label>
+                  <label class="field">
+                    <span data-i18n="settings.embeddingModel">Embedding model</span>
+                    <span class="model-picker-field">
+                      <input id="memoriaModel" list="memoriaModelOptions" />
+                      <button id="refreshMemoriaModels" class="secondary" type="button" data-i18n="settings.fetchModels">Fetch</button>
+                    </span>
+                    <datalist id="memoriaModelOptions"></datalist>
+                    <small id="memoriaModelNotice" class="quiet" aria-live="polite"></small>
+                  </label>
                   <label class="field">
                     <span data-i18n="settings.apiKeyRef">API key reference</span>
                     <span class="copy-field">
@@ -593,7 +591,6 @@
                       <button id="copyMemoriaApiKey" class="secondary" type="button" data-i18n="actions.copy">Copy</button>
                     </span>
                   </label>
-                  <label class="field wide-field"><span data-i18n="settings.source">Source</span><input id="memoriaSource" readonly /></label>
                 </div>
               </section>
               <section class="model-config-card">
@@ -616,8 +613,19 @@
                     </select>
                   </label>
                   <label class="field"><span data-i18n="settings.endpoint">Endpoint</span><input id="innerLifeEndpoint" /></label>
-                  <label class="field"><span data-i18n="settings.lightModel">Light model</span><input id="innerLifeLightModel" /></label>
-                  <label class="field"><span data-i18n="settings.deepModel">Deep model</span><input id="innerLifeDeepModel" /></label>
+                  <label class="field">
+                    <span data-i18n="settings.lightModel">Light model</span>
+                    <input id="innerLifeLightModel" list="innerLifeModelOptions" />
+                  </label>
+                  <label class="field">
+                    <span data-i18n="settings.deepModel">Deep model</span>
+                    <span class="model-picker-field">
+                      <input id="innerLifeDeepModel" list="innerLifeModelOptions" />
+                      <button id="refreshInnerLifeModels" class="secondary" type="button" data-i18n="settings.fetchModels">Fetch</button>
+                    </span>
+                    <datalist id="innerLifeModelOptions"></datalist>
+                    <small id="innerLifeModelNotice" class="quiet" aria-live="polite"></small>
+                  </label>
                   <label class="field"><span data-i18n="settings.pollMinutes">Loop minutes</span><input id="innerLifePollSeconds" type="number" min="1" step="1" /></label>
                   <label class="field">
                     <span data-i18n="settings.apiKeyRef">API key reference</span>
@@ -626,7 +634,6 @@
                       <button id="copyInnerLifeApiKey" class="secondary" type="button" data-i18n="actions.copy">Copy</button>
                     </span>
                   </label>
-                  <label class="field wide-field"><span data-i18n="settings.source">Source</span><input id="innerLifeSource" readonly /></label>
                 </div>
               </section>
             </div>
@@ -653,52 +660,115 @@
                 <h2 data-i18n="settings.generalTitle">Settings</h2>
                 <p class="quiet" data-i18n="settings.generalBody">General product settings stay here. Model wiring and daemon controls live in Models.</p>
               </div>
+              <span id="appearanceSettingsNotice" class="quiet" aria-live="polite"></span>
             </div>
-            <div class="settings-roadmap-grid">
-              <section class="settings-roadmap-card">
-                <h3 data-i18n="settings.appearanceTitle">Appearance</h3>
-                <p data-i18n="settings.appearanceBody">Language, theme, window behavior, and tray behavior.</p>
-                <span data-i18n="settings.status.future">future</span>
+            <div class="general-settings-list">
+              <section class="settings-section-card">
+                <div class="settings-section-head">
+                  <div>
+                    <h3 data-i18n="settings.appearanceTitle">Appearance</h3>
+                    <p data-i18n="settings.appearanceBody">Language and theme preferences for this desktop shell.</p>
+                  </div>
+                  <span class="badge ok" data-i18n="settings.status.ready">ready</span>
+                </div>
+                <div class="settings-grid">
+                  <label class="field">
+                    <span data-i18n="settings.language">Language</span>
+                    <select id="settingsLanguage">
+                      <option value="en">English</option>
+                      <option value="zh">中文</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span data-i18n="settings.theme">Theme</span>
+                    <select id="settingsTheme">
+                      <option value="system" data-i18n="settings.themeSystem">Follow system</option>
+                      <option value="light" data-i18n="settings.themeLight">Light</option>
+                      <option value="dark" data-i18n="settings.themeDark">Dark</option>
+                    </select>
+                  </label>
+                </div>
               </section>
-              <section class="settings-roadmap-card">
-                <h3 data-i18n="settings.pathsTitle">Data paths</h3>
-                <p data-i18n="settings.pathsBody">Data directory, backup directory, and default import/export paths.</p>
-                <span data-i18n="settings.status.future">future</span>
+
+              <section class="settings-section-card">
+                <div class="settings-section-head">
+                  <div>
+                    <h3 data-i18n="settings.windowTitle">Window</h3>
+                    <p data-i18n="settings.windowBody">Basic window behavior for day-to-day desktop use.</p>
+                  </div>
+                  <span class="badge ok" data-i18n="settings.status.ready">ready</span>
+                </div>
+                <div class="settings-grid">
+                  <label class="field wide-field">
+                    <span data-i18n="settings.closeBehavior">Close window</span>
+                    <select id="settingsCloseBehavior">
+                      <option value="hide" data-i18n="settings.closeHide">Hide to tray</option>
+                      <option value="quit" data-i18n="settings.closeQuit">Quit app</option>
+                    </select>
+                  </label>
+                </div>
               </section>
-              <section class="settings-roadmap-card">
-                <h3 data-i18n="settings.logsTitle">Logs and diagnostics</h3>
-                <p data-i18n="settings.logsBody">Log retention days and debug trace switches.</p>
-                <span data-i18n="settings.status.future">future</span>
+
+              <section class="settings-section-card">
+                <div class="settings-section-head">
+                  <div>
+                    <h3 data-i18n="settings.pathsTitle">Data paths</h3>
+                    <p data-i18n="settings.pathsBody">ClaraCore keeps product data under one local root.</p>
+                  </div>
+                  <span id="settingsDataStatus" class="badge ok">ready</span>
+                </div>
+                <div class="path-root-row">
+                  <div>
+                    <span data-i18n="settings.dataRoot">Data root</span>
+                    <code id="settingsDataRoot">-</code>
+                  </div>
+                  <button id="openSettingsDataRoot" class="secondary" type="button" data-i18n="data.openDataDir">Open data folder</button>
+                </div>
+                <div id="settingsPathSummary" class="path-chip-list"></div>
+                <details class="settings-path-details">
+                  <summary data-i18n="settings.showPathDetails">Show path details</summary>
+                  <div id="settingsPathDetails" class="path-detail-list"></div>
+                </details>
+                <p class="quiet" data-i18n="settings.dataRootHint">Change the data root before launch with CLARACORE_DESKTOP_DATA_DIR.</p>
               </section>
-              <section class="settings-roadmap-card">
-                <h3 data-i18n="settings.gatewayTitle">Gateway policy</h3>
-                <p data-i18n="settings.gatewayBody">Local access policy, port preferences, and transport preferences.</p>
-                <span data-i18n="settings.status.future">future</span>
-              </section>
-              <section class="settings-roadmap-card">
-                <h3 data-i18n="settings.privacyTitle">Privacy and security</h3>
-                <p data-i18n="settings.privacyBody">Restricted content visibility, automatic maintenance, and secret storage status.</p>
-                <span data-i18n="settings.status.future">future</span>
-              </section>
-              <section class="settings-roadmap-card">
-                <h3 data-i18n="settings.developerTitle">Advanced developer options</h3>
-                <p data-i18n="settings.developerBody">Development paths, packaged runtime information, and diagnostic toggles.</p>
-                <span data-i18n="settings.status.future">future</span>
-              </section>
+            </div>
+            <div class="settings-actions">
+              <button id="saveAppearanceSettings" class="primary" data-i18n="settings.saveAppearance">Save appearance</button>
             </div>
           </article>
           <article class="panel">
-            <h2 data-i18n="settings.shortcutsTitle">Shortcuts</h2>
-            <button class="secondary full" data-view-target="models" data-i18n="settings.openModels">Open Models</button>
-            <button class="secondary full" data-view-target="data" data-i18n="settings.openData">Open Data</button>
-            <button class="secondary full" data-view-target="agent-setup" data-i18n="settings.openAgentSetup">Open Agent Access</button>
+            <h2 data-i18n="settings.aboutTitle">About</h2>
+            <p class="quiet" data-i18n="settings.aboutBody">Read-only application and runtime information.</p>
+            <div class="metric-list">
+              <div><span data-i18n="settings.appVersion">App version</span><strong id="settingsAppVersion">-</strong></div>
+              <div><span data-i18n="settings.runtimeMode">Runtime mode</span><strong id="settingsRuntimeMode">-</strong></div>
+              <div><span data-i18n="settings.databaseState">Local database</span><strong id="settingsDatabaseState">-</strong></div>
+              <div><span data-i18n="settings.closeBehavior">Close window</span><strong id="settingsCloseBehaviorSummary">-</strong></div>
+              <div><span data-i18n="settings.trayStatus">Tray</span><strong id="settingsTrayStatus">-</strong></div>
+              <div><span data-i18n="settings.currentTheme">Theme</span><strong id="settingsThemeSummary">-</strong></div>
+              <div><span data-i18n="settings.electronVersion">Electron</span><strong id="settingsElectronVersion">-</strong></div>
+              <div><span data-i18n="settings.nodeVersion">Node</span><strong id="settingsNodeVersion">-</strong></div>
+            </div>
+            <details class="settings-path-details">
+              <summary data-i18n="settings.showRuntimeDetails">Show runtime details</summary>
+              <div class="path-detail-list">
+                <div>
+                  <span data-i18n="settings.appRoot">App root</span>
+                  <code id="settingsAppRoot">-</code>
+                </div>
+                <div>
+                  <span data-i18n="settings.chromeVersion">Chrome</span>
+                  <code id="settingsChromeVersion">-</code>
+                </div>
+              </div>
+            </details>
           </article>
         </div>
       </section>
     </main>
 
     <footer class="resource-monitor" aria-label="System resources">
-      <span><strong>ClaraCore</strong> <span id="monitorVersion">v0.1.0</span></span>
+      <span><strong>ClaraCore</strong> <span id="monitorVersion">-</span></span>
       <span><span data-i18n="monitor.uptime">Uptime</span>: <strong id="monitorUptime">--:--:--</strong></span>
       <span><span data-i18n="monitor.cpu">CPU</span>: <strong id="monitorCpu">--</strong><b class="monitor-dot"></b></span>
       <span><span data-i18n="monitor.ram">RAM</span>: <strong id="monitorRam">--</strong></span>

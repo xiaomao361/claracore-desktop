@@ -200,19 +200,23 @@ Model configuration belongs on the Models page, not the general Settings page:
 - Memory embedding provider.
 - Embedding model.
 - Embedding endpoint.
+- Endpoint model discovery for Ollama `/api/tags` and OpenAI-compatible
+  `/v1/models`.
 - InnerLife provider.
 - InnerLife light/deep model.
 - InnerLife loop settings.
 
 Settings is reserved for general app and runtime configuration:
 
-- Language and theme.
-- Window and tray behavior.
-- Data, backup, import, and export paths.
-- Log retention and debug tracing.
-- Gateway local access policy, port, and transport preference.
-- Privacy and security display choices, automatic maintenance policy, and secret-storage status.
-- Development paths, packaged runtime information, and diagnostic toggles.
+- Implemented now: language and theme.
+- Implemented now: close-window behavior and tray status display.
+- Implemented now: local data root, child paths, and open-data-folder action.
+- Implemented now: app version, runtime mode, database state, Electron, Node,
+  app root, and Chrome version.
+- Deferred: log retention and debug tracing.
+- Deferred: Gateway local access policy, port, and transport preference.
+- Deferred: privacy and security display choices, automatic maintenance policy,
+  and secret-storage status.
 
 Other product configuration areas:
 

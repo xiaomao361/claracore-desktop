@@ -1,6 +1,7 @@
 const { spawn } = require("child_process");
 const fs = require("fs/promises");
 const http = require("http");
+const https = require("https");
 const path = require("path");
 const { DEFAULT_AGENT_ID, DEFAULT_SETTINGS, WRITABLE_SETTINGS, normalizeSettingValue } = require("../config");
 const { installInnerLifeRepository } = require("./repositories/innerlife");
@@ -218,20 +219,26 @@ function likePattern(value) {
   return `%${String(value || "").trim().replaceAll("%", "\\%").replaceAll("_", "\\_")}%`;
 }
 
-function postJson(url, payload, timeoutMs = 15000) {
+function postJson(url, payload, options = {}) {
   return new Promise((resolve, reject) => {
     const target = new URL(url);
     const body = JSON.stringify(payload);
-    const request = http.request(
+    const timeoutMs = typeof options === "number" ? options : options.timeoutMs || 15000;
+    const extraHeaders = typeof options === "object" && !Array.isArray(options) ? options.headers || {} : {};
+    const errorPrefix =
+      typeof options === "object" && !Array.isArray(options) ? options.errorPrefix || "JSON endpoint" : "JSON endpoint";
+    const transport = target.protocol === "https:" ? https : http;
+    const request = transport.request(
       {
         hostname: target.hostname,
         port: target.port,
-        path: target.pathname,
+        path: `${target.pathname}${target.search}`,
         method: "POST",
         timeout: timeoutMs,
         headers: {
           "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(body)
+          "Content-Length": Buffer.byteLength(body),
+          ...extraHeaders
         }
       },
       (response) => {
@@ -242,7 +249,7 @@ function postJson(url, payload, timeoutMs = 15000) {
         });
         response.on("end", () => {
           if (response.statusCode < 200 || response.statusCode >= 300) {
-            reject(new Error(`Ollama returned ${response.statusCode}: ${data.slice(0, 200)}`));
+            reject(new Error(`${errorPrefix} returned ${response.statusCode}: ${data.slice(0, 200)}`));
             return;
           }
           try {
@@ -254,7 +261,7 @@ function postJson(url, payload, timeoutMs = 15000) {
       }
     );
     request.on("timeout", () => {
-      request.destroy(new Error("Ollama embedding request timed out."));
+      request.destroy(new Error(`${errorPrefix} request timed out.`));
     });
     request.on("error", reject);
     request.end(body);

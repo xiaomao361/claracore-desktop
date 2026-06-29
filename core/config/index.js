@@ -48,8 +48,13 @@ function normalizeSettingValue(key, value) {
   }
   if (key === "memory.embedding.base_url") {
     const endpoint = String(value || "").trim();
-    if (!endpoint.startsWith("http://127.0.0.1:") && !endpoint.startsWith("http://localhost:")) {
-      throw new Error("Embedding endpoint must be a local Ollama URL.");
+    try {
+      const url = new URL(endpoint);
+      if (!["http:", "https:"].includes(url.protocol)) {
+        throw new Error("Embedding endpoint must use http or https.");
+      }
+    } catch (_error) {
+      throw new Error("Embedding endpoint must be a valid http or https URL.");
     }
     return endpoint.replace(/\/$/, "");
   }

@@ -1,7 +1,11 @@
 const {
   moduleGrid,
+  brandVersion,
   runtimeMode,
   rootPath,
+  topbarHealthIcon,
+  topbarHealthLabel,
+  topbarDataLabel,
   refreshButton,
   primaryAction,
   openDevelopmentPlan,
@@ -58,20 +62,23 @@ const {
   memoriaProvider,
   memoriaEndpoint,
   memoriaModel,
-  memoriaDimension,
+  memoriaModelOptions,
+  memoriaModelNotice,
+  refreshMemoriaModels,
   memoriaApiKey,
   copyMemoriaApiKey,
-  memoriaSource,
   memoriaModelStatus,
   innerLifeBackend,
   innerLifeEndpoint,
   innerLifeLightModel,
   innerLifeDeepModel,
+  innerLifeModelOptions,
+  innerLifeModelNotice,
+  refreshInnerLifeModels,
   innerLifePollSeconds,
   innerLifeApiKey,
   innerLifeApiKeySummary,
   copyInnerLifeApiKey,
-  innerLifeSource,
   innerLifeModelStatus,
   innerLifeAgentFilter,
   innerLifeSessionList,
@@ -94,6 +101,8 @@ const {
   innerLifeThoughtCount,
   saveSettings,
   settingsNotice,
+  saveAppearanceSettings,
+  appearanceSettingsNotice,
   memorySearchInput,
   searchMemory,
   memoryList,
@@ -165,6 +174,8 @@ const {
 } = window.ClaraCoreUtils;
 
 let currentLanguage = localStorage.getItem("claracore.language") || "en";
+let currentTheme = localStorage.getItem("claracore.theme") || "system";
+let currentCloseBehavior = localStorage.getItem("claracore.window.closeBehavior") || "hide";
 
 function t(key, values = {}) {
   const template = translations[currentLanguage]?.[key] || translations.en[key] || key;
@@ -227,7 +238,9 @@ const homeView = window.createClaraCoreHomeView({
 const settingsView = window.createClaraCoreSettingsView({
   dom: window.ClaraCoreDom,
   t,
-  getSnapshot: () => snapshot
+  getSnapshot: () => snapshot,
+  getAppearancePreferences,
+  formatMode
 });
 const sharedInnerLifeView = window.createClaraCoreSharedInnerLifeView({
   dom: window.ClaraCoreDom,
@@ -303,12 +316,100 @@ function getSecretInputValue(input) {
   return settingsView.getSecretInputValue(input);
 }
 
+function setModelOptions(target, models) {
+  if (!target) return;
+  target.replaceChildren(
+    ...models.map((model) => {
+      const option = document.createElement("option");
+      option.value = model;
+      return option;
+    })
+  );
+}
+
+async function loadModelOptions(kind, { silent = false } = {}) {
+  const isMemoria = kind === "memoria";
+  const providerInput = isMemoria ? memoriaProvider : innerLifeBackend;
+  const endpointInput = isMemoria ? memoriaEndpoint : innerLifeEndpoint;
+  const apiKeyInput = isMemoria ? memoriaApiKey : innerLifeApiKey;
+  const button = isMemoria ? refreshMemoriaModels : refreshInnerLifeModels;
+  const notice = isMemoria ? memoriaModelNotice : innerLifeModelNotice;
+  const options = isMemoria ? memoriaModelOptions : innerLifeModelOptions;
+  if (!providerInput || !endpointInput || !window.ClaraCoreDesktop?.listModels) return;
+  const provider = providerInput.value;
+  const endpoint = endpointInput.value;
+  if (!endpoint || ["disabled", "claracore-built-in", "custom-command"].includes(provider)) {
+    setModelOptions(options, []);
+    if (!silent && notice) notice.textContent = t("settings.modelFetchUnsupported");
+    return;
+  }
+  if (button) button.disabled = true;
+  if (notice && !silent) notice.textContent = t("common.checking");
+  try {
+    const result = await window.ClaraCoreDesktop.listModels({
+      provider,
+      endpoint,
+      apiKeyRef: getSecretInputValue(apiKeyInput)
+    });
+    const models = Array.isArray(result?.models) ? result.models : [];
+    setModelOptions(options, models);
+    if (notice) {
+      notice.textContent = models.length
+        ? t("settings.modelsLoaded", { count: String(models.length) })
+        : t(result?.supported === false ? "settings.modelFetchUnsupported" : "settings.modelsEmpty");
+    }
+  } catch (error) {
+    console.error(error);
+    setModelOptions(options, []);
+    if (notice && !silent) notice.textContent = t("settings.modelsFailed");
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
 function renderSettings() {
   settingsView.renderSettings();
+  settingsView.renderAppearanceSettings();
 }
 
 function collectSettingsForm() {
   return settingsView.collectSettingsForm();
+}
+
+function collectAppearanceSettingsForm() {
+  return settingsView.collectAppearanceSettingsForm();
+}
+
+function resolvedTheme() {
+  if (currentTheme === "light" || currentTheme === "dark") return currentTheme;
+  return window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "dark" : "light";
+}
+
+function getAppearancePreferences() {
+  return {
+    language: currentLanguage,
+    theme: currentTheme,
+    resolvedTheme: resolvedTheme(),
+    closeBehavior: currentCloseBehavior
+  };
+}
+
+function applyTheme() {
+  document.body.dataset.theme = resolvedTheme();
+  document.body.dataset.themePreference = currentTheme;
+}
+
+function setTheme(theme) {
+  currentTheme = ["system", "light", "dark"].includes(theme) ? theme : "system";
+  localStorage.setItem("claracore.theme", currentTheme);
+  applyTheme();
+}
+
+function setWindowCloseBehavior(closeBehavior) {
+  currentCloseBehavior = closeBehavior === "quit" ? "quit" : "hide";
+  localStorage.setItem("claracore.window.closeBehavior", currentCloseBehavior);
+  const result = window.ClaraCoreDesktop.setWindowPreferences?.({ closeBehavior: currentCloseBehavior });
+  if (result?.catch) result.catch(console.error);
 }
 
 function memoryAgentId(memory) {
@@ -347,7 +448,20 @@ function renderBackups() {
   dataView.renderBackups();
 }
 
+function renderTopbarStatus() {
+  const healthStatus = snapshot?.health?.status || "warn";
+  topbarHealthIcon.className = `dot ${healthStatus === "ok" ? "ok-dot" : healthStatus === "error" ? "error-dot" : "warn-dot"}`;
+  topbarHealthLabel.textContent =
+    healthStatus === "ok"
+      ? t("status.healthReady")
+      : healthStatus === "error"
+        ? t("status.healthError")
+        : t("status.healthAttention");
+  topbarDataLabel.textContent = snapshot?.data?.databasePresent ? t("status.databaseReady") : t("status.databaseMissing");
+}
+
 function renderSnapshot() {
+  if (brandVersion) brandVersion.textContent = `Desktop v${snapshot.productVersion || "-"}`;
   runtimeMode.textContent = formatMode(snapshot.mode);
   rootPath.textContent = snapshot.root;
   dataLocation.textContent = snapshot.data.root;
@@ -355,6 +469,7 @@ function renderSnapshot() {
   dataRootPath.textContent = snapshot.data.root;
   memoryStore.textContent = snapshot.data.databasePath;
   memoryStoreShort.textContent = snapshot.data.databasePresent ? t("common.found") : t("common.notCreated");
+  renderTopbarStatus();
   renderModules(snapshot.modules);
   renderHomeDashboard();
   renderHealth();
@@ -371,7 +486,7 @@ function renderSnapshot() {
 }
 
 function renderResourceSnapshot(resources) {
-  monitorVersion.textContent = `v${resources.appVersion || "0.1.0"}`;
+  monitorVersion.textContent = resources.appVersion ? `v${resources.appVersion}` : "-";
   monitorUptime.textContent = resources.uptime || "--:--:--";
   monitorCpu.textContent = Number.isFinite(resources.cpuPercent) ? `${resources.cpuPercent}%` : "--";
   monitorRam.textContent =
@@ -398,9 +513,6 @@ function applyStaticTranslations() {
   });
   document.querySelectorAll("[data-i18n-placeholder]").forEach((element) => {
     element.setAttribute("placeholder", t(element.dataset.i18nPlaceholder));
-  });
-  document.querySelectorAll("[data-language]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.language === currentLanguage);
   });
 }
 
@@ -467,10 +579,6 @@ document.querySelectorAll("[data-view-target]").forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.viewTarget));
 });
 
-document.querySelectorAll("[data-language]").forEach((button) => {
-  button.addEventListener("click", () => setLanguage(button.dataset.language));
-});
-
 copyAgentSetup.addEventListener("click", () => {
   agentSetupView.copy().catch(console.error);
 });
@@ -506,6 +614,54 @@ copyInnerLifeApiKey.addEventListener("click", () => {
     return;
   }
   copyValue(value, t("settings.apiKey.copied"), settingsNotice).catch(console.error);
+});
+
+refreshMemoriaModels?.addEventListener("click", () => {
+  loadModelOptions("memoria").catch(console.error);
+});
+
+refreshInnerLifeModels?.addEventListener("click", () => {
+  loadModelOptions("innerlife").catch(console.error);
+});
+
+memoriaEndpoint?.addEventListener("blur", () => {
+  loadModelOptions("memoria", { silent: true }).catch(console.error);
+});
+
+memoriaProvider?.addEventListener("change", () => {
+  loadModelOptions("memoria", { silent: true }).catch(console.error);
+});
+
+innerLifeEndpoint?.addEventListener("blur", () => {
+  loadModelOptions("innerlife", { silent: true }).catch(console.error);
+});
+
+innerLifeBackend?.addEventListener("change", () => {
+  loadModelOptions("innerlife", { silent: true }).catch(console.error);
+});
+
+saveAppearanceSettings?.addEventListener("click", async () => {
+  saveAppearanceSettings.disabled = true;
+  appearanceSettingsNotice.textContent = t("common.checking");
+  try {
+    const preferences = collectAppearanceSettingsForm();
+    setLanguage(preferences.language);
+    setTheme(preferences.theme);
+    setWindowCloseBehavior(preferences.closeBehavior);
+    renderSettings();
+    showCopyNotice(t("settings.appearanceSaved"), appearanceSettingsNotice);
+  } catch (error) {
+    console.error(error);
+    appearanceSettingsNotice.textContent = t("settings.appearanceSaveFailed");
+  } finally {
+    saveAppearanceSettings.disabled = false;
+  }
+});
+
+window.ClaraCoreDom.openSettingsDataRoot?.addEventListener("click", () => {
+  if (snapshot?.data?.root) {
+    window.ClaraCoreDesktop.openPath(snapshot.data.root);
+  }
 });
 
 searchMemory.addEventListener("click", async () => {
@@ -994,7 +1150,15 @@ window.setInterval(() => {
 }, 5000);
 
 applyStaticTranslations();
+applyTheme();
 window.ClaraCoreDesktop.setLanguage(currentLanguage).catch(console.error);
+setWindowCloseBehavior(currentCloseBehavior);
+window.matchMedia?.("(prefers-color-scheme: dark)")?.addEventListener("change", () => {
+  if (currentTheme === "system") {
+    applyTheme();
+    renderSettings();
+  }
+});
 if (typeof window.ClaraCoreDesktop.onRuntimeChanged === "function") {
   window.ClaraCoreDesktop.onRuntimeChanged(() => scheduleRuntimeRefresh());
 }

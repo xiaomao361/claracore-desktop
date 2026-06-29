@@ -1251,15 +1251,34 @@ function installMemoriaRepository(ProductDatabase, helpers) {
       const maxChars = Number.parseInt(String(settings["memory.embedding.max_chars"] || 2000), 10);
       const prompt = String(text || "").trim().slice(0, maxChars);
       if (!prompt) throw new Error("Embedding text is required.");
-      if (provider !== "ollama") {
-        throw new Error(`Embedding provider '${provider}' is not implemented yet.`);
+      if (provider === "ollama") {
+        const response = await postJson(`${baseUrl}/api/embeddings`, { model, prompt }, { errorPrefix: "Ollama" });
+        const vector = parseVector(response.embedding);
+        if (vector.length === 0) {
+          throw new Error("Ollama returned no embedding.");
+        }
+        return { provider, model, vector };
       }
-      const response = await postJson(`${baseUrl}/api/embeddings`, { model, prompt });
-      const vector = parseVector(response.embedding);
-      if (vector.length === 0) {
-        throw new Error("Ollama returned no embedding.");
+      if (provider === "openai-compatible") {
+        const secrets = await this.getSecretRefs();
+        const apiKeyRef = secrets["memory.embedding.api_key"]?.ref || "";
+        const apiKey = apiKeyRef.startsWith("env:") ? process.env[apiKeyRef.slice(4)] || "" : apiKeyRef;
+        const endpoint = baseUrl.replace(/\/+$/, "").endsWith("/v1")
+          ? `${baseUrl.replace(/\/+$/, "")}/embeddings`
+          : `${baseUrl.replace(/\/+$/, "")}/v1/embeddings`;
+        const headers = apiKey ? { Authorization: `Bearer ${apiKey}` } : {};
+        const response = await postJson(
+          endpoint,
+          { model, input: prompt },
+          { headers, errorPrefix: "OpenAI-compatible embedding endpoint" }
+        );
+        const vector = parseVector(response.data?.[0]?.embedding);
+        if (vector.length === 0) {
+          throw new Error("OpenAI-compatible embedding endpoint returned no embedding.");
+        }
+        return { provider, model, vector };
       }
-      return { provider, model, vector };
+      throw new Error(`Embedding provider '${provider}' is not implemented yet.`);
     }
     ,
     

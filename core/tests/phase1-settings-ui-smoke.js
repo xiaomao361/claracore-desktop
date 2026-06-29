@@ -26,19 +26,18 @@ async function main() {
       provider: document.querySelector("#memoriaProvider").value,
       endpoint: document.querySelector("#memoriaEndpoint").value,
       model: document.querySelector("#memoriaModel").value,
-      dimension: document.querySelector("#memoriaDimension").value,
       innerlifeBackend: document.querySelector("#innerLifeBackend").value,
       innerlifeEndpoint: document.querySelector("#innerLifeEndpoint").value,
       innerlifeApiKeyReadonly: document.querySelector("#innerLifeApiKey").hasAttribute("readonly"),
       innerlifeLoop: document.querySelector("#innerLifePollSeconds").value,
       innerlifeStatus: document.querySelector("#innerLifeModelStatus").textContent,
-      source: document.querySelector("#memoriaSource").value,
-      innerlifeSource: document.querySelector("#innerLifeSource").value
+      hasDimensionField: Boolean(document.querySelector("#memoriaDimension")),
+      hasMemoriaSourceField: Boolean(document.querySelector("#memoriaSource")),
+      hasInnerLifeSourceField: Boolean(document.querySelector("#innerLifeSource"))
     }));
     if (defaults.provider !== "ollama") throw new Error(`Unexpected provider: ${defaults.provider}`);
     if (defaults.endpoint !== "http://127.0.0.1:11434") throw new Error(`Unexpected endpoint: ${defaults.endpoint}`);
     if (defaults.model !== "bge-m3") throw new Error(`Unexpected model: ${defaults.model}`);
-    if (defaults.dimension !== "1024") throw new Error(`Unexpected dimension: ${defaults.dimension}`);
     if (defaults.innerlifeBackend !== "disabled") throw new Error(`Unexpected InnerLife backend: ${defaults.innerlifeBackend}`);
     if (defaults.innerlifeEndpoint !== "http://127.0.0.1:11434") throw new Error(`Unexpected InnerLife endpoint: ${defaults.innerlifeEndpoint}`);
     if (defaults.innerlifeApiKeyReadonly) throw new Error("InnerLife API key reference should be editable.");
@@ -46,14 +45,13 @@ async function main() {
     if (!["disabled", "关闭"].some((label) => defaults.innerlifeStatus.toLowerCase().includes(label))) {
       throw new Error(`Unexpected InnerLife status: ${defaults.innerlifeStatus}`);
     }
-    if (!defaults.source.includes("claracore.db") || !defaults.innerlifeSource.includes("claracore.db")) {
-      throw new Error(`Settings page is not showing database-backed sources: ${JSON.stringify(defaults)}`);
+    if (defaults.hasDimensionField || defaults.hasMemoriaSourceField || defaults.hasInnerLifeSourceField) {
+      throw new Error(`Settings page should not expose internal dimension/source fields: ${JSON.stringify(defaults)}`);
     }
 
     await page.selectOption("#memoriaProvider", "claracore-built-in");
     await page.fill("#memoriaEndpoint", "http://127.0.0.1:11437");
     await page.fill("#memoriaModel", "bge-m3-ui-smoke");
-    await page.fill("#memoriaDimension", "640");
     await page.selectOption("#innerLifeBackend", "claracore-built-in");
     await page.fill("#innerLifeEndpoint", "http://127.0.0.1:11438");
     await page.fill("#innerLifeLightModel", "ui-light");
@@ -82,9 +80,6 @@ async function main() {
     }
     if (snapshot.configuration.memoria.model !== "bge-m3-ui-smoke") {
       throw new Error("Settings UI did not persist Memoria model.");
-    }
-    if (snapshot.configuration.memoria.dimension !== "640") {
-      throw new Error("Settings UI did not persist Memoria dimension.");
     }
     if (snapshot.configuration.innerlife.backend !== "claracore-built-in") {
       throw new Error("Settings UI did not persist InnerLife backend.");

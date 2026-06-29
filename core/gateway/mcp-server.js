@@ -3,11 +3,12 @@ const os = require("os");
 const path = require("path");
 const { initializeProductDatabase } = require("../db/database");
 const { exportProductMemoryArchive, importProductMemoryArchive } = require("../runtime");
+const { PRODUCT_VERSION } = require("../version");
 
 const PROTOCOL_VERSION = "2025-06-18";
 const SERVER_INFO = {
   name: "claracore-desktop",
-  version: "0.2-reset"
+  version: PRODUCT_VERSION
 };
 
 function productPaths() {

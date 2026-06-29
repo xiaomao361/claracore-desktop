@@ -4,6 +4,7 @@ const fs = require("fs/promises");
 const os = require("os");
 const http = require("http");
 const crypto = require("crypto");
+const { PRODUCT_VERSION } = require("../core/version");
 const {
   applyProductInnerLifeShareToMemory,
   applyProductInnerLifeShareToSharedLine,
@@ -84,6 +85,7 @@ let mainWindow = null;
 let tray = null;
 let isQuitting = false;
 let trayLanguage = "en";
+let windowCloseBehavior = "hide";
 let lastCpuSample = null;
 let innerLifeScheduler = null;
 let innerLifeSchedulerBusy = false;
@@ -205,7 +207,7 @@ async function getResourceSnapshot() {
   const usedMem = Math.max(0, totalMem - freeMem);
   const disk = await getDiskSnapshot(dataRoot);
   return {
-    appVersion: app.getVersion(),
+    appVersion: PRODUCT_VERSION,
     uptime: formatDuration(Date.now() - appStartedAt),
     cpuPercent: sampleCpu(),
     memory: {
@@ -233,11 +235,87 @@ async function getRuntimeSnapshot() {
       rootPresent: await exists(snapshot.data.root),
       databasePresent: await exists(snapshot.data.databasePath)
     },
+    shell: {
+      closeBehavior: windowCloseBehavior,
+      hasTray: Boolean(tray),
+      windowVisible: mainWindow ? mainWindow.isVisible() : false
+    },
+    runtime: {
+      electron: process.versions.electron || "",
+      node: process.versions.node || "",
+      chrome: process.versions.chrome || "",
+      packaged: app.isPackaged
+    },
     modules: snapshot.modules.map((module) => ({
       ...module,
       servicePath: module.servicePath || (module.id === "memoria" ? snapshot.data.databasePath : "product core planned")
     }))
   };
+}
+
+function normalizeModelEndpoint(endpoint) {
+  const raw = String(endpoint || "").trim();
+  if (!raw) throw new Error("Endpoint is required.");
+  const url = new URL(raw);
+  if (!["http:", "https:"].includes(url.protocol)) {
+    throw new Error("Endpoint must use http or https.");
+  }
+  return url.toString().replace(/\/+$/, "");
+}
+
+function resolveApiKeyRef(apiKeyRef) {
+  const ref = String(apiKeyRef || "").trim();
+  if (!ref) return "";
+  if (ref.startsWith("env:")) return process.env[ref.slice(4)] || "";
+  return ref;
+}
+
+async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 7000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return await response.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function openAiModelsUrl(baseUrl) {
+  const url = new URL(baseUrl);
+  const pathName = url.pathname.replace(/\/+$/, "");
+  if (pathName.endsWith("/v1")) return `${baseUrl}/models`;
+  return `${baseUrl}/v1/models`;
+}
+
+function uniqueSortedModelNames(values) {
+  return Array.from(new Set(values.map((value) => String(value || "").trim()).filter(Boolean))).sort((a, b) =>
+    a.localeCompare(b)
+  );
+}
+
+async function listConfiguredModels(input = {}) {
+  const provider = String(input.provider || "").trim();
+  if (["disabled", "claracore-built-in", "custom-command"].includes(provider)) {
+    return { provider, models: [], supported: false };
+  }
+  const baseUrl = normalizeModelEndpoint(input.endpoint);
+  if (provider === "ollama") {
+    const payload = await fetchJsonWithTimeout(`${baseUrl}/api/tags`);
+    const models = Array.isArray(payload.models) ? payload.models.map((item) => item.name || item.model) : [];
+    return { provider, endpoint: baseUrl, models: uniqueSortedModelNames(models), supported: true };
+  }
+  if (provider === "openai-compatible") {
+    const apiKey = resolveApiKeyRef(input.apiKeyRef);
+    const headers = apiKey ? { Authorization: `Bearer ${apiKey}` } : {};
+    const payload = await fetchJsonWithTimeout(openAiModelsUrl(baseUrl), { headers });
+    const models = Array.isArray(payload.data) ? payload.data.map((item) => item.id || item.name) : [];
+    return { provider, endpoint: baseUrl, models: uniqueSortedModelNames(models), supported: true };
+  }
+  return { provider, endpoint: baseUrl, models: [], supported: false };
 }
 
 function httpAgentBaseUrl() {
@@ -474,6 +552,11 @@ function createWindow() {
 
   mainWindow.on("close", (event) => {
     if (isQuitting) return;
+    if (windowCloseBehavior === "quit") {
+      isQuitting = true;
+      app.quit();
+      return;
+    }
     event.preventDefault();
     mainWindow.hide();
   });
@@ -588,6 +671,7 @@ if (!isGatewayMode) {
     if (!updates || typeof updates !== "object" || Array.isArray(updates)) return false;
     return saveProductSettings(app, updates);
   });
+  ipcMain.handle("claracore:listModels", async (_event, input) => listConfiguredModels(input));
   ipcMain.handle("claracore:createMemory", async (_event, input) => {
     if (!input || typeof input !== "object" || Array.isArray(input)) return false;
     return createProductMemory(app, input);
@@ -919,6 +1003,12 @@ if (!isGatewayMode) {
     updateTrayMenu(language);
     return trayLanguage;
   });
+  ipcMain.handle("claracore:setWindowPreferences", (_event, preferences = {}) => {
+    windowCloseBehavior = preferences.closeBehavior === "quit" ? "quit" : "hide";
+    return {
+      closeBehavior: windowCloseBehavior
+    };
+  });
   ipcMain.handle("claracore:getShellState", () => ({
     hasTray: Boolean(tray),
     trayBounds: tray ? tray.getBounds() : null,
@@ -934,7 +1024,7 @@ if (!isGatewayMode) {
       source: "desktop",
       message: "ClaraCore Desktop started",
       metadata: {
-        version: app.getVersion(),
+        version: PRODUCT_VERSION,
         packaged: app.isPackaged,
         platform: process.platform
       }

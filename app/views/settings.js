@@ -5,10 +5,18 @@ function createClaraCoreSettingsView(context) {
     getSnapshot
   } = context;
   const {
-    memoriaProvider, memoriaEndpoint, memoriaModel, memoriaDimension, memoriaApiKey, memoriaSource, memoriaModelStatus,
+    memoriaProvider, memoriaEndpoint, memoriaModel, memoriaApiKey, memoriaModelStatus,
     innerLifeBackend, innerLifeEndpoint, innerLifeLightModel, innerLifeDeepModel, innerLifePollSeconds, innerLifeApiKey,
-    innerLifeApiKeySummary, innerLifeSource, innerLifeModelStatus
+    innerLifeApiKeySummary, innerLifeModelStatus,
+    settingsLanguage, settingsTheme, settingsCloseBehavior, settingsCloseBehaviorSummary, settingsTrayStatus,
+    settingsThemeSummary, settingsDataStatus, settingsDataRoot, settingsPathSummary, settingsPathDetails,
+    settingsAppVersion, settingsRuntimeMode, settingsDatabaseState, settingsElectronVersion, settingsNodeVersion,
+    settingsAppRoot, settingsChromeVersion
   } = dom;
+  const {
+    getAppearancePreferences,
+    formatMode
+  } = context;
 
 function modelStatus(provider, hasModel = true) {
   if (provider === "claracore-built-in") {
@@ -56,6 +64,75 @@ function displayMinutesToSeconds(value) {
   return String(Math.max(1, minutes) * 60);
 }
 
+function setInputValue(input, value) {
+  if (input) input.value = value == null ? "" : String(value);
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function childPathLabel(pathValue, rootValue) {
+  const pathText = String(pathValue || "");
+  const rootText = String(rootValue || "");
+  if (!pathText || !rootText || !pathText.startsWith(rootText)) return pathText || "-";
+  return pathText.slice(rootText.length).replace(/^\/+/, "") || ".";
+}
+
+function renderDataPaths() {
+  const snapshot = getSnapshot();
+  const data = snapshot?.data || {};
+  const root = data.root || "";
+  if (settingsDataRoot) settingsDataRoot.textContent = root || "-";
+  if (settingsDataStatus) {
+    settingsDataStatus.textContent = data.databasePresent ? t("settings.status.ready") : t("common.notCreated");
+    settingsDataStatus.className = data.databasePresent ? "badge ok" : "badge warn";
+  }
+  const paths = [
+    ["settings.databaseFile", data.databasePath, data.databasePresent ? t("common.ready") : t("common.notCreated")],
+    ["settings.backupsDir", data.backupsDir, childPathLabel(data.backupsDir, root)],
+    ["settings.exportsDir", data.exportsDir, childPathLabel(data.exportsDir, root)],
+    ["settings.logsDir", data.logsDir, childPathLabel(data.logsDir, root)],
+    ["settings.runtimeDir", data.runtimeDir, childPathLabel(data.runtimeDir, root)]
+  ];
+  if (settingsPathSummary) {
+    settingsPathSummary.innerHTML = paths
+      .slice(0, 4)
+      .map(([labelKey, _pathValue, value]) => `<span><strong>${escapeHtml(t(labelKey))}</strong>${escapeHtml(value)}</span>`)
+      .join("");
+  }
+  if (settingsPathDetails) {
+    settingsPathDetails.innerHTML = paths
+      .map(
+        ([labelKey, pathValue]) => `
+          <div>
+            <span>${escapeHtml(t(labelKey))}</span>
+            <code>${escapeHtml(pathValue || "-")}</code>
+          </div>
+        `
+      )
+      .join("");
+  }
+}
+
+function renderAbout() {
+  const snapshot = getSnapshot();
+  if (settingsAppVersion) settingsAppVersion.textContent = snapshot?.productVersion || "-";
+  if (settingsRuntimeMode) settingsRuntimeMode.textContent = snapshot?.mode ? formatMode(snapshot.mode) : "-";
+  if (settingsDatabaseState) {
+    settingsDatabaseState.textContent = snapshot?.data?.databasePresent ? t("status.databaseReady") : t("status.databaseMissing");
+  }
+  if (settingsElectronVersion) settingsElectronVersion.textContent = snapshot?.runtime?.electron || "-";
+  if (settingsNodeVersion) settingsNodeVersion.textContent = snapshot?.runtime?.node || "-";
+  if (settingsAppRoot) settingsAppRoot.textContent = snapshot?.appRoot || snapshot?.root || "-";
+  if (settingsChromeVersion) settingsChromeVersion.textContent = snapshot?.runtime?.chrome || "-";
+}
+
 function renderSettings() {
   const snapshot = getSnapshot();
   if (!snapshot?.configuration) return;
@@ -64,9 +141,7 @@ function renderSettings() {
   memoriaProvider.value = memoria.provider;
   memoriaEndpoint.value = memoria.endpoint;
   memoriaModel.value = memoria.model;
-  memoriaDimension.value = memoria.dimension;
   setSecretInput(memoriaApiKey, memoria.apiKeyRef || "");
-  memoriaSource.value = memoria.source;
   innerLifeBackend.value = innerlife.backend;
   innerLifeEndpoint.value = innerlife.baseUrl;
   innerLifeLightModel.value = innerlife.lightModel;
@@ -74,7 +149,6 @@ function renderSettings() {
   innerLifePollSeconds.value = secondsToDisplayMinutes(innerlife.pollSeconds);
   setSecretInput(innerLifeApiKey, innerlife.apiKeyRef || "");
   innerLifeApiKeySummary.textContent = maskMiddle(innerlife.apiKeyRef);
-  innerLifeSource.value = innerlife.source;
   const memoriaStatus = modelStatus(memoria.provider, Boolean(memoria.model));
   memoriaModelStatus.textContent = memoriaStatus.label;
   memoriaModelStatus.className = memoriaStatus.className;
@@ -85,12 +159,31 @@ function renderSettings() {
   innerLifeModelStatus.title = innerLifeStatus.note;
 }
 
+function renderAppearanceSettings() {
+  const snapshot = getSnapshot();
+  const preferences = getAppearancePreferences();
+  setInputValue(settingsLanguage, preferences.language);
+  setInputValue(settingsTheme, preferences.theme);
+  setInputValue(settingsCloseBehavior, preferences.closeBehavior);
+  if (settingsCloseBehaviorSummary) {
+    settingsCloseBehaviorSummary.textContent =
+      preferences.closeBehavior === "quit" ? t("settings.closeQuit") : t("settings.closeHide");
+  }
+  if (settingsTrayStatus) {
+    settingsTrayStatus.textContent = snapshot?.shell?.hasTray ? t("common.ready") : t("common.missing");
+  }
+  if (settingsThemeSummary) {
+    settingsThemeSummary.textContent = t(`settings.theme.${preferences.resolvedTheme}`);
+  }
+  renderDataPaths();
+  renderAbout();
+}
+
 function collectSettingsForm() {
   return {
     "memory.embedding.provider": memoriaProvider.value,
     "memory.embedding.base_url": memoriaEndpoint.value,
     "memory.embedding.model": memoriaModel.value,
-    "memory.embedding.dimension": memoriaDimension.value,
     "memory.embedding.api_key_ref": getSecretInputValue(memoriaApiKey),
     "innerlife.provider": innerLifeBackend.value,
     "innerlife.base_url": innerLifeEndpoint.value,
@@ -101,9 +194,19 @@ function collectSettingsForm() {
   };
 }
 
+function collectAppearanceSettingsForm() {
   return {
+    language: settingsLanguage.value,
+    theme: settingsTheme.value,
+    closeBehavior: settingsCloseBehavior.value
+  };
+}
+
+  return {
+    collectAppearanceSettingsForm,
     collectSettingsForm,
     getSecretInputValue,
+    renderAppearanceSettings,
     renderSettings
   };
 }

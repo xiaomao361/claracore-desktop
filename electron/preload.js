@@ -16,6 +16,12 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   saveSettings(updates) {
     return ipcRenderer.invoke("claracore:saveSettings", updates);
   },
+  listModels(input) {
+    return ipcRenderer.invoke("claracore:listModels", input);
+  },
+  setWindowPreferences(preferences) {
+    return ipcRenderer.invoke("claracore:setWindowPreferences", preferences);
+  },
   createMemory(input) {
     return ipcRenderer.invoke("claracore:createMemory", input);
   },

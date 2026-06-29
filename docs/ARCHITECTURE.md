@@ -56,7 +56,7 @@ Focused renderer modules live under `app/`:
 - `app/views/home.js`: overview, modules, health, and trace summary view
 - `app/views/logs.js`: Logs view
 - `app/views/memoria.js`: Memoria workbench, tabs, graph, labels, and embedding
-- `app/views/settings.js`: settings collection and model config rendering
+- `app/views/settings.js`: model configuration collection plus Settings-page appearance, window, data-path, and about rendering
 - `app/views/shared-innerlife.js`: Shared Line and InnerLife views
 
 New renderer work should go into a focused module, not into `app.js`.
@@ -70,6 +70,10 @@ single stylesheet again.
 `core/runtime/index.js` is the public runtime facade used by Electron, CLI,
 Gateway, and tests. It stays small by delegating focused workflows to sibling
 runtime modules.
+
+`core/version.js` is the single product-version source. It reads
+`package.json` and is used by runtime snapshots, resource snapshots, Gateway
+metadata, and renderer display.
 
 Runtime should coordinate cross-module workflows:
 

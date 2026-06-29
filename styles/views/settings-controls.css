@@ -43,6 +43,72 @@
   gap: 2px 12px;
 }
 
+.settings-grid .field {
+  min-width: 0;
+}
+
+.model-config-card .settings-grid {
+  gap: 10px 12px;
+  align-items: start;
+}
+
+.model-config-card .settings-grid .field {
+  grid-template-rows: 18px 36px 16px;
+  gap: 6px;
+  margin-top: 0;
+  align-content: start;
+}
+
+.model-config-card .settings-grid .field > input,
+.model-config-card .settings-grid .field > select,
+.model-config-card .settings-grid .field > .copy-field,
+.model-config-card .settings-grid .field > .model-picker-field {
+  grid-row: 2;
+}
+
+.model-config-card .settings-grid .field > small.quiet {
+  grid-row: 3;
+}
+
+.model-picker-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  height: 36px;
+}
+
+.model-picker-field input {
+  min-width: 0;
+}
+
+.model-picker-field .secondary {
+  width: 72px;
+  min-height: 36px;
+  margin: 0;
+  padding-inline: 8px;
+  white-space: nowrap;
+}
+
+.model-config-card .copy-field {
+  height: 36px;
+}
+
+.model-config-card .copy-field .secondary {
+  min-height: 36px;
+  margin: 0;
+}
+
+.field small.quiet {
+  display: block;
+  min-height: 16px;
+  margin-top: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .wide-field {
   grid-column: 1 / -1;
 }
@@ -75,9 +141,9 @@ summary {
   gap: 18px;
   padding: 10px 18px;
   border-top: 1px solid var(--border);
-  background: rgba(251, 251, 248, 0.96);
+  background: var(--sidebar);
   color: var(--muted);
-  box-shadow: 0 -1px 2px rgba(28, 33, 30, 0.03);
+  box-shadow: var(--shadow);
 }
 
 .resource-monitor > span {

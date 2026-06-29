@@ -208,7 +208,7 @@
   padding: 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fafaf7;
+  background: var(--surface);
 }
 
 .health-dot {
@@ -246,7 +246,7 @@
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #f8f8f4;
+  background: var(--surface);
 }
 
 .snippet span {
@@ -264,7 +264,7 @@
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #f8f8f4;
+  background: var(--surface);
 }
 
 .doc-preview pre {
@@ -280,7 +280,7 @@
 .doc-preview code {
   display: block;
   min-width: 0;
-  color: #38403b;
+  color: var(--text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 12px;
   line-height: 1.5;

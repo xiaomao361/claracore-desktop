@@ -64,12 +64,12 @@ Included:
 - View-focused Shared Line UI for line browsing, agent filtering, current position, metadata, history, snapshots, handoffs, and resume packet review; selecting a line only changes the reviewed detail, not the agent-active line
 - Desktop-owned InnerLife storage, agent profiles, inbox, sessions, events, thoughts, shares, digest runs, and daemon state
 - Agent-managed InnerLife access through Gateway MCP and CLI fallback; the Desktop UI is primarily for inspection and runtime control
-- Models page for Memoria embedding configuration, InnerLife model configuration, secret references, and loop cadence
+- Models page for Memoria embedding configuration, InnerLife model configuration, endpoint model discovery, secret references, and loop cadence
 - InnerLife runtime panel for daemon enable/pause/tick, doctor status, pending shares, inbox, sessions, and digest review
 - Verified SQLite product backups with restore preview and safety-backup restore
 - Full product JSON export/import for portable ClaraCore Desktop data
 - Agent identity labels using `tool:agent` form, such as `claude-code:clara` and `hermes:lara`, with single-name agents such as `codex` supported
-- Settings page placeholder sections for future language, theme, window, tray, paths, logs, Gateway policy, privacy, security, and developer diagnostics
+- Settings page for language, theme, close-window behavior, local data paths, and read-only app/runtime details
 - Terminal-style runtime log view for maintenance and Gateway traces
 - Chinese and English UI switching
 - macOS menu bar / Windows tray entry
@@ -154,6 +154,7 @@ The app has no renderer build step. `index.html` loads classic scripts.
 - `styles/`: shared and view-specific CSS
 - `electron/`: Electron main process, preload bridge, IPC, tray, and schedulers
 - `core/runtime/`: public runtime facade, paths, backup/restore, and import workflows
+- `core/version.js`: single product-version source shared by Desktop runtime, resource snapshots, and Gateway metadata
 - `core/db/`: schema, migrations, database adapter, settings, events, traces, and repositories
 - `core/memoria/`: Desktop Memoria domain facade
 - `core/continuity/`: Shared Line domain facade

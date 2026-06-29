@@ -5,11 +5,10 @@ const { previewImportSources } = require("../import-preview");
 const { ensureProductDirectories, resolveProductPaths } = require("./paths");
 const { createBackupRuntime } = require("./backup");
 const { createImportRuntime } = require("./imports");
+const { PRODUCT_VERSION } = require("../version");
 const memoria = require("../memoria");
 const continuity = require("../continuity");
 const innerlife = require("../innerlife");
-
-const PRODUCT_VERSION = "0.2-reset";
 
 function timestampForFilename(date = new Date()) {
   return date.toISOString().replace(/[:.]/g, "-");

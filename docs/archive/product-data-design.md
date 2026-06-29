@@ -191,10 +191,18 @@ The Models UI should present the InnerLife daemon cadence in minutes. The
 database keeps `innerlife.loop_seconds` in seconds so the existing scheduler can
 continue to use one internal unit.
 
-Settings is reserved for general app configuration: language, theme, window and
-tray behavior, data and backup paths, log retention, debug tracing, Gateway
+The Models UI can discover available model names from an entered endpoint for
+the implemented providers: Ollama uses `/api/tags`, and OpenAI-compatible
+providers use `/v1/models`. Memoria embedding dimensions are not user-facing;
+Desktop stores the dimension from the returned vector length when embeddings
+are generated.
+
+Settings is reserved for general app configuration. The current implemented
+slice covers language, theme, close-window behavior, data root/path inspection,
+open-data-folder, version display, runtime mode, local database state, and
+Electron/Node/Chrome runtime details. Log retention, debug tracing, Gateway
 local access policy, privacy/security display choices, secret-storage status,
-development paths, packaged runtime information, and diagnostics.
+and deeper diagnostics remain deferred.
 
 ## Vector Strategy
 
@@ -621,8 +629,8 @@ Implemented:
 - The scheduler does not run in `--gateway` mode.
 - Gateway exposes InnerLife daemon status, enable/pause, tick, and Doctor tools.
 - No old InnerLife daemon or old service data is started, read, or modified.
-- The Models page owns Memoria embedding settings, InnerLife model settings, secret references, loop cadence in minutes, and daemon controls.
-- The Settings page now only exposes future general app setting placeholders.
+- The Models page owns Memoria embedding settings, InnerLife model settings, endpoint model discovery, secret references, loop cadence in minutes, and daemon controls.
+- The Settings page owns implemented appearance/window preferences, local data-path inspection, and read-only app/runtime details.
 
 Validated:
 

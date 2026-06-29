@@ -40,10 +40,6 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .sidebar-footer {
-    display: none;
-  }
-
   .workspace {
     padding: 18px 18px 118px;
   }

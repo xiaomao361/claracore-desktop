@@ -5,6 +5,113 @@
   margin-top: 14px;
 }
 
+.general-settings-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.settings-section-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.settings-section-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.settings-section-head h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+.settings-section-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.settings-section-head > span {
+  flex: 0 0 auto;
+}
+
+.path-root-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.path-root-row span,
+.path-detail-list span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.path-root-row code,
+.path-detail-list code {
+  display: block;
+  min-width: 0;
+  margin-top: 5px;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.path-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.path-chip-list span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.path-chip-list strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.settings-path-details {
+  padding-top: 2px;
+}
+
+.path-detail-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.path-detail-list div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-soft);
+}
+
 .settings-roadmap-card {
   display: grid;
   gap: 8px;
@@ -12,7 +119,7 @@
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fafaf7;
+  background: var(--surface);
 }
 
 .settings-roadmap-card h3 {
@@ -67,9 +174,9 @@
 .state-card {
   margin-top: 18px;
   padding: 14px;
-  border: 1px solid #dfd1b9;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fbf4e6;
+  background: var(--amber-bg);
 }
 
 .state-card strong {
@@ -129,7 +236,7 @@
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fafaf7;
+  background: var(--surface);
 }
 
 .daemon-control-panel.is-enabled {
