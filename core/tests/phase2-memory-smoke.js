@@ -35,11 +35,12 @@ async function main() {
   }
 
   const snapshotAfterCreate = await runtime.buildProductSnapshot(app);
-  if (!snapshotAfterCreate.memories.some((memory) => memory.id === created.id)) {
-    throw new Error("Created Memory is missing from the runtime snapshot.");
-  }
   if (!snapshotAfterCreate.data.databasePath.startsWith(dataRoot)) {
     throw new Error(`Memory database escaped product data root: ${snapshotAfterCreate.data.databasePath}`);
+  }
+  const memoriesAfterCreate = await runtime.getProductMemories(app, { limit: 20 });
+  if (!memoriesAfterCreate.some((memory) => memory.id === created.id)) {
+    throw new Error("Created Memory is missing from the runtime snapshot.");
   }
   const { database } = await runtime.ensureProductCore(app);
 
@@ -67,9 +68,6 @@ async function main() {
     throw new Error(`Structured Memory stats did not count the saved record: ${JSON.stringify(structuredRecords.stats)}`);
   }
   const snapshotAfterStructuredRecord = await runtime.buildProductSnapshot(app);
-  if (!snapshotAfterStructuredRecord.memoryRecords.some((record) => record.id === structuredRecord.id)) {
-    throw new Error("Structured Memory record is missing from the runtime snapshot.");
-  }
   if (snapshotAfterStructuredRecord.memoryStats.structuredRecordCount !== 1) {
     throw new Error(`Memory stats did not include structured record count: ${JSON.stringify(snapshotAfterStructuredRecord.memoryStats)}`);
   }
@@ -90,14 +88,15 @@ async function main() {
     throw new Error(`Memory labels did not use alias canonical label: ${JSON.stringify(aliasMemory.labels)}`);
   }
   const snapshotAfterAlias = await runtime.buildProductSnapshot(app);
-  if (!snapshotAfterAlias.memoryLabelAliases.some((item) => item.alias === "ai" && item.canonicalLabel === "agent")) {
-    throw new Error("Memory label aliases are missing from runtime snapshot.");
-  }
   if (!snapshotAfterAlias.memoryStats.labels.some((item) => item.label === "agent" && item.count === 1)) {
     throw new Error(`Memory stats did not count canonical alias label: ${JSON.stringify(snapshotAfterAlias.memoryStats.labels)}`);
   }
   if (snapshotAfterAlias.memoryStats.labels.some((item) => item.label === "ai")) {
     throw new Error(`Memory stats still include alias label: ${JSON.stringify(snapshotAfterAlias.memoryStats.labels)}`);
+  }
+  const aliasesAfterCreate = await runtime.getProductMemoryLabelAliases(app);
+  if (!aliasesAfterCreate.some((item) => item.alias === "ai" && item.canonicalLabel === "agent")) {
+    throw new Error("Memory label aliases are missing from runtime snapshot.");
   }
   await runtime.deleteProductMemoryLabelAlias(app, "ai");
   const aliasesAfterDelete = await runtime.getProductMemoryLabelAliases(app);
@@ -222,8 +221,8 @@ async function main() {
   if (archiveResult.archived < 1) {
     throw new Error(`Memory archive dormant did not archive candidate: ${JSON.stringify(archiveResult)}`);
   }
-  const archivedSnapshot = await runtime.buildProductSnapshot(app);
-  if (!archivedSnapshot.archivedMemories.some((memory) => memory.id === archiveCandidate.id)) {
+  const archivedMemoriesAfterArchive = await runtime.getProductArchivedMemories(app, { limit: 20 });
+  if (!archivedMemoriesAfterArchive.some((memory) => memory.id === archiveCandidate.id)) {
     throw new Error("Archived Memory is missing from runtime snapshot.");
   }
   const archivedSearch = await runtime.searchProductMemories(app, "Dormant archive candidate");
@@ -249,14 +248,16 @@ async function main() {
     throw new Error(`Restricted Memory was not saved as restricted: ${JSON.stringify(restricted)}`);
   }
   const snapshotAfterRestricted = await runtime.buildProductSnapshot(app);
-  if (snapshotAfterRestricted.memories.some((memory) => memory.id === restricted.id)) {
-    throw new Error("Restricted Memory appeared in the normal runtime Memory list.");
-  }
-  if (!snapshotAfterRestricted.restrictedMemories.some((memory) => memory.id === restricted.id)) {
-    throw new Error("Restricted Memory is missing from the restricted runtime list.");
-  }
   if (snapshotAfterRestricted.memoryStats.restrictedCount !== 1 || snapshotAfterRestricted.memoryStats.labels.some((item) => item.label === "private")) {
     throw new Error(`Restricted Memory leaked into normal stats: ${JSON.stringify(snapshotAfterRestricted.memoryStats)}`);
+  }
+  const normalMemoriesAfterRestrict = await runtime.getProductMemories(app, { limit: 50 });
+  if (normalMemoriesAfterRestrict.some((memory) => memory.id === restricted.id)) {
+    throw new Error("Restricted Memory appeared in the normal runtime Memory list.");
+  }
+  const restrictedList = await runtime.getProductRestrictedMemories(app, { limit: 20 });
+  if (!restrictedList.some((memory) => memory.id === restricted.id)) {
+    throw new Error("Restricted Memory is missing from the restricted runtime list.");
   }
   const restrictedSearch = await runtime.searchProductMemories(app, "Restricted Memory");
   if (restrictedSearch.results.some((memory) => memory.id === restricted.id)) {
@@ -312,11 +313,12 @@ async function main() {
     throw new Error("Soft-deleted Memory still appears in active search results.");
   }
   const snapshotAfterDelete = await runtime.buildProductSnapshot(app);
-  if (!snapshotAfterDelete.deletedMemories.some((memory) => memory.id === created.id)) {
-    throw new Error("Deleted Memory is missing from the deleted-memory snapshot.");
-  }
   if (snapshotAfterDelete.memoryStats.deletedCount !== 2 || snapshotAfterDelete.memoryStats.labels.some((item) => item.label === "updated")) {
     throw new Error(`Memory stats did not reflect delete and labels: ${JSON.stringify(snapshotAfterDelete.memoryStats)}`);
+  }
+  const deletedMemoriesAfterDelete = await runtime.getProductDeletedMemories(app, { limit: 20 });
+  if (!deletedMemoriesAfterDelete.some((memory) => memory.id === created.id)) {
+    throw new Error("Deleted Memory is missing from the deleted-memory snapshot.");
   }
   const restored = await runtime.restoreProductMemory(app, created.id);
   if (restored.status !== "active") {
@@ -369,14 +371,17 @@ async function main() {
     throw new Error(`Memory archive import counts mismatch: ${JSON.stringify(importResult)}`);
   }
   const importedSnapshot = await runtime.buildProductSnapshot(importApp);
-  if (!importedSnapshot.memories.some((memory) => memory.id === aliasMemory.id)) {
+  const importedMemories = await runtime.getProductMemories(importApp, { limit: 50 });
+  if (!importedMemories.some((memory) => memory.id === aliasMemory.id)) {
     throw new Error("Memory archive import did not restore active Memory.");
   }
-  if (!importedSnapshot.deletedMemories.some((memory) => memory.id === created.id)) {
+  const importedDeleted = await runtime.getProductDeletedMemories(importApp, { limit: 20 });
+  if (!importedDeleted.some((memory) => memory.id === created.id)) {
     throw new Error("Memory archive import did not preserve deleted Memory state.");
   }
-  if (!importedSnapshot.memoryRecordStats.types.some((item) => item.recordType === "fitness" && item.count === 1)) {
-    throw new Error(`Memory archive import did not restore structured records: ${JSON.stringify(importedSnapshot.memoryRecordStats)}`);
+  const importedRecordStats = await runtime.getProductMemoryRecords(importApp, { recordType: "fitness", limit: 5 });
+  if (!importedRecordStats.stats.types.some((item) => item.recordType === "fitness" && item.count === 1)) {
+    throw new Error(`Memory archive import did not restore structured records: ${JSON.stringify(importedSnapshot.memoryStats)}`);
   }
   const duplicateImport = await runtime.importProductMemoryArchive(importApp, { filePath: exportedArchive.path });
   if (duplicateImport.memories.imported !== 0 || duplicateImport.records.imported !== 0 || duplicateImport.memories.skipped < 3) {

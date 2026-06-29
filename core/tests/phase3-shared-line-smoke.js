@@ -114,11 +114,12 @@ async function main() {
   if (!snapshot.data.databasePath.startsWith(dataRoot)) {
     throw new Error(`Shared Line database escaped product data root: ${snapshot.data.databasePath}`);
   }
-  if (!snapshot.memoryGraph.nodes.some((node) => node.kind === "shared_line" && node.refId === "line_default")) {
-    throw new Error(`Memory graph did not include Shared Line node: ${JSON.stringify(snapshot.memoryGraph)}`);
+  const memoryGraph = await runtime.getProductMemoryGraph(app, {});
+  if (!memoryGraph.nodes.some((node) => node.kind === "shared_line" && node.refId === "line_default")) {
+    throw new Error(`Memory graph did not include Shared Line node: ${JSON.stringify(memoryGraph)}`);
   }
-  if (!snapshot.memoryGraph.edges.some((edge) => edge.from === "line:line_default" && edge.to === `memory:${memory.id}` && edge.kind === "uses")) {
-    throw new Error(`Memory graph did not include Shared Line fact edge: ${JSON.stringify(snapshot.memoryGraph.edges)}`);
+  if (!memoryGraph.edges.some((edge) => edge.from === "line:line_default" && edge.to === `memory:${memory.id}` && edge.kind === "uses")) {
+    throw new Error(`Memory graph did not include Shared Line fact edge: ${JSON.stringify(memoryGraph.edges)}`);
   }
 
   const positionRows = await database.query(`

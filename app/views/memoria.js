@@ -710,7 +710,7 @@ function renderMemoryOverview() {
     archivedMemoryList.innerHTML = `<div class="endpoint-empty">${t("memory.lazy.openTab")}</div>`;
     deletedMemoryList.innerHTML = `<div class="endpoint-empty">${t("memory.lazy.openTab")}</div>`;
   }
-  renderMemoryGraph();
+  if (loadedMemoryTabs.graph) renderMemoryGraph();
   renderMemoryTabs();
 }
 

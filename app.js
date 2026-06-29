@@ -700,22 +700,16 @@ window.ClaraCoreDom.openSettingsDataRoot?.addEventListener("click", () => {
 });
 
 searchMemory.addEventListener("click", async () => {
-  if (searchMemory.disabled) return;
-  searchMemory.disabled = true;
-  try {
-    const selectedAgentId = memoryAgentFilter?.value || rendererState.activeMemoryAgentFilter || "";
-    rendererState.activeMemoryAgentFilter = selectedAgentId;
-    memoriaView.setActiveAgentFilter(selectedAgentId);
-    const response = await window.ClaraCoreDesktop.searchMemories({
-      query: memorySearchInput.value,
-      agentId: selectedAgentId
-    });
-    const results = Array.isArray(response) ? response : response?.results || [];
-    renderMemoryResults(results);
-    if (response?.error) showCopyNotice(t("memory.search.fallback"));
-  } finally {
-    searchMemory.disabled = false;
-  }
+  const selectedAgentId = memoryAgentFilter?.value || rendererState.activeMemoryAgentFilter || "";
+  rendererState.activeMemoryAgentFilter = selectedAgentId;
+  memoriaView.setActiveAgentFilter(selectedAgentId);
+  const response = await window.ClaraCoreDesktop.searchMemories({
+    query: memorySearchInput.value,
+    agentId: selectedAgentId
+  });
+  const results = Array.isArray(response) ? response : response?.results || [];
+  renderMemoryResults(results);
+  if (response?.error) showCopyNotice(t("memory.search.fallback"));
 });
 
 memoryAgentFilter?.addEventListener("change", async () => {

@@ -152,8 +152,7 @@ async function main() {
         ok: true,
         dataRoot,
         databasePath: paths.databasePath,
-        settingsCount: snapshot.database.settings_count,
-        oldServices: oldServices.detail
+        settingsCount: snapshot.database.settings_count
       },
       null,
       2

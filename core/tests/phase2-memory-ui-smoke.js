@@ -56,6 +56,8 @@ async function main() {
       return { visible, restricted };
     });
     await page.evaluate(() => refresh());
+    await page.fill("#memorySearchInput", "UI Memoria visible fact");
+    await page.click("#searchMemory");
     await page.waitForFunction(() => document.querySelector("#memoryList")?.textContent.includes("UI Memoria visible fact"), null, {
       timeout: 15000
     });
