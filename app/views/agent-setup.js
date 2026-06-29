@@ -4,9 +4,18 @@ function createClaraCoreAgentSetupView({ dom, t, getSnapshot, copyValue }) {
     if (!snapshot?.connections) return t("common.checking");
     const endpoints =
       (snapshot.connections.httpEndpoints || [])
-        .map((endpoint) => `- ${t(`connections.endpoint.${endpoint.id}`)}: ${endpoint.url}`)
+        .map((endpoint) => {
+          const lines = [
+            `- ${t(`connections.endpoint.${endpoint.id}`) || endpoint.id}: ${endpoint.method || "GET"} ${endpoint.url}`
+          ];
+          if (endpoint.authHeader) lines.push(`  - Header: ${endpoint.authHeader}`);
+          if (endpoint.copyUrl) lines.push(`  - Copy URL: ${endpoint.copyUrl}`);
+          return lines.join("\n");
+        })
         .join("\n") || "- No HTTP endpoints are exposed yet.";
     return `# ClaraCore Agent Setup
+
+ClaraCore Desktop is agent-first: this software is built for agents to operate and for humans to inspect. Treat Agent Access as the primary integration surface.
 
 Desktop owns the product Gateway, Memoria, Shared Line, and InnerLife state for this app. Old local ClaraCore services are references and import sources only. Do not stop or mutate them from this setup.
 
@@ -16,6 +25,13 @@ Desktop owns the product Gateway, Memoria, Shared Line, and InnerLife state for 
 2. Call \`gateway_context\` first.
 3. Use exposed product Gateway tools for Memory, Shared Line, InnerLife, traces, diagnostics, import/export, and maintenance.
 4. Use CLI fallback only when MCP is unavailable or when a local recovery script needs it.
+
+## Connection Mode
+
+- Current recommended path: stdio MCP, configured in the agent client with the JSON below.
+- Current URL path: Desktop also exposes a localhost HTTP Agent Gateway when the app is running.
+- Human copy step: copy this setup note, the MCP config, or a local URL with its bearer token into the agent client.
+- LAN path: intentionally disabled by default. Do not bind this beyond localhost unless the user explicitly enables a token-protected LAN mode.
 
 ## Gateway MCP
 
@@ -65,11 +81,13 @@ node core/cli.js innerlife inbox --agent codex --body "material to digest later"
 - Legacy/reference Memoria service: Python CLI, FastAPI, MCP stdio, usually conda env \`zhouwei\`.
 - Legacy/reference Continuity service: Python CLI, FastAPI, MCP stdio, usually conda env \`zhouwei\`.
 - Legacy/reference InnerLife service: Python package/CLI, FastAPI, MCP stdio, daemon scripts; Python 3.10+ or project venv.
-- Desktop import preview/import reads old service databases as migration sources. It does not start those Python services for normal product use.
+- Hidden migration helpers can read old service databases as one-off migration sources. Normal product use should not start or depend on those Python services.
 
 ## HTTP Management Endpoints
 
 ${endpoints}
+
+Use \`Authorization: Bearer <token>\` for HTTP requests. \`/agent/setup\` returns this setup as JSON; \`/gateway/context\` returns the first context packet an agent should read.
 
 ## Product Surface
 

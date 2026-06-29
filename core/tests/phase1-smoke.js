@@ -128,6 +128,27 @@ async function main() {
   if (oldServices?.detail !== "not controlled by Desktop") {
     throw new Error("Old services are not explicitly isolated in the runtime health check.");
   }
+  await database.recordRuntimeEvent({
+    level: "info",
+    source: "phase1-smoke",
+    message: "Phase 1 log clear test"
+  });
+  await database.recordGatewayTrace({
+    agentId: "codex",
+    toolName: "phase1_log_clear",
+    status: "ok",
+    durationMs: 3,
+    request: { smoke: true },
+    responseSummary: "ok"
+  });
+  const clearResult = await runtime.clearProductLogs(app);
+  if (clearResult.runtimeEventsDeleted < 1 || clearResult.gatewayTracesDeleted < 1) {
+    throw new Error(`Log clear did not report deleted rows: ${JSON.stringify(clearResult)}`);
+  }
+  const clearedSnapshot = await runtime.buildProductSnapshot(app);
+  if (clearedSnapshot.runtimeEvents.length !== 0 || clearedSnapshot.gatewayTraces.length !== 0) {
+    throw new Error("Log clear did not remove runtime events and Gateway traces.");
+  }
 
   console.log(
     JSON.stringify(

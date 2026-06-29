@@ -88,8 +88,32 @@ function createClaraCoreLogsView({ dom, t, getSnapshot, refreshSnapshot }) {
       });
   }
 
+  function clear() {
+    if (!window.confirm(t("logs.clearConfirm"))) return;
+    dom.clearLogs.disabled = true;
+    window.ClaraCoreDesktop.clearLogs()
+      .then((result) => {
+        liveLines.length = 0;
+        return refreshSnapshot().then(() => result);
+      })
+      .then((result) => {
+        appendLiveLine("logs", t("logs.cleared", {
+          runtime: result?.runtimeEventsDeleted || 0,
+          gateway: result?.gatewayTracesDeleted || 0
+        }));
+      })
+      .catch((error) => {
+        console.error(error);
+        appendLiveLine("logs", `${t("logs.clearFailed")}: ${error.message || String(error)}`);
+      })
+      .finally(() => {
+        dom.clearLogs.disabled = false;
+      });
+  }
+
   return {
     appendLiveLine,
+    clear,
     refreshNow,
     render,
     syncRefreshTimer,

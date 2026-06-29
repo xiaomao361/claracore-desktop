@@ -197,8 +197,61 @@ function createBackupRuntime({ ensureProductCore, productVersion, sqlString, tim
     };
   }
 
+  function backupFileInsideRoot(filePath, backupsRoot) {
+    const resolved = path.resolve(filePath || "");
+    const root = path.resolve(backupsRoot);
+    return resolved.startsWith(`${root}${path.sep}`);
+  }
+
+  async function deleteProductBackup(app, backupId) {
+    const { paths, database } = await ensureProductCore(app);
+    const backup = await database.getBackup(backupId);
+    if (!backup) throw new Error("Backup not found.");
+    if (!backupFileInsideRoot(backup.path, paths.backupsDir)) {
+      throw new Error("Backup must be inside the product backup directory.");
+    }
+    const deletedFiles = [];
+    const missingFiles = [];
+    const candidateFiles = [
+      backup.path,
+      backup.metadata?.manifestPath
+    ].filter(Boolean);
+    for (const filePath of candidateFiles) {
+      if (!backupFileInsideRoot(filePath, paths.backupsDir)) continue;
+      try {
+        await fs.rm(filePath, { force: false });
+        deletedFiles.push(filePath);
+      } catch (error) {
+        if (error?.code === "ENOENT") {
+          missingFiles.push(filePath);
+          continue;
+        }
+        throw error;
+      }
+    }
+    const deleted = await database.deleteBackupRecord(backup.id);
+    await database.recordRuntimeEvent({
+      level: "info",
+      source: "backup",
+      message: "Backup deleted",
+      metadata: {
+        backupId: backup.id,
+        path: backup.path,
+        deletedFiles,
+        missingFiles
+      }
+    });
+    return {
+      deleted: true,
+      backup: deleted,
+      deletedFiles,
+      missingFiles
+    };
+  }
+
   return {
     createProductBackup,
+    deleteProductBackup,
     previewProductRestore,
     restoreProductBackup
   };

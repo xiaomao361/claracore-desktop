@@ -64,23 +64,9 @@ function renderAgentFilter(select, agentIds, activeValue) {
 }
 
 function renderMemoryList() {
-  sharedInnerLifeView.renderMemoryList();
-}
-
-function renderSharedLine() {
-  sharedInnerLifeView.renderSharedLine();
-}
-
-function renderInnerLife() {
-  sharedInnerLifeView.renderInnerLife();
-}
-
-function renderBackups() {
-  dataView.renderBackups();
-}
-
-function renderImportPreview() {
-  dataView.renderImportPreview();
+  syncSnapshot();
+  const memories = filterByAgent(snapshot?.memories || [], activeMemoryAgentFilter, memoryAgentId);
+  renderMemoryResults(memories);
 }
 
 function memoryItemsHtml(memories, action = "delete", itemClass = "") {
@@ -282,7 +268,7 @@ async function loadMemoryTabData(tabName, options = {}) {
     snapshot.memories = append ? [...(snapshot.memories || []), ...rows] : rows;
     memoryPaging.all.loaded = snapshot.memories.length;
     loadedMemoryTabs.all = true;
-    if ((rows || []).length > 0) renderMemoryResults(filterByAgent(rows || [], rendererState.activeMemoryAgentFilter, memoryAgentId), allMemoryList, { append });
+    if ((rows || []).length > 0) renderMemoryResults(filterByAgent(rows || [], activeMemoryAgentFilter, memoryAgentId), allMemoryList, { append });
     memoryAllHint.textContent = t("memory.list.sample", {
       shown: snapshot?.memories?.length || 0,
       total: snapshot?.memoryStats?.activeCount ?? 0
@@ -295,7 +281,7 @@ async function loadMemoryTabData(tabName, options = {}) {
     snapshot.restrictedMemories = append ? [...(snapshot.restrictedMemories || []), ...rows] : rows;
     memoryPaging.restricted.loaded = snapshot.restrictedMemories.length;
     loadedMemoryTabs.restricted = true;
-    if ((rows || []).length > 0) renderMemoryResults(filterByAgent(rows || [], rendererState.activeMemoryAgentFilter, memoryAgentId), restrictedMemoryList, { append, action: "delete-restricted", itemClass: "restricted" });
+    if ((rows || []).length > 0) renderMemoryResults(filterByAgent(rows || [], activeMemoryAgentFilter, memoryAgentId), restrictedMemoryList, { append, action: "delete-restricted", itemClass: "restricted" });
     memoryRestrictedHint.textContent = t("memory.list.sample", {
       shown: snapshot?.restrictedMemories?.length || 0,
       total: snapshot?.memoryStats?.restrictedCount ?? 0
@@ -314,8 +300,8 @@ async function loadMemoryTabData(tabName, options = {}) {
     memoryPaging.archived.loaded = snapshot.archivedMemories.length;
     memoryPaging.deleted.loaded = snapshot.deletedMemories.length;
     loadedMemoryTabs.archive = true;
-    if ((archived || []).length > 0) renderMemoryResults(filterByAgent(archived || [], rendererState.activeMemoryAgentFilter, memoryAgentId), archivedMemoryList, { append, action: "restore-archived", itemClass: "archived" });
-    if ((deleted || []).length > 0) renderMemoryResults(filterByAgent(deleted || [], rendererState.activeMemoryAgentFilter, memoryAgentId), deletedMemoryList, { append, action: "restore", itemClass: "deleted" });
+    if ((archived || []).length > 0) renderMemoryResults(filterByAgent(archived || [], activeMemoryAgentFilter, memoryAgentId), archivedMemoryList, { append, action: "restore-archived", itemClass: "archived" });
+    if ((deleted || []).length > 0) renderMemoryResults(filterByAgent(deleted || [], activeMemoryAgentFilter, memoryAgentId), deletedMemoryList, { append, action: "restore", itemClass: "deleted" });
     renderLoadMore("archive");
   }
 }

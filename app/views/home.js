@@ -498,19 +498,27 @@ function renderConnections() {
   }
   httpEndpointList.innerHTML = endpoints
     .map(
-      (endpoint) => `
+      (endpoint) => {
+        const label = t(`connections.endpoint.${endpoint.id}`) || endpoint.id;
+        const openUrl = endpoint.openUrl || endpoint.url;
+        const copyUrl = endpoint.copyUrl || endpoint.url;
+        const detail = [endpoint.method, endpoint.auth === "bearer-token" ? t("connections.auth.bearer") : "", endpoint.bind]
+          .filter(Boolean)
+          .join(" · ");
+        return `
         <div class="endpoint-card">
           <div>
-            <strong>${t(`connections.endpoint.${endpoint.id}`)}</strong>
-            <code>${endpoint.url}</code>
-            <span>${endpoint.healthUrl}</span>
+            <strong>${escapeHtml(label)}</strong>
+            <code>${escapeHtml(endpoint.url)}</code>
+            <span>${escapeHtml(detail || endpoint.healthUrl || "")}</span>
           </div>
           <div class="endpoint-actions">
-            <button class="secondary" data-open-url="${endpoint.url}">${t("actions.open")}</button>
-            <button class="secondary" data-copy-url="${endpoint.url}">${t("actions.copy")}</button>
+            <button class="secondary" data-open-url="${escapeHtml(openUrl)}">${t("actions.open")}</button>
+            <button class="secondary" data-copy-url="${escapeHtml(copyUrl)}">${t("actions.copy")}</button>
           </div>
         </div>
-      `
+      `;
+      }
     )
     .join("");
 }

@@ -23,85 +23,12 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, getSnapshot,
                   ? `<button class="secondary" data-backup-action="restore" data-backup-id="${escapeHtml(backup.id)}">${t("actions.restore")}</button>`
                   : ""
               }
+              <button class="secondary danger-button" data-backup-action="delete" data-backup-id="${escapeHtml(backup.id)}">${t("actions.delete")}</button>
             </div>
             <code>${escapeHtml(backup.path || "")}</code>
             ${manifestPath ? `<small>${t("data.manifest")}: ${escapeHtml(manifestPath)}</small>` : ""}
             ${quickCheck ? `<small>${t("data.quickCheck")}: ${escapeHtml(quickCheck)}</small>` : ""}
           </div>
-        `;
-      })
-      .join("");
-  }
-
-  function renderImportPreview() {
-    const sources = getSnapshot()?.importPreview?.sources || {};
-    const entries = Object.values(sources);
-    if (entries.length === 0) {
-      dom.importPreviewList.innerHTML = `<div class="endpoint-empty">${t("data.importPreviewMissing")}</div>`;
-      return;
-    }
-    dom.importPreviewList.innerHTML = entries
-      .map((source) => {
-        const database = source.database || {};
-        const present = Boolean(database.present);
-        const counts = Object.entries(database.counts || {})
-          .map(([table, count]) => `${table}: ${count}`)
-          .join(", ");
-        const extras = [
-          source.labelAliases?.present ? `label_aliases.json: ${formatBytes(source.labelAliases.sizeBytes)}` : "",
-          source.modelAdjustments?.present ? `model_adjustments.json: ${formatBytes(source.modelAdjustments.sizeBytes)}` : "",
-          source.envFile?.present ? "innerlife.env" : ""
-        ].filter(Boolean);
-        const importPlan = source.importPlan || {};
-        const candidateRows = Number.isFinite(importPlan.candidateRows) ? importPlan.candidateRows : 0;
-        const skippedTables = importPlan.skippedTables || [];
-        const importState = importPlan.importEnabled ? t("data.importEnabled") : t("data.importDisabled");
-        const candidateHtml = (importPlan.candidates || [])
-          .map((candidate) => {
-            const sampleRows = candidate.samples || [];
-            const sampleHtml = sampleRows.length
-              ? sampleRows
-                  .map((sample) => {
-                    const parts = [sample.id ? `# ${sample.id}` : "", sample.title, sample.status, sample.preview].filter(Boolean);
-                    return `<li>${escapeHtml(parts.join(" · "))}</li>`;
-                  })
-                  .join("")
-              : `<li>${t("data.importNoSamples")}</li>`;
-            return `
-              <div class="import-candidate">
-                <div>
-                  <strong>${escapeHtml(candidate.table || "")}</strong>
-                  <span>${escapeHtml(String(candidate.rowCount ?? 0))} ${t("data.importCandidates")}</span>
-                </div>
-                <small>${t("data.importTarget")}: ${escapeHtml(candidate.target || "")} · ${escapeHtml(candidate.note || "")}</small>
-                <small>${t("data.importSamples")}:</small>
-                <ul>${sampleHtml}</ul>
-                ${candidate.sampleError ? `<small class="error-text">${escapeHtml(candidate.sampleError)}</small>` : ""}
-              </div>
-            `;
-          })
-          .join("");
-        return `
-          <article class="import-preview-item ${present ? "present" : "missing"}">
-            <div>
-              <strong>${escapeHtml(source.label || source.id || "")}</strong>
-              <span>${present ? t("data.importPreviewFound") : t("data.importPreviewMissing")}</span>
-            </div>
-            <code>${escapeHtml(database.dbPath || source.root || "")}</code>
-            <small>${escapeHtml(formatBytes(database.sizeBytes || 0))}</small>
-            ${
-              present
-                ? `<small>${t("data.importPreviewTables")}: ${escapeHtml((database.tables || []).length)} · ${t("data.importPreviewQuickCheck")}: ${escapeHtml(database.quickCheck || "-")}</small>`
-                : ""
-            }
-            ${counts ? `<small>${escapeHtml(counts)}</small>` : ""}
-            ${extras.length ? `<small>${escapeHtml(extras.join(", "))}</small>` : ""}
-            <small><strong>${t("data.importPlan")}:</strong> ${escapeHtml(String(candidateRows))} ${t("data.importCandidates")} · ${escapeHtml(importState)}</small>
-            ${importPlan.requirement ? `<small><strong>${t("data.importRequirement")}:</strong> ${escapeHtml(importPlan.requirement)}</small>` : ""}
-            ${candidateHtml ? `<div class="import-candidate-list">${candidateHtml}</div>` : ""}
-            ${skippedTables.length ? `<small>${t("data.importSkipped")}: ${escapeHtml(skippedTables.join(", "))}</small>` : ""}
-            ${database.error ? `<small class="error-text">${escapeHtml(database.error)}</small>` : ""}
-          </article>
         `;
       })
       .join("");
@@ -201,125 +128,42 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, getSnapshot,
     }
   }
 
-  async function exportMemoryArchive() {
-    dom.exportMemoryArchive.disabled = true;
-    dom.memoryArchiveNotice.textContent = t("common.checking");
+  async function exportProductJson() {
+    dom.exportProductJson.disabled = true;
+    dom.productJsonNotice.textContent = t("common.checking");
     try {
-      const exported = await window.ClaraCoreDesktop.exportMemoryArchive({});
+      const exported = await window.ClaraCoreDesktop.exportProductJson({});
       if (exported?.canceled) {
-        dom.memoryArchiveNotice.textContent = "";
+        dom.productJsonNotice.textContent = "";
         return;
       }
       await refresh();
-      const counts = exported.counts || {};
-      showCopyNotice(
-        `${t("data.memoryExported")}: ${t("data.memoryArchiveSummary", {
-          memories: counts.memories || 0,
-          records: counts.records || 0,
-          aliases: counts.aliases || 0
-        })} · ${exported.path}`,
-        dom.memoryArchiveNotice
-      );
+      showCopyNotice(`${t("data.productJsonExported")}: ${exported.path}`, dom.productJsonNotice);
     } catch (error) {
       console.error(error);
-      dom.memoryArchiveNotice.textContent = t("data.memoryExportFailed");
+      dom.productJsonNotice.textContent = t("data.productJsonExportFailed");
     } finally {
-      dom.exportMemoryArchive.disabled = false;
+      dom.exportProductJson.disabled = false;
     }
   }
 
-  async function importMemoryArchive() {
-    dom.importMemoryArchive.disabled = true;
-    dom.memoryArchiveNotice.textContent = t("common.checking");
+  async function importProductJson() {
+    if (!window.confirm(t("data.productJsonImportConfirm"))) return;
+    dom.importProductJson.disabled = true;
+    dom.productJsonNotice.textContent = t("common.checking");
     try {
-      const imported = await window.ClaraCoreDesktop.importMemoryArchive({});
+      const imported = await window.ClaraCoreDesktop.importProductJson({});
       if (imported?.canceled) {
-        dom.memoryArchiveNotice.textContent = t("data.memoryImportCancelled");
+        dom.productJsonNotice.textContent = t("data.productJsonImportCancelled");
         return;
       }
       await refresh();
-      showCopyNotice(
-        `${t("data.memoryImportDone")}: ${t("data.memoryArchiveSummary", {
-          memories: imported.memories?.imported || 0,
-          records: imported.records?.imported || 0,
-          aliases: imported.aliases?.imported || 0
-        })}`,
-        dom.memoryArchiveNotice
-      );
+      showCopyNotice(t("data.productJsonImportDone"), dom.productJsonNotice);
     } catch (error) {
       console.error(error);
-      dom.memoryArchiveNotice.textContent = t("data.memoryImportFailed");
+      dom.productJsonNotice.textContent = t("data.productJsonImportFailed");
     } finally {
-      dom.importMemoryArchive.disabled = false;
-    }
-  }
-
-  function oldSourceImporters() {
-    return {
-      memoria: {
-        button: dom.importOldMemoria,
-        confirmKey: "data.oldMemoriaConfirm",
-        doneKey: "data.oldMemoriaImported",
-        failedKey: "data.oldMemoriaImportFailed",
-        importFn: () => window.ClaraCoreDesktop.importOldMemoria({}),
-        summary(imported) {
-          return t("data.oldMemoriaSummary", {
-            memories: imported.memories?.imported || 0,
-            records: imported.records?.imported || 0
-          });
-        }
-      },
-      continuity: {
-        button: dom.importOldContinuity,
-        confirmKey: "data.oldContinuityConfirm",
-        doneKey: "data.oldContinuityImported",
-        failedKey: "data.oldContinuityImportFailed",
-        importFn: () => window.ClaraCoreDesktop.importOldContinuity({}),
-        summary(imported) {
-          return t("data.oldContinuitySummary", {
-            lines: imported.lines?.imported || 0,
-            positions: imported.positions?.imported || 0,
-            handoffs: imported.handoffs?.imported || 0
-          });
-        }
-      },
-      innerlife: {
-        button: dom.importOldInnerLife,
-        confirmKey: "data.oldInnerLifeConfirm",
-        doneKey: "data.oldInnerLifeImported",
-        failedKey: "data.oldInnerLifeImportFailed",
-        importFn: () => window.ClaraCoreDesktop.importOldInnerLife({}),
-        summary(imported) {
-          return t("data.oldInnerLifeSummary", {
-            profiles: imported.profiles?.imported || 0,
-            inbox: imported.inbox?.imported || 0,
-            events: imported.events?.imported || 0,
-            shares: imported.shares?.imported || 0,
-            digestRuns: imported.digestRuns?.imported || 0,
-            sessions: imported.sessions?.imported || 0
-          });
-        }
-      }
-    };
-  }
-
-  async function importOldSource(sourceId, triggerButton = null) {
-    const config = oldSourceImporters()[sourceId];
-    if (!config) return;
-    if (!window.confirm(t(config.confirmKey))) return;
-    const button = triggerButton || config.button;
-    if (button) button.disabled = true;
-    dom.memoryArchiveNotice.textContent = t("common.checking");
-    try {
-      const imported = await config.importFn();
-      await refresh();
-      const backupPath = imported.backup?.path ? ` · ${imported.backup.path}` : "";
-      showCopyNotice(`${t(config.doneKey)}: ${config.summary(imported)}${backupPath}`, dom.memoryArchiveNotice);
-    } catch (error) {
-      console.error(error);
-      dom.memoryArchiveNotice.textContent = t(config.failedKey);
-    } finally {
-      if (button) button.disabled = false;
+      dom.importProductJson.disabled = false;
     }
   }
 
@@ -342,6 +186,27 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, getSnapshot,
     } catch (error) {
       console.error(error);
       dom.backupNotice.textContent = t("data.restoreFailed");
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function deleteBackup(event) {
+    const button = event.target.closest("[data-backup-action='delete']");
+    if (!button) return;
+    const backupId = button.dataset.backupId;
+    if (!backupId) return;
+    if (!window.confirm(t("data.deleteBackupConfirm"))) return;
+    button.disabled = true;
+    dom.backupNotice.textContent = t("common.checking");
+    try {
+      await window.ClaraCoreDesktop.deleteBackup(backupId);
+      if (pendingRestoreBackupId === backupId) closeRestoreConfirm();
+      await refresh();
+      showCopyNotice(t("data.backupDeleted"), dom.backupNotice);
+    } catch (error) {
+      console.error(error);
+      dom.backupNotice.textContent = t("data.backupDeleteFailed");
     } finally {
       button.disabled = false;
     }
@@ -371,11 +236,8 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, getSnapshot,
 
   function bindEvents() {
     dom.exportBackup.addEventListener("click", () => exportBackup());
-    dom.exportMemoryArchive.addEventListener("click", () => exportMemoryArchive());
-    dom.importMemoryArchive.addEventListener("click", () => importMemoryArchive());
-    dom.importOldMemoria.addEventListener("click", () => importOldSource("memoria"));
-    dom.importOldContinuity.addEventListener("click", () => importOldSource("continuity"));
-    dom.importOldInnerLife.addEventListener("click", () => importOldSource("innerlife"));
+    dom.exportProductJson.addEventListener("click", () => exportProductJson());
+    dom.importProductJson.addEventListener("click", () => importProductJson());
     dom.openBackupsFolder.addEventListener("click", () => {
       const backupsDir = getSnapshot()?.data?.backupsDir;
       if (backupsDir) {
@@ -384,6 +246,7 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, getSnapshot,
     });
     dom.backupList.addEventListener("click", (event) => {
       previewRestore(event).catch(console.error);
+      deleteBackup(event).catch(console.error);
     });
     dom.cancelRestoreBackup.addEventListener("click", () => {
       closeRestoreConfirm();
@@ -396,8 +259,7 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, getSnapshot,
 
   return {
     bindEvents,
-    renderBackups,
-    renderImportPreview
+    renderBackups
   };
 }
 

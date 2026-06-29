@@ -333,6 +333,11 @@ async function saveProductSettings(app, updates) {
   };
 }
 
+async function clearProductLogs(app) {
+  const { database } = await ensureProductCore(app);
+  return database.clearLogs();
+}
+
 async function createProductMemory(app, input) {
   return memoria.create(await ensureProductCore(app), input);
 }
@@ -544,8 +549,16 @@ async function exportProductMemoryArchive(app, input = {}) {
   return importRuntime.exportProductMemoryArchive(app, input);
 }
 
+async function exportProductDataJson(app, input = {}) {
+  return importRuntime.exportProductDataJson(app, input);
+}
+
 async function importProductMemoryArchive(app, input = {}) {
   return importRuntime.importProductMemoryArchive(app, input);
+}
+
+async function importProductDataJson(app, input = {}) {
+  return importRuntime.importProductDataJson(app, input);
 }
 
 async function importOldMemoriaIntoProduct(app, input = {}) {
@@ -661,6 +674,10 @@ async function createProductBackup(app) {
   return backupRuntime.createProductBackup(app);
 }
 
+async function deleteProductBackup(app, backupId) {
+  return backupRuntime.deleteProductBackup(app, backupId);
+}
+
 async function previewProductRestore(app, backupId) {
   return backupRuntime.previewProductRestore(app, backupId);
 }
@@ -678,17 +695,20 @@ module.exports = {
   archiveProductDormantMemories,
   archiveProductMemory,
   archiveProductSharedLine,
+  clearProductLogs,
   createProductBackup,
   createProductMemoryLabelAlias,
   createProductSharedLine,
   createProductSharedLineHandoff,
   createProductMemory,
   createProductMemoryRecord,
+  deleteProductBackup,
   deleteProductMemory,
   deleteProductMemoryLabelAlias,
   embedProductMemory,
   ensureProductDirectories,
   ensureProductCore,
+  exportProductDataJson,
   exportProductMemoryArchive,
   getProductMemoryStats,
   getProductMemories,
@@ -706,6 +726,7 @@ module.exports = {
   getProductInnerLife,
   getProductInnerLifeDoctor,
   getProductImportPreview,
+  importProductDataJson,
   importProductMemoryArchive,
   importOldContinuityIntoProduct,
   importOldInnerLifeIntoProduct,

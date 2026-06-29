@@ -594,6 +594,23 @@ class ProductDatabase {
     }));
   }
 
+  async clearLogs() {
+    const rows = await this.query(`
+      SELECT
+        (SELECT COUNT(*) FROM runtime_events) AS runtime_events_count,
+        (SELECT COUNT(*) FROM gateway_traces) AS gateway_traces_count;
+    `);
+    await this.exec(`
+      DELETE FROM runtime_events;
+      DELETE FROM gateway_traces;
+    `);
+    const counts = rows[0] || {};
+    return {
+      runtimeEventsDeleted: Number(counts.runtime_events_count || 0),
+      gatewayTracesDeleted: Number(counts.gateway_traces_count || 0)
+    };
+  }
+
   async createDatabaseBackup(targetPath, metadata = {}) {
     if (!targetPath) throw new Error("Backup path is required.");
     await this.exec(`VACUUM INTO ${sqlString(targetPath)};`);
@@ -652,6 +669,19 @@ class ProductDatabase {
       WHERE id = ${sqlString(id)};
     `);
     return this.getBackup(id);
+  }
+
+  async deleteBackupRecord(id) {
+    const existing = await this.getBackup(id);
+    if (!existing) throw new Error("Backup not found.");
+    await this.exec(`
+      DELETE FROM backups
+      WHERE id = ${sqlString(id)};
+    `);
+    return {
+      ...existing,
+      deleted: true
+    };
   }
 
   async listBackups(limit = 10) {

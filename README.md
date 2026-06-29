@@ -1,5 +1,20 @@
 # ClaraCore Desktop
 
+## Agent-First Principle
+
+For the next development window, ClaraCore Desktop should be treated as software
+for agents to use and for humans to inspect. Human-facing UI exists to make
+agent state, data, runtime health, backups, and recovery understandable and
+controllable; the primary operational path should be friendly to connected
+agents. Agent Access is therefore a first-class product surface, not a
+secondary settings page.
+
+Agent Access exposes both stdio MCP setup and a token-protected localhost HTTP
+Agent Gateway while the desktop app is running. The setup note should not show
+a LAN URL by default. LAN binding is intentionally off and should only become
+available through an explicit product mode with clear bind address, bearer
+token, token regeneration, and disable controls.
+
 ClaraCore Desktop is the local desktop manager for the first ClaraCore core package:
 
 - Gateway
@@ -39,7 +54,7 @@ Included:
 - Product-owned SQLite data root under Desktop user data
 - Home, Memoria, Shared Line, InnerLife, Models, Data, Agent Setup, Settings, and Logs pages
 - Home dashboard with Gateway, Memoria, Shared Line, InnerLife, agent-view, and Gateway trace summaries
-- Agent Setup page with MCP connection command, copyable config, CLI fallback notes, runtime paths, and recent Gateway activity
+- Agent Setup page with MCP connection command, token-protected localhost HTTP Agent Gateway URLs, copyable config, CLI fallback notes, runtime paths, and recent Gateway activity
 - Desktop-owned Gateway stdio entry for Gateway context, Memoria, Shared Line, and InnerLife MCP tools
 - Memoria CLI for store, recall, get, update, tag, delete, restore, archive, import/export, records, and maintenance audit/run
 - View-focused Memoria UI for search, graph, labels, all memories, restricted memories, archive/delete review, and manual delete/restore
@@ -51,9 +66,8 @@ Included:
 - Agent-managed InnerLife access through Gateway MCP and CLI fallback; the Desktop UI is primarily for inspection and runtime control
 - Models page for Memoria embedding configuration, InnerLife model configuration, secret references, and loop cadence
 - InnerLife runtime panel for daemon enable/pause/tick, doctor status, pending shares, inbox, sessions, and digest review
-- Copy-based import for old Continuity data into Desktop-owned Shared Line tables
-- Backup-gated import preview for old Memoria, Continuity, and InnerLife data
-- Backup-gated copy import for old Memoria, Continuity, and InnerLife data
+- Verified SQLite product backups with restore preview and safety-backup restore
+- Full product JSON export/import for portable ClaraCore Desktop data
 - Agent identity labels using `tool:agent` form, such as `claude-code:clara` and `hermes:lara`, with single-name agents such as `codex` supported
 - Settings page placeholder sections for future language, theme, window, tray, paths, logs, Gateway policy, privacy, security, and developer diagnostics
 - Terminal-style runtime log view for maintenance and Gateway traces
@@ -64,7 +78,7 @@ Included:
 
 Not included yet:
 
-- HTTP management console for the Desktop-owned Gateway
+- LAN Agent Gateway mode and HTTP management console for the Desktop-owned Gateway
 - Packaged macOS release artifact
 - Windows package
 - Old Memoria REST API compatibility

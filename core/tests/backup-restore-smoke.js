@@ -84,6 +84,61 @@ async function main() {
   if (snapshot.sharedLine.currentPosition.summary !== "Backup restore shared line checkpoint.") {
     throw new Error("Restore did not recover the Shared Line checkpoint.");
   }
+
+  const productJson = await runtime.exportProductDataJson(app, {});
+  await fs.access(productJson.path);
+  const productJsonPayload = JSON.parse(await fs.readFile(productJson.path, "utf8"));
+  if (productJsonPayload.format !== "claracore.product.export" || productJsonPayload.version !== 1) {
+    throw new Error(`Product JSON export format mismatch: ${JSON.stringify(productJsonPayload).slice(0, 300)}`);
+  }
+  if (!productJsonPayload.tables?.memories?.some((memory) => memory.id === before.id)) {
+    throw new Error("Product JSON export did not include the restored Memory.");
+  }
+  const afterJson = await runtime.createProductMemory(app, {
+    title: "Product JSON after C",
+    body: "This record should disappear after product JSON import.",
+    labels: "json, restore"
+  });
+  const jsonImported = await runtime.importProductDataJson(app, { filePath: productJson.path });
+  if (!jsonImported.imported || jsonImported.quickCheck !== "ok") {
+    throw new Error(`Product JSON import failed: ${JSON.stringify(jsonImported)}`);
+  }
+  const jsonRestoredSearch = await runtime.searchProductMemories(app, "Backup restore before A");
+  if (!jsonRestoredSearch.results.some((memory) => memory.id === before.id)) {
+    throw new Error("Product JSON import did not restore exported Memory.");
+  }
+  const jsonRemovedSearch = await runtime.searchProductMemories(app, "Product JSON after C");
+  if (jsonRemovedSearch.results.some((memory) => memory.id === afterJson.id)) {
+    throw new Error("Product JSON import did not replace post-export Memory.");
+  }
+
+  const disposableBackup = await runtime.createProductBackup(app);
+  const disposableManifestPath = disposableBackup.metadata.manifestPath;
+  await fs.access(disposableBackup.path);
+  await fs.access(disposableManifestPath);
+  const deletedBackup = await runtime.deleteProductBackup(app, disposableBackup.id);
+  if (!deletedBackup.deleted || deletedBackup.backup.id !== disposableBackup.id) {
+    throw new Error(`Backup delete did not report success: ${JSON.stringify(deletedBackup)}`);
+  }
+  let backupFileStillExists = true;
+  try {
+    await fs.access(disposableBackup.path);
+  } catch (_error) {
+    backupFileStillExists = false;
+  }
+  if (backupFileStillExists) throw new Error("Backup delete did not remove the .db file.");
+  let manifestStillExists = true;
+  try {
+    await fs.access(disposableManifestPath);
+  } catch (_error) {
+    manifestStillExists = false;
+  }
+  if (manifestStillExists) throw new Error("Backup delete did not remove the manifest file.");
+  const afterDeleteSnapshot = await runtime.buildProductSnapshot(app);
+  if (afterDeleteSnapshot.backups.some((item) => item.id === disposableBackup.id)) {
+    throw new Error("Backup delete did not remove the backup record.");
+  }
+
   const events = await (await runtime.ensureProductCore(app)).database.query(`
     SELECT message
     FROM runtime_events
@@ -102,6 +157,7 @@ async function main() {
         dataRoot,
         backupPath: backup.path,
         manifestPath: backup.metadata.manifestPath,
+        productJsonPath: productJson.path,
         safetyBackupPath: restored.safetyBackup.path,
         restoredMemoryId: before.id,
         removedMemoryId: after.id

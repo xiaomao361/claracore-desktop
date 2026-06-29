@@ -21,13 +21,15 @@ Do not add new feature logic here when it belongs to a domain module.
 - `index.js`: public facade imported as `core/runtime`.
 - `paths.js`: ClaraCore root and product data path resolution.
 - `backup.js`: product backup, restore, restore preview, and backup listing.
-- `imports.js`: memory archive import/export plus old Memoria, Continuity, and
-  InnerLife copy import workflows.
+- `imports.js`: product JSON import/export, memory archive import/export, and
+  hidden old Memoria, Continuity, and InnerLife copy import workflows.
 
 ## Import Rules
 
-Old-service imports are backup-gated and copy-based. Source databases are read
-only. Import preview must remain read-only.
+Product data import/export should default to verified SQLite backups or full
+product JSON. Old-service imports are one-off migration helpers, not a normal
+user-facing product flow; keep them hidden unless an explicit migration task
+requires them. Source databases are read only.
 
 If a new import source is added, put the source-specific reading and copy logic
 in `imports.js` or a focused helper under `core/runtime/`, then expose only a

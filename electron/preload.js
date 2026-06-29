@@ -10,6 +10,9 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   getImportPreview() {
     return ipcRenderer.invoke("claracore:getImportPreview");
   },
+  clearLogs() {
+    return ipcRenderer.invoke("claracore:clearLogs");
+  },
   saveSettings(updates) {
     return ipcRenderer.invoke("claracore:saveSettings", updates);
   },
@@ -162,6 +165,15 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   },
   createBackup() {
     return ipcRenderer.invoke("claracore:createBackup");
+  },
+  deleteBackup(backupId) {
+    return ipcRenderer.invoke("claracore:deleteBackup", backupId);
+  },
+  exportProductJson(input) {
+    return ipcRenderer.invoke("claracore:exportProductJson", input);
+  },
+  importProductJson(input) {
+    return ipcRenderer.invoke("claracore:importProductJson", input);
   },
   exportMemoryArchive(input) {
     return ipcRenderer.invoke("claracore:exportMemoryArchive", input);

@@ -10,16 +10,12 @@ const {
   dataHint,
   dataRootPath,
   exportBackup,
-  exportMemoryArchive,
-  importMemoryArchive,
-  importOldMemoria,
-  importOldContinuity,
-  importOldInnerLife,
+  exportProductJson,
+  importProductJson,
   openBackupsFolder,
   backupNotice,
-  memoryArchiveNotice,
+  productJsonNotice,
   backupList,
-  importPreviewList,
   restoreConfirmPanel,
   restorePreview,
   restoreConfirmInput,
@@ -35,6 +31,7 @@ const {
   logTerminal,
   refreshLogs,
   toggleLogFollow,
+  clearLogs,
   logRuntimeCount,
   logGatewayCount,
   logLineCount,
@@ -359,10 +356,6 @@ function renderBackups() {
   dataView.renderBackups();
 }
 
-function renderImportPreview() {
-  dataView.renderImportPreview();
-}
-
 function renderSnapshot() {
   runtimeMode.textContent = formatMode(snapshot.mode);
   rootPath.textContent = snapshot.root;
@@ -384,7 +377,6 @@ function renderSnapshot() {
   renderSharedLine();
   renderInnerLife();
   renderBackups();
-  renderImportPreview();
 }
 
 function renderResourceSnapshot(resources) {
@@ -547,6 +539,7 @@ searchMemory.addEventListener("click", async () => {
 
 memoryAgentFilter?.addEventListener("change", async () => {
   rendererState.activeMemoryAgentFilter = memoryAgentFilter.value || "";
+  memoriaView.setActiveAgentFilter(rendererState.activeMemoryAgentFilter);
   renderMemoryList();
   if (memoriaView.getActiveTab() !== "search") {
     await loadMemoryTabData(memoriaView.getActiveTab(), { force: true });
@@ -1082,6 +1075,10 @@ refreshLogs.addEventListener("click", () => {
 
 toggleLogFollow.addEventListener("click", () => {
   logsView.toggleFollow(activeView);
+});
+
+clearLogs.addEventListener("click", () => {
+  logsView.clear();
 });
 
 primaryAction.addEventListener("click", () => {

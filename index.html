@@ -479,14 +479,10 @@
           <article class="panel main-panel">
             <h2 data-i18n="data.title">Data import and export</h2>
             <p data-i18n="data.body">Import and restore are separated so destructive actions stay clear.</p>
-            <div class="action-row"><span data-i18n="data.exportBackup">Export backup</span><button id="exportBackup" class="secondary" data-i18n="actions.export">Export</button></div>
-            <div class="action-row"><span data-i18n="data.exportMemoryArchive">Export Memory JSON</span><button id="exportMemoryArchive" class="secondary" data-i18n="actions.export">Export</button></div>
-            <div class="action-row"><span data-i18n="data.importMemoryArchive">Import Memory JSON</span><button id="importMemoryArchive" class="secondary" data-i18n="actions.import">Import</button></div>
-            <div class="action-row"><span data-i18n="data.importOldMemoria">Import old Memoria</span><button id="importOldMemoria" class="secondary" data-i18n="actions.import">Import</button></div>
-            <div class="action-row"><span data-i18n="data.importOldContinuity">Import old Continuity</span><button id="importOldContinuity" class="secondary" data-i18n="actions.import">Import</button></div>
-            <div class="action-row"><span data-i18n="data.importOldInnerLife">Import old InnerLife</span><button id="importOldInnerLife" class="secondary" data-i18n="actions.import">Import</button></div>
-            <div class="action-row danger"><span data-i18n="data.restoreBackup">Restore from backup</span><button class="secondary" disabled data-i18n="actions.restore">Restore</button></div>
-            <span id="memoryArchiveNotice" class="quiet" aria-live="polite"></span>
+            <div class="action-row"><span data-i18n="data.exportBackup">Create backup (.db + manifest)</span><button id="exportBackup" class="secondary" data-i18n="actions.create">Create</button></div>
+            <div class="action-row"><span data-i18n="data.exportProductJson">Export JSON</span><button id="exportProductJson" class="secondary" data-i18n="actions.export">Export</button></div>
+            <div class="action-row danger"><span data-i18n="data.importProductJson">Import JSON</span><button id="importProductJson" class="secondary" data-i18n="actions.import">Import</button></div>
+            <span id="productJsonNotice" class="quiet" aria-live="polite"></span>
             <span id="backupNotice" class="quiet" aria-live="polite"></span>
             <div id="restoreConfirmPanel" class="restore-confirm-panel hidden">
               <p data-i18n="data.restorePrompt">Type RESTORE to confirm.</p>
@@ -504,9 +500,6 @@
             <button id="openBackupsFolder" class="secondary full" data-i18n="data.openBackupsFolder">Open backups folder</button>
             <h2 class="section-title" data-i18n="data.recentBackups">Recent backups</h2>
             <div id="backupList" class="backup-list"></div>
-            <h2 class="section-title" data-i18n="data.importPreview">Import preview</h2>
-            <p class="quiet" data-i18n="data.importPreviewReadOnly">Read-only scan. Import remains disabled.</p>
-            <div id="importPreviewList" class="import-preview-list"></div>
           </article>
         </div>
       </section>
@@ -522,6 +515,7 @@
               <div class="log-toolbar">
                 <button id="refreshLogs" class="secondary" data-i18n="actions.refresh">Refresh</button>
                 <button id="toggleLogFollow" class="secondary active" data-i18n="logs.follow">Follow</button>
+                <button id="clearLogs" class="secondary danger-button" data-i18n="logs.clear">Clear</button>
               </div>
             </div>
             <div class="log-status-strip">
@@ -558,6 +552,11 @@
             <button class="secondary full" data-copy="mcp-command" data-i18n="connections.copyMcpCommand">Copy MCP command</button>
             <button class="secondary full" data-copy="mcp-config" data-i18n="connections.copyMcpConfig">Copy MCP config</button>
             <button id="openGatewayFolder" class="secondary full" data-i18n="connections.openGatewayFolder">Open runtime folder</button>
+            <h2 class="section-title" data-i18n="agentSetup.connectionMode">Connection mode</h2>
+            <ul class="plain-list">
+              <li data-i18n="agentSetup.modeMcp">Recommended now: stdio MCP config copied into the agent client.</li>
+              <li data-i18n="agentSetup.modeLan">LAN URL later: useful for phones or remote agents, but only with explicit HTTP Gateway, local/LAN binding, and token protection.</li>
+            </ul>
             <h2 class="section-title" data-i18n="connections.title">Connection details</h2>
             <div class="snippet">
               <span data-i18n="connections.mcpCommand">MCP command</span>

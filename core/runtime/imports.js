@@ -210,8 +210,174 @@ function reviewStatusFromShareStatus(status) {
   return "unreviewed";
 }
 
+const PRODUCT_EXPORT_TABLES = [
+  "schema_migrations",
+  "app_settings",
+  "secret_refs",
+  "agents",
+  "memory_sources",
+  "memories",
+  "memory_labels",
+  "memory_label_aliases",
+  "memory_embeddings",
+  "memory_records",
+  "continuity_lines",
+  "current_positions",
+  "continuity_position_history",
+  "continuity_snapshots",
+  "continuity_handoffs",
+  "innerlife_profiles",
+  "innerlife_events",
+  "innerlife_inbox",
+  "innerlife_thoughts",
+  "innerlife_shares",
+  "innerlife_share_actions",
+  "innerlife_digest_runs",
+  "innerlife_sessions",
+  "innerlife_share_checks",
+  "innerlife_daemon_state",
+  "gateway_sessions",
+  "gateway_traces",
+  "runtime_events",
+  "backups"
+];
+
+function sqlValue(value, quoteString) {
+  if (value === null || value === undefined) return "NULL";
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return quoteString(value);
+}
+
+function insertRowsSql(tableName, rows, quoteString) {
+  if (!Array.isArray(rows) || rows.length === 0) return "";
+  return rows
+    .map((row) => {
+      const columns = Object.keys(row || {});
+      if (columns.length === 0) return "";
+      return `
+        INSERT INTO ${quoteIdentifier(tableName)} (${columns.map(quoteIdentifier).join(", ")})
+        VALUES (${columns.map((column) => sqlValue(row[column], quoteString)).join(", ")});
+      `;
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
+function summarizeProductTables(tables = {}) {
+  return Object.fromEntries(
+    Object.entries(tables).map(([tableName, rows]) => [tableName, Array.isArray(rows) ? rows.length : 0])
+  );
+}
+
 
 function createImportRuntime({ createProductBackup, ensureProductCore, productVersion, sqlString, timestampForFilename }) {
+  async function exportProductDataJson(app, input = {}) {
+    const { paths, database } = await ensureProductCore(app);
+    const createdAt = new Date().toISOString();
+    const filename = `claracore-product-export-${timestampForFilename(new Date(createdAt))}.json`;
+    const targetPath = path.resolve(input?.targetPath || path.join(paths.exportsDir, filename));
+    const exportsRoot = path.resolve(paths.exportsDir);
+    if (!targetPath.startsWith(`${exportsRoot}${path.sep}`) && !input?.allowExternalPath) {
+      throw new Error("Product JSON export path must be inside the product exports directory.");
+    }
+    await fs.mkdir(path.dirname(targetPath), { recursive: true });
+    const existingTables = new Set(
+      (await database.query("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name;")).map((row) => row.name)
+    );
+    const tables = {};
+    for (const tableName of PRODUCT_EXPORT_TABLES) {
+      if (!existingTables.has(tableName)) continue;
+      tables[tableName] = await database.query(`SELECT * FROM ${quoteIdentifier(tableName)};`);
+    }
+    const exported = {
+      format: "claracore.product.export",
+      version: 1,
+      exportedAt: createdAt,
+      productVersion,
+      source: {
+        dataRoot: paths.dataRoot,
+        databasePath: paths.databasePath
+      },
+      counts: summarizeProductTables(tables),
+      tables
+    };
+    await fs.writeFile(targetPath, `${JSON.stringify(exported, null, 2)}\n`, "utf8");
+    return {
+      path: targetPath,
+      createdAt,
+      counts: exported.counts
+    };
+  }
+
+  async function importProductDataJson(app, input = {}) {
+    const requestedFilePath = String(input?.filePath || "").trim();
+    if (!requestedFilePath) throw new Error("Product JSON import file path is required.");
+    const filePath = path.resolve(requestedFilePath);
+    const importedAt = new Date().toISOString();
+    const raw = await fs.readFile(filePath, "utf8");
+    const exported = JSON.parse(raw);
+    if (exported?.format !== "claracore.product.export" || exported?.version !== 1 || !exported.tables || typeof exported.tables !== "object") {
+      throw new Error("Unsupported product JSON export format.");
+    }
+    const safetyBackup = await createProductBackup(app);
+    const { paths, database } = await ensureProductCore(app);
+    const tempPath = path.join(paths.runtimeDir, `product-json-import-${timestampForFilename(new Date(importedAt))}.db`);
+    await fs.rm(tempPath, { force: true });
+    const tempDatabase = new database.constructor(tempPath);
+    await tempDatabase.initialize();
+    try {
+      const deleteSql = [...PRODUCT_EXPORT_TABLES]
+        .reverse()
+        .map((tableName) => `DELETE FROM ${quoteIdentifier(tableName)};`)
+        .join("\n");
+      const insertSql = PRODUCT_EXPORT_TABLES.map((tableName) => insertRowsSql(tableName, exported.tables[tableName] || [], sqlString)).join("\n");
+      await tempDatabase.exec(`
+        PRAGMA foreign_keys = OFF;
+        ${deleteSql}
+        ${insertSql}
+        PRAGMA foreign_keys = ON;
+      `);
+      const quickRows = await tempDatabase.query("PRAGMA quick_check;");
+      const quickCheck = quickRows[0]?.quick_check || quickRows[0]?.["quick_check"] || Object.values(quickRows[0] || {})[0];
+      if (quickCheck !== "ok") throw new Error(`Imported product JSON quick_check failed: ${quickCheck}`);
+      await fs.copyFile(tempPath, paths.databasePath);
+      const restoredDatabase = new database.constructor(paths.databasePath);
+      await restoredDatabase.initialize();
+      const restoredSafetyBackup = await restoredDatabase.registerBackupRecord({
+        id: safetyBackup.id,
+        path: safetyBackup.path,
+        status: safetyBackup.status,
+        metadata: {
+          ...(safetyBackup.metadata || {}),
+          restoredDatabaseRegistered: true,
+          restoredAfterProductJsonPath: filePath
+        }
+      });
+      await restoredDatabase.recordRuntimeEvent({
+        level: "info",
+        source: "data",
+        message: "Product database imported from JSON",
+        metadata: {
+          filePath,
+          exportedAt: exported.exportedAt || "",
+          safetyBackupId: restoredSafetyBackup.id,
+          safetyBackupPath: restoredSafetyBackup.path,
+          counts: exported.counts || summarizeProductTables(exported.tables)
+        }
+      });
+      return {
+        imported: true,
+        filePath,
+        quickCheck,
+        safetyBackup: restoredSafetyBackup,
+        counts: exported.counts || summarizeProductTables(exported.tables),
+        summary: await restoredDatabase.getSummary()
+      };
+    } finally {
+      await fs.rm(tempPath, { force: true }).catch(() => {});
+    }
+  }
+
   async function exportProductMemoryArchive(app, input = {}) {
     const { paths, database } = await ensureProductCore(app);
     const createdAt = new Date().toISOString();
@@ -1447,7 +1613,9 @@ function createImportRuntime({ createProductBackup, ensureProductCore, productVe
   }
 
   return {
+    exportProductDataJson,
     exportProductMemoryArchive,
+    importProductDataJson,
     importProductMemoryArchive,
     importOldMemoriaIntoProduct,
     importOldContinuityIntoProduct,

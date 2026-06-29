@@ -21,7 +21,7 @@ expanding `app.js`.
 - `views/home.js`: dashboard, module state, agent views, health, and Gateway traces.
 - `views/memoria.js`: Memoria tabs, search, labels, graph, archive/delete, and embedding actions.
 - `views/shared-innerlife.js`: Shared Line and InnerLife rendering.
-- `views/data.js`: backups, restore confirmation, archive import/export, and old-service import preview.
+- `views/data.js`: SQLite backups, restore confirmation, and full product JSON import/export.
 - `views/logs.js`: runtime log rendering, follow mode, and periodic refresh.
 - `views/settings.js`: Models and settings form rendering/collection.
 - `views/agent-setup.js`: agent MCP/CLI setup guide.

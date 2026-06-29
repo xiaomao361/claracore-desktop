@@ -2,6 +2,8 @@ const { app, BrowserWindow, Menu, Tray, clipboard, dialog, ipcMain, nativeImage,
 const path = require("path");
 const fs = require("fs/promises");
 const os = require("os");
+const http = require("http");
+const crypto = require("crypto");
 const {
   applyProductInnerLifeShareToMemory,
   applyProductInnerLifeShareToSharedLine,
@@ -11,18 +13,22 @@ const {
   archiveProductDormantMemories,
   archiveProductMemory,
   archiveProductSharedLine,
+  clearProductLogs,
   createProductBackup,
   createProductMemory,
   createProductMemoryLabelAlias,
   createProductMemoryRecord,
   createProductSharedLine,
   createProductSharedLineHandoff,
+  deleteProductBackup,
   deleteProductMemory,
   deleteProductMemoryLabelAlias,
   embedProductMemory,
   ensureProductCore,
   ensureProductDirectories,
+  exportProductDataJson,
   exportProductMemoryArchive,
+  getProductGatewayContext,
   getProductMemories,
   getProductInnerLife,
   getProductImportPreview,
@@ -37,6 +43,7 @@ const {
   getProductMemoryStats,
   getProductRestrictedMemories,
   getProductSharedLine,
+  importProductDataJson,
   importProductMemoryArchive,
   importOldContinuityIntoProduct,
   importOldInnerLifeIntoProduct,
@@ -82,6 +89,12 @@ let innerLifeSchedulerBusy = false;
 let memoryMaintenanceScheduler = null;
 let memoryMaintenanceSchedulerBusy = false;
 const appStartedAt = Date.now();
+const httpAgentGateway = {
+  host: "127.0.0.1",
+  server: null,
+  port: null,
+  token: crypto.randomBytes(32).toString("base64url")
+};
 
 if (isGatewayMode) {
   require("../core/gateway/mcp-server").start();
@@ -207,8 +220,13 @@ async function getResourceSnapshot() {
 
 async function getRuntimeSnapshot() {
   const snapshot = await buildProductSnapshot(app);
+  const connections = {
+    ...snapshot.connections,
+    httpEndpoints: buildHttpAgentEndpoints()
+  };
   return {
     ...snapshot,
+    connections,
     data: {
       ...snapshot.data,
       rootPresent: await exists(snapshot.data.root),
@@ -219,6 +237,149 @@ async function getRuntimeSnapshot() {
       servicePath: module.servicePath || (module.id === "memoria" ? snapshot.data.databasePath : "product core planned")
     }))
   };
+}
+
+function httpAgentBaseUrl() {
+  if (!httpAgentGateway.port) return null;
+  return `http://${httpAgentGateway.host}:${httpAgentGateway.port}`;
+}
+
+function buildHttpAgentEndpoints() {
+  const baseUrl = httpAgentBaseUrl();
+  if (!baseUrl) return [];
+  return [
+    {
+      id: "agent-setup-json",
+      method: "GET",
+      url: `${baseUrl}/agent/setup`,
+      openUrl: `${baseUrl}/agent/setup?token=${encodeURIComponent(httpAgentGateway.token)}`,
+      copyUrl: `${baseUrl}/agent/setup?token=${encodeURIComponent(httpAgentGateway.token)}`,
+      healthUrl: `${baseUrl}/health`,
+      auth: "bearer-token",
+      authHeader: `Authorization: Bearer ${httpAgentGateway.token}`,
+      bind: httpAgentGateway.host
+    },
+    {
+      id: "gateway-context-json",
+      method: "GET",
+      url: `${baseUrl}/gateway/context`,
+      openUrl: `${baseUrl}/gateway/context?token=${encodeURIComponent(httpAgentGateway.token)}`,
+      copyUrl: `${baseUrl}/gateway/context?token=${encodeURIComponent(httpAgentGateway.token)}`,
+      healthUrl: `${baseUrl}/health`,
+      auth: "bearer-token",
+      authHeader: `Authorization: Bearer ${httpAgentGateway.token}`,
+      bind: httpAgentGateway.host
+    }
+  ];
+}
+
+function sendHttpJson(response, statusCode, payload) {
+  const body = JSON.stringify(payload, null, 2);
+  response.writeHead(statusCode, {
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "no-store",
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET, OPTIONS",
+    "access-control-allow-headers": "authorization, content-type"
+  });
+  response.end(body);
+}
+
+function isHttpAgentRequestAuthorized(request, requestUrl) {
+  const authorization = request.headers.authorization || "";
+  const token = requestUrl.searchParams.get("token") || "";
+  return authorization === `Bearer ${httpAgentGateway.token}` || token === httpAgentGateway.token;
+}
+
+async function handleHttpAgentRequest(request, response) {
+  const baseUrl = httpAgentBaseUrl() || `http://${httpAgentGateway.host}:0`;
+  const requestUrl = new URL(request.url || "/", baseUrl);
+  if (request.method === "OPTIONS") {
+    sendHttpJson(response, 204, {});
+    return;
+  }
+  if (request.method !== "GET") {
+    sendHttpJson(response, 405, { error: "method_not_allowed" });
+    return;
+  }
+  if (requestUrl.pathname === "/health") {
+    sendHttpJson(response, 200, {
+      ok: true,
+      product: "ClaraCore Desktop",
+      bind: httpAgentGateway.host
+    });
+    return;
+  }
+  if (!isHttpAgentRequestAuthorized(request, requestUrl)) {
+    sendHttpJson(response, 401, {
+      error: "unauthorized",
+      message: "Use Authorization: Bearer <token> from Agent Access."
+    });
+    return;
+  }
+  if (requestUrl.pathname === "/agent/setup") {
+    const snapshot = await getRuntimeSnapshot();
+    sendHttpJson(response, 200, {
+      product: "ClaraCore Desktop",
+      principle: "Agent-first: software is built for agents to operate and for humans to inspect.",
+      connectionMode: {
+        current: "localhost-http-url",
+        bind: httpAgentGateway.host,
+        lan: "disabled-by-default"
+      },
+      auth: {
+        type: "bearer",
+        header: `Authorization: Bearer ${httpAgentGateway.token}`
+      },
+      endpoints: buildHttpAgentEndpoints().map((endpoint) => ({
+        id: endpoint.id,
+        method: endpoint.method,
+        url: endpoint.url,
+        healthUrl: endpoint.healthUrl,
+        auth: endpoint.auth
+      })),
+      mcp: {
+        serverName: snapshot.connections.mcpServerName,
+        command: snapshot.connections.mcpCommand,
+        config: JSON.parse(snapshot.connections.mcpConfig)
+      },
+      firstCall: "GET /gateway/context with the bearer token, or call gateway_context through MCP."
+    });
+    return;
+  }
+  if (requestUrl.pathname === "/gateway/context") {
+    const agentId = requestUrl.searchParams.get("agentId") || process.env.CLARACORE_AGENT_ID || "http-agent";
+    sendHttpJson(response, 200, await getProductGatewayContext(app, { agentId }));
+    return;
+  }
+  sendHttpJson(response, 404, { error: "not_found" });
+}
+
+async function startHttpAgentGateway() {
+  if (httpAgentGateway.server) return;
+  httpAgentGateway.server = http.createServer((request, response) => {
+    handleHttpAgentRequest(request, response).catch((error) => {
+      sendHttpJson(response, 500, {
+        error: "internal_error",
+        message: error?.message || String(error)
+      });
+    });
+  });
+  await new Promise((resolve, reject) => {
+    httpAgentGateway.server.once("error", reject);
+    httpAgentGateway.server.listen(0, httpAgentGateway.host, () => {
+      httpAgentGateway.port = httpAgentGateway.server.address().port;
+      httpAgentGateway.server.off("error", reject);
+      resolve();
+    });
+  });
+}
+
+function stopHttpAgentGateway() {
+  if (!httpAgentGateway.server) return;
+  httpAgentGateway.server.close();
+  httpAgentGateway.server = null;
+  httpAgentGateway.port = null;
 }
 
 function createTrayIcon() {
@@ -417,6 +578,11 @@ if (!isGatewayMode) {
   ipcMain.handle("claracore:getRuntimeSnapshot", () => getRuntimeSnapshot());
   ipcMain.handle("claracore:getResourceSnapshot", () => getResourceSnapshot());
   ipcMain.handle("claracore:getImportPreview", () => getProductImportPreview(app));
+  ipcMain.handle("claracore:clearLogs", async () => {
+    const result = await clearProductLogs(app);
+    notifyRuntimeChanged("logs-clear");
+    return result;
+  });
   ipcMain.handle("claracore:saveSettings", async (_event, updates) => {
     if (!updates || typeof updates !== "object" || Array.isArray(updates)) return false;
     return saveProductSettings(app, updates);
@@ -631,6 +797,45 @@ if (!isGatewayMode) {
   ipcMain.handle("claracore:createBackup", async () => {
     return createProductBackup(app);
   });
+  ipcMain.handle("claracore:deleteBackup", async (_event, backupId) => {
+    if (typeof backupId !== "string" || backupId.length === 0) return false;
+    const result = await deleteProductBackup(app, backupId);
+    notifyRuntimeChanged("backup-delete");
+    return result;
+  });
+  ipcMain.handle("claracore:exportProductJson", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    const options = input || {};
+    if (!options.targetPath && !options.silent) {
+      const paths = await ensureProductDirectories(app);
+      const defaultPath = path.join(paths.exportsDir, `claracore-product-export-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
+      const result = await dialog.showSaveDialog(mainWindow, {
+        title: "Export ClaraCore Product JSON",
+        defaultPath,
+        filters: [{ name: "JSON", extensions: ["json"] }]
+      });
+      if (result.canceled || !result.filePath) return { canceled: true };
+      options.targetPath = result.filePath;
+      options.allowExternalPath = true;
+    }
+    return exportProductDataJson(app, options);
+  });
+  ipcMain.handle("claracore:importProductJson", async (_event, input) => {
+    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
+    const options = input || {};
+    if (!options.filePath && !options.silent) {
+      const result = await dialog.showOpenDialog(mainWindow, {
+        title: "Import ClaraCore Product JSON",
+        properties: ["openFile"],
+        filters: [{ name: "JSON", extensions: ["json"] }]
+      });
+      if (result.canceled || !result.filePaths?.[0]) return { canceled: true };
+      options.filePath = result.filePaths[0];
+    }
+    const imported = await importProductDataJson(app, options);
+    notifyRuntimeChanged("product-json-import");
+    return imported;
+  });
   ipcMain.handle("claracore:exportMemoryArchive", async (_event, input) => {
     if (input && (typeof input !== "object" || Array.isArray(input))) return false;
     const options = input || {};
@@ -718,6 +923,7 @@ if (!isGatewayMode) {
 
   app.whenReady().then(async () => {
     const { database } = await ensureProductCore(app);
+    await startHttpAgentGateway();
     await database.recordRuntimeEvent({
       level: "info",
       source: "desktop",
@@ -745,6 +951,7 @@ if (!isGatewayMode) {
 
   app.on("before-quit", () => {
     isQuitting = true;
+    stopHttpAgentGateway();
     stopInnerLifeScheduler();
     stopMemoryMaintenanceScheduler();
   });

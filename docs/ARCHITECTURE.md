@@ -20,6 +20,14 @@ The Desktop runtime is Node/Electron.
 - CLI fallback: `core/cli.js`
 
 Agents should use Gateway MCP first, then CLI fallback when MCP is unavailable.
+When the Desktop app is running, Agent Access may also expose a
+token-protected localhost HTTP Agent Gateway for setup JSON and the first
+Gateway context packet. This HTTP surface binds to `127.0.0.1` by default.
+
+Do not show or bind a LAN URL by default. A LAN Agent Gateway must be an
+explicit product mode with visible bind address, bearer token, token
+regeneration, and disable controls because Gateway context includes product
+state such as Shared Line, Memory, and InnerLife status.
 
 Old Python services are not started by the Desktop app during normal product
 use. They are reference implementations and read-only import sources. Product
@@ -71,6 +79,11 @@ Runtime should coordinate cross-module workflows:
 - delegate backup and restore to `core/runtime/backup.js`
 - delegate archive import/export and old-service imports to `core/runtime/imports.js`
 - delegate domain behavior
+
+Product data portability is the normal Data page contract: use verified SQLite
+database backups for exact restore points, and full product JSON for portable
+inspection/import. Old-service imports are migration helpers for explicit
+one-off tasks, not the default user-facing flow.
 
 Domain behavior belongs in:
 
