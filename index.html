@@ -724,6 +724,17 @@
                   </div>
                   <button id="openSettingsDataRoot" class="secondary" type="button" data-i18n="data.openDataDir">Open data folder</button>
                 </div>
+                <div class="settings-grid">
+                  <label class="field wide-field">
+                    <span data-i18n="settings.dataRootOverride">Custom data root</span>
+                    <input id="settingsDataRootOverride" data-i18n-placeholder="settings.dataRootDefaultPlaceholder" placeholder="Use default data directory" />
+                  </label>
+                </div>
+                <div class="settings-actions compact-actions">
+                  <button id="chooseSettingsDataRoot" class="secondary" type="button" data-i18n="settings.chooseDataRoot">Choose folder</button>
+                  <button id="resetSettingsDataRoot" class="secondary" type="button" data-i18n="settings.useDefaultDataRoot">Use default</button>
+                  <button id="relaunchForDataRoot" class="secondary" type="button" data-i18n="settings.restartNow" hidden>Restart now</button>
+                </div>
                 <div id="settingsPathSummary" class="path-chip-list"></div>
                 <details class="settings-path-details">
                   <summary data-i18n="settings.showPathDetails">Show path details</summary>

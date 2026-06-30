@@ -2,7 +2,7 @@ const path = require("path");
 const fs = require("fs/promises");
 const { initializeProductDatabase } = require("../db/database");
 const { previewImportSources } = require("../import-preview");
-const { ensureProductDirectories, resolveProductPaths } = require("./paths");
+const { desktopSettingsPath, ensureProductDirectories, readDesktopSettings, resolveProductPaths } = require("./paths");
 const { createBackupRuntime } = require("./backup");
 const { createImportRuntime } = require("./imports");
 const { PRODUCT_VERSION } = require("../version");
@@ -231,6 +231,7 @@ function buildHealthChecks(app, paths, configuration, databaseSummary, canWriteR
 
 async function buildProductSnapshot(app) {
   const { paths, database } = await ensureProductCore(app);
+  const desktopSettings = readDesktopSettings(app);
   const [configuration, databaseSummary] = await Promise.all([
     database.getConfiguration(paths),
     database.getSummary()
@@ -252,7 +253,7 @@ async function buildProductSnapshot(app) {
   ]);
   const health = buildHealthChecks(app, paths, configuration, databaseSummary, canWriteProbe);
   return {
-    mode: process.env.CLARACORE_DESKTOP_DATA_DIR ? "custom-product-data" : "isolated-product-dev",
+    mode: process.env.CLARACORE_DESKTOP_DATA_DIR || desktopSettings.dataRoot ? "custom-product-data" : "isolated-product-dev",
     productVersion: PRODUCT_VERSION,
     root: paths.appRoot,
     appRoot: paths.appRoot,
@@ -765,5 +766,7 @@ module.exports = {
   endProductInnerLifeSession,
   unrestrictProductMemory,
   updateProductMemory,
+  desktopSettingsPath,
+  readDesktopSettings,
   resolveProductPaths
 };

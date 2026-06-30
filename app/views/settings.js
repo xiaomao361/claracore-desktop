@@ -2,7 +2,8 @@ function createClaraCoreSettingsView(context) {
   const {
     dom,
     t,
-    getSnapshot
+    getSnapshot,
+    state = {}
   } = context;
   const {
     memoriaProvider, memoriaEndpoint, memoriaModel, memoriaApiKey, memoriaModelStatus,
@@ -10,6 +11,7 @@ function createClaraCoreSettingsView(context) {
     innerLifeApiKeySummary, innerLifeModelStatus,
     settingsLanguage, settingsTheme, settingsMotion, settingsCloseBehavior, settingsCloseBehaviorSummary, settingsTrayStatus,
     settingsThemeSummary, settingsMotionSummary, settingsDataStatus, settingsDataRoot, settingsPathSummary, settingsPathDetails,
+    settingsDataRootOverride, relaunchForDataRoot,
     settingsAppVersion, settingsRuntimeMode, settingsDatabaseState, settingsElectronVersion, settingsNodeVersion,
     settingsAppRoot, settingsChromeVersion
   } = dom;
@@ -87,8 +89,17 @@ function childPathLabel(pathValue, rootValue) {
 function renderDataPaths() {
   const snapshot = getSnapshot();
   const data = snapshot?.data || {};
+  const preference = state.dataRootPreference || {};
   const root = data.root || "";
   if (settingsDataRoot) settingsDataRoot.textContent = root || "-";
+  if (settingsDataRootOverride) {
+    settingsDataRootOverride.value = preference.configuredDataRoot || "";
+    settingsDataRootOverride.disabled = Boolean(preference.envOverride);
+    settingsDataRootOverride.placeholder = preference.envOverride
+      ? t("settings.dataRootEnvOverride")
+      : t("settings.dataRootDefaultPlaceholder");
+  }
+  if (relaunchForDataRoot) relaunchForDataRoot.hidden = true;
   if (settingsDataStatus) {
     settingsDataStatus.textContent = data.databasePresent ? t("settings.status.ready") : t("common.notCreated");
     settingsDataStatus.className = data.databasePresent ? "badge ok" : "badge warn";
@@ -98,7 +109,9 @@ function renderDataPaths() {
     ["settings.backupsDir", data.backupsDir, childPathLabel(data.backupsDir, root)],
     ["settings.exportsDir", data.exportsDir, childPathLabel(data.exportsDir, root)],
     ["settings.logsDir", data.logsDir, childPathLabel(data.logsDir, root)],
-    ["settings.runtimeDir", data.runtimeDir, childPathLabel(data.runtimeDir, root)]
+    ["settings.runtimeDir", data.runtimeDir, childPathLabel(data.runtimeDir, root)],
+    ["settings.defaultDataRoot", preference.defaultDataRoot, preference.defaultDataRoot],
+    ["settings.pathConfigFile", preference.configPath, preference.configPath]
   ];
   if (settingsPathSummary) {
     settingsPathSummary.innerHTML = paths

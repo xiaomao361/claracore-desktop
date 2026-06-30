@@ -35,7 +35,15 @@ state such as Shared Line, Memory, and InnerLife status.
 Old Python services are not started by the Desktop app during normal product
 use. They are reference implementations and read-only import sources. Product
 state lives in the Desktop-owned SQLite database selected by
-`CLARACORE_DESKTOP_DATA_DIR` or Electron user data.
+`CLARACORE_DESKTOP_DATA_DIR` or the default Electron user data `data/`
+subdirectory. The product database and product-owned files live under
+`<userData>/data` by default so Electron cache files stay outside the
+ClaraCore data root.
+
+The Settings page can save a custom data root to `<userData>/desktop-settings.json`.
+That file is read on app startup, before opening `claracore.db`; changing the
+path requires restarting the app. `CLARACORE_DESKTOP_DATA_DIR` remains the
+highest-priority override for test and scripted launches.
 
 ## Renderer Boundary
 

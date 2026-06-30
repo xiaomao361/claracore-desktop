@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const os = require("os");
 const path = require("path");
+const fs = require("fs");
 const { initializeProductDatabase } = require("../db/database");
 const { exportProductMemoryArchive, importProductMemoryArchive } = require("../runtime");
 const { PRODUCT_VERSION } = require("../version");
@@ -11,10 +12,33 @@ const SERVER_INFO = {
   version: PRODUCT_VERSION
 };
 
+function defaultUserDataPath() {
+  if (process.versions.electron) {
+    try {
+      return require("electron").app.getPath("userData");
+    } catch (_error) {
+      // Fall back to the development CLI path below when Electron is not ready.
+    }
+  }
+  return path.join(os.homedir(), "Library", "Application Support", "claracore-desktop");
+}
+
+function configuredDataRoot(userDataPath) {
+  try {
+    const raw = fs.readFileSync(path.join(userDataPath, "desktop-settings.json"), "utf8");
+    const settings = JSON.parse(raw);
+    const dataRoot = String(settings?.dataRoot || "").trim();
+    return dataRoot ? path.resolve(dataRoot) : "";
+  } catch (_error) {
+    return "";
+  }
+}
+
 function productPaths() {
+  const userDataPath = defaultUserDataPath();
   const dataRoot = process.env.CLARACORE_DESKTOP_DATA_DIR
     ? path.resolve(process.env.CLARACORE_DESKTOP_DATA_DIR)
-    : path.join(os.homedir(), ".claracore-desktop", "product-dev");
+    : configuredDataRoot(userDataPath) || path.join(userDataPath, "data");
   return {
     dataRoot,
     databasePath: path.join(dataRoot, "claracore.db"),

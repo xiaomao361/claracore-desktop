@@ -75,7 +75,9 @@ const {
   startProductInnerLifeSession,
   endProductInnerLifeSession,
   unrestrictProductMemory,
-  updateProductMemory
+  updateProductMemory,
+  desktopSettingsPath,
+  readDesktopSettings
 } = require("../core/runtime");
 
 const APP_ROOT = path.resolve(__dirname, "..");
@@ -100,6 +102,55 @@ const httpAgentGateway = {
   port: null,
   token: crypto.randomBytes(32).toString("base64url")
 };
+
+function defaultDataRoot() {
+  return path.join(app.getPath("userData"), "data");
+}
+
+function currentDataRootPreference() {
+  const settings = readDesktopSettings(app, { fresh: true });
+  const configuredDataRoot = String(settings.dataRoot || "").trim();
+  const envDataRoot = String(process.env.CLARACORE_DESKTOP_DATA_DIR || "").trim();
+  const effectiveDataRoot = envDataRoot || configuredDataRoot || defaultDataRoot();
+  return {
+    configPath: desktopSettingsPath(app),
+    defaultDataRoot: defaultDataRoot(),
+    configuredDataRoot,
+    envDataRoot,
+    effectiveDataRoot: path.resolve(effectiveDataRoot),
+    envOverride: Boolean(envDataRoot),
+    canRelaunch: app.isPackaged
+  };
+}
+
+async function saveDataRootPreference(dataRoot) {
+  const nextDataRoot = String(dataRoot || "").trim();
+  const activeDataRoot = (await ensureProductDirectories(app)).dataRoot;
+  if (process.env.CLARACORE_DESKTOP_DATA_DIR) {
+    return {
+      ...currentDataRootPreference(),
+      saved: false,
+      restartRequired: false,
+      message: "CLARACORE_DESKTOP_DATA_DIR is set for this process."
+    };
+  }
+  const settings = readDesktopSettings(app, { fresh: true });
+  const configPath = desktopSettingsPath(app);
+  if (nextDataRoot) {
+    settings.dataRoot = path.resolve(nextDataRoot);
+    await fs.mkdir(settings.dataRoot, { recursive: true });
+  } else {
+    delete settings.dataRoot;
+  }
+  await fs.mkdir(path.dirname(configPath), { recursive: true });
+  await fs.writeFile(configPath, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
+  const preference = currentDataRootPreference();
+  return {
+    ...preference,
+    saved: true,
+    restartRequired: path.resolve(activeDataRoot) !== path.resolve(preference.effectiveDataRoot)
+  };
+}
 
 if (isGatewayMode) {
   require("../core/gateway/mcp-server").start();
@@ -1002,6 +1053,28 @@ if (!isGatewayMode) {
   ipcMain.handle("claracore:previewRestore", async (_event, backupId) => {
     if (typeof backupId !== "string" || backupId.length === 0) return false;
     return previewProductRestore(app, backupId);
+  });
+  ipcMain.handle("claracore:getDataRootPreference", async () => currentDataRootPreference());
+  ipcMain.handle("claracore:chooseDataRoot", async () => {
+    const preference = currentDataRootPreference();
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: "Choose ClaraCore data directory",
+      defaultPath: preference.effectiveDataRoot,
+      properties: ["openDirectory", "createDirectory"]
+    });
+    if (result.canceled || !result.filePaths?.[0]) {
+      return { canceled: true, path: preference.configuredDataRoot || preference.effectiveDataRoot };
+    }
+    return { canceled: false, path: result.filePaths[0] };
+  });
+  ipcMain.handle("claracore:saveDataRootPreference", async (_event, dataRoot) => saveDataRootPreference(dataRoot));
+  ipcMain.handle("claracore:relaunch", () => {
+    if (!app.isPackaged) {
+      return { relaunched: false, reason: "development-mode" };
+    }
+    app.relaunch();
+    app.quit();
+    return { relaunched: true };
   });
   ipcMain.handle("claracore:openPath", async (_event, targetPath) => {
     if (typeof targetPath !== "string" || targetPath.length === 0) return false;

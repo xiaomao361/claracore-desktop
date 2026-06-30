@@ -211,6 +211,18 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   previewRestore(backupId) {
     return ipcRenderer.invoke("claracore:previewRestore", backupId);
   },
+  getDataRootPreference() {
+    return ipcRenderer.invoke("claracore:getDataRootPreference");
+  },
+  chooseDataRoot() {
+    return ipcRenderer.invoke("claracore:chooseDataRoot");
+  },
+  saveDataRootPreference(dataRoot) {
+    return ipcRenderer.invoke("claracore:saveDataRootPreference", dataRoot);
+  },
+  relaunch() {
+    return ipcRenderer.invoke("claracore:relaunch");
+  },
   openPath(targetPath) {
     return ipcRenderer.invoke("claracore:openPath", targetPath);
   },

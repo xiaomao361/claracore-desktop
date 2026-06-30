@@ -150,6 +150,24 @@ Use the CLI fallback:
 node core/cli.js --help
 ```
 
+## Data Directory
+
+ClaraCore product data lives under one data root. By default, Desktop stores
+product files under the Electron user data `data/` subdirectory:
+
+```text
+~/Library/Application Support/ClaraCore Desktop/data
+```
+
+The product database is `claracore.db`; backups, exports, logs, and runtime
+cache files live beside it under that data root. Electron/Chromium cache files
+remain in the user data root outside `data/`.
+
+You can change the product data root from `Settings -> Data paths`. The path is
+saved in `desktop-settings.json` and takes effect after restarting the app.
+`CLARACORE_DESKTOP_DATA_DIR` remains available as the highest-priority override
+for tests and scripted launches.
+
 ## Current Code Layout
 
 The app has no renderer build step. `index.html` loads classic scripts.

@@ -283,3 +283,9 @@
   justify-content: flex-end;
   margin-top: 16px;
 }
+
+.compact-actions {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  margin-top: 10px;
+}

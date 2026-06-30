@@ -46,7 +46,13 @@ Agent setup should include:
 
 - command: the packaged app executable
 - args: `["--gateway"]`
-- env: `CLARACORE_DESKTOP_DATA_DIR`
+- env: `CLARACORE_DESKTOP_DATA_DIR` only when using a custom data directory
+
+By default, packaged Desktop data is created under:
+
+```text
+~/Library/Application Support/ClaraCore Desktop/data
+```
 
 Development mode still uses:
 

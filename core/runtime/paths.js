@@ -1,15 +1,38 @@
 const path = require("path");
 const fs = require("fs/promises");
+const fsSync = require("fs");
+
+const DESKTOP_SETTINGS_FILE = "desktop-settings.json";
+let cachedDesktopSettings = null;
+
+function desktopSettingsPath(app) {
+  return path.join(app.getPath("userData"), DESKTOP_SETTINGS_FILE);
+}
+
+function readDesktopSettings(app, options = {}) {
+  if (!options.fresh && cachedDesktopSettings) return cachedDesktopSettings;
+  try {
+    const raw = fsSync.readFileSync(desktopSettingsPath(app), "utf8");
+    const parsed = JSON.parse(raw);
+    const settings = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    if (!options.fresh) cachedDesktopSettings = settings;
+    return settings;
+  } catch (_error) {
+    if (!options.fresh) cachedDesktopSettings = {};
+    return {};
+  }
+}
 
 function resolveDataRoot(app) {
   if (process.env.CLARACORE_DESKTOP_DATA_DIR) {
     return path.resolve(process.env.CLARACORE_DESKTOP_DATA_DIR);
   }
-  // packaged: userData = ~/Library/Application Support/ClaraCore Desktop  (clean root)
-  // dev: append "dev" so local dev data doesn't pollute production path
-  if (app.isPackaged) {
-    return app.getPath("userData");
+  const configuredDataRoot = String(readDesktopSettings(app).dataRoot || "").trim();
+  if (configuredDataRoot) {
+    return path.resolve(configuredDataRoot);
   }
+  // Keep ClaraCore product data under one explicit child folder so Electron
+  // userData cache files do not mix with the product database and exports.
   return path.join(app.getPath("userData"), "data");
 }
 
@@ -40,7 +63,9 @@ async function ensureProductDirectories(app) {
 }
 
 module.exports = {
+  desktopSettingsPath,
   ensureProductDirectories,
+  readDesktopSettings,
   resolveDataRoot,
   resolveProductPaths
 };

@@ -32,7 +32,13 @@ For packaged mode, the MCP config should use:
 
 - command: the app executable inside `ClaraCore Desktop.app`
 - args: `["--gateway"]`
-- env: `CLARACORE_DESKTOP_DATA_DIR`
+- env: `CLARACORE_DESKTOP_DATA_DIR` only when using a custom data directory
+
+The default packaged data root is:
+
+```text
+~/Library/Application Support/ClaraCore Desktop/data
+```
 
 ## Backup Check
 

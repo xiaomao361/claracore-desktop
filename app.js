@@ -191,7 +191,8 @@ const rendererState = {
   innerLifeDigestTotals: {},
   innerLifeInboxLoading: false,
   innerLifeInboxTotals: {},
-  selectedSharedLineId: ""
+  selectedSharedLineId: "",
+  dataRootPreference: null
 };
 let runtimeRefreshTimer = null;
 const logsView = window.createClaraCoreLogsView({
@@ -240,7 +241,8 @@ const settingsView = window.createClaraCoreSettingsView({
   t,
   getSnapshot: () => snapshot,
   getAppearancePreferences,
-  formatMode
+  formatMode,
+  state: rendererState
 });
 const sharedInnerLifeView = window.createClaraCoreSharedInnerLifeView({
   dom: window.ClaraCoreDom,
@@ -556,7 +558,10 @@ function setLanguage(language) {
 }
 
 async function refresh() {
-  snapshot = await window.ClaraCoreDesktop.getRuntimeSnapshot();
+  [snapshot, rendererState.dataRootPreference] = await Promise.all([
+    window.ClaraCoreDesktop.getRuntimeSnapshot(),
+    window.ClaraCoreDesktop.getDataRootPreference()
+  ]);
   memoriaView.resetLoadedTabs();
   renderSnapshot();
   if (memoriaView.getActiveTab() !== "search" && memoriaView.getActiveTab() !== "labels" && memoriaView.getActiveTab() !== "graph") {
@@ -565,7 +570,10 @@ async function refresh() {
 }
 
 async function refreshRuntimeSnapshotOnly() {
-  snapshot = await window.ClaraCoreDesktop.getRuntimeSnapshot();
+  [snapshot, rendererState.dataRootPreference] = await Promise.all([
+    window.ClaraCoreDesktop.getRuntimeSnapshot(),
+    window.ClaraCoreDesktop.getDataRootPreference()
+  ]);
   renderSnapshot();
 }
 
@@ -683,14 +691,55 @@ saveAppearanceSettings?.addEventListener("click", async () => {
     setTheme(preferences.theme);
     setMotion(preferences.motion);
     setWindowCloseBehavior(preferences.closeBehavior);
+    if (window.ClaraCoreDom.settingsDataRootOverride) {
+      const result = await window.ClaraCoreDesktop.saveDataRootPreference(window.ClaraCoreDom.settingsDataRootOverride.value);
+      rendererState.dataRootPreference = result;
+      if (result.envOverride) {
+        appearanceSettingsNotice.textContent = t("settings.dataRootEnvOverride");
+      }
+    }
     renderSettings();
-    showCopyNotice(t("settings.appearanceSaved"), appearanceSettingsNotice);
+    if (
+      rendererState.dataRootPreference?.restartRequired &&
+      rendererState.dataRootPreference?.canRelaunch &&
+      window.ClaraCoreDom.relaunchForDataRoot
+    ) {
+      window.ClaraCoreDom.relaunchForDataRoot.hidden = false;
+    }
+    if (!appearanceSettingsNotice.textContent || appearanceSettingsNotice.textContent === t("common.checking")) {
+      showCopyNotice(t("settings.appearanceSaved"), appearanceSettingsNotice);
+    } else if (rendererState.dataRootPreference?.restartRequired) {
+      appearanceSettingsNotice.textContent = rendererState.dataRootPreference?.canRelaunch
+        ? t("settings.dataRootRestartRequired")
+        : t("settings.dataRootManualRestartRequired");
+    }
   } catch (error) {
     console.error(error);
     appearanceSettingsNotice.textContent = t("settings.appearanceSaveFailed");
   } finally {
     saveAppearanceSettings.disabled = false;
   }
+});
+
+window.ClaraCoreDom.chooseSettingsDataRoot?.addEventListener("click", async () => {
+  const result = await window.ClaraCoreDesktop.chooseDataRoot();
+  if (!result?.canceled && window.ClaraCoreDom.settingsDataRootOverride) {
+    window.ClaraCoreDom.settingsDataRootOverride.value = result.path || "";
+  }
+});
+
+window.ClaraCoreDom.resetSettingsDataRoot?.addEventListener("click", () => {
+  if (window.ClaraCoreDom.settingsDataRootOverride) {
+    window.ClaraCoreDom.settingsDataRootOverride.value = "";
+  }
+});
+
+window.ClaraCoreDom.relaunchForDataRoot?.addEventListener("click", () => {
+  window.ClaraCoreDesktop.relaunch().then((result) => {
+    if (result?.relaunched === false) {
+      appearanceSettingsNotice.textContent = t("settings.dataRootManualRestartRequired");
+    }
+  });
 });
 
 window.ClaraCoreDom.openSettingsDataRoot?.addEventListener("click", () => {
