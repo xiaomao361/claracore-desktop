@@ -34,6 +34,10 @@ Read these before adding new features:
   Gateway, and documentation boundaries.
 - [Cleanup Plan](docs/CLEANUP_PLAN.md): active technical-debt cleanup order before
   feature expansion.
+- [Polish Log](docs/POLISH_LOG.md): daily-stable target, focused verification
+  matrix, and active runtime issues.
+- [Runtime Memory Policy](docs/RUNTIME_MEMORY_POLICY.md): small snapshot,
+  pagination, resource ownership, memory telemetry, and long-run checks.
 - Module boundary notes:
   - [Renderer modules](app/README.md)
   - [Runtime](core/runtime/README.md)
@@ -130,6 +134,12 @@ Useful narrower smoke gates:
 npm run test:phase5
 npm run test:backup
 npm run test:import-preview
+```
+
+Run the opt-in long-run memory stability check:
+
+```bash
+npm run test:memory-long-run
 ```
 
 Start the desktop app:

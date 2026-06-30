@@ -4,6 +4,8 @@ const fs = require("fs/promises");
 const os = require("os");
 const http = require("http");
 const crypto = require("crypto");
+const { execFile, spawn, spawnSync } = require("child_process");
+const { promisify } = require("util");
 const { PRODUCT_VERSION } = require("../core/version");
 const {
   applyProductInnerLifeShareToMemory,
@@ -57,6 +59,7 @@ const {
   previewProductRestore,
   processProductMemoryEmbeddings,
   processProductInnerLifeOnce,
+  resetCachedDatabase,
   reviewProductInnerLifeShare,
   renameProductSharedLine,
   restoreProductBackup,
@@ -75,6 +78,7 @@ const {
   startProductInnerLifeSession,
   endProductInnerLifeSession,
   unrestrictProductMemory,
+  updateProductInnerLifeProfile,
   updateProductMemory,
   desktopSettingsPath,
   readDesktopSettings
@@ -84,6 +88,25 @@ const APP_ROOT = path.resolve(__dirname, "..");
 const APP_ICON_PATH = path.join(APP_ROOT, "assets", "generated", "icon-512.png");
 const TRAY_TEMPLATE_PATH = path.join(APP_ROOT, "assets", "generated", "tray-template-32.png");
 const TRAY_COLOR_PATH = path.join(APP_ROOT, "assets", "generated", "tray-color-32.png");
+const execFileAsync = promisify(execFile);
+
+function applyCliEnvArgs(argv = process.argv) {
+  for (let index = 0; index < argv.length; index += 1) {
+    if (argv[index] !== "--env") continue;
+    const assignment = String(argv[index + 1] || "");
+    const equalsIndex = assignment.indexOf("=");
+    if (equalsIndex <= 0) continue;
+    const key = assignment.slice(0, equalsIndex).trim();
+    const value = assignment.slice(equalsIndex + 1);
+    if (/^[A-Z_][A-Z0-9_]*$/.test(key)) {
+      process.env[key] = value;
+    }
+    index += 1;
+  }
+}
+
+applyCliEnvArgs();
+
 const isGatewayMode = process.argv.includes("--gateway");
 let mainWindow = null;
 let tray = null;
@@ -96,12 +119,41 @@ let innerLifeSchedulerBusy = false;
 let memoryMaintenanceScheduler = null;
 let memoryMaintenanceSchedulerBusy = false;
 const appStartedAt = Date.now();
+const INNERLIFE_SCHEDULER_INTERVAL_MS = 60 * 1000;
+const RESOURCE_SAMPLE_MAX_AGE_MS = 10 * 60 * 1000;
 const httpAgentGateway = {
   host: "127.0.0.1",
   server: null,
+  sockets: new Set(),
   port: null,
   token: crypto.randomBytes(32).toString("base64url")
 };
+let forceQuitTimer = null;
+const resourceMemorySamples = [];
+
+function hideGatewayFromDock() {
+  if (!isGatewayMode || process.platform !== "darwin") return;
+  if (typeof app.setActivationPolicy === "function") {
+    app.setActivationPolicy("accessory");
+  }
+  app.whenReady().then(() => {
+    if (app.dock && typeof app.dock.hide === "function") {
+      app.dock.hide();
+    }
+  });
+}
+
+function openUiFromGatewayActivation() {
+  if (!isGatewayMode || !app.isPackaged) return;
+  const child = spawn(process.execPath, [], {
+    detached: true,
+    stdio: "ignore",
+    env: {
+      ...process.env
+    }
+  });
+  child.unref();
+}
 
 function defaultDataRoot() {
   return path.join(app.getPath("userData"), "data");
@@ -153,7 +205,28 @@ async function saveDataRootPreference(dataRoot) {
 }
 
 if (isGatewayMode) {
+  hideGatewayFromDock();
+  app.on("activate", openUiFromGatewayActivation);
+  app.on("open-file", (event) => {
+    event.preventDefault();
+    openUiFromGatewayActivation();
+  });
+  app.on("open-url", (event) => {
+    event.preventDefault();
+    openUiFromGatewayActivation();
+  });
   require("../core/gateway/mcp-server").start();
+}
+
+const hasSingleInstanceLock = isGatewayMode || app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) {
+  app.quit();
+} else if (!isGatewayMode) {
+  app.on("second-instance", () => {
+    if (isQuitting) return;
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    showMainWindow();
+  });
 }
 
 const trayLabels = {
@@ -216,6 +289,94 @@ function formatBytes(bytes) {
   return `${value.toFixed(precision)} ${units[unitIndex]}`;
 }
 
+function formatBytesDelta(bytes) {
+  if (!Number.isFinite(bytes)) return "0 B";
+  const prefix = bytes > 0 ? "+" : bytes < 0 ? "-" : "";
+  return `${prefix}${formatBytes(Math.abs(bytes))}`;
+}
+
+function memoryTrend(samples, windowMs) {
+  if (samples.length < 2) return { deltaBytes: 0, text: "0 B" };
+  const latest = samples[samples.length - 1];
+  const cutoff = latest.at - windowMs;
+  const baseline = samples.find((sample) => sample.at >= cutoff) || samples[0];
+  const deltaBytes = latest.totalRssBytes - baseline.totalRssBytes;
+  return {
+    deltaBytes,
+    text: formatBytesDelta(deltaBytes)
+  };
+}
+
+async function getRendererMemorySnapshot() {
+  if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.webContents?.getProcessMemoryInfo) {
+    return null;
+  }
+  try {
+    const info = await mainWindow.webContents.getProcessMemoryInfo();
+    const rssBytes = Number(info?.workingSetSize || 0) * 1024;
+    return {
+      rssBytes,
+      rssText: rssBytes > 0 ? formatBytes(rssBytes) : "-"
+    };
+  } catch (_error) {
+    return null;
+  }
+}
+
+async function getGatewayMemorySnapshot() {
+  if (isGatewayMode) {
+    const rssBytes = process.memoryUsage().rss;
+    return {
+      rssBytes,
+      rssText: formatBytes(rssBytes),
+      processCount: 1,
+      source: "current"
+    };
+  }
+  if (process.platform !== "darwin") {
+    return {
+      rssBytes: 0,
+      rssText: "-",
+      processCount: 0,
+      source: "unsupported"
+    };
+  }
+  try {
+    const { stdout } = await execFileAsync("/bin/ps", ["-axo", "rss=,command="], {
+      maxBuffer: 1024 * 1024
+    });
+    const rows = String(stdout || "")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.includes("--gateway") || line.includes("core/gateway/mcp-server.js"));
+    const rssBytes = rows.reduce((sum, line) => {
+      const rssKb = Number.parseInt(line.split(/\s+/)[0], 10) || 0;
+      return sum + rssKb * 1024;
+    }, 0);
+    return {
+      rssBytes,
+      rssText: rssBytes > 0 ? formatBytes(rssBytes) : "-",
+      processCount: rows.length,
+      source: "ps"
+    };
+  } catch (_error) {
+    return {
+      rssBytes: 0,
+      rssText: "-",
+      processCount: 0,
+      source: "unavailable"
+    };
+  }
+}
+
+function rememberResourceMemorySample(sample) {
+  resourceMemorySamples.push(sample);
+  const cutoff = sample.at - RESOURCE_SAMPLE_MAX_AGE_MS;
+  while (resourceMemorySamples.length > 0 && resourceMemorySamples[0].at < cutoff) {
+    resourceMemorySamples.shift();
+  }
+}
+
 function formatDuration(milliseconds) {
   const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
   const hours = Math.floor(totalSeconds / 3600);
@@ -259,6 +420,37 @@ async function getResourceSnapshot() {
   const freeMem = os.freemem();
   const usedMem = Math.max(0, totalMem - freeMem);
   const disk = await getDiskSnapshot(dataRoot);
+  const mainMemory = process.memoryUsage();
+  const [rendererMemory, gatewayMemory] = await Promise.all([
+    getRendererMemorySnapshot(),
+    getGatewayMemorySnapshot()
+  ]);
+  const totalProcessRssBytes =
+    mainMemory.rss +
+    Number(rendererMemory?.rssBytes || 0) +
+    Number(gatewayMemory?.rssBytes || 0);
+  rememberResourceMemorySample({
+    at: Date.now(),
+    totalRssBytes: totalProcessRssBytes
+  });
+  const processMemory = {
+    totalRssBytes: totalProcessRssBytes,
+    totalRssText: formatBytes(totalProcessRssBytes),
+    main: {
+      rssBytes: mainMemory.rss,
+      heapUsedBytes: mainMemory.heapUsed,
+      externalBytes: mainMemory.external,
+      rssText: formatBytes(mainMemory.rss),
+      heapUsedText: formatBytes(mainMemory.heapUsed)
+    },
+    renderer: rendererMemory,
+    gateway: gatewayMemory,
+    trend: {
+      oneMinute: memoryTrend(resourceMemorySamples, 60 * 1000),
+      tenMinutes: memoryTrend(resourceMemorySamples, 10 * 60 * 1000),
+      sampleCount: resourceMemorySamples.length
+    }
+  };
   return {
     appVersion: PRODUCT_VERSION,
     uptime: formatDuration(Date.now() - appStartedAt),
@@ -269,6 +461,7 @@ async function getResourceSnapshot() {
       percent: totalMem > 0 ? Math.round((usedMem / totalMem) * 100) : null,
       text: `${formatBytes(usedMem)} / ${formatBytes(totalMem)}`
     },
+    processMemory,
     disk,
     localTime: new Date().toLocaleString()
   };
@@ -499,6 +692,12 @@ async function startHttpAgentGateway() {
       });
     });
   });
+  httpAgentGateway.server.on("connection", (socket) => {
+    httpAgentGateway.sockets.add(socket);
+    socket.on("close", () => {
+      httpAgentGateway.sockets.delete(socket);
+    });
+  });
   await new Promise((resolve, reject) => {
     httpAgentGateway.server.once("error", reject);
     httpAgentGateway.server.listen(0, httpAgentGateway.host, () => {
@@ -512,8 +711,31 @@ async function startHttpAgentGateway() {
 function stopHttpAgentGateway() {
   if (!httpAgentGateway.server) return;
   httpAgentGateway.server.close();
+  for (const socket of httpAgentGateway.sockets) {
+    socket.destroy();
+  }
+  httpAgentGateway.sockets.clear();
   httpAgentGateway.server = null;
   httpAgentGateway.port = null;
+}
+
+function stopSiblingGatewayProcesses() {
+  if (isGatewayMode) return;
+  if (process.platform !== "darwin") return;
+  try {
+    spawnSync("/usr/bin/pkill", ["-f", `${process.execPath} --gateway`], {
+      stdio: "ignore"
+    });
+  } catch (_error) {
+    // Best effort: quitting the UI should release packaged Gateway helpers.
+  }
+}
+
+function forceExitIfQuitStalls() {
+  if (forceQuitTimer) return;
+  forceQuitTimer = setTimeout(() => {
+    app.exit(0);
+  }, 1500);
 }
 
 function createTrayIcon() {
@@ -631,7 +853,7 @@ async function runInnerLifeScheduledTick() {
   if (innerLifeSchedulerBusy || isQuitting) return;
   innerLifeSchedulerBusy = true;
   try {
-    const result = await tickProductInnerLifeDaemon(app, { force: false });
+    const result = await tickProductInnerLifeDaemon(app, { force: false, includeSnapshot: false });
     if (result?.reason && result.reason !== "paused" && result.reason !== "not_due") {
       notifyRuntimeChanged("innerlife-daemon", {
         daemonReason: result.reason,
@@ -652,7 +874,7 @@ function startInnerLifeScheduler() {
   if (innerLifeScheduler) return;
   innerLifeScheduler = setInterval(() => {
     runInnerLifeScheduledTick().catch(console.error);
-  }, 1000);
+  }, INNERLIFE_SCHEDULER_INTERVAL_MS);
   if (typeof innerLifeScheduler.unref === "function") innerLifeScheduler.unref();
 }
 
@@ -717,7 +939,7 @@ function isPlainObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-if (!isGatewayMode) {
+if (!isGatewayMode && hasSingleInstanceLock) {
   ipcMain.handle("claracore:getRuntimeSnapshot", () => getRuntimeSnapshot());
   ipcMain.handle("claracore:getResourceSnapshot", () => getResourceSnapshot());
   ipcMain.handle("claracore:getImportPreview", () => getProductImportPreview(app));
@@ -896,6 +1118,12 @@ if (!isGatewayMode) {
   ipcMain.handle("claracore:getInnerLifeInbox", async (_event, input) => {
     if (input && (typeof input !== "object" || Array.isArray(input))) return false;
     return getProductInnerLifeInbox(app, input || {});
+  });
+  ipcMain.handle("claracore:updateInnerLifeProfile", async (_event, input) => {
+    if (!isPlainObject(input)) return false;
+    const result = await updateProductInnerLifeProfile(app, input);
+    notifyRuntimeChanged("innerlife-profile");
+    return result;
   });
   ipcMain.handle("claracore:processInnerLifeOnce", async (_event, input) => {
     if (input && (typeof input !== "object" || Array.isArray(input))) return false;
@@ -1138,8 +1366,17 @@ if (!isGatewayMode) {
 
   app.on("before-quit", () => {
     isQuitting = true;
+    forceExitIfQuitStalls();
     stopHttpAgentGateway();
+    stopSiblingGatewayProcesses();
     stopInnerLifeScheduler();
     stopMemoryMaintenanceScheduler();
+    resetCachedDatabase();
+  });
+  app.on("will-quit", () => {
+    if (forceQuitTimer) {
+      clearTimeout(forceQuitTimer);
+      forceQuitTimer = null;
+    }
   });
 }

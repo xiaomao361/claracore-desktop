@@ -83,6 +83,28 @@ Use `node core/cli.js shared-line <command>`:
 
 The agent-facing CLI/MCP surface now accepts the old Continuity shared-reality and affective fields as formal inputs. They are persisted in `current_positions.metadata_json` and included in resume packets. Continuity-specific `agent_state` and `model_adjustments` are product-owned tables and are also included in resume packets.
 
+## Current Position Semantics
+
+There is exactly one current position per Shared Line. Imported legacy data may
+carry old position ids, so updates must not assume the current position id is
+always `position_${lineId}`. The write path must:
+
+- resolve the target line first,
+- reuse the existing current position id when one already exists,
+- upsert `current_positions` by `line_id`,
+- append to `continuity_position_history`,
+- append to `continuity_snapshots`,
+- return a resume packet for the line that was actually written.
+
+`shared_line_update` and the CLI `shared-line update` follow this rule. Passing
+`lineId` updates that exact active line. Omitting `lineId` updates the current
+active line, not an agent-inferred recent line. Agents that maintain several
+lines should call `shared_line_list` and pass the real `lineId` explicitly.
+
+The default line exists as a fallback, but reading or ensuring it exists must
+not refresh its `updated_at`; otherwise it can incorrectly become the most
+recent line for agent-scoped views.
+
 ## Arc Lifecycle
 
 The affective trace and position history are managed arcs, not unbounded logs:

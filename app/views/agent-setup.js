@@ -3,7 +3,7 @@ function createClaraCoreAgentSetupView({ dom, t, getSnapshot, copyValue }) {
     const snapshot = getSnapshot();
     if (!snapshot?.connections) return t("common.checking");
     const agentIdentity = snapshot.connections.agentIdentity || {};
-    const agentExamples = agentIdentity.examples || ["claude-code:clara", "codex", "hermes:lara"];
+    const agentExamples = agentIdentity.examples || ["hermes:lara", "claude-code:clara", "codex"];
     const endpoints =
       (snapshot.connections.httpEndpoints || [])
         .map((endpoint) => {
@@ -25,10 +25,9 @@ Desktop owns the product Gateway, Memoria, Shared Line, and InnerLife state for 
 
 1. Install ClaraCore Desktop as an MCP server in your own agent client.
 2. Set \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\` to your own stable agent id.
-3. Call \`claracore_connection_test\` with that same agent id.
-4. Call \`gateway_context\` first for the current working packet.
-5. Use exposed product Gateway tools for Memory, Shared Line, InnerLife, traces, diagnostics, import/export, and maintenance.
-6. Use CLI fallback only when MCP is unavailable or when a local recovery script needs it.
+3. Call \`gateway_context\` first for the current working packet.
+4. Use exposed product Gateway tools for Memory, Shared Line, InnerLife, traces, diagnostics, import/export, and maintenance.
+5. Use CLI fallback only when MCP is unavailable or when a local recovery script needs it.
 
 ## Agent Identity Contract
 
@@ -56,12 +55,10 @@ ${snapshot.connections.mcpConfig}
 
 ## First Context Call
 
-After installing, call:
-
-1. \`claracore_connection_test\` with your stable \`agentId\`.
-2. \`gateway_context\`.
+After installing, call \`gateway_context\` with your stable \`agentId\`.
 
 \`gateway_context\` returns the current Shared Line, recent Memory, InnerLife state, Doctor guidance, and recovery advice in one packet.
+Any successful MCP call appears in Agent Access as recent agent activity.
 
 ## CLI Fallback
 
@@ -73,15 +70,15 @@ node core/cli.js stats
 node core/cli.js recall --query "what should I know before continuing?"
 node core/cli.js shared-line get
 node core/cli.js innerlife status
-node core/cli.js innerlife doctor --agent codex
+node core/cli.js innerlife doctor --agent <agent-id>
 \`\`\`
 
 For writes, keep content factual and agent-scoped:
 
 \`\`\`bash
-node core/cli.js store --body "observable fact" --labels codex
+node core/cli.js store --body "observable fact" --labels agent-id:<agent-id>
 node core/cli.js shared-line update --summary "current resumable position"
-node core/cli.js innerlife inbox --agent codex --body "material to digest later"
+node core/cli.js innerlife inbox --agent <agent-id> --body "material to digest later"
 \`\`\`
 
 ## Runtime Paths

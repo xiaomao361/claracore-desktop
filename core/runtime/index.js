@@ -145,7 +145,7 @@ function gatewayLaunchConfig(app, paths) {
 
 function productAgentSetup(app, paths, configuration) {
   const launch = gatewayLaunchConfig(app, paths);
-  const agentIdentityExamples = ["claude-code:clara", "codex", "hermes:lara"];
+  const agentIdentityExamples = ["hermes:lara", "claude-code:clara", "codex"];
   return {
     gatewayStatus: "available",
     mcpServerName: "claracore-desktop",
@@ -237,10 +237,11 @@ async function buildProductSnapshot(app) {
     database.getSummary()
   ]);
   const [
-    memoryStats, memoryMaintenance,
+    recentMemories, memoryStats, memoryMaintenance,
     sharedLine, innerLife, gatewayTraces, runtimeEvents, backups,
     importPreview, canWriteProbe
   ] = await Promise.all([
+    database.listMemories(20),
     database.getMemoryStats(),
     database.getMemoryMaintenanceReport(),
     database.getResumePacket(),
@@ -271,6 +272,8 @@ async function buildProductSnapshot(app) {
     health,
     connections: productAgentSetup(app, paths, configuration),
     configuration,
+    memories: recentMemories,
+    recentMemories,
     memoryStats,
     memoryMaintenance,
     sharedLine,
@@ -290,6 +293,14 @@ async function buildProductSnapshot(app) {
 let _cachedDatabase = null;
 let _cachedDatabasePath = null;
 
+function resetCachedDatabase() {
+  if (_cachedDatabase && typeof _cachedDatabase.close === "function") {
+    _cachedDatabase.close();
+  }
+  _cachedDatabase = null;
+  _cachedDatabasePath = null;
+}
+
 async function ensureProductCore(app) {
   const paths = await ensureProductDirectories(app);
   if (!_cachedDatabase || _cachedDatabasePath !== paths.databasePath) {
@@ -306,6 +317,7 @@ async function ensureProductCore(app) {
 const backupRuntime = createBackupRuntime({
   ensureProductCore,
   productVersion: PRODUCT_VERSION,
+  resetCachedDatabase,
   sqlString,
   timestampForFilename
 });
@@ -314,6 +326,7 @@ const importRuntime = createImportRuntime({
   createProductBackup,
   ensureProductCore,
   productVersion: PRODUCT_VERSION,
+  resetCachedDatabase,
   sqlString,
   timestampForFilename
 });
@@ -411,7 +424,7 @@ async function getProductArchivedMemories(app, input = {}) {
 
 async function getProductMemoryGraph(app, input = {}) {
   const paths = await ensureProductDirectories(app);
-  const database = await initializeProductDatabase(paths.databasePath);
+  const { database } = await ensureProductCore(app);
   if (input?.includeRestricted) {
     return (await readMemoryGraphCache(paths, input || {})) || database.getMemoryGraph(input || {});
   }
@@ -424,7 +437,7 @@ async function getProductMemoryMaintenance(app) {
 
 async function runProductMemoryMaintenance(app, input = {}) {
   const paths = await ensureProductDirectories(app);
-  const database = await initializeProductDatabase(paths.databasePath);
+  const { database } = await ensureProductCore(app);
   const maintenance = await database.runMemoryMaintenance(input || {});
   let graphCache = null;
   let embeddings = null;
@@ -626,6 +639,18 @@ async function getProductInnerLifeDoctor(app, agentId = "codex") {
   return innerlife.doctor(await ensureProductCore(app), agentId);
 }
 
+async function updateProductInnerLifeProfile(app, input = {}) {
+  return innerlife.updateProfile(await ensureProductCore(app), input);
+}
+
+async function listProductInnerLifeProfiles(app, input = {}) {
+  return innerlife.profiles(await ensureProductCore(app), input);
+}
+
+async function deleteProductInnerLifeProfile(app, input = {}) {
+  return innerlife.deleteProfile(await ensureProductCore(app), input);
+}
+
 async function submitProductInnerLifeInbox(app, input) {
   return innerlife.submitInbox(await ensureProductCore(app), input);
 }
@@ -711,6 +736,7 @@ module.exports = {
   createProductMemory,
   createProductMemoryRecord,
   deleteProductBackup,
+  deleteProductInnerLifeProfile,
   deleteProductMemory,
   deleteProductMemoryLabelAlias,
   embedProductMemory,
@@ -742,12 +768,14 @@ module.exports = {
   importOldContinuityIntoProduct,
   importOldInnerLifeIntoProduct,
   importOldMemoriaIntoProduct,
+  listProductInnerLifeProfiles,
   markProductInnerLifeShare,
   mergeProductMemories,
   processProductMemoryEmbeddings,
   processProductInnerLifeOnce,
   previewProductRestore,
   reviewProductInnerLifeShare,
+  resetCachedDatabase,
   restoreProductBackup,
   restoreArchivedProductMemory,
   restoreProductMemory,
@@ -765,6 +793,7 @@ module.exports = {
   startProductInnerLifeSession,
   endProductInnerLifeSession,
   unrestrictProductMemory,
+  updateProductInnerLifeProfile,
   updateProductMemory,
   desktopSettingsPath,
   readDesktopSettings,

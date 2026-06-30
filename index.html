@@ -373,6 +373,56 @@
                   <div id="innerLifeSummaryList" class="shared-line-history-list compact-list"></div>
                 </section>
               </div>
+              <section class="innerlife-profile-panel">
+                <div class="section-heading-line">
+                  <div>
+                    <strong data-i18n="innerLife.profileTitle">Inner profile</strong>
+                    <span data-i18n="innerLife.profileBody">What this agent tends to watch, avoid, and surface.</span>
+                  </div>
+                  <button id="saveInnerLifeProfile" class="secondary" data-i18n="innerLife.profileSaveAction">Save</button>
+                </div>
+                <div class="innerlife-profile-grid">
+                  <label>
+                    <span data-i18n="innerLife.profileDisplayName">Display name</span>
+                    <input id="innerLifeProfileDisplayName" type="text" />
+                  </label>
+                  <label>
+                    <span data-i18n="innerLife.profileFocus">Current focus</span>
+                    <input id="innerLifeProfileRecentFocus" type="text" />
+                  </label>
+                  <label>
+                    <span data-i18n="innerLife.profileInterests">Current interests</span>
+                    <input id="innerLifeProfileInterests" type="text" placeholder="continuity, reliable reasoning" />
+                  </label>
+                  <label>
+                    <span data-i18n="innerLife.shareAfterHours">Share after hours</span>
+                    <input id="innerLifeProfileShareAfterHours" type="number" min="0" step="0.5" />
+                  </label>
+                  <label>
+                    <span data-i18n="innerLife.shareCooldownHours">Cooldown hours</span>
+                    <input id="innerLifeProfileShareCooldownHours" type="number" min="0" step="0.5" />
+                  </label>
+                  <label>
+                    <span data-i18n="innerLife.shareMaxDaily">Max proactive per day</span>
+                    <input id="innerLifeProfileShareMaxDaily" type="number" min="0" step="1" />
+                  </label>
+                </div>
+                <details class="innerlife-advanced-profile">
+                  <summary>
+                    <span data-i18n="innerLife.advancedProfile">Advanced raw config</span>
+                    <small data-i18n="innerLife.advancedProfileHint">Only needed for boundaries, sources, and imported fields.</small>
+                  </summary>
+                  <label class="innerlife-json-editor">
+                    <span data-i18n="innerLife.profileJson">Profile JSON</span>
+                    <textarea id="innerLifeProfileJson" spellcheck="false"></textarea>
+                  </label>
+                  <label class="innerlife-json-editor">
+                    <span data-i18n="innerLife.stateJson">State JSON</span>
+                    <textarea id="innerLifeStateJson" spellcheck="false"></textarea>
+                  </label>
+                </details>
+                <p id="innerLifeProfileNotice" class="quiet"></p>
+              </section>
             </article>
             <aside class="innerlife-side">
               <article class="panel">
@@ -481,20 +531,35 @@
       </section>
 
       <section id="agentSetupView" class="view">
-        <div class="screen-grid">
+        <div class="screen-grid agent-access-grid">
           <article class="panel main-panel">
             <div class="panel-heading">
               <div>
                 <h2 data-i18n="agentSetup.title">Agent Access</h2>
-                <p data-i18n="agentSetup.body">Give this brief to each agent so it can install ClaraCore access with its own identity.</p>
+                <p data-i18n="agentSetup.body">Monitor MCP agents using the Desktop-owned Gateway.</p>
               </div>
               <span id="agentSetupNotice" class="quiet" aria-live="polite"></span>
             </div>
-            <div class="doc-preview">
-              <pre><code id="agentSetupMarkdown">Checking...</code></pre>
-            </div>
+            <section class="agent-access-section">
+              <div class="section-heading-line">
+                <div>
+                  <strong data-i18n="connections.connectedAgents">Connected agents</strong>
+                  <span data-i18n="connections.connectedAgentsBody">Inferred from recent MCP calls.</span>
+                </div>
+              </div>
+              <div id="gatewayHandshakeList" class="agent-roster"></div>
+            </section>
+            <section class="agent-access-section">
+              <div class="section-heading-line">
+                <div>
+                  <strong data-i18n="connections.agentActivity">Agent activity</strong>
+                  <span data-i18n="connections.agentActivityBody">Recent Gateway tool calls across agents.</span>
+                </div>
+              </div>
+              <div id="gatewayTraceList" class="gateway-activity-table"></div>
+            </section>
           </article>
-          <article class="panel">
+          <article class="panel agent-access-side">
             <div class="panel-heading">
               <h2 data-i18n="agentSetup.actions">Actions</h2>
               <span id="copyNotice" class="quiet" aria-live="polite"></span>
@@ -503,36 +568,29 @@
             <button class="secondary full" data-copy="mcp-command" data-i18n="connections.copyMcpCommand">Copy MCP command</button>
             <button class="secondary full" data-copy="mcp-config" data-i18n="connections.copyMcpConfig">Copy MCP config</button>
             <button id="openGatewayFolder" class="secondary full" data-i18n="connections.openGatewayFolder">Open runtime folder</button>
-            <h2 class="section-title" data-i18n="agentSetup.connectionMode">Connection mode</h2>
-            <ul class="plain-list">
-              <li data-i18n="agentSetup.modeResident">ClaraCore Desktop stays open as the local agent service.</li>
-              <li data-i18n="agentSetup.modeMcp">Agents connect through MCP and set their own CLARACORE_AGENT_ID.</li>
-              <li data-i18n="agentSetup.modeLan">Local HTTP helper is localhost-only, token-protected, and uses a runtime-assigned port.</li>
-            </ul>
             <h2 class="section-title" data-i18n="agentSetup.identityContract">Agent identity</h2>
             <div id="agentIdentityList" class="endpoint-list"></div>
-            <h2 class="section-title" data-i18n="connections.handshakes">Connection tests</h2>
-            <div id="gatewayHandshakeList" class="endpoint-list"></div>
-            <h2 class="section-title" data-i18n="connections.title">Connection details</h2>
-            <div class="snippet">
-              <span data-i18n="connections.mcpCommand">MCP command</span>
-              <code id="mcpCommand">Checking...</code>
-            </div>
-            <div class="snippet large">
-              <span data-i18n="connections.mcpConfig">MCP config</span>
-              <pre><code id="mcpConfig">Checking...</code></pre>
-            </div>
-            <h2 class="section-title" data-i18n="connections.agentActivity">Agent activity</h2>
-            <div id="gatewayTraceList" class="endpoint-list"></div>
-            <h2 class="section-title" data-i18n="connections.httpEndpoints">HTTP endpoints</h2>
-            <div id="httpEndpointList" class="endpoint-list"></div>
-            <h2 class="section-title" data-i18n="agentSetup.includes">Includes</h2>
-            <ul class="plain-list">
-              <li data-i18n="agentSetup.includeGateway">Gateway MCP config</li>
-              <li data-i18n="agentSetup.includeServices">Sub-service MCP and CLI fallbacks</li>
-              <li data-i18n="agentSetup.includeRuntime">Python and data paths</li>
-              <li data-i18n="agentSetup.includeTroubleshooting">Troubleshooting notes</li>
-            </ul>
+            <details class="agent-access-details">
+              <summary data-i18n="connections.title">Connection details</summary>
+              <div class="snippet">
+                <span data-i18n="connections.mcpCommand">MCP command</span>
+                <code id="mcpCommand">Checking...</code>
+              </div>
+              <div class="snippet large">
+                <span data-i18n="connections.mcpConfig">MCP config</span>
+                <pre><code id="mcpConfig">Checking...</code></pre>
+              </div>
+            </details>
+            <details class="agent-access-details">
+              <summary data-i18n="connections.httpEndpoints">HTTP endpoints</summary>
+              <div id="httpEndpointList" class="endpoint-list"></div>
+            </details>
+            <details class="agent-access-details">
+              <summary data-i18n="agentSetup.installBrief">Install brief</summary>
+              <div class="doc-preview compact">
+                <pre><code id="agentSetupMarkdown">Checking...</code></pre>
+              </div>
+            </details>
           </article>
         </div>
       </section>
@@ -784,6 +842,7 @@
       <span><span data-i18n="monitor.uptime">Uptime</span>: <strong id="monitorUptime">--:--:--</strong></span>
       <span><span data-i18n="monitor.cpu">CPU</span>: <strong id="monitorCpu">--</strong><b class="monitor-dot"></b></span>
       <span><span data-i18n="monitor.ram">RAM</span>: <strong id="monitorRam">--</strong></span>
+      <span><span data-i18n="monitor.process">Process</span>: <strong id="monitorProcess">--</strong></span>
       <span><span data-i18n="monitor.disk">Disk</span>: <strong id="monitorDisk">--</strong><b class="monitor-dot"></b></span>
       <span><span data-i18n="monitor.localTime">Local time</span>: <strong id="monitorTime">--</strong></span>
     </footer>

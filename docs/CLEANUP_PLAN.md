@@ -80,6 +80,10 @@ module can own the behavior."
    - Done: InnerLife daemon ticks are guarded against concurrent background and
      manual execution for the same product database and agent.
    - Done: background idle ticks no longer pollute manual tick counts.
+   - Done: Home/runtime snapshot is bounded to counts, summaries, and recent
+     samples instead of full product lists.
+   - Done: runtime resource ownership and long-run memory policy are documented
+     in `docs/RUNTIME_MEMORY_POLICY.md`.
 
 ## Before New Features
 
@@ -123,6 +127,9 @@ Tomorrow's new features should start only after:
   can own it.
 - Do not add new domain behavior directly to `core/runtime/index.js`.
 - Do not add product semantics directly to the SQLite adapter.
+- Do not add full product lists to `buildProductSnapshot()`; page or lazy-load
+  large views through focused IPC calls.
+- Do not add long-lived resources without a clear owner and dispose path.
 - Do not leave placeholder directories with only aspirational README files.
 - Keep `memoria` as the product name; do not introduce new `memory` module
   directories.

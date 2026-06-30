@@ -31,11 +31,15 @@ async function main() {
     externalSessionId: "phase5-session-001"
   });
   if (!sessionStart.session?.id) throw new Error("InnerLife session start did not create a session.");
-  if (!sessionStart.briefing.text.includes("Current position")) {
-    throw new Error("InnerLife session briefing did not include current position.");
+  if (!sessionStart.share_plan || sessionStart.briefing) {
+    throw new Error("InnerLife session start should return compact share_plan and omit full briefing by default.");
   }
-  if (!sessionStart.briefing.recentMemories.some((item) => item.id === memory.id)) {
-    throw new Error("InnerLife session briefing did not include recent Memory context.");
+  const fullBriefing = await core.database.getInnerLifeBriefing("my-agent");
+  if (!fullBriefing.text.includes("Current position")) {
+    throw new Error("InnerLife lazy briefing did not include current position.");
+  }
+  if (!fullBriefing.recentMemories.some((item) => item.id === memory.id)) {
+    throw new Error("InnerLife lazy briefing did not include recent Memory context.");
   }
   const duplicateStart = await runtime.startProductInnerLifeSession(app, {
     agentId: "my-agent",

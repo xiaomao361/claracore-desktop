@@ -1,6 +1,7 @@
 const path = require("path");
 const fs = require("fs/promises");
 const { previewImportSources, quoteIdentifier, runSqliteReadOnly } = require("../import-preview");
+const { removeSqliteSidecars } = require("./backup");
 
 function safeArchiveString(value, fallback = "") {
   return String(value ?? fallback).trim();
@@ -270,7 +271,7 @@ function summarizeProductTables(tables = {}) {
 }
 
 
-function createImportRuntime({ createProductBackup, ensureProductCore, productVersion, sqlString, timestampForFilename }) {
+function createImportRuntime({ createProductBackup, ensureProductCore, productVersion, resetCachedDatabase, sqlString, timestampForFilename }) {
   async function exportProductDataJson(app, input = {}) {
     const { paths, database } = await ensureProductCore(app);
     const createdAt = new Date().toISOString();
@@ -340,7 +341,16 @@ function createImportRuntime({ createProductBackup, ensureProductCore, productVe
       const quickRows = await tempDatabase.query("PRAGMA quick_check;");
       const quickCheck = quickRows[0]?.quick_check || quickRows[0]?.["quick_check"] || Object.values(quickRows[0] || {})[0];
       if (quickCheck !== "ok") throw new Error(`Imported product JSON quick_check failed: ${quickCheck}`);
+      // Close the temp database first so its WAL is checkpointed into the main
+      // temp file; copyFile only copies the main `.db`, so uncheckpointed rows
+      // would otherwise be lost. Then close the live cached connection and drop
+      // the destination WAL/SHM sidecars so the swapped file is read cleanly
+      // instead of through a stale connection's -wal.
+      tempDatabase.close();
+      if (typeof resetCachedDatabase === "function") resetCachedDatabase();
+      await removeSqliteSidecars(paths.databasePath);
       await fs.copyFile(tempPath, paths.databasePath);
+      await removeSqliteSidecars(paths.databasePath);
       const restoredDatabase = new database.constructor(paths.databasePath);
       await restoredDatabase.initialize();
       const restoredSafetyBackup = await restoredDatabase.registerBackupRecord({

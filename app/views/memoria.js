@@ -482,6 +482,7 @@ function setMemoryGraphZoom(action) {
     memoryGraphZoom = 1;
     memoryGraphPan = { x: 0, y: 0 };
   }
+  stopMemoryGraphAnimation();
   drawMemoryGraphCanvas();
 }
 

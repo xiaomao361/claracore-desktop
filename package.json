@@ -27,6 +27,7 @@
     "test:backup:ui": "NODE_PATH=/Users/zhouwei/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules node core/tests/backup-restore-ui-smoke.js",
     "test:import-preview": "node core/tests/import-preview-smoke.js",
     "test:import-preview:ui": "NODE_PATH=/Users/zhouwei/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules node core/tests/import-preview-ui-smoke.js",
+    "test:memory-long-run": "node core/tests/memory-long-run-check.js",
     "test:smoke": "npm run check && npm run test:shell && npm run test:phase1 && npm run test:phase2 && npm run test:phase3 && npm run test:phase4 && npm run test:phase5 && npm run test:backup && npm run test:import-preview",
     "pack:mac": "electron-builder --mac --dir",
     "dist:mac": "electron-builder --mac"

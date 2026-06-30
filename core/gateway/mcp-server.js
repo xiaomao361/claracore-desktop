@@ -11,6 +11,51 @@ const SERVER_INFO = {
   name: "claracore-desktop",
   version: PRODUCT_VERSION
 };
+const UNKNOWN_AGENT_ID = "unknown-agent";
+let cachedDatabase = null;
+let cachedDatabasePath = "";
+let cachedDatabaseInit = null;
+
+function applyCliEnvArgs(argv = process.argv) {
+  for (let index = 0; index < argv.length; index += 1) {
+    if (argv[index] !== "--env") continue;
+    const assignment = String(argv[index + 1] || "");
+    const equalsIndex = assignment.indexOf("=");
+    if (equalsIndex <= 0) continue;
+    const key = assignment.slice(0, equalsIndex).trim();
+    const value = assignment.slice(equalsIndex + 1);
+    if (/^[A-Z_][A-Z0-9_]*$/.test(key)) {
+      process.env[key] = value;
+    }
+    index += 1;
+  }
+}
+
+applyCliEnvArgs();
+
+function closeCachedDatabase() {
+  if (cachedDatabase && typeof cachedDatabase.close === "function") {
+    cachedDatabase.close();
+  }
+  cachedDatabase = null;
+  cachedDatabaseInit = null;
+  cachedDatabasePath = "";
+}
+
+process.once("exit", closeCachedDatabase);
+process.once("SIGINT", () => {
+  closeCachedDatabase();
+  process.exit(130);
+});
+process.once("SIGTERM", () => {
+  closeCachedDatabase();
+  process.exit(143);
+});
+
+function exitWhenTransportCloses() {
+  closeCachedDatabase();
+  process.exit(0);
+}
 
 function defaultUserDataPath() {
   if (process.versions.electron) {
@@ -85,6 +130,10 @@ function textResult(value) {
   };
 }
 
+function currentMcpAgentId(args = {}) {
+  return String(args.agentId || args.agent_id || process.env.CLARACORE_AGENT_ID || "").trim() || UNKNOWN_AGENT_ID;
+}
+
 function toolDefinitions() {
   return [
     {
@@ -155,6 +204,30 @@ function toolDefinitions() {
           },
           toolName: { type: "string" },
           status: { type: "string", enum: ["ok", "error"] }
+        },
+        additionalProperties: false
+      }
+    },
+    {
+      name: "agent_identity_merge",
+      title: "Merge Agent Identity",
+      description: "Merge one ClaraCore Desktop agent id into another across Desktop-owned data. Use this instead of editing SQLite directly.",
+      inputSchema: {
+        type: "object",
+        required: ["fromAgentId", "toAgentId", "confirm"],
+        properties: {
+          fromAgentId: {
+            type: "string",
+            description: "Existing source agent id to retire, for example hermes:lara."
+          },
+          toAgentId: {
+            type: "string",
+            description: "Canonical target agent id to keep, for example lara or hermes:lara."
+          },
+          confirm: {
+            type: "boolean",
+            description: "Must be true because this updates many Desktop-owned records."
+          }
         },
         additionalProperties: false
       }
@@ -1012,7 +1085,7 @@ function toolDefinitions() {
     {
       name: "innerlife_session_start",
       title: "Start InnerLife Session",
-      description: "Start a Desktop-owned InnerLife session and return the current briefing.",
+      description: "Start a Desktop-owned InnerLife session and return a compact share_plan plus session id. Fetch innerlife_briefing lazily for full context.",
       inputSchema: {
         type: "object",
         properties: {
@@ -1021,7 +1094,8 @@ function toolDefinitions() {
           agentName: { type: "string" },
           userId: { type: "string" },
           host: { type: "string" },
-          externalSessionId: { type: "string" }
+          externalSessionId: { type: "string" },
+          includeBriefing: { type: "boolean" }
         },
         additionalProperties: false
       }
@@ -1029,7 +1103,7 @@ function toolDefinitions() {
     {
       name: "innerlife_session_end",
       title: "End InnerLife Session",
-      description: "End a Desktop-owned InnerLife session and create a reviewable afterthought.",
+      description: "End a Desktop-owned InnerLife session and create a waiting share afterthought.",
       inputSchema: {
         type: "object",
         required: ["sessionId"],
@@ -1091,6 +1165,50 @@ function toolDefinitions() {
       }
     },
     {
+      name: "innerlife_profile_set",
+      title: "Set InnerLife Profile",
+      description: "Update the calling agent's Desktop-owned InnerLife profile, state, focus, and sharing policy.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          agentId: { type: "string" },
+          agentTool: { type: "string" },
+          agentName: { type: "string" },
+          displayName: { type: "string" },
+          profile: { type: "object" },
+          state: { type: "object" }
+        },
+        additionalProperties: false
+      }
+    },
+    {
+      name: "innerlife_profile_list",
+      title: "List InnerLife Profiles",
+      description: "List Desktop-owned InnerLife agent profiles.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          limit: { type: "number", minimum: 1, maximum: 200 }
+        },
+        additionalProperties: false
+      }
+    },
+    {
+      name: "innerlife_profile_delete",
+      title: "Delete InnerLife Profile",
+      description: "Delete one agent's Desktop-owned InnerLife profile and all InnerLife data for that agent.",
+      inputSchema: {
+        type: "object",
+        required: ["agentId"],
+        properties: {
+          agentId: { type: "string" },
+          agentTool: { type: "string" },
+          agentName: { type: "string" }
+        },
+        additionalProperties: false
+      }
+    },
+    {
       name: "innerlife_digest",
       title: "Run InnerLife Digest",
       description: "Run a Desktop-owned InnerLife digest and record what was digested.",
@@ -1109,7 +1227,7 @@ function toolDefinitions() {
     {
       name: "innerlife_share_check",
       title: "Check InnerLife Share Timing",
-      description: "Check whether a reviewable InnerLife share fits the current context.",
+      description: "Check whether a waiting InnerLife share fits the current context.",
       inputSchema: {
         type: "object",
         properties: {
@@ -1126,7 +1244,7 @@ function toolDefinitions() {
     {
       name: "innerlife_submit_inbox",
       title: "Submit InnerLife Inbox",
-      description: "Submit a reviewable material item into the Desktop-owned InnerLife inbox.",
+      description: "Submit material into the Desktop-owned InnerLife inbox for autonomous processing.",
       inputSchema: {
         type: "object",
         required: ["body"],
@@ -1244,7 +1362,7 @@ function toolDefinitions() {
     {
       name: "innerlife_daemon_tick",
       title: "Tick InnerLife Daemon",
-      description: "Run one due InnerLife daemon tick and create only reviewable output.",
+      description: "Run one due InnerLife daemon tick and create a waiting share when material is ready.",
       inputSchema: {
         type: "object",
         properties: {
@@ -1298,7 +1416,7 @@ function toolDefinitions() {
     {
       name: "innerlife_explore",
       title: "Explore InnerLife",
-      description: "Trigger autonomous Desktop-owned InnerLife exploration — surfaces what deserves attention from Memory and recent thoughts, creates a reviewable share candidate.",
+      description: "Trigger autonomous Desktop-owned InnerLife exploration — surfaces what deserves attention from Memory and recent thoughts, creates a waiting share candidate.",
       inputSchema: {
         type: "object",
         properties: {
@@ -1329,7 +1447,24 @@ function toolDefinitions() {
 
 async function openDatabase() {
   const paths = productPaths();
-  const database = await initializeProductDatabase(paths.databasePath);
+  if (cachedDatabase && cachedDatabasePath === paths.databasePath) {
+    return { paths, database: cachedDatabase };
+  }
+  if (!cachedDatabaseInit || cachedDatabasePath !== paths.databasePath) {
+    cachedDatabasePath = paths.databasePath;
+    cachedDatabaseInit = initializeProductDatabase(paths.databasePath)
+      .then((database) => {
+        cachedDatabase = database;
+        return database;
+      })
+      .catch((error) => {
+        cachedDatabase = null;
+        cachedDatabaseInit = null;
+        cachedDatabasePath = "";
+        throw error;
+      });
+  }
+  const database = await cachedDatabaseInit;
   return { paths, database };
 }
 
@@ -1360,7 +1495,7 @@ async function callToolBody(name, args = {}, paths, database) {
             "",
             "Use this MCP server as the single local entry for ClaraCore Desktop product data.",
             "Each agent must set its own stable CLARACORE_AGENT_ID. Do not reuse another agent's id.",
-            "Recommended ids: claude-code:clara, codex, hermes:lara.",
+            "Recommended ids: hermes:lara, claude-code:clara, codex.",
             "",
             "## MCP Config",
             "",
@@ -1390,7 +1525,7 @@ async function callToolBody(name, args = {}, paths, database) {
             "",
             "## Verify The Connection",
             "",
-            "After installing the MCP config, call claracore_connection_test with your stable agentId. Desktop records that call as a visible handshake in Agent Access.",
+            "After installing the MCP config, call gateway_context with your stable agentId. Desktop records successful MCP calls as recent agent activity in Agent Access.",
             "",
             "## CLI Fallback",
             "",
@@ -1405,9 +1540,9 @@ async function callToolBody(name, args = {}, paths, database) {
     };
   }
   if (name === "claracore_connection_test") {
-    const agentId = String(args.agentId || process.env.CLARACORE_AGENT_ID || "codex").trim() || "codex";
+    const agentId = currentMcpAgentId(args);
     const summary = await database.getSummary();
-    const configuration = await database.getConfiguration(paths);
+    const daemonState = await database.ensureInnerLifeDaemonState(agentId);
     return textResult({
       ok: true,
       agentId,
@@ -1422,7 +1557,7 @@ async function callToolBody(name, args = {}, paths, database) {
         gateway: "available",
         memoria: summary.memories_count > 0 ? "ready" : "empty",
         continuity: summary.continuity_lines_count > 0 ? "ready" : "empty",
-        innerlife: configuration?.innerlife?.daemon?.status || "paused"
+        innerlife: daemonState?.status || "paused"
       },
       timestamp: new Date().toISOString(),
       next: "Call gateway_context to read the current agent packet."
@@ -1435,6 +1570,9 @@ async function callToolBody(name, args = {}, paths, database) {
     return textResult({
       traces: await database.listGatewayTraces(args)
     });
+  }
+  if (name === "agent_identity_merge") {
+    return textResult(await database.mergeAgentIdentity(args));
   }
   if (name === "memoria_list") {
     return textResult({
@@ -1610,8 +1748,8 @@ async function callToolBody(name, args = {}, paths, database) {
     });
   }
   if (name === "shared_line_update") {
-    await database.saveCurrentPosition(args);
-    return textResult(await database.getResumePacket({ lineId: args.lineId, agentId: args.agentId, model: args.model }));
+    const currentPosition = await database.saveCurrentPosition(args);
+    return textResult(await database.getResumePacket({ lineId: currentPosition.lineId, agentId: args.agentId, model: args.model }));
   }
   if (name === "shared_line_handoff_create") {
     const handoff = await database.createContinuityHandoff(args);
@@ -1621,7 +1759,7 @@ async function callToolBody(name, args = {}, paths, database) {
     });
   }
   if (name === "shared_line_agent_state") {
-    const agentId = args.agentId || process.env.CLARACORE_AGENT_ID || "codex";
+    const agentId = currentMcpAgentId(args);
     return textResult({
       agentState: args.update
         ? await database.updateContinuityAgentState(agentId, args.update)
@@ -1655,17 +1793,28 @@ async function callToolBody(name, args = {}, paths, database) {
   }
   if (name === "innerlife_sessions") {
     return textResult({
-      sessions: await database.listInnerLifeSessions(args.agentId || process.env.CLARACORE_AGENT_ID || "codex", args.limit || 20)
+      sessions: await database.listInnerLifeSessions(currentMcpAgentId(args), args.limit || 20)
     });
   }
   if (name === "innerlife_status") {
     return textResult(await database.getInnerLifeSnapshot());
   }
   if (name === "innerlife_briefing") {
-    return textResult(await database.getInnerLifeBriefing(args.agentId || process.env.CLARACORE_AGENT_ID || "codex"));
+    return textResult(await database.getInnerLifeBriefing(currentMcpAgentId(args)));
   }
   if (name === "innerlife_doctor") {
-    return textResult(await database.getInnerLifeDoctor(args.agentId || process.env.CLARACORE_AGENT_ID || "codex"));
+    return textResult(await database.getInnerLifeDoctor(currentMcpAgentId(args)));
+  }
+  if (name === "innerlife_profile_set") {
+    return textResult(await database.updateInnerLifeProfile(args));
+  }
+  if (name === "innerlife_profile_list") {
+    return textResult({
+      profiles: await database.listInnerLifeProfiles(args)
+    });
+  }
+  if (name === "innerlife_profile_delete") {
+    return textResult(await database.deleteInnerLifeProfile(args));
   }
   if (name === "innerlife_digest") {
     return textResult(await database.runInnerLifeDigest(args));
@@ -1681,13 +1830,13 @@ async function callToolBody(name, args = {}, paths, database) {
   }
   if (name === "innerlife_submit_fact") {
     return textResult({
-      inbox: await database.submitInnerLifeInbox({ ...args, agentId: args.agentId || process.env.CLARACORE_AGENT_ID || "codex", source: "fact", body: args.body }),
+      inbox: await database.submitInnerLifeInbox({ ...args, agentId: currentMcpAgentId(args), source: "fact", body: args.body }),
       innerLife: await database.getInnerLifeSnapshot()
     });
   }
   if (name === "innerlife_submit_continuity") {
     return textResult({
-      inbox: await database.submitInnerLifeInbox({ ...args, agentId: args.agentId || process.env.CLARACORE_AGENT_ID || "codex", source: "continuity", body: args.body }),
+      inbox: await database.submitInnerLifeInbox({ ...args, agentId: currentMcpAgentId(args), source: "continuity", body: args.body }),
       innerLife: await database.getInnerLifeSnapshot()
     });
   }
@@ -1705,7 +1854,7 @@ async function callToolBody(name, args = {}, paths, database) {
     return textResult(await database.markInnerLifeShare(args.id, args.action, args.reason || ""));
   }
   if (name === "innerlife_daemon_status") {
-    return textResult(await database.ensureInnerLifeDaemonState(args.agentId || process.env.CLARACORE_AGENT_ID || "codex"));
+    return textResult(await database.ensureInnerLifeDaemonState(currentMcpAgentId(args)));
   }
   if (name === "innerlife_daemon_set") {
     return textResult(await database.setInnerLifeDaemonState(args));
@@ -1715,17 +1864,17 @@ async function callToolBody(name, args = {}, paths, database) {
   }
   if (name === "innerlife_history") {
     return textResult({
-      history: await database.getInnerLifeHistory(args.agentId || process.env.CLARACORE_AGENT_ID || "codex", args.limit || 20)
+      history: await database.getInnerLifeHistory(currentMcpAgentId(args), args.limit || 20)
     });
   }
   if (name === "innerlife_experiences") {
     return textResult({
-      experiences: await database.listInnerLifeExperiences(args.agentId || process.env.CLARACORE_AGENT_ID || "codex", args.limit || 20)
+      experiences: await database.listInnerLifeExperiences(currentMcpAgentId(args), args.limit || 20)
     });
   }
   if (name === "innerlife_summaries") {
     return textResult({
-      summaries: await database.listInnerLifeSummaries(args.agentId || process.env.CLARACORE_AGENT_ID || "codex", args.limit || 10)
+      summaries: await database.listInnerLifeSummaries(currentMcpAgentId(args), args.limit || 10)
     });
   }
   if (name === "innerlife_explore") {
@@ -1740,15 +1889,16 @@ async function callToolBody(name, args = {}, paths, database) {
 async function callTool(name, args = {}) {
   const startedAt = Date.now();
   const { paths, database } = await openDatabase();
-  const agentId = String(args.agentId || process.env.CLARACORE_AGENT_ID || "codex").trim() || "codex";
+  const agentId = currentMcpAgentId(args);
+  const callArgs = args.agentId || args.agent_id ? args : { ...args, agentId };
   try {
-    const result = await callToolBody(name, args, paths, database);
+    const result = await callToolBody(name, callArgs, paths, database);
     await database.recordGatewayTrace({
       agentId,
       toolName: name,
       status: "ok",
       durationMs: Date.now() - startedAt,
-      request: args,
+      request: callArgs,
       responseSummary: summarizeToolResponse(result)
     });
     return result;
@@ -1758,7 +1908,7 @@ async function callTool(name, args = {}) {
       toolName: name,
       status: "error",
       durationMs: Date.now() - startedAt,
-      request: args,
+      request: callArgs,
       error: error.message || String(error)
     });
     throw error;
@@ -1837,6 +1987,8 @@ function start() {
       }
     }
   });
+  process.stdin.once("end", exitWhenTransportCloses);
+  process.stdin.once("close", exitWhenTransportCloses);
 }
 
 if (require.main === module) {

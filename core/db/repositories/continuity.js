@@ -177,7 +177,11 @@ function installContinuityRepository(ProductDatabase, helpers) {
         VALUES (${sqlString(lineId)}, ${sqlString(DEFAULT_AGENT_ID)}, 'Default Shared Line', 'active')
         ON CONFLICT(id) DO UPDATE SET
           status = 'active',
-          updated_at = CURRENT_TIMESTAMP;
+          updated_at = CASE
+            WHEN continuity_lines.status != 'active' THEN CURRENT_TIMESTAMP
+            ELSE continuity_lines.updated_at
+          END
+        WHERE continuity_lines.status != 'active';
       `);
       return lineId;
     }
@@ -255,7 +259,16 @@ function installContinuityRepository(ProductDatabase, helpers) {
           p.metadata_json,
           p.updated_at AS position_updated_at
         FROM continuity_lines l
-        LEFT JOIN current_positions p ON p.line_id = l.id
+        LEFT JOIN current_positions p ON p.rowid = (
+          SELECT candidate.rowid
+          FROM current_positions candidate
+          WHERE candidate.line_id = l.id
+          ORDER BY
+            candidate.updated_at DESC,
+            CASE WHEN candidate.id = 'position_' || candidate.line_id THEN 0 ELSE 1 END,
+            candidate.id DESC
+          LIMIT 1
+        )
         WHERE ${filters.join(" AND ")}
         ORDER BY
           CASE WHEN l.id = ${sqlString(activeLineId)} THEN 0 ELSE 1 END,
@@ -409,15 +422,14 @@ function installContinuityRepository(ProductDatabase, helpers) {
     ,
     
     async saveCurrentPosition(input) {
-      const agentLineId = input?.lineId ? null : await this.findContinuityLineIdForAgent(input?.agentId || input?.agent_id || "");
-      const lineId = await this.resolveContinuityLineId(input?.lineId || agentLineId || null);
-      const positionId = `position_${lineId}`;
+      const lineId = await this.resolveContinuityLineId(input?.lineId || null);
       const summary = String(input?.summary || "").trim();
       if (!summary) throw new Error("Current position summary is required.");
       const status = normalizeInterpretationStatus(input?.interpretationStatus || input?.interpretation_status || "draft");
       const factsUsed = Array.isArray(input?.factsUsed) ? input.factsUsed.map((item) => String(item).trim()).filter(Boolean) : [];
       const source = String(input?.source || "desktop").trim() || "desktop";
       const current = await this.getCurrentPosition(lineId);
+      const positionId = current.summary && current.positionId ? current.positionId : `position_${lineId}`;
       const currentFacts = JSON.stringify(current.factsUsed || []);
       const nextFacts = JSON.stringify(factsUsed);
       const changesConfirmedPosition =
@@ -437,7 +449,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
       await this.exec(`
         INSERT INTO current_positions (id, line_id, summary, interpretation_status, facts_used_json, metadata_json, updated_at)
         VALUES (${sqlString(positionId)}, ${sqlString(lineId)}, ${sqlString(summary)}, ${sqlString(status)}, ${jsonSql(factsUsed)}, ${jsonSql(metadata)}, CURRENT_TIMESTAMP)
-        ON CONFLICT(id) DO UPDATE SET
+        ON CONFLICT(line_id) DO UPDATE SET
           summary = excluded.summary,
           interpretation_status = excluded.interpretation_status,
           facts_used_json = excluded.facts_used_json,
@@ -863,8 +875,10 @@ function installContinuityRepository(ProductDatabase, helpers) {
         : await this.listMemories(limit);
       const innerLife = await this.getInnerLifeSnapshot();
       const doctor = await this.getInnerLifeDoctor(agentId);
-      const pendingShares = (innerLife.pendingShares || []).slice(0, limit);
-      const pendingInbox = (innerLife.inbox || []).filter((item) => item.status === "pending").slice(0, limit);
+      const sameAgent = (item) => String(item?.agentId || item?.agent_id || "").trim() === agentId;
+      const pendingShares = (innerLife.pendingShares || []).filter(sameAgent).slice(0, limit);
+      const pendingInbox = (innerLife.inbox || []).filter((item) => item.status === "pending" && sameAgent(item)).slice(0, limit);
+      const recentShares = (innerLife.recentShares || []).filter(sameAgent).slice(0, limit);
       const memoryText = memories.length
         ? memories.map((memory, index) => `${index + 1}. ${memory.title || memory.body.slice(0, 80)} [${memory.id}]`).join("\n")
         : "(none)";
@@ -903,7 +917,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
         doctorText,
         "",
         "## Agent Guidance",
-        "Use Shared Line as the current position, Memory as durable facts, and InnerLife output only after review."
+        "Use Shared Line as the current position, Memory as durable facts, and InnerLife waiting shares only when they fit the current moment."
       ].join("\n");
       return {
         agentId,
@@ -917,13 +931,13 @@ function installContinuityRepository(ProductDatabase, helpers) {
           doctor,
           pendingShares,
           pendingInbox,
-          recentShares: (innerLife.recentShares || []).slice(0, limit),
+          recentShares,
           recentThoughts: (innerLife.recentThoughts || []).slice(0, limit)
         },
         guidance: {
           useSharedLine: "Treat Shared Line as the current resumable position.",
           useMemory: "Treat Memory as durable reviewed facts.",
-          useInnerLife: "Use InnerLife shares only after explicit review or approved status.",
+          useInnerLife: "Use this agent's InnerLife waiting shares only when they fit the current moment.",
           oldServices: "Do not read or mutate old ClaraCore service databases from this Gateway context."
         },
         text

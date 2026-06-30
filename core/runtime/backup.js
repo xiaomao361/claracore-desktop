@@ -2,7 +2,22 @@ const path = require("path");
 const fs = require("fs/promises");
 const { ProductDatabase, initializeProductDatabase } = require("../db/database");
 
-function createBackupRuntime({ ensureProductCore, productVersion, sqlString, timestampForFilename }) {
+async function removeSqliteSidecars(databasePath) {
+  // A WAL-mode database keeps `-wal` and `-shm` sidecar files next to the main
+  // file. Overwriting the main `.db` while a stale (non-empty) `-wal` is still
+  // on disk lets SQLite replay old frames onto the freshly restored database,
+  // which corrupts it. Remove the sidecars before and after the copy so the
+  // restored file always opens clean.
+  for (const suffix of ["-wal", "-shm"]) {
+    try {
+      await fs.rm(`${databasePath}${suffix}`, { force: true });
+    } catch (_error) {
+      // Best effort: a missing sidecar is the expected, healthy case.
+    }
+  }
+}
+
+function createBackupRuntime({ ensureProductCore, productVersion, resetCachedDatabase, sqlString, timestampForFilename }) {
   async function createProductBackup(app) {
     const { paths, database } = await ensureProductCore(app);
     const createdAt = new Date();
@@ -23,14 +38,18 @@ function createBackupRuntime({ ensureProductCore, productVersion, sqlString, tim
     };
     try {
       const backupDatabase = new ProductDatabase(backupPath);
-      const quickRows = await backupDatabase.query("PRAGMA quick_check;");
-      const quickCheck = quickRows[0]?.quick_check || quickRows[0]?.["quick_check"] || Object.values(quickRows[0] || {})[0];
-      const backupSummary = await backupDatabase.getSummary();
-      verification = {
-        ok: quickCheck === "ok",
-        quickCheck,
-        summary: backupSummary
-      };
+      try {
+        const quickRows = await backupDatabase.query("PRAGMA quick_check;");
+        const quickCheck = quickRows[0]?.quick_check || quickRows[0]?.["quick_check"] || Object.values(quickRows[0] || {})[0];
+        const backupSummary = await backupDatabase.getSummary();
+        verification = {
+          ok: quickCheck === "ok",
+          quickCheck,
+          summary: backupSummary
+        };
+      } finally {
+        backupDatabase.close();
+      }
     } catch (error) {
       verification = {
         ok: false,
@@ -79,19 +98,24 @@ function createBackupRuntime({ ensureProductCore, productVersion, sqlString, tim
       throw new Error("Backup must be inside the product backup directory.");
     }
     const candidate = new ProductDatabase(backupPath);
-    const quickRows = await candidate.query("PRAGMA quick_check;");
-    const quickCheck = quickRows[0]?.quick_check || quickRows[0]?.["quick_check"] || Object.values(quickRows[0] || {})[0];
-    if (quickCheck !== "ok") {
-      throw new Error(`Backup quick_check failed: ${quickCheck}`);
+    try {
+      const quickRows = await candidate.query("PRAGMA quick_check;");
+      const quickCheck = quickRows[0]?.quick_check || quickRows[0]?.["quick_check"] || Object.values(quickRows[0] || {})[0];
+      if (quickCheck !== "ok") {
+        throw new Error(`Backup quick_check failed: ${quickCheck}`);
+      }
+      return {
+        paths,
+        database,
+        backup,
+        backupPath,
+        quickCheck,
+        candidate
+      };
+    } catch (error) {
+      candidate.close();
+      throw error;
     }
-    return {
-      paths,
-      database,
-      backup,
-      backupPath,
-      quickCheck,
-      candidate
-    };
   }
 
   async function restorePreviewMemoryRows(database) {
@@ -144,57 +168,69 @@ function createBackupRuntime({ ensureProductCore, productVersion, sqlString, tim
 
   async function previewProductRestore(app, backupId) {
     const { database, backup, quickCheck, candidate } = await resolveVerifiedBackup(app, backupId);
-    const currentMemories = await restorePreviewMemoryRows(database);
-    const targetMemories = await restorePreviewMemoryRows(candidate);
-    return {
-      backup,
-      quickCheck,
-      current: await database.getSummary(),
-      target: await candidate.getSummary(),
-      memoryDiff: summarizeRestoreMemoryDiff(currentMemories, targetMemories)
-    };
+    try {
+      const currentMemories = await restorePreviewMemoryRows(database);
+      const targetMemories = await restorePreviewMemoryRows(candidate);
+      return {
+        backup,
+        quickCheck,
+        current: await database.getSummary(),
+        target: await candidate.getSummary(),
+        memoryDiff: summarizeRestoreMemoryDiff(currentMemories, targetMemories)
+      };
+    } finally {
+      candidate.close();
+    }
   }
 
   async function restoreProductBackup(app, backupId) {
-    const { paths, backup, backupPath } = await resolveVerifiedBackup(app, backupId);
+    const { paths, backup, backupPath, candidate } = await resolveVerifiedBackup(app, backupId);
+    candidate.close();
 
     const safetyBackup = await createProductBackup(app);
+    if (typeof resetCachedDatabase === "function") resetCachedDatabase();
+    await removeSqliteSidecars(paths.databasePath);
     await fs.copyFile(backupPath, paths.databasePath);
+    await removeSqliteSidecars(paths.databasePath);
     const restoredDatabase = await initializeProductDatabase(paths.databasePath);
-    const restoredSafetyBackup = await restoredDatabase.registerBackupRecord({
-      id: safetyBackup.id,
-      path: safetyBackup.path,
-      status: safetyBackup.status,
-      metadata: {
-        ...(safetyBackup.metadata || {}),
-        restoredDatabaseRegistered: true,
-        restoredAfterBackupId: backup.id,
-        restoredAfterBackupPath: backup.path
-      }
-    });
-    await restoredDatabase.exec(`
-      INSERT INTO runtime_events (id, level, source, message, metadata_json)
-      VALUES (
-        'event_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}',
-        'info',
-        'backup',
-        'Database restored from verified backup',
-        ${sqlString(
-          JSON.stringify({
-            restoredBackupId: backup.id,
-            restoredBackupPath: backup.path,
-            safetyBackupId: restoredSafetyBackup.id,
-            safetyBackupPath: restoredSafetyBackup.path
-          })
-        )}
-      );
-    `);
-    return {
-      restored: true,
-      backup,
-      safetyBackup: restoredSafetyBackup,
-      summary: await restoredDatabase.getSummary()
-    };
+    try {
+      const restoredSafetyBackup = await restoredDatabase.registerBackupRecord({
+        id: safetyBackup.id,
+        path: safetyBackup.path,
+        status: safetyBackup.status,
+        metadata: {
+          ...(safetyBackup.metadata || {}),
+          restoredDatabaseRegistered: true,
+          restoredAfterBackupId: backup.id,
+          restoredAfterBackupPath: backup.path
+        }
+      });
+      await restoredDatabase.exec(`
+        INSERT INTO runtime_events (id, level, source, message, metadata_json)
+        VALUES (
+          'event_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}',
+          'info',
+          'backup',
+          'Database restored from verified backup',
+          ${sqlString(
+            JSON.stringify({
+              restoredBackupId: backup.id,
+              restoredBackupPath: backup.path,
+              safetyBackupId: restoredSafetyBackup.id,
+              safetyBackupPath: restoredSafetyBackup.path
+            })
+          )}
+        );
+      `);
+      return {
+        restored: true,
+        backup,
+        safetyBackup: restoredSafetyBackup,
+        summary: await restoredDatabase.getSummary()
+      };
+    } finally {
+      restoredDatabase.close();
+    }
   }
 
   function backupFileInsideRoot(filePath, backupsRoot) {
@@ -258,5 +294,6 @@ function createBackupRuntime({ ensureProductCore, productVersion, sqlString, tim
 }
 
 module.exports = {
-  createBackupRuntime
+  createBackupRuntime,
+  removeSqliteSidecars
 };

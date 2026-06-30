@@ -97,8 +97,11 @@ function usage() {
       "innerlife status",
       "innerlife doctor [--agent <id>]",
       "innerlife briefing [--agent <id>]",
+      "innerlife profiles [--limit N]",
+      "innerlife profile-set [--agent <id>] [--display-name <text>] [--profile-json <json>] [--state-json <json>]",
+      "innerlife profile-delete --agent <id>",
       "innerlife sessions [--agent <id>] [--limit N]",
-      "innerlife session-start [--agent <id>] [--user <id>] [--host <host>] [--external-session-id <id>]",
+      "innerlife session-start [--agent <id>] [--user <id>] [--host <host>] [--external-session-id <id>] [--include-briefing]",
       "innerlife session-end --session-id <id> [--summary <text>] [--transcript <text>]",
       "innerlife inbox --body <text> [--agent <id>] [--source <text>]",
       "innerlife submit-fact --body <text> [--agent <id>]",
@@ -376,6 +379,24 @@ async function runMemoryCommand(app, command, subcommand, options) {
       const { database } = await runtime.ensureProductCore(app);
       return { briefing: await database.getInnerLifeBriefing(agentId) };
     }
+    if (subcommand === "profiles") {
+      const { database } = await runtime.ensureProductCore(app);
+      return { profiles: await database.listInnerLifeProfiles({ limit: options.limit || 100 }) };
+    }
+    if (subcommand === "profile-set") {
+      return runtime.updateProductInnerLifeProfile(app, {
+        agentId,
+        displayName: options["display-name"] || options.displayName || "",
+        profile: options["profile-json"] ? JSON.parse(options["profile-json"]) : undefined,
+        state: options["state-json"] ? JSON.parse(options["state-json"]) : undefined
+      });
+    }
+    if (subcommand === "profile-delete") {
+      const targetAgentId = options.agent || options.agentId || "";
+      if (!targetAgentId) throw new Error("innerlife profile-delete requires --agent <id>.");
+      const { database } = await runtime.ensureProductCore(app);
+      return database.deleteInnerLifeProfile({ agentId: targetAgentId });
+    }
     if (subcommand === "sessions") {
       const { database } = await runtime.ensureProductCore(app);
       return {
@@ -387,7 +408,8 @@ async function runMemoryCommand(app, command, subcommand, options) {
         agentId,
         userId: options.user || options.userId || "local-user",
         host: options.host || "cli",
-        externalSessionId: options["external-session-id"] || options.externalSessionId || ""
+        externalSessionId: options["external-session-id"] || options.externalSessionId || "",
+        includeBriefing: Boolean(options["include-briefing"] || options.includeBriefing)
       });
     }
     if (subcommand === "session-end") {
@@ -418,7 +440,7 @@ async function runMemoryCommand(app, command, subcommand, options) {
         prompt: options.prompt || ""
       });
     }
-    if (subcommand === "process-once") return runtime.processProductInnerLifeOnce(app, { prompt: options.prompt || "" });
+    if (subcommand === "process-once") return runtime.processProductInnerLifeOnce(app, { agentId, prompt: options.prompt || "" });
     if (subcommand === "pending") {
       const { database } = await runtime.ensureProductCore(app);
       return {
@@ -481,7 +503,7 @@ async function runMemoryCommand(app, command, subcommand, options) {
       if (action === "tick") return runtime.tickProductInnerLifeDaemon(app, { agentId, force: Boolean(options.force) });
       throw new Error("innerlife daemon requires status, enable, pause, or tick.");
     }
-    throw new Error("innerlife requires status, doctor, briefing, sessions, session-start, session-end, inbox, submit-fact, submit-continuity, digest, process-once, pending, share-check, mark-share, share-actions, history, experiences, summaries, explore, converge, or daemon.");
+    throw new Error("innerlife requires status, doctor, briefing, profiles, profile-set, profile-delete, sessions, session-start, session-end, inbox, submit-fact, submit-continuity, digest, process-once, pending, share-check, mark-share, share-actions, history, experiences, summaries, explore, converge, or daemon.");
   }
   throw new Error(`Unknown command: ${command || ""}`);
 }

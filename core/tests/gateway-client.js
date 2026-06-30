@@ -69,6 +69,8 @@ function createGatewayClient(dataRoot, options = {}) {
   }
 
   return {
+    child,
+    childPid: child.pid,
     request,
     callTool(name, args = {}) {
       return request("tools/call", {

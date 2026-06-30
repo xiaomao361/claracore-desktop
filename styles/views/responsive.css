@@ -143,6 +143,7 @@
   }
 
   .backup-meta-grid,
+  .innerlife-profile-grid,
   .backup-file-row {
     grid-template-columns: 1fr;
   }

@@ -22,7 +22,10 @@ function createClaraCoreSharedInnerLifeView(context) {
     innerLifeShareCheckList, innerLifeShareList, innerLifeDaemonStatus,
     innerLifeHistoryList, innerLifeExperienceList, innerLifeSummaryList,
     innerLifeDaemonToggle, innerLifeDaemonToggleLabel, innerLifeNextRun, innerLifeLastResult, innerLifeRecovery,
-    innerLifeDoctorStatus, innerLifeDoctorList, innerLifePendingCount, innerLifeEventCount, innerLifeThoughtCount
+    innerLifeDoctorStatus, innerLifeDoctorList, innerLifePendingCount, innerLifeEventCount, innerLifeThoughtCount,
+    innerLifeProfileDisplayName, innerLifeProfileRecentFocus, innerLifeProfileInterests,
+    innerLifeProfileShareAfterHours, innerLifeProfileShareCooldownHours, innerLifeProfileShareMaxDaily,
+    innerLifeProfileJson, innerLifeStateJson, saveInnerLifeProfile, innerLifeProfileNotice
   } = dom;
 
 function renderTraceValue(value) {
@@ -108,6 +111,95 @@ function innerLifeDoctorAction(issue) {
   if (code === "pending_inbox_paused") return t("innerLife.doctor.pendingInboxPausedAction");
   if (code === "daemon_retrying") return t("innerLife.doctor.daemonRetryingAction");
   return issue?.action || "";
+}
+
+function selectedInnerLifeProfile(innerLife) {
+  const profiles = Array.isArray(innerLife.profiles) ? innerLife.profiles : [];
+  const selectedAgentId = String(state.activeInnerLifeAgentFilter || "").trim();
+  if (!selectedAgentId || selectedAgentId === "all") return null;
+  return profiles.find((profile) => profile.agentId === selectedAgentId)
+    || {
+      agentId: selectedAgentId,
+      displayName: selectedAgentId,
+      profile: innerLife.profile?.profile || {},
+      state: innerLife.profile?.state || {}
+    };
+}
+
+function prettyJson(value) {
+  return JSON.stringify(value || {}, null, 2);
+}
+
+function renderInnerLifeProfile(innerLife) {
+  if (!innerLifeProfileJson || !innerLifeStateJson) return;
+  const selectedProfile = selectedInnerLifeProfile(innerLife);
+  const fields = [
+    innerLifeProfileDisplayName,
+    innerLifeProfileRecentFocus,
+    innerLifeProfileInterests,
+    innerLifeProfileShareAfterHours,
+    innerLifeProfileShareCooldownHours,
+    innerLifeProfileShareMaxDaily,
+    innerLifeProfileJson,
+    innerLifeStateJson
+  ].filter(Boolean);
+  const hasSelectedAgent = Boolean(selectedProfile);
+  for (const field of fields) {
+    field.disabled = !hasSelectedAgent;
+  }
+  if (!selectedProfile) {
+    innerLifeProfileDisplayName.value = "";
+    innerLifeProfileRecentFocus.value = "";
+    innerLifeProfileInterests.value = "";
+    innerLifeProfileShareAfterHours.value = "";
+    innerLifeProfileShareCooldownHours.value = "";
+    innerLifeProfileShareMaxDaily.value = "";
+    innerLifeProfileJson.value = "";
+    innerLifeStateJson.value = "";
+    if (saveInnerLifeProfile) {
+      saveInnerLifeProfile.disabled = true;
+      saveInnerLifeProfile.title = t("innerLife.profileSelectAgent");
+    }
+    if (innerLifeProfileNotice && !innerLifeProfileNotice.dataset.locked) {
+      innerLifeProfileNotice.textContent = t("innerLife.profileSelectAgent");
+    }
+    return;
+  }
+  const profileJson = selectedProfile.profile || {};
+  const stateJson = selectedProfile.state || {};
+  const policy = profileJson.share_policy || profileJson.sharePolicy || {};
+  innerLifeProfileDisplayName.value = selectedProfile.displayName || selectedProfile.agentId || "";
+  innerLifeProfileRecentFocus.value = stateJson.recent_focus || "";
+  innerLifeProfileInterests.value = Array.isArray(stateJson.current_interests) ? stateJson.current_interests.join(", ") : "";
+  innerLifeProfileShareAfterHours.value = policy.proactive_after_hours ?? 2;
+  innerLifeProfileShareCooldownHours.value = policy.repeat_cooldown_hours ?? 4;
+  innerLifeProfileShareMaxDaily.value = policy.max_proactive_per_day ?? 3;
+  innerLifeProfileJson.value = prettyJson({
+    ...profileJson,
+    share_policy: {
+      default_mode: "when_relevant",
+      max_proactive_per_day: 3,
+      proactive_after_hours: 2,
+      repeat_cooldown_hours: 4,
+      max_defer_count: 3,
+      stale_after_days: 7,
+      ...policy
+    }
+  });
+  innerLifeStateJson.value = prettyJson({
+    current_interests: [],
+    open_loops: [],
+    recent_mood: null,
+    recent_focus: null,
+    ...stateJson
+  });
+  if (saveInnerLifeProfile) {
+    saveInnerLifeProfile.disabled = false;
+    saveInnerLifeProfile.title = "";
+  }
+  if (innerLifeProfileNotice && !innerLifeProfileNotice.dataset.locked) {
+    innerLifeProfileNotice.textContent = "";
+  }
 }
 
 function renderDetailGroups(target, groups, traceSource = {}) {
@@ -384,6 +476,7 @@ function renderInnerLife() {
   const counts = innerLife.counts || {};
   const daemon = innerLife.daemon || {};
   const innerLifeAgentIds = [
+    ...(innerLife.profiles || []).map((profile) => profile.agentId || profile.agent_id),
     ...(innerLife.sessions || []).map(itemAgentId),
     ...(innerLife.digestRuns || []).map(itemAgentId),
     ...(innerLife.inbox || []).map(itemAgentId),
@@ -394,6 +487,7 @@ function renderInnerLife() {
     ...(innerLife.summaries || []).map(itemAgentId)
   ];
   state.activeInnerLifeAgentFilter = renderAgentFilter(innerLifeAgentFilter, innerLifeAgentIds, state.activeInnerLifeAgentFilter);
+  renderInnerLifeProfile(innerLife);
   innerLifeDaemonStatus.textContent = daemon.status || "paused";
   const daemonEnabled = Boolean(daemon.enabled) && daemon.status !== "paused";
   if (innerLifeDaemonToggle) {

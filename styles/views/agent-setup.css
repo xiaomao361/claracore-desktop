@@ -1,0 +1,229 @@
+#agentSetupView .agent-access-grid {
+  grid-template-columns: minmax(520px, 1fr) minmax(300px, 0.38fr);
+  align-items: start;
+}
+
+.agent-access-section {
+  display: grid;
+  gap: 10px;
+}
+
+.agent-access-section + .agent-access-section {
+  margin-top: 18px;
+}
+
+.agent-roster {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.agent-roster-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 74px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  border-radius: 8px;
+  background: #fffefa;
+}
+
+.agent-roster-card.active {
+  border-left-color: var(--green);
+}
+
+.agent-roster-card.recent {
+  border-left-color: var(--blue);
+}
+
+.agent-roster-card.idle {
+  border-left-color: var(--amber);
+}
+
+.agent-roster-card.error {
+  border-left-color: var(--red);
+}
+
+.agent-roster-main,
+.agent-roster-meta {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.agent-roster-main strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
+.agent-roster-main span,
+.agent-roster-meta code,
+.agent-roster-meta small {
+  min-width: 0;
+  color: var(--faint);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.agent-roster-meta {
+  justify-items: end;
+  text-align: right;
+}
+
+.agent-state {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.agent-roster-card.active .agent-state {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.agent-roster-card.recent .agent-state {
+  background: var(--blue-bg);
+  color: var(--blue);
+}
+
+.agent-roster-card.idle .agent-state {
+  background: var(--amber-bg);
+  color: var(--amber);
+}
+
+.agent-roster-card.error .agent-state {
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+.gateway-activity-table {
+  display: grid;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.gateway-activity-header,
+.gateway-activity-row {
+  display: grid;
+  grid-template-columns: 92px minmax(120px, 0.8fr) minmax(170px, 1fr) 82px 62px;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 9px 11px;
+}
+
+.gateway-activity-header {
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.gateway-activity-row {
+  border-top: 1px solid rgba(43, 61, 52, 0.08);
+  font-size: 12px;
+}
+
+.gateway-activity-row > * {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gateway-activity-row time,
+.gateway-activity-row small {
+  color: var(--faint);
+}
+
+.gateway-activity-row code {
+  justify-self: start;
+  border-radius: 999px;
+  padding: 3px 7px;
+  background: var(--green-bg);
+  color: var(--green);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.gateway-activity-row.error code {
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+.agent-access-side {
+  display: grid;
+  gap: 9px;
+}
+
+.agent-access-side .section-title {
+  margin-top: 8px;
+}
+
+.agent-access-details {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fafaf7;
+}
+
+.agent-access-details summary {
+  padding: 10px 11px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 760;
+  list-style: none;
+}
+
+.agent-access-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.agent-access-details[open] summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.agent-access-details .snippet,
+.agent-access-details .endpoint-list,
+.agent-access-details .doc-preview {
+  margin: 10px;
+}
+
+.doc-preview.compact pre {
+  max-height: 260px;
+  margin: 0;
+  overflow: auto;
+}
+
+@media (max-width: 1200px) {
+  #agentSetupView .agent-access-grid,
+  .agent-roster {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .gateway-activity-header {
+    display: none;
+  }
+
+  .gateway-activity-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .gateway-activity-row > * {
+    white-space: normal;
+  }
+}

@@ -188,8 +188,8 @@ async function main() {
         externalSessionId: "phase4-session-001"
       })
     );
-    if (!started.session?.id || !started.briefing?.text?.includes("Current position")) {
-      throw new Error("Gateway innerlife_session_start did not return a session and briefing.");
+    if (!started.session?.id || !started.share_plan || started.briefing) {
+      throw new Error("Gateway innerlife_session_start did not return a compact session start packet.");
     }
     const ended = parseTextResult(
       await client.callTool("innerlife_session_end", {

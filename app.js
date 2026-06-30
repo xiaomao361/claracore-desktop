@@ -56,6 +56,7 @@ const {
   monitorUptime,
   monitorCpu,
   monitorRam,
+  monitorProcess,
   monitorDisk,
   monitorTime,
   agentSetupMarkdown,
@@ -103,6 +104,16 @@ const {
   innerLifePendingCount,
   innerLifeEventCount,
   innerLifeThoughtCount,
+  innerLifeProfileDisplayName,
+  innerLifeProfileRecentFocus,
+  innerLifeProfileInterests,
+  innerLifeProfileShareAfterHours,
+  innerLifeProfileShareCooldownHours,
+  innerLifeProfileShareMaxDaily,
+  innerLifeProfileJson,
+  innerLifeStateJson,
+  saveInnerLifeProfile,
+  innerLifeProfileNotice,
   saveSettings,
   settingsNotice,
   saveAppearanceSettings,
@@ -510,6 +521,20 @@ function renderResourceSnapshot(resources) {
     resources.memory?.text && Number.isFinite(resources.memory?.percent)
       ? `${resources.memory.text} (${resources.memory.percent}%)`
       : "--";
+  if (monitorProcess) {
+    const processMemory = resources.processMemory || {};
+    const oneMinute = processMemory.trend?.oneMinute?.text || "0 B";
+    const tenMinutes = processMemory.trend?.tenMinutes?.text || "0 B";
+    monitorProcess.textContent = processMemory.totalRssText
+      ? `${processMemory.totalRssText} (1m ${oneMinute}, 10m ${tenMinutes})`
+      : "--";
+    monitorProcess.title = [
+      `main rss: ${processMemory.main?.rssText || "-"}`,
+      `main heap: ${processMemory.main?.heapUsedText || "-"}`,
+      `renderer rss: ${processMemory.renderer?.rssText || "-"}`,
+      `gateway rss: ${processMemory.gateway?.rssText || "-"}`
+    ].join("\n");
+  }
   monitorDisk.textContent =
     resources.disk?.text && Number.isFinite(resources.disk?.percent)
       ? `${resources.disk.text} (${resources.disk.percent}%)`
@@ -774,6 +799,65 @@ memoryAgentFilter?.addEventListener("change", async () => {
 innerLifeAgentFilter?.addEventListener("change", () => {
   rendererState.activeInnerLifeAgentFilter = innerLifeAgentFilter.value || "";
   renderInnerLife();
+});
+
+saveInnerLifeProfile?.addEventListener("click", async () => {
+  const agentId = rendererState.activeInnerLifeAgentFilter || "";
+  if (!agentId || agentId === "all") {
+    if (innerLifeProfileNotice) innerLifeProfileNotice.textContent = t("innerLife.profileSelectAgent");
+    return;
+  }
+  try {
+    const numericValue = (input, fallback, parser = Number.parseFloat) => {
+      const raw = String(input?.value ?? "").trim();
+      if (raw === "") return fallback;
+      const parsed = parser(raw, 10);
+      return Number.isFinite(parsed) ? Math.max(0, parsed) : fallback;
+    };
+    const profile = JSON.parse(innerLifeProfileJson.value || "{}");
+    const stateJson = JSON.parse(innerLifeStateJson.value || "{}");
+    const interests = splitListInput(innerLifeProfileInterests.value);
+    const sharePolicy = {
+      default_mode: profile.share_policy?.default_mode || "when_relevant",
+      max_proactive_per_day: numericValue(innerLifeProfileShareMaxDaily, profile.share_policy?.max_proactive_per_day ?? 3, Number.parseInt),
+      proactive_after_hours: numericValue(innerLifeProfileShareAfterHours, profile.share_policy?.proactive_after_hours ?? 2),
+      repeat_cooldown_hours: numericValue(innerLifeProfileShareCooldownHours, profile.share_policy?.repeat_cooldown_hours ?? 4),
+      max_defer_count: profile.share_policy?.max_defer_count ?? 3,
+      stale_after_days: profile.share_policy?.stale_after_days ?? 7,
+      ...(profile.share_policy || {})
+    };
+    sharePolicy.max_proactive_per_day = numericValue(innerLifeProfileShareMaxDaily, sharePolicy.max_proactive_per_day, Number.parseInt);
+    sharePolicy.proactive_after_hours = numericValue(innerLifeProfileShareAfterHours, sharePolicy.proactive_after_hours);
+    sharePolicy.repeat_cooldown_hours = numericValue(innerLifeProfileShareCooldownHours, sharePolicy.repeat_cooldown_hours);
+    const nextProfile = {
+      ...profile,
+      share_policy: sharePolicy
+    };
+    const nextState = {
+      ...stateJson,
+      current_interests: interests,
+      recent_focus: innerLifeProfileRecentFocus.value.trim() || null
+    };
+    saveInnerLifeProfile.disabled = true;
+    if (innerLifeProfileNotice) {
+      innerLifeProfileNotice.dataset.locked = "true";
+      innerLifeProfileNotice.textContent = t("common.checking");
+    }
+    await window.ClaraCoreDesktop.updateInnerLifeProfile({
+      agentId,
+      displayName: innerLifeProfileDisplayName.value.trim() || agentId,
+      profile: nextProfile,
+      state: nextState
+    });
+    await refreshRuntimeSnapshotOnly();
+    if (innerLifeProfileNotice) innerLifeProfileNotice.textContent = t("innerLife.profileSaved");
+  } catch (error) {
+    console.error(error);
+    if (innerLifeProfileNotice) innerLifeProfileNotice.textContent = t("innerLife.profileSaveFailed");
+  } finally {
+    if (innerLifeProfileNotice) delete innerLifeProfileNotice.dataset.locked;
+    renderInnerLife();
+  }
 });
 
 loadMoreInnerLifeSessions?.addEventListener("click", async () => {
@@ -1201,6 +1285,7 @@ refreshResources().catch((error) => {
   console.error(error);
   monitorCpu.textContent = "--";
   monitorRam.textContent = "--";
+  if (monitorProcess) monitorProcess.textContent = "--";
   monitorDisk.textContent = "--";
 });
 window.setInterval(() => {

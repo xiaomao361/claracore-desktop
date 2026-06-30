@@ -18,6 +18,18 @@ async function doctor(core, agentId = "codex") {
   return core.database.getInnerLifeDoctor(agentId);
 }
 
+async function updateProfile(core, input = {}) {
+  return core.database.updateInnerLifeProfile(input);
+}
+
+async function profiles(core, input = {}) {
+  return core.database.listInnerLifeProfiles(input);
+}
+
+async function deleteProfile(core, input = {}) {
+  return core.database.deleteInnerLifeProfile(input);
+}
+
 async function submitInbox(core, input) {
   return core.database.submitInnerLifeInbox(input);
 }
@@ -91,6 +103,7 @@ module.exports = {
   applyShareToSharedLine,
   checkShareTiming,
   converge,
+  deleteProfile,
   digest,
   digestRuns,
   doctor,
@@ -101,6 +114,7 @@ module.exports = {
   inbox,
   markShare,
   processOnce,
+  profiles,
   reviewShare,
   sessions,
   setDaemon,
@@ -108,5 +122,6 @@ module.exports = {
   startSession,
   submitInbox,
   summaries,
-  tickDaemon
+  tickDaemon,
+  updateProfile
 };

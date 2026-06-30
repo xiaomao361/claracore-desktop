@@ -128,6 +128,12 @@ Runtime modules may compose multiple domains for product workflows, such as
 snapshots, backup-gated imports, or archive export. They should not become the
 home for new domain rules.
 
+Runtime snapshots must stay bounded. `buildProductSnapshot()` is the Home and
+status snapshot, so it should carry counts, summaries, and recent samples only.
+Full Memory lists, InnerLife history, Gateway trace browsing, and graph data
+must be fetched through focused paged or lazy-loaded IPC calls. The detailed
+resource rules live in [Runtime Memory Policy](RUNTIME_MEMORY_POLICY.md).
+
 Database implementation belongs in `core/db`. Product persistence is split into
 repositories under `core/db/repositories/`.
 
@@ -155,6 +161,12 @@ or scheduler-driven workflows should still protect their own product semantics;
 for example InnerLife daemon ticks are guarded so background scheduler ticks and
 manual UI ticks do not create duplicate share candidates.
 
+The Node runtime uses a cached `ProductDatabase` connection per process. In
+packaged mode, `node:sqlite` may be unavailable, so the database helper can
+fall back to the `sqlite3` CLI. Both paths must set WAL mode and a non-zero busy
+timeout; otherwise short write contention between Desktop and multiple Gateway
+processes can surface as immediate `database is locked` failures.
+
 Multi-statement writes that must be atomic must wrap their SQL in an explicit
 `BEGIN; ... COMMIT;` block. The `exec()` helper runs multiple statements in
 one call but does not add an implicit transaction; partial writes will persist
@@ -175,6 +187,18 @@ not bypass runtime into database internals.
 The MCP config shown in Agent Setup launches this Gateway as a stdio server.
 Gateway is part of the product runtime, while the Logs view and Gateway trace
 tables are inspection surfaces for what agents are doing.
+
+Each MCP agent usually owns its own stdio Gateway process. In-process database
+serialization does not coordinate across sibling Gateway processes, so database
+writes must also be correct under SQLite's cross-process WAL and busy-timeout
+rules. The Desktop UI's quit path best-effort stops packaged sibling Gateway
+processes so replacing `/Applications/ClaraCore Desktop.app` is not blocked by
+a stale `--gateway` process.
+
+Gateway tool responses must describe the actual record a write changed. For
+example `shared_line_update` saves one current position and then reads the
+resume packet for that exact `lineId`; it must not re-infer a line from agent
+identity after the write.
 
 ## Import And Backup Boundary
 

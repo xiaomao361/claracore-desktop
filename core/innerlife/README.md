@@ -16,7 +16,7 @@ Desktop currently owns:
 - Session start/end records.
 - Briefing generation from Shared Line, Memory, pending shares, and inbox.
 - Digest runs and share candidate generation.
-- Autonomous exploration and convergence into reviewable share candidates.
+- Autonomous exploration and convergence into waiting share candidates.
 - Internal change history, formed experiences, and stable summaries.
 - Pending share lifecycle records.
 - Share timing checks against current context.
@@ -41,7 +41,7 @@ Each generated record stores `generationSource` in its metadata:
   kept and tagged with `[InnerLife model fallback: <error>]`.
 
 Model failures never throw out of the generation step, so a degraded or
-unreachable model produces a clearly tagged reviewable share instead of breaking
+unreachable model produces a clearly tagged waiting share instead of breaking
 the daemon tick or session lifecycle. The model client supports `ollama`
 (`/api/chat`) and `openai-compatible` (`/v1/chat/completions`) providers, reusing
 the same secret-ref pattern as Memory embeddings (`innerlife.llm.api_key`).

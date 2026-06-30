@@ -9,11 +9,12 @@ const { installMemoriaRepository } = require("./repositories/memoria");
 const { installContinuityRepository } = require("./repositories/continuity");
 
 const SCHEMA_ID = "001_product_core_schema";
+const SQLITE_BUSY_TIMEOUT_MS = 30000;
 
 const databaseLocks = new Map();
 
 function innerLifeRetrySeconds(pollSeconds, failureCount) {
-    const safePoll = Math.max(1, Number.parseInt(String(pollSeconds), 10) || 900);
+  const safePoll = Math.max(1, Number.parseInt(String(pollSeconds), 10) || 900);
   const safeFailures = Math.max(1, Math.min(Number.parseInt(String(failureCount), 10) || 1, 8));
   return Math.min(3600, safePoll * 2 ** (safeFailures - 1));
 }
@@ -296,7 +297,7 @@ function normalizeSearchRows(rows) {
 }
 
 async function runSqliteCli(dbPath, sql, json = false) {
-  const args = json ? ["-json", dbPath] : [dbPath];
+  const args = ["-cmd", `.timeout ${SQLITE_BUSY_TIMEOUT_MS}`, ...(json ? ["-json"] : []), dbPath];
   const output = await new Promise((resolve, reject) => {
     const child = spawn("sqlite3", args, { stdio: ["pipe", "pipe", "pipe"] });
     let stdout = "";
@@ -349,6 +350,7 @@ class ProductDatabase {
     this.dbPath = dbPath;
     this.schemaPath = path.join(__dirname, "schema.sql");
     this.sqlite = tryBuiltinSqlite();
+    this.connection = null;
   }
 
   async initialize() {
@@ -361,24 +363,28 @@ class ProductDatabase {
   }
 
   openConnection() {
+    if (this.connection) return this.connection;
     const db = new this.sqlite.DatabaseSync(this.dbPath);
     // WAL lets concurrent readers coexist with a single writer, and
     // busy_timeout makes a contended writer wait instead of failing
     // immediately with SQLITE_BUSY. Both are required for a long-running
     // Gateway serving multiple agents against one product database.
-    db.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
+    db.exec(`PRAGMA journal_mode = WAL; PRAGMA busy_timeout = ${SQLITE_BUSY_TIMEOUT_MS}; PRAGMA foreign_keys = ON;`);
+    this.connection = db;
     return db;
+  }
+
+  close() {
+    if (!this.connection) return;
+    this.connection.close();
+    this.connection = null;
   }
 
   async exec(sql) {
     return withDatabaseLock(this.dbPath, async () => {
       if (this.sqlite?.DatabaseSync) {
         const db = this.openConnection();
-        try {
-          db.exec(sql);
-        } finally {
-          db.close();
-        }
+        db.exec(sql);
         return [];
       }
       return runSqliteCli(this.dbPath, sql, false);
@@ -389,11 +395,7 @@ class ProductDatabase {
     return withDatabaseLock(this.dbPath, async () => {
       if (this.sqlite?.DatabaseSync) {
         const db = this.openConnection();
-        try {
-          return db.prepare(sql).all();
-        } finally {
-          db.close();
-        }
+        return db.prepare(sql).all();
       }
       return runSqliteCli(this.dbPath, sql, true);
     });
@@ -469,6 +471,10 @@ class ProductDatabase {
       SET agent_id = 'codex'
       WHERE agent_id IS NULL OR agent_id = '';
 
+      UPDATE continuity_lines
+      SET agent_id = 'codex'
+      WHERE agent_id = 'default';
+
       CREATE INDEX IF NOT EXISTS idx_memory_records_user_type_time
       ON memory_records(user_id, record_type, occurred_at DESC);
 
@@ -477,6 +483,28 @@ class ProductDatabase {
 
       CREATE INDEX IF NOT EXISTS idx_continuity_lines_agent_status_updated
       ON continuity_lines(agent_id, status, updated_at DESC);
+
+      WITH ranked_current_positions AS (
+        SELECT
+          rowid AS rid,
+          ROW_NUMBER() OVER (
+            PARTITION BY line_id
+            ORDER BY
+              julianday(updated_at) DESC,
+              CASE WHEN id = 'position_' || line_id THEN 0 ELSE 1 END,
+              rowid DESC
+          ) AS rank
+        FROM current_positions
+      )
+      DELETE FROM current_positions
+      WHERE rowid IN (
+        SELECT rid
+        FROM ranked_current_positions
+        WHERE rank > 1
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_current_positions_line_unique
+      ON current_positions(line_id);
 
       CREATE TABLE IF NOT EXISTS continuity_agent_state (
         agent_id TEXT PRIMARY KEY,
@@ -501,6 +529,76 @@ class ProductDatabase {
       CREATE UNIQUE INDEX IF NOT EXISTS idx_memory_records_dedupe
       ON memory_records(user_id, record_type, dedupe_key)
       WHERE dedupe_key IS NOT NULL;
+    `);
+    await this.normalizeLegacyContinuityDefaultAgent();
+  }
+
+  async normalizeLegacyContinuityDefaultAgent() {
+    const positionRows = await this.query(`
+      SELECT id, metadata_json
+      FROM current_positions
+      WHERE metadata_json LIKE '%"agentId"%default%';
+    `);
+    for (const row of positionRows) {
+      const metadata = parseJson(row.metadata_json, {});
+      if (metadata?.agentId !== "default") continue;
+      metadata.agentId = DEFAULT_AGENT_ID;
+      await this.exec(`
+        UPDATE current_positions
+        SET metadata_json = ${jsonSql(metadata)}
+        WHERE id = ${sqlString(row.id)};
+      `);
+    }
+
+    const defaultAgentRows = await this.query(`
+      SELECT agent_id, communication_style, relationship_position, long_term_preferences_json,
+             boundaries_json, stable_patterns_json, notes
+      FROM continuity_agent_state
+      WHERE agent_id IN ('default', ${sqlString(DEFAULT_AGENT_ID)});
+    `);
+    const defaultState = defaultAgentRows.find((row) => row.agent_id === "default");
+    if (!defaultState) return;
+    const codexState = defaultAgentRows.find((row) => row.agent_id === DEFAULT_AGENT_ID);
+    if (!codexState) {
+      await this.exec(`
+        UPDATE continuity_agent_state
+        SET agent_id = ${sqlString(DEFAULT_AGENT_ID)},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE agent_id = 'default';
+      `);
+      return;
+    }
+    await this.exec(`
+      UPDATE continuity_agent_state
+      SET communication_style = CASE
+            WHEN communication_style = '' THEN ${sqlString(defaultState.communication_style || "")}
+            ELSE communication_style
+          END,
+          relationship_position = CASE
+            WHEN relationship_position = '' THEN ${sqlString(defaultState.relationship_position || "")}
+            ELSE relationship_position
+          END,
+          long_term_preferences_json = CASE
+            WHEN long_term_preferences_json = '[]' THEN ${sqlString(defaultState.long_term_preferences_json || "[]")}
+            ELSE long_term_preferences_json
+          END,
+          boundaries_json = CASE
+            WHEN boundaries_json = '[]' THEN ${sqlString(defaultState.boundaries_json || "[]")}
+            ELSE boundaries_json
+          END,
+          stable_patterns_json = CASE
+            WHEN stable_patterns_json = '[]' THEN ${sqlString(defaultState.stable_patterns_json || "[]")}
+            ELSE stable_patterns_json
+          END,
+          notes = CASE
+            WHEN notes = '' THEN ${sqlString(defaultState.notes || "")}
+            ELSE notes
+          END,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE agent_id = ${sqlString(DEFAULT_AGENT_ID)};
+
+      DELETE FROM continuity_agent_state
+      WHERE agent_id = 'default';
     `);
   }
 
@@ -643,6 +741,151 @@ class ProductDatabase {
       error: row.error || "",
       createdAt: row.created_at
     }));
+  }
+
+  async agentReferenceCounts(agentId) {
+    const id = normalizeAgentId(agentId);
+    if (!id) return {};
+    const tail = id.split(":").filter(Boolean).pop() || id;
+    const labels = [`agent-id:${id}`, `agent:${tail}`];
+    const labelList = labels.map(sqlString).join(", ");
+    const rows = await this.query(`
+      SELECT
+        (SELECT COUNT(*) FROM agents WHERE id = ${sqlString(id)}) AS agents,
+        (SELECT COUNT(*) FROM continuity_lines WHERE agent_id = ${sqlString(id)}) AS continuity_lines,
+        (SELECT COUNT(*) FROM continuity_agent_state WHERE agent_id = ${sqlString(id)}) AS continuity_agent_state,
+        (SELECT COUNT(*) FROM innerlife_profiles WHERE agent_id = ${sqlString(id)}) AS innerlife_profiles,
+        (SELECT COUNT(*) FROM innerlife_events WHERE agent_id = ${sqlString(id)}) AS innerlife_events,
+        (SELECT COUNT(*) FROM innerlife_inbox WHERE agent_id = ${sqlString(id)}) AS innerlife_inbox,
+        (SELECT COUNT(*) FROM innerlife_shares WHERE agent_id = ${sqlString(id)}) AS innerlife_shares,
+        (SELECT COUNT(*) FROM innerlife_share_actions WHERE agent_id = ${sqlString(id)}) AS innerlife_share_actions,
+        (SELECT COUNT(*) FROM innerlife_digest_runs WHERE agent_id = ${sqlString(id)}) AS innerlife_digest_runs,
+        (SELECT COUNT(*) FROM innerlife_share_checks WHERE agent_id = ${sqlString(id)}) AS innerlife_share_checks,
+        (SELECT COUNT(*) FROM innerlife_sessions WHERE agent_id = ${sqlString(id)}) AS innerlife_sessions,
+        (SELECT COUNT(*) FROM innerlife_daemon_state WHERE agent_id = ${sqlString(id)}) AS innerlife_daemon_state,
+        (SELECT COUNT(*) FROM gateway_sessions WHERE agent_id = ${sqlString(id)}) AS gateway_sessions,
+        (SELECT COUNT(*) FROM gateway_traces WHERE agent_id = ${sqlString(id)}) AS gateway_traces,
+        (SELECT COUNT(*) FROM memory_records WHERE source_agent = ${sqlString(id)}) AS memory_records,
+        (SELECT COUNT(*) FROM memory_labels WHERE label IN (${labelList || "''"})) AS memory_labels;
+    `);
+    return rows[0] || {};
+  }
+
+  async mergeAgentIdentity(input = {}) {
+    const sourceAgentId = normalizeAgentId(input.fromAgentId || input.from_agent_id || input.sourceAgentId || input.source_agent_id || "");
+    const targetAgentId = normalizeAgentId(input.toAgentId || input.to_agent_id || input.targetAgentId || input.target_agent_id || "");
+    if (!sourceAgentId) throw new Error("Source agent id is required.");
+    if (!targetAgentId) throw new Error("Target agent id is required.");
+    if (sourceAgentId === targetAgentId) throw new Error("Source and target agent ids are the same.");
+    if (input.confirm !== true) throw new Error("Agent identity merge requires confirm=true.");
+
+    const sourceBefore = await this.agentReferenceCounts(sourceAgentId);
+    const targetBefore = await this.agentReferenceCounts(targetAgentId);
+    const sourceTail = sourceAgentId.split(":").filter(Boolean).pop() || sourceAgentId;
+    const targetTail = targetAgentId.split(":").filter(Boolean).pop() || targetAgentId;
+    const positionMatchRows = await this.query(`
+      SELECT COUNT(*) AS c
+      FROM current_positions
+      WHERE json_extract(metadata_json, '$.agentId') = ${sqlString(sourceAgentId)};
+    `);
+    const currentPositionMetadataUpdated = Number(positionMatchRows[0]?.c || 0);
+
+    await this.exec(`
+      BEGIN IMMEDIATE;
+
+      INSERT INTO agents (id, label, role, status)
+      VALUES (${sqlString(targetAgentId)}, ${sqlString(targetTail)}, 'agent', 'active')
+      ON CONFLICT(id) DO UPDATE SET
+        label = CASE WHEN label = '' OR label = id THEN excluded.label ELSE label END,
+        status = 'active',
+        updated_at = CURRENT_TIMESTAMP;
+
+      UPDATE continuity_lines SET agent_id = ${sqlString(targetAgentId)}, updated_at = CURRENT_TIMESTAMP WHERE agent_id = ${sqlString(sourceAgentId)};
+      UPDATE innerlife_events SET agent_id = ${sqlString(targetAgentId)} WHERE agent_id = ${sqlString(sourceAgentId)};
+      UPDATE innerlife_inbox SET agent_id = ${sqlString(targetAgentId)} WHERE agent_id = ${sqlString(sourceAgentId)};
+      UPDATE innerlife_shares SET agent_id = ${sqlString(targetAgentId)}, updated_at = CURRENT_TIMESTAMP WHERE agent_id = ${sqlString(sourceAgentId)};
+      UPDATE innerlife_share_actions SET agent_id = ${sqlString(targetAgentId)} WHERE agent_id = ${sqlString(sourceAgentId)};
+      UPDATE innerlife_digest_runs SET agent_id = ${sqlString(targetAgentId)} WHERE agent_id = ${sqlString(sourceAgentId)};
+      UPDATE innerlife_share_checks SET agent_id = ${sqlString(targetAgentId)} WHERE agent_id = ${sqlString(sourceAgentId)};
+      UPDATE gateway_sessions SET agent_id = ${sqlString(targetAgentId)} WHERE agent_id = ${sqlString(sourceAgentId)};
+      UPDATE gateway_traces SET agent_id = ${sqlString(targetAgentId)} WHERE agent_id = ${sqlString(sourceAgentId)};
+      UPDATE memory_records SET source_agent = ${sqlString(targetAgentId)}, updated_at = CURRENT_TIMESTAMP WHERE source_agent = ${sqlString(sourceAgentId)};
+
+      UPDATE current_positions
+      SET metadata_json = json_set(metadata_json, '$.agentId', ${sqlString(targetAgentId)})
+      WHERE json_extract(metadata_json, '$.agentId') = ${sqlString(sourceAgentId)};
+
+      UPDATE innerlife_sessions
+      SET external_session_id = external_session_id || ':' || id
+      WHERE agent_id = ${sqlString(sourceAgentId)}
+        AND external_session_id IS NOT NULL
+        AND EXISTS (
+          SELECT 1
+          FROM innerlife_sessions existing
+          WHERE existing.agent_id = ${sqlString(targetAgentId)}
+            AND existing.external_session_id = innerlife_sessions.external_session_id
+        );
+      UPDATE innerlife_sessions SET agent_id = ${sqlString(targetAgentId)} WHERE agent_id = ${sqlString(sourceAgentId)};
+
+      INSERT INTO innerlife_profiles (agent_id, display_name, enabled, profile_json, state_json, created_at, updated_at)
+      SELECT ${sqlString(targetAgentId)}, display_name, enabled, profile_json, state_json, created_at, CURRENT_TIMESTAMP
+      FROM innerlife_profiles
+      WHERE agent_id = ${sqlString(sourceAgentId)}
+        AND NOT EXISTS (SELECT 1 FROM innerlife_profiles WHERE agent_id = ${sqlString(targetAgentId)});
+      DELETE FROM innerlife_profiles WHERE agent_id = ${sqlString(sourceAgentId)};
+
+      INSERT INTO innerlife_daemon_state (agent_id, status, enabled, last_tick_at, next_run_at, last_result, last_error, tick_count, metadata_json, updated_at)
+      SELECT ${sqlString(targetAgentId)}, status, enabled, last_tick_at, next_run_at, last_result, last_error, tick_count, metadata_json, CURRENT_TIMESTAMP
+      FROM innerlife_daemon_state
+      WHERE agent_id = ${sqlString(sourceAgentId)}
+        AND NOT EXISTS (SELECT 1 FROM innerlife_daemon_state WHERE agent_id = ${sqlString(targetAgentId)});
+      DELETE FROM innerlife_daemon_state WHERE agent_id = ${sqlString(sourceAgentId)};
+
+      INSERT INTO continuity_agent_state (agent_id, communication_style, relationship_position, long_term_preferences_json, boundaries_json, stable_patterns_json, notes, updated_at)
+      SELECT ${sqlString(targetAgentId)}, communication_style, relationship_position, long_term_preferences_json, boundaries_json, stable_patterns_json, notes, CURRENT_TIMESTAMP
+      FROM continuity_agent_state
+      WHERE agent_id = ${sqlString(sourceAgentId)}
+        AND NOT EXISTS (SELECT 1 FROM continuity_agent_state WHERE agent_id = ${sqlString(targetAgentId)});
+      DELETE FROM continuity_agent_state WHERE agent_id = ${sqlString(sourceAgentId)};
+
+      INSERT OR IGNORE INTO memory_labels (memory_id, label)
+      SELECT memory_id, ${sqlString(`agent-id:${targetAgentId}`)}
+      FROM memory_labels
+      WHERE label = ${sqlString(`agent-id:${sourceAgentId}`)};
+      DELETE FROM memory_labels WHERE label = ${sqlString(`agent-id:${sourceAgentId}`)};
+
+      INSERT OR IGNORE INTO memory_labels (memory_id, label)
+      SELECT memory_id, ${sqlString(`agent:${targetTail}`)}
+      FROM memory_labels
+      WHERE label = ${sqlString(`agent:${sourceTail}`)};
+      DELETE FROM memory_labels WHERE label = ${sqlString(`agent:${sourceTail}`)};
+
+      DELETE FROM agents
+      WHERE id = ${sqlString(sourceAgentId)}
+        AND NOT EXISTS (SELECT 1 FROM continuity_lines WHERE agent_id = ${sqlString(sourceAgentId)})
+        AND NOT EXISTS (SELECT 1 FROM continuity_agent_state WHERE agent_id = ${sqlString(sourceAgentId)})
+        AND NOT EXISTS (SELECT 1 FROM innerlife_profiles WHERE agent_id = ${sqlString(sourceAgentId)})
+        AND NOT EXISTS (SELECT 1 FROM innerlife_events WHERE agent_id = ${sqlString(sourceAgentId)})
+        AND NOT EXISTS (SELECT 1 FROM innerlife_inbox WHERE agent_id = ${sqlString(sourceAgentId)})
+        AND NOT EXISTS (SELECT 1 FROM innerlife_shares WHERE agent_id = ${sqlString(sourceAgentId)})
+        AND NOT EXISTS (SELECT 1 FROM innerlife_digest_runs WHERE agent_id = ${sqlString(sourceAgentId)})
+        AND NOT EXISTS (SELECT 1 FROM innerlife_sessions WHERE agent_id = ${sqlString(sourceAgentId)})
+        AND NOT EXISTS (SELECT 1 FROM innerlife_daemon_state WHERE agent_id = ${sqlString(sourceAgentId)})
+        AND NOT EXISTS (SELECT 1 FROM gateway_sessions WHERE agent_id = ${sqlString(sourceAgentId)})
+        AND NOT EXISTS (SELECT 1 FROM gateway_traces WHERE agent_id = ${sqlString(sourceAgentId)});
+
+      COMMIT;
+    `);
+
+    return {
+      sourceAgentId,
+      targetAgentId,
+      sourceBefore,
+      targetBefore,
+      sourceAfter: await this.agentReferenceCounts(sourceAgentId),
+      targetAfter: await this.agentReferenceCounts(targetAgentId),
+      currentPositionMetadataUpdated
+    };
   }
 
   async clearLogs() {

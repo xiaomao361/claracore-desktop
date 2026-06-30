@@ -113,7 +113,7 @@ function createClaraCoreHomeView(context) {
     }
     if (module.id === "gateway") {
       const traces = snapshot?.gatewayTraces || [];
-      const errors = traces.filter((trace) => trace.status === "error").length;
+      const errors = actionableGatewayErrors(traces).length;
       return [
         [t("home.cognitive.surface"), "stdio MCP"],
         [t("home.gateway.calls"), String(traces.length)],
@@ -191,7 +191,7 @@ function createClaraCoreHomeView(context) {
     const sharedLine = snapshot?.sharedLine || {};
     const innerLife = snapshot?.innerLife || {};
     const counts = innerLife.counts || {};
-    const gatewayErrors = (snapshot?.gatewayTraces || []).filter((trace) => trace.status === "error").length;
+    const gatewayErrors = actionableGatewayErrors(snapshot?.gatewayTraces || []).length;
     const healthStatus = snapshot?.health?.status || "warn";
     return [
       {
@@ -259,7 +259,7 @@ function createClaraCoreHomeView(context) {
     const hasError =
       snapshot?.health?.status === "error" ||
       daemon.status === "error" ||
-      traces.some((trace) => trace.status === "error") ||
+      actionableGatewayErrors(traces).length > 0 ||
       Boolean(stats.failedEmbeddingCount);
     if (hasError) return "error";
 
@@ -334,7 +334,7 @@ function createClaraCoreHomeView(context) {
       });
     }
 
-    const traceError = (snapshot?.gatewayTraces || []).find((trace) => trace.status === "error");
+    const traceError = actionableGatewayErrors(snapshot?.gatewayTraces || [])[0];
     if (traceError) {
       items.push({
         tone: "error",
@@ -382,7 +382,9 @@ function createClaraCoreHomeView(context) {
     const snapshot = getSnapshot();
     const sharedLine = snapshot?.sharedLine || {};
     const innerLife = snapshot?.innerLife || {};
+    const innerLifeProfileIds = (innerLife.profiles || []).map((profile) => profile.agentId || profile.agent_id).filter(Boolean);
     const ids = [
+      ...innerLifeProfileIds,
       ...(sharedLine.lines || []).map((line) => safeJsonObject(line.metadata, {}).agentId || line.agentId),
       ...(innerLife.sessions || []).map(itemAgentId),
       ...(innerLife.digestRuns || []).map(itemAgentId),
@@ -411,11 +413,34 @@ function createClaraCoreHomeView(context) {
 
   function memoryMatchesAgent(memory, agentId) {
     const labels = Array.isArray(memory.labels) ? memory.labels : [];
-    return labels.some((label) => label === `agent:${agentId}` || label === `agent-id:${agentId}` || label.endsWith(`:${agentId}`));
+    return labels.some((label) =>
+      agentAliases(agentId).some((alias) => label === `agent:${alias}` || label === `agent-id:${alias}` || label.endsWith(`:${alias}`))
+    );
+  }
+
+  function agentAliases(agentId) {
+    const raw = String(agentId || "").trim();
+    const tail = raw.split(":").filter(Boolean).pop() || "";
+    return [...new Set([raw, tail].filter(Boolean))];
+  }
+
+  function sameAgent(left, right) {
+    if (!left || !right) return false;
+    const leftAliases = new Set(agentAliases(left));
+    return agentAliases(right).some((alias) => leftAliases.has(alias));
+  }
+
+  function filterByAgentAlias(items, agentId, getter = itemAgentId) {
+    if (!agentId) return items || [];
+    return (items || []).filter((item) => sameAgent(getter(item), agentId));
+  }
+
+  function hasAgentShareMatch(shares, agentIds) {
+    return (shares || []).some((share) => (agentIds || []).some((agentId) => sameAgent(itemAgentId(share), agentId)));
   }
 
   function latestAgentText(items, agentId, fields) {
-    const match = (items || []).find((item) => itemAgentId(item) === agentId);
+    const match = (items || []).find((item) => sameAgent(itemAgentId(item), agentId));
     if (!match) return "";
     for (const field of fields) {
       if (match[field]) return String(match[field]);
@@ -423,23 +448,26 @@ function createClaraCoreHomeView(context) {
     return "";
   }
 
-  function homeAgentView(agentId) {
+  function homeAgentView(agentId, options = {}) {
     const snapshot = getSnapshot();
     const sharedLine = snapshot?.sharedLine || {};
     const lines = sharedLine.lines || [];
     const current = lines.find((line) => {
       const metadata = safeJsonObject(line.metadata, {});
-      return (metadata.agentId || line.agentId) === agentId && line.status !== "archived";
+      return sameAgent(metadata.agentId || line.agentId, agentId) && line.status !== "archived";
     }) || (sharedLine.line?.status !== "archived" ? sharedLine.line : null);
     const innerLife = snapshot?.innerLife || {};
-    const sessions = filterByAgent(innerLife.sessions || [], agentId);
+    const sessions = filterByAgentAlias(innerLife.sessions || [], agentId);
     const activeSession = sessions.find((session) => session.status === "active") || sessions[0];
-    const pendingShares = filterByAgent(innerLife.pendingShares || [], agentId);
-    const traces = (snapshot?.gatewayTraces || []).filter((trace) => trace.agentId === agentId);
-    const matchedMemories = (snapshot?.memories || []).filter((memory) => memoryMatchesAgent(memory, agentId));
+    const allPendingShares = innerLife.pendingShares || [];
+    const agentPendingShares = filterByAgentAlias(allPendingShares, agentId);
+    const pendingShares = agentPendingShares.length || !options.useGlobalPendingFallback ? agentPendingShares : allPendingShares;
+    const traces = filterByAgentAlias(snapshot?.gatewayTraces || [], agentId, (trace) => trace.agentId);
+    const recentMemories = snapshot?.recentMemories || snapshot?.memories || [];
+    const matchedMemories = recentMemories.filter((memory) => memoryMatchesAgent(memory, agentId));
     const recentFocus =
       latestAgentText(pendingShares, agentId, ["summary", "content", "body", "thought", "output"]) ||
-      latestAgentText(filterByAgent(innerLife.inbox || [], agentId), agentId, ["body", "summary", "content"]);
+      latestAgentText(filterByAgentAlias(innerLife.inbox || [], agentId), agentId, ["body", "summary", "content"]);
     return {
       agentId,
       displayName: agentId,
@@ -547,18 +575,64 @@ function createClaraCoreHomeView(context) {
             <strong>${escapeHtml(responseText)}</strong>
           </div>
         </div>
-        <small class="trace-flow-time">${escapeHtml(trace.createdAt || "")}</small>
+        <small class="trace-flow-time">${escapeHtml(formatRelativeTime(traceTimestamp(trace)))}</small>
       </article>
     `;
   }
 
   function traceTimeValue(trace) {
-    const value = Date.parse(trace.createdAt || "");
-    return Number.isFinite(value) ? value : 0;
+    return traceTimestamp(trace);
+  }
+
+  function traceRequest(trace) {
+    return trace?.request && typeof trace.request === "object" ? trace.request : {};
+  }
+
+  function traceResolutionKey(trace) {
+    const request = traceRequest(trace);
+    const target =
+      request.lineId ||
+      request.line_id ||
+      request.id ||
+      request.memoryId ||
+      request.memory_id ||
+      request.sessionId ||
+      request.session_id ||
+      request.shareId ||
+      request.share_id ||
+      "";
+    if (!target) return "";
+    return [trace.agentId || "", trace.toolName || "", String(target)].join("::");
+  }
+
+  function resolvedGatewayErrorKeys(traces) {
+    const sorted = [...(traces || [])].sort((left, right) => traceTimestamp(left) - traceTimestamp(right));
+    const latestByKey = new Map();
+    for (const trace of sorted) {
+      const key = traceResolutionKey(trace);
+      if (!key) continue;
+      latestByKey.set(key, trace);
+    }
+    const resolved = new Set();
+    for (const [key, trace] of latestByKey.entries()) {
+      if (trace.status === "ok") resolved.add(key);
+    }
+    return resolved;
+  }
+
+  function actionableGatewayErrors(traces) {
+    const resolved = resolvedGatewayErrorKeys(traces || []);
+    return (traces || []).filter((trace) => {
+      if (trace.status !== "error") return false;
+      const key = traceResolutionKey(trace);
+      return !key || !resolved.has(key);
+    });
   }
 
   function tracePriority(trace) {
-    return trace.status === "error" ? 1 : 0;
+    const resolved = resolvedGatewayErrorKeys(getSnapshot()?.gatewayTraces || []);
+    const key = traceResolutionKey(trace);
+    return trace.status === "error" && (!key || !resolved.has(key)) ? 1 : 0;
   }
 
   function traceCompactRow(trace) {
@@ -583,8 +657,10 @@ function createClaraCoreHomeView(context) {
     renderRuntimeOverview();
     renderAttentionQueue();
 
-    homeAgentViewList.innerHTML = homeAgentIds()
-      .map(homeAgentView)
+    const agentIds = homeAgentIds();
+    const useGlobalPendingFallback = Boolean((snapshot?.innerLife?.pendingShares || []).length) && !hasAgentShareMatch(snapshot?.innerLife?.pendingShares || [], agentIds);
+    homeAgentViewList.innerHTML = agentIds
+      .map((agentId, index) => homeAgentView(agentId, { useGlobalPendingFallback: useGlobalPendingFallback && index === 0 }))
       .map(
         (agent) => `
           <article class="home-agent-card">
@@ -715,6 +791,54 @@ function createClaraCoreHomeView(context) {
       .join("");
   }
 
+  function traceTimestamp(trace) {
+    const raw = String(trace?.createdAt || "").trim();
+    if (!raw) return 0;
+    const normalized = raw.includes("T") ? raw : `${raw.replace(" ", "T")}Z`;
+    const parsed = Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(normalized) ? normalized : `${normalized}Z`);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function formatRelativeTime(timestamp) {
+    if (!timestamp) return t("common.notTracked");
+    const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+    if (seconds < 60) return t("connections.time.now");
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return t("connections.time.minutes", { count: String(minutes) });
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return t("connections.time.hours", { count: String(hours) });
+    const days = Math.floor(hours / 24);
+    return t("connections.time.days", { count: String(days) });
+  }
+
+  function agentActivityState(trace) {
+    if (!trace) return { className: "idle", label: t("connections.agentRecorded") };
+    if (trace.status === "error") return { className: "error", label: t("home.trace.statusError") };
+    const age = Date.now() - traceTimestamp(trace);
+    if (age <= 5 * 60 * 1000) return { className: "active", label: t("connections.agentJustCalled") };
+    if (age <= 60 * 60 * 1000) return { className: "recent", label: t("connections.agentRecentlyCalled") };
+    return { className: "idle", label: t("connections.agentRecorded") };
+  }
+
+  function summarizeAgentsFromTraces(traces) {
+    const byAgent = new Map();
+    const sorted = [...(traces || [])].sort((left, right) => traceTimestamp(right) - traceTimestamp(left));
+    for (const trace of sorted) {
+      const agentId = trace.agentId || t("home.trace.unknownAgent");
+      const existing = byAgent.get(agentId) || {
+        agentId,
+        count: 0,
+        errors: 0,
+        latest: null
+      };
+      existing.count += 1;
+      if (trace.status === "error") existing.errors += 1;
+      if (!existing.latest) existing.latest = trace;
+      byAgent.set(agentId, existing);
+    }
+    return [...byAgent.values()].sort((left, right) => traceTimestamp(right.latest) - traceTimestamp(left.latest));
+  }
+
   function renderConnections() {
     const snapshot = getSnapshot();
     if (!snapshot?.connections) return;
@@ -734,24 +858,30 @@ function createClaraCoreHomeView(context) {
       `;
     }
     const traces = snapshot.gatewayTraces || [];
-    const handshakes = traces.filter((trace) => trace.toolName === "claracore_connection_test");
+    const agents = summarizeAgentsFromTraces(traces);
     if (gatewayHandshakeList) {
-      if (handshakes.length === 0) {
-        gatewayHandshakeList.innerHTML = `<div class="endpoint-empty">${t("connections.noHandshakes")}</div>`;
+      if (agents.length === 0) {
+        gatewayHandshakeList.innerHTML = `<div class="endpoint-empty">${t("connections.noConnectedAgents")}</div>`;
       } else {
-        gatewayHandshakeList.innerHTML = handshakes
-          .slice(0, 5)
+        gatewayHandshakeList.innerHTML = agents
+          .slice(0, 8)
           .map(
-            (trace) => `
-              <div class="endpoint-card trace-card ${escapeHtml(trace.status || "")}">
-                <div>
-                  <strong>${escapeHtml(trace.agentId || "")}</strong>
-                  <code>${escapeHtml(trace.status || "")} · ${escapeHtml(String(trace.durationMs ?? 0))}ms</code>
-                  <span>${escapeHtml(trace.error || trace.responseSummary || t("connections.handshakeOk"))}</span>
-                  <small>${escapeHtml(trace.createdAt || "")}</small>
+            (agent) => {
+              const state = agentActivityState(agent.latest);
+              return `
+              <article class="agent-roster-card ${escapeHtml(state.className)}">
+                <div class="agent-roster-main">
+                  <strong>${escapeHtml(agent.agentId)}</strong>
+                  <span>${escapeHtml(agent.latest?.toolName || t("home.trace.unknownTool"))}</span>
                 </div>
-              </div>
-            `
+                <div class="agent-roster-meta">
+                  <span class="agent-state">${escapeHtml(state.label)}</span>
+                  <code>${escapeHtml(formatRelativeTime(traceTimestamp(agent.latest)))}</code>
+                  <small>${escapeHtml(t("connections.agentCalls", { count: String(agent.count), errors: String(agent.errors) }))}</small>
+                </div>
+              </article>
+            `;
+            }
           )
           .join("");
       }
@@ -759,21 +889,30 @@ function createClaraCoreHomeView(context) {
     if (traces.length === 0) {
       gatewayTraceList.innerHTML = `<div class="endpoint-empty">${t("connections.noGatewayTraces")}</div>`;
     } else {
-      gatewayTraceList.innerHTML = traces
-        .slice(0, 8)
-        .map(
-          (trace) => `
-            <div class="endpoint-card trace-card ${escapeHtml(trace.status || "")}">
-              <div>
-                <strong>${escapeHtml(trace.toolName || "")}</strong>
-                <code>${escapeHtml(trace.status || "")} · ${escapeHtml(String(trace.durationMs ?? 0))}ms</code>
-                <span>${escapeHtml(trace.error || trace.responseSummary || "")}</span>
-                <small>${escapeHtml(trace.createdAt || "")}</small>
+      gatewayTraceList.innerHTML = `
+        <div class="gateway-activity-header">
+          <span>${escapeHtml(t("connections.activityTime"))}</span>
+          <span>${escapeHtml(t("connections.activityAgent"))}</span>
+          <span>${escapeHtml(t("connections.activityTool"))}</span>
+          <span>${escapeHtml(t("common.status"))}</span>
+          <span>${escapeHtml(t("connections.activityDuration"))}</span>
+        </div>
+        ${traces
+          .slice(0, 20)
+          .map((trace) => {
+            const status = trace.status === "error" ? "error" : "ok";
+            return `
+              <div class="gateway-activity-row ${escapeHtml(status)}">
+                <time>${escapeHtml(formatRelativeTime(traceTimestamp(trace)))}</time>
+                <strong>${escapeHtml(trace.agentId || t("home.trace.unknownAgent"))}</strong>
+                <span>${escapeHtml(trace.toolName || t("home.trace.unknownTool"))}</span>
+                <code>${escapeHtml(status === "error" ? t("home.trace.statusError") : t("home.trace.statusOk"))}</code>
+                <small>${escapeHtml(String(trace.durationMs ?? 0))}ms</small>
               </div>
-            </div>
-          `
-        )
-        .join("");
+            `;
+          })
+          .join("")}
+      `;
     }
     const endpoints = snapshot.connections.httpEndpoints || [];
     if (endpoints.length === 0) {
