@@ -180,6 +180,9 @@ Current shape:
 
 - `core/db/database.js`: connection, initialization, settings, runtime events,
   gateway traces, backup records, configuration, and summary
+- `core/db/helpers.js`: shared repository/database helpers for SQL escaping,
+  JSON parsing, agent identity normalization, label/date/value normalization,
+  vector math, and JSON HTTP calls
 - `core/db/migrations/`: explicit migrations
 - `core/db/repositories/memoria.js`: Memoria persistence
 - `core/db/repositories/memoria/`: focused Memoria repository submodules,

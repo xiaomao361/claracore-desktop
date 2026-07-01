@@ -115,6 +115,9 @@ Repository ownership:
 
 - `core/db/repositories/memoria.js`: Memoria tables, labels, search, graph,
   records, maintenance, embeddings, archive/delete/restrict flows.
+- `core/db/helpers.js`: shared helper functions injected into database
+  repositories, including SQL escaping, JSON/date parsing, agent identity,
+  label/value normalization, vector math, and JSON HTTP calls.
 - `core/db/repositories/memoria/labels.js`: Memoria label alias listing,
   creation, deletion, and canonicalization.
 - `core/db/repositories/memoria/records.js`: Memoria structured record create,
