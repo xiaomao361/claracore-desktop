@@ -10,9 +10,9 @@ into focused modules.
 
 Current largest files after the current split:
 
-- `core/db/repositories/innerlife.js`: InnerLife persistence aggregation, about
-  1580 lines
 - `core/db/repositories/memoria.js`: Memoria persistence, about 1560 lines
+- `core/db/repositories/innerlife.js`: InnerLife persistence aggregation, about
+  1330 lines
 - `core/db/database.js`: SQLite adapter, migrations, settings, and shared
   helpers, about 1170 lines
 - `app.js`: renderer orchestration and event wiring, about 850 lines
@@ -22,6 +22,8 @@ Current largest files after the current split:
 - `app/i18n/en.js` and `app/i18n/zh.js`: locale dictionaries, about 900 lines
   each
 - `app/views/home.js`: Home view rendering, about 820 lines
+- `core/db/repositories/innerlife/daemon.js`: InnerLife daemon persistence,
+  about 270 lines
 - `core/runtime/imports/legacy-innerlife.js`: old InnerLife copy import, about
   620 lines
 - `styles/base-layout.css`: shared layout shell styles, about 540 lines
@@ -101,6 +103,8 @@ module can own the behavior."
      `core/db/repositories/innerlife/profile.js`.
    - Done: InnerLife inbox persistence moved to
      `core/db/repositories/innerlife/inbox.js`.
+   - Done: InnerLife daemon state and tick locking moved to
+     `core/db/repositories/innerlife/daemon.js`.
    - Done: InnerLife prompts/share policy/compact response shaping moved to
      `core/innerlife/policy.js`.
    - Add explicit migrations before new schema-heavy features.
