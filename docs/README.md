@@ -5,6 +5,8 @@ packaging, data, or agent behavior.
 
 - `ARCHITECTURE.md`: current Electron, runtime, database, Gateway, packaging
   resource, and validation boundaries.
+- `CODE_MAP.md`: source-first map for agents and developers debugging or
+  repairing Desktop behavior.
 - `CLEANUP_PLAN.md`: active debt rules and remaining refactor targets.
 - `RUNTIME_MEMORY_POLICY.md`: bounded snapshot, pagination, resource ownership,
   and long-run memory rules.

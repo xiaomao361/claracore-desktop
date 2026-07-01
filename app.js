@@ -180,9 +180,6 @@ const {
 } = window.ClaraCoreUtils;
 
 let currentLanguage = localStorage.getItem("claracore.language") || "en";
-let currentTheme = localStorage.getItem("claracore.theme") || "system";
-let currentMotion = localStorage.getItem("claracore.motion") || "system";
-let currentCloseBehavior = localStorage.getItem("claracore.window.closeBehavior") || "hide";
 
 function t(key, values = {}) {
   const template = translations[currentLanguage]?.[key] || translations.en[key] || key;
@@ -206,6 +203,15 @@ const rendererState = {
   dataRootPreference: null
 };
 let runtimeRefreshTimer = null;
+const appearance = window.createClaraCoreAppearance({
+  desktop: window.ClaraCoreDesktop,
+  onSystemPreferenceChange: () => renderSettings()
+});
+const modelOptions = window.createClaraCoreModelOptions({
+  dom: window.ClaraCoreDom,
+  t,
+  getSecretInputValue
+});
 const logsView = window.createClaraCoreLogsView({
   dom: window.ClaraCoreDom,
   t,
@@ -329,55 +335,8 @@ function getSecretInputValue(input) {
   return settingsView.getSecretInputValue(input);
 }
 
-function setModelOptions(target, models) {
-  if (!target) return;
-  target.replaceChildren(
-    ...models.map((model) => {
-      const option = document.createElement("option");
-      option.value = model;
-      return option;
-    })
-  );
-}
-
 async function loadModelOptions(kind, { silent = false } = {}) {
-  const isMemoria = kind === "memoria";
-  const providerInput = isMemoria ? memoriaProvider : innerLifeBackend;
-  const endpointInput = isMemoria ? memoriaEndpoint : innerLifeEndpoint;
-  const apiKeyInput = isMemoria ? memoriaApiKey : innerLifeApiKey;
-  const button = isMemoria ? refreshMemoriaModels : refreshInnerLifeModels;
-  const notice = isMemoria ? memoriaModelNotice : innerLifeModelNotice;
-  const options = isMemoria ? memoriaModelOptions : innerLifeModelOptions;
-  if (!providerInput || !endpointInput || !window.ClaraCoreDesktop?.listModels) return;
-  const provider = providerInput.value;
-  const endpoint = endpointInput.value;
-  if (!endpoint || ["disabled", "claracore-built-in", "custom-command"].includes(provider)) {
-    setModelOptions(options, []);
-    if (!silent && notice) notice.textContent = t("settings.modelFetchUnsupported");
-    return;
-  }
-  if (button) button.disabled = true;
-  if (notice && !silent) notice.textContent = t("common.checking");
-  try {
-    const result = await window.ClaraCoreDesktop.listModels({
-      provider,
-      endpoint,
-      apiKeyRef: getSecretInputValue(apiKeyInput)
-    });
-    const models = Array.isArray(result?.models) ? result.models : [];
-    setModelOptions(options, models);
-    if (notice) {
-      notice.textContent = models.length
-        ? t("settings.modelsLoaded", { count: String(models.length) })
-        : t(result?.supported === false ? "settings.modelFetchUnsupported" : "settings.modelsEmpty");
-    }
-  } catch (error) {
-    console.error(error);
-    setModelOptions(options, []);
-    if (notice && !silent) notice.textContent = t("settings.modelsFailed");
-  } finally {
-    if (button) button.disabled = false;
-  }
+  return modelOptions.loadModelOptions(kind, { silent });
 }
 
 function renderSettings() {
@@ -393,51 +352,23 @@ function collectAppearanceSettingsForm() {
   return settingsView.collectAppearanceSettingsForm();
 }
 
-function resolvedTheme() {
-  if (currentTheme === "light" || currentTheme === "dark") return currentTheme;
-  return window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "dark" : "light";
-}
-
-function resolvedMotion() {
-  if (currentMotion === "on" || currentMotion === "off") return currentMotion;
-  return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "off" : "on";
-}
-
 function getAppearancePreferences() {
   return {
     language: currentLanguage,
-    theme: currentTheme,
-    resolvedTheme: resolvedTheme(),
-    motion: currentMotion,
-    resolvedMotion: resolvedMotion(),
-    closeBehavior: currentCloseBehavior
+    ...appearance.getPreferences()
   };
 }
 
-function applyTheme() {
-  document.body.dataset.theme = resolvedTheme();
-  document.body.dataset.themePreference = currentTheme;
-  document.body.dataset.motion = resolvedMotion();
-  document.body.dataset.motionPreference = currentMotion;
-}
-
 function setTheme(theme) {
-  currentTheme = ["system", "light", "dark"].includes(theme) ? theme : "system";
-  localStorage.setItem("claracore.theme", currentTheme);
-  applyTheme();
+  appearance.setTheme(theme);
 }
 
 function setMotion(motion) {
-  currentMotion = ["system", "on", "off"].includes(motion) ? motion : "system";
-  localStorage.setItem("claracore.motion", currentMotion);
-  applyTheme();
+  appearance.setMotion(motion);
 }
 
 function setWindowCloseBehavior(closeBehavior) {
-  currentCloseBehavior = closeBehavior === "quit" ? "quit" : "hide";
-  localStorage.setItem("claracore.window.closeBehavior", currentCloseBehavior);
-  const result = window.ClaraCoreDesktop.setWindowPreferences?.({ closeBehavior: currentCloseBehavior });
-  if (result?.catch) result.catch(console.error);
+  appearance.setWindowCloseBehavior(closeBehavior);
 }
 
 function memoryAgentId(memory) {
@@ -1293,21 +1224,8 @@ window.setInterval(() => {
 }, 5000);
 
 applyStaticTranslations();
-applyTheme();
+appearance.initialize();
 window.ClaraCoreDesktop.setLanguage(currentLanguage).catch(console.error);
-setWindowCloseBehavior(currentCloseBehavior);
-window.matchMedia?.("(prefers-color-scheme: dark)")?.addEventListener("change", () => {
-  if (currentTheme === "system") {
-    applyTheme();
-    renderSettings();
-  }
-});
-window.matchMedia?.("(prefers-reduced-motion: reduce)")?.addEventListener("change", () => {
-  if (currentMotion === "system") {
-    applyTheme();
-    renderSettings();
-  }
-});
 if (typeof window.ClaraCoreDesktop.onRuntimeChanged === "function") {
   window.ClaraCoreDesktop.onRuntimeChanged(() => scheduleRuntimeRefresh());
 }

@@ -27,8 +27,10 @@ module can own the behavior."
 
 1. Renderer split
    - Done: `app/dom.js` contains DOM bindings only.
+   - Done: `app/appearance.js` owns theme, motion, and window preference state.
    - Done: `app/i18n.js` aggregates locale dictionaries only.
    - Done: locale dictionaries live under `app/i18n/`.
+   - Done: `app/model-options.js` owns provider model-list loading.
    - Done: `app/view-registry.js` contains the view registry only.
    - Done: `app/utils.js` contains pure formatting and HTML helpers.
    - Done: extract view renderers into focused files under `app/views/`.
