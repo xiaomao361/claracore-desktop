@@ -275,6 +275,17 @@ const sharedInnerLifeView = window.createClaraCoreSharedInnerLifeView({
   renderMemoryResults,
   memoryAgentId
 });
+const innerLifeActions = window.createClaraCoreInnerLifeActions({
+  desktop: window.ClaraCoreDesktop,
+  dom: window.ClaraCoreDom,
+  state: rendererState,
+  t,
+  getSnapshot: () => snapshot,
+  renderInnerLife,
+  refreshRuntimeSnapshotOnly,
+  splitListInput,
+  itemAgentId: sharedItemAgentId
+});
 
 function formatMode(mode) {
   if (mode === "custom-product-data") return t("runtime.customProductData");
@@ -732,176 +743,7 @@ innerLifeAgentFilter?.addEventListener("change", () => {
   renderInnerLife();
 });
 
-saveInnerLifeProfile?.addEventListener("click", async () => {
-  const agentId = rendererState.activeInnerLifeAgentFilter || "";
-  if (!agentId || agentId === "all") {
-    if (innerLifeProfileNotice) innerLifeProfileNotice.textContent = t("innerLife.profileSelectAgent");
-    return;
-  }
-  try {
-    const numericValue = (input, fallback, parser = Number.parseFloat) => {
-      const raw = String(input?.value ?? "").trim();
-      if (raw === "") return fallback;
-      const parsed = parser(raw, 10);
-      return Number.isFinite(parsed) ? Math.max(0, parsed) : fallback;
-    };
-    const profile = JSON.parse(innerLifeProfileJson.value || "{}");
-    const stateJson = JSON.parse(innerLifeStateJson.value || "{}");
-    const interests = splitListInput(innerLifeProfileInterests.value);
-    const sharePolicy = {
-      default_mode: profile.share_policy?.default_mode || "when_relevant",
-      max_proactive_per_day: numericValue(innerLifeProfileShareMaxDaily, profile.share_policy?.max_proactive_per_day ?? 3, Number.parseInt),
-      proactive_after_hours: numericValue(innerLifeProfileShareAfterHours, profile.share_policy?.proactive_after_hours ?? 2),
-      repeat_cooldown_hours: numericValue(innerLifeProfileShareCooldownHours, profile.share_policy?.repeat_cooldown_hours ?? 4),
-      max_defer_count: profile.share_policy?.max_defer_count ?? 3,
-      stale_after_days: profile.share_policy?.stale_after_days ?? 7,
-      ...(profile.share_policy || {})
-    };
-    sharePolicy.max_proactive_per_day = numericValue(innerLifeProfileShareMaxDaily, sharePolicy.max_proactive_per_day, Number.parseInt);
-    sharePolicy.proactive_after_hours = numericValue(innerLifeProfileShareAfterHours, sharePolicy.proactive_after_hours);
-    sharePolicy.repeat_cooldown_hours = numericValue(innerLifeProfileShareCooldownHours, sharePolicy.repeat_cooldown_hours);
-    const nextProfile = {
-      ...profile,
-      share_policy: sharePolicy
-    };
-    const nextState = {
-      ...stateJson,
-      current_interests: interests,
-      recent_focus: innerLifeProfileRecentFocus.value.trim() || null
-    };
-    saveInnerLifeProfile.disabled = true;
-    if (innerLifeProfileNotice) {
-      innerLifeProfileNotice.dataset.locked = "true";
-      innerLifeProfileNotice.textContent = t("common.checking");
-    }
-    await window.ClaraCoreDesktop.updateInnerLifeProfile({
-      agentId,
-      displayName: innerLifeProfileDisplayName.value.trim() || agentId,
-      profile: nextProfile,
-      state: nextState
-    });
-    await refreshRuntimeSnapshotOnly();
-    if (innerLifeProfileNotice) innerLifeProfileNotice.textContent = t("innerLife.profileSaved");
-  } catch (error) {
-    console.error(error);
-    if (innerLifeProfileNotice) innerLifeProfileNotice.textContent = t("innerLife.profileSaveFailed");
-  } finally {
-    if (innerLifeProfileNotice) delete innerLifeProfileNotice.dataset.locked;
-    renderInnerLife();
-  }
-});
-
-loadMoreInnerLifeSessions?.addEventListener("click", async () => {
-  if (!snapshot?.innerLife || rendererState.innerLifeSessionsLoading) return;
-  rendererState.innerLifeSessionsLoading = true;
-  renderInnerLife();
-  const agentId = rendererState.activeInnerLifeAgentFilter || "all";
-  const currentSessions = snapshot.innerLife.sessions || [];
-  const offset =
-    agentId === "all"
-      ? currentSessions.length
-      : currentSessions.filter((session) => sharedItemAgentId(session) === agentId).length;
-  try {
-    const page = await window.ClaraCoreDesktop.getInnerLifeSessions({
-      agentId,
-      limit: 10,
-      offset
-    });
-    const existingIds = new Set(currentSessions.map((session) => session.id));
-    snapshot.innerLife.sessions = [
-      ...currentSessions,
-      ...(page.items || []).filter((session) => !existingIds.has(session.id))
-    ];
-    rendererState.innerLifeSessionTotals[agentId] = page.total ?? snapshot.innerLife.sessions.length;
-    if (agentId === "all") {
-      snapshot.innerLife.sessionsPage = {
-        ...(snapshot.innerLife.sessionsPage || {}),
-        total: page.total ?? snapshot.innerLife.sessions.length,
-        hasMore: Boolean(page.hasMore)
-      };
-    }
-  } catch (error) {
-    console.error(error);
-  } finally {
-    rendererState.innerLifeSessionsLoading = false;
-    renderInnerLife();
-  }
-});
-
-loadMoreInnerLifeDigestRuns?.addEventListener("click", async () => {
-  if (!snapshot?.innerLife || rendererState.innerLifeDigestRunsLoading) return;
-  rendererState.innerLifeDigestRunsLoading = true;
-  renderInnerLife();
-  const agentId = rendererState.activeInnerLifeAgentFilter || "all";
-  const currentRuns = snapshot.innerLife.digestRuns || [];
-  const offset =
-    agentId === "all"
-      ? currentRuns.length
-      : currentRuns.filter((run) => sharedItemAgentId(run) === agentId).length;
-  try {
-    const page = await window.ClaraCoreDesktop.getInnerLifeDigestRuns({
-      agentId,
-      limit: 10,
-      offset
-    });
-    const existingIds = new Set(currentRuns.map((run) => run.id));
-    snapshot.innerLife.digestRuns = [
-      ...currentRuns,
-      ...(page.items || []).filter((run) => !existingIds.has(run.id))
-    ];
-    rendererState.innerLifeDigestTotals[agentId] = page.total ?? snapshot.innerLife.digestRuns.length;
-    if (agentId === "all") {
-      snapshot.innerLife.digestRunsPage = {
-        ...(snapshot.innerLife.digestRunsPage || {}),
-        total: page.total ?? snapshot.innerLife.digestRuns.length,
-        hasMore: Boolean(page.hasMore)
-      };
-    }
-  } catch (error) {
-    console.error(error);
-  } finally {
-    rendererState.innerLifeDigestRunsLoading = false;
-    renderInnerLife();
-  }
-});
-
-loadMoreInnerLifeInbox?.addEventListener("click", async () => {
-  if (!snapshot?.innerLife || rendererState.innerLifeInboxLoading) return;
-  rendererState.innerLifeInboxLoading = true;
-  renderInnerLife();
-  const agentId = rendererState.activeInnerLifeAgentFilter || "all";
-  const currentInbox = snapshot.innerLife.inbox || [];
-  const offset =
-    agentId === "all"
-      ? currentInbox.length
-      : currentInbox.filter((item) => sharedItemAgentId(item) === agentId).length;
-  try {
-    const page = await window.ClaraCoreDesktop.getInnerLifeInbox({
-      agentId,
-      status: "all",
-      limit: 10,
-      offset
-    });
-    const existingIds = new Set(currentInbox.map((item) => item.id));
-    snapshot.innerLife.inbox = [
-      ...currentInbox,
-      ...(page.items || []).filter((item) => !existingIds.has(item.id))
-    ];
-    rendererState.innerLifeInboxTotals[agentId] = page.total ?? snapshot.innerLife.inbox.length;
-    if (agentId === "all") {
-      snapshot.innerLife.inboxPage = {
-        ...(snapshot.innerLife.inboxPage || {}),
-        total: page.total ?? snapshot.innerLife.inbox.length,
-        hasMore: Boolean(page.hasMore)
-      };
-    }
-  } catch (error) {
-    console.error(error);
-  } finally {
-    rendererState.innerLifeInboxLoading = false;
-    renderInnerLife();
-  }
-});
+innerLifeActions.bindEvents();
 
 processMemoryEmbeddings.addEventListener("click", () => {
   memoriaView.processEmbeddings().catch(console.error);

@@ -71,6 +71,7 @@ Focused renderer modules live under `app/`:
 - `app/appearance.js`: theme, motion, and window preference state
 - `app/i18n.js`: translation aggregation only
 - `app/i18n/`: locale dictionaries
+- `app/innerlife-actions.js`: InnerLife profile save and paginated load-more actions
 - `app/model-options.js`: provider model-list loading
 - `app/view-registry.js`: view metadata only
 - `app/utils.js`: pure formatting and HTML helpers
