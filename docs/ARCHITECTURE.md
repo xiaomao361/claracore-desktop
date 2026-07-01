@@ -72,6 +72,7 @@ Focused renderer modules live under `app/`:
 - `app/i18n.js`: translation aggregation only
 - `app/i18n/`: locale dictionaries
 - `app/memoria-actions.js`: Memoria search, tab, graph, and list action wiring
+- `app/shared-line-actions.js`: Shared Line tab, filter, line action, and resume copy wiring
 - `app/innerlife-actions.js`: InnerLife agent filter, daemon, profile save, and paginated load-more actions
 - `app/model-options.js`: provider model-list loading
 - `app/view-registry.js`: view metadata only

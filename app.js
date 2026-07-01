@@ -287,6 +287,18 @@ const sharedInnerLifeView = window.createClaraCoreSharedInnerLifeView({
   renderMemoryResults,
   memoryAgentId
 });
+const sharedLineActions = window.createClaraCoreSharedLineActions({
+  desktop: window.ClaraCoreDesktop,
+  dom: window.ClaraCoreDom,
+  state: rendererState,
+  t,
+  setSharedLineSnapshot: (sharedLine) => {
+    snapshot.sharedLine = sharedLine;
+  },
+  renderSharedLine,
+  copyValue,
+  showCopyNotice
+});
 const innerLifeActions = window.createClaraCoreInnerLifeActions({
   desktop: window.ClaraCoreDesktop,
   dom: window.ClaraCoreDom,
@@ -731,64 +743,7 @@ window.ClaraCoreDom.openSettingsDataRoot?.addEventListener("click", () => {
 
 innerLifeActions.bindEvents();
 memoriaActions.bindEvents();
-
-function setSharedLineTab(tabName) {
-  sharedLineTabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.sharedLineTab === tabName));
-  sharedLineTabPanels.forEach((panel) => panel.classList.toggle("active", panel.dataset.sharedLinePanel === tabName));
-}
-
-sharedLineTabs.forEach((tab) => {
-  tab.addEventListener("click", () => setSharedLineTab(tab.dataset.sharedLineTab || "lines"));
-});
-
-sharedLineAgentFilter.addEventListener("change", () => {
-  rendererState.activeSharedLineAgentFilter = sharedLineAgentFilter.value || "";
-  renderSharedLine();
-});
-
-sharedLineList.addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-shared-line-action]");
-  if (!button) return;
-  const action = button.dataset.sharedLineAction;
-  const lineId = button.dataset.sharedLineId;
-  button.setAttribute("aria-busy", "true");
-  if (action !== "select") sharedLineNotice.textContent = t("common.checking");
-  try {
-    let result;
-    if (action === "select") {
-      rendererState.selectedSharedLineId = lineId;
-      result = { sharedLine: await window.ClaraCoreDesktop.getSharedLine({ lineId }) };
-      sharedLineNotice.textContent = "";
-    } else if (action === "archive") {
-      if (!window.confirm(t("sharedLine.archiveConfirm"))) {
-        sharedLineNotice.textContent = "";
-        return;
-      }
-      result = await window.ClaraCoreDesktop.archiveSharedLine(lineId);
-      showCopyNotice(t("sharedLine.lineArchived"), sharedLineNotice);
-    }
-    if (!result?.sharedLine) return;
-    snapshot.sharedLine = result.sharedLine;
-    renderSharedLine();
-  } catch (error) {
-    console.error(error);
-    sharedLineNotice.textContent = t("sharedLine.lineFailed");
-  } finally {
-    button.removeAttribute("aria-busy");
-  }
-});
-
-sharedLineList.addEventListener("keydown", (event) => {
-  if (event.key !== "Enter" && event.key !== " ") return;
-  const card = event.target.closest("[data-shared-line-action]");
-  if (!card) return;
-  event.preventDefault();
-  card.click();
-});
-
-copySharedLineResume.addEventListener("click", () => {
-  copyValue(sharedLineResume.textContent, t("sharedLine.resumeCopied"), sharedLineNotice).catch(console.error);
-});
+sharedLineActions.bindEvents();
 
 dataView.bindEvents();
 

@@ -49,6 +49,8 @@ module can own the behavior."
    - Done: `app/views/settings.js` owns settings and model config form logic.
    - Done: `app/memoria-actions.js` owns Memoria search, tab, graph, and list
      action wiring.
+   - Done: `app/shared-line-actions.js` owns Shared Line tab, filter, line
+     action, and resume copy wiring.
    - Done: `app/innerlife-actions.js` owns InnerLife agent filter, daemon,
      profile save, and paginated load-more actions.
    - Done: `app/views/home.js` owns Home/Health/Modules rendering.
