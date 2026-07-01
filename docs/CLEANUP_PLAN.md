@@ -54,6 +54,7 @@ module can own the behavior."
    - `core/runtime/` is the runtime boundary.
    - `core/runtime/index.js` is the public entry for Electron, CLI, Gateway, and
      tests.
+   - Done: Home/status snapshot assembly moved to `core/runtime/snapshot.js`.
    - Done: backup and restore moved to `core/runtime/backup.js`.
    - Done: archive import/export and old-service imports moved to
      `core/runtime/imports.js`.

@@ -17,6 +17,7 @@ The Desktop runtime is Node/Electron.
     Gateway lifecycle and request handling
   - `electron/schedulers.js`: InnerLife and Memoria maintenance timers
 - Product runtime facade: `core/runtime/index.js`
+- Runtime snapshot assembly: `core/runtime/snapshot.js`
 - Runtime path helpers: `core/runtime/paths.js`
 - Backup and restore workflows: `core/runtime/backup.js`
 - Archive import/export and old-service copy imports: `core/runtime/imports.js`
@@ -114,7 +115,7 @@ Runtime should coordinate cross-module workflows:
 
 - resolve paths
 - initialize the product database
-- create snapshots
+- delegate Home/status snapshot assembly to `core/runtime/snapshot.js`
 - delegate backup and restore to `core/runtime/backup.js`
 - delegate archive import/export and old-service imports through
   `core/runtime/imports.js`; focused implementation modules live under

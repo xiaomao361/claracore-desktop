@@ -5,6 +5,7 @@ const { previewImportSources } = require("../import-preview");
 const { desktopSettingsPath, ensureProductDirectories, readDesktopSettings, resolveProductPaths } = require("./paths");
 const { createBackupRuntime } = require("./backup");
 const { createImportRuntime } = require("./imports");
+const { createSnapshotRuntime } = require("./snapshot");
 const { PRODUCT_VERSION } = require("../version");
 const memoria = require("../memoria");
 const continuity = require("../continuity");
@@ -85,211 +86,6 @@ async function refreshMemoryGraphCaches(paths, database) {
   };
 }
 
-function productModules(input = {}) {
-  const innerLife = input.innerLife || {};
-  const daemon = innerLife.daemon || {};
-  const innerLifePresent = Boolean(innerLife.counts || daemon.agentId);
-  return [
-    {
-      id: "gateway",
-      label: "Gateway",
-      descriptionKey: "module.gateway.description",
-      required: true,
-      present: true,
-      state: "ready"
-    },
-    {
-      id: "memoria",
-      label: "Memoria",
-      descriptionKey: "module.memoria.description",
-      required: true,
-      present: true,
-      state: "ready"
-    },
-    {
-      id: "continuity",
-      label: "Continuity",
-      descriptionKey: "module.continuity.description",
-      required: true,
-      present: true,
-      state: "ready"
-    },
-    {
-      id: "innerlife",
-      label: "InnerLife",
-      descriptionKey: "module.innerlife.description",
-      required: true,
-      present: innerLifePresent,
-      state: daemon.enabled ? "ready" : "paused"
-    }
-  ];
-}
-
-function gatewayLaunchConfig(app, paths) {
-  const gatewayScript = path.join(paths.appRoot, "core", "gateway", "mcp-server.js");
-  if (app?.isPackaged) {
-    return {
-      command: process.execPath,
-      args: ["--gateway"],
-      displayCommand: `"${process.execPath}" --gateway`,
-      source: "packaged app"
-    };
-  }
-  return {
-    command: "node",
-    args: [gatewayScript],
-    displayCommand: `node ${gatewayScript}`,
-    source: "development checkout"
-  };
-}
-
-function productAgentSetup(app, paths, configuration) {
-  const launch = gatewayLaunchConfig(app, paths);
-  const agentIdentityExamples = ["lara", "clara", "codex"];
-  return {
-    gatewayStatus: "available",
-    mcpServerName: "claracore-desktop",
-    mcpCommand: launch.displayCommand,
-    agentIdentity: {
-      envKey: "CLARACORE_AGENT_ID",
-      required: true,
-      owner: "calling agent",
-      examples: agentIdentityExamples,
-      note: "Each connected agent must set its own stable id. Do not reuse another agent id."
-    },
-    mcpConfig: JSON.stringify(
-      {
-        mcpServers: {
-          "claracore-desktop": {
-            type: "stdio",
-            command: launch.command,
-            args: launch.args,
-            env: {
-              CLARACORE_AGENT_ID: "<agent-stable-id>",
-              CLARACORE_DESKTOP_DATA_DIR: paths.dataRoot
-            }
-          }
-        }
-      },
-      null,
-      2
-    ),
-    httpEndpoints: [],
-    python: "not required for Desktop Gateway",
-    pythonSource: "Node/Electron runtime",
-    gatewayEnvPath: "not used in product core reset"
-  };
-}
-
-async function canWriteRuntimeProbe(paths) {
-  const probePath = path.join(paths.runtimeDir, ".write-check");
-  try {
-    await fs.writeFile(probePath, String(Date.now()), "utf8");
-    await fs.unlink(probePath);
-    return true;
-  } catch (_error) {
-    return false;
-  }
-}
-
-function buildHealthChecks(app, paths, configuration, databaseSummary, canWriteRuntime) {
-  const checks = [
-    {
-      id: "data-root",
-      level: canWriteRuntime ? "ok" : "error",
-      labelKey: "health.dataRoot",
-      detail: canWriteRuntime ? paths.dataRoot : `${paths.dataRoot} is not writable`
-    },
-    {
-      id: "database",
-      level: databaseSummary?.initialized ? "ok" : "warn",
-      labelKey: "health.database",
-      detail: paths.databasePath
-    },
-    {
-      id: "gateway",
-      level: "ok",
-      labelKey: "health.gateway",
-      detail: app?.isPackaged ? "packaged stdio gateway" : "development stdio gateway"
-    },
-    {
-      id: "embedding",
-      level: configuration?.memoria?.provider === "ollama" && configuration?.memoria?.endpoint ? "ok" : "warn",
-      labelKey: "health.embedding",
-      detail: `${configuration?.memoria?.provider || "unknown"} ${configuration?.memoria?.model || ""}`.trim()
-    }
-  ];
-  return {
-    status: checks.some((check) => check.level === "error")
-      ? "error"
-      : checks.some((check) => check.level === "warn")
-        ? "warn"
-        : "ok",
-    checks
-  };
-}
-
-async function buildProductSnapshot(app) {
-  const { paths, database } = await ensureProductCore(app);
-  const desktopSettings = readDesktopSettings(app);
-  const [configuration, databaseSummary] = await Promise.all([
-    database.getConfiguration(paths),
-    database.getSummary()
-  ]);
-  const [
-    recentMemories, memoryStats, memoryMaintenance,
-    sharedLine, innerLife, gatewayTraces, runtimeEvents, backups,
-    importPreview, canWriteProbe
-  ] = await Promise.all([
-    database.listMemories(20),
-    database.getMemoryStats(),
-    database.getMemoryMaintenanceReport(),
-    database.getResumePacket(),
-    database.getInnerLifeSnapshot(),
-    database.listGatewayTraces({ limit: 20 }),
-    database.listRuntimeEvents({ limit: 50 }),
-    database.listBackups(5),
-    previewImportSources(),
-    canWriteRuntimeProbe(paths)
-  ]);
-  const health = buildHealthChecks(app, paths, configuration, databaseSummary, canWriteProbe);
-  return {
-    mode: process.env.CLARACORE_DESKTOP_DATA_DIR || desktopSettings.dataRoot ? "custom-product-data" : "isolated-product-dev",
-    productVersion: PRODUCT_VERSION,
-    root: paths.appRoot,
-    appRoot: paths.appRoot,
-    coreStatus: health.status === "ok" ? "Ready" : "Needs attention",
-    data: {
-      root: paths.dataRoot,
-      databasePath: paths.databasePath,
-      databasePresent: Boolean(databaseSummary.initialized),
-      backupsDir: paths.backupsDir,
-      exportsDir: paths.exportsDir,
-      runtimeDir: paths.runtimeDir,
-      logsDir: paths.logsDir
-    },
-    database: databaseSummary,
-    health,
-    connections: productAgentSetup(app, paths, configuration),
-    configuration,
-    memories: recentMemories,
-    recentMemories,
-    memoryStats,
-    memoryMaintenance,
-    sharedLine,
-    innerLife,
-    gatewayTraces,
-    runtimeEvents,
-    importPreview,
-    backups,
-    modules: productModules({ innerLife }),
-    plans: {
-      productReset: path.join(paths.appRoot, "docs", "ARCHITECTURE.md"),
-      v02Legacy: path.join(paths.appRoot, "docs", "CLEANUP_PLAN.md")
-    }
-  };
-}
-
 let _cachedDatabase = null;
 let _cachedDatabasePath = null;
 
@@ -330,6 +126,14 @@ const importRuntime = createImportRuntime({
   sqlString,
   timestampForFilename
 });
+
+const snapshotRuntime = createSnapshotRuntime({
+  ensureProductCore
+});
+
+async function buildProductSnapshot(app) {
+  return snapshotRuntime.buildProductSnapshot(app);
+}
 
 async function saveProductSettings(app, updates) {
   const { paths, database } = await ensureProductCore(app);
