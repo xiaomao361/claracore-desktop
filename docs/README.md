@@ -10,8 +10,8 @@ packaging, data, or agent behavior.
 - `CLEANUP_PLAN.md`: active debt rules and remaining refactor targets.
 - `RUNTIME_MEMORY_POLICY.md`: bounded snapshot, pagination, resource ownership,
   and long-run memory rules.
-- `UI_UX_POLISH_BACKLOG.md`: screenshot-based UI/UX adjustment backlog for the
-  current Desktop surface.
+- `UI_UX_POLISH_BACKLOG.md`: next-version UI/UX direction and staged polish
+  backlog for the current Desktop surface.
 - `mac-packaging.md`: current local macOS packaging and packaged Gateway notes.
 
 Historical notes and completed bugfix reports live under `docs/archive/`.

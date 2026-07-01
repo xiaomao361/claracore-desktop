@@ -14,7 +14,7 @@ Current largest files after the current split:
 - `core/db/repositories/memoria.js`: Memoria persistence, about 1560 lines
 - `core/db/database.js`: SQLite adapter, migrations, settings, and shared
   helpers, about 1170 lines
-- `app.js`: renderer orchestration and event wiring, about 1070 lines
+- `app.js`: renderer orchestration and event wiring, about 850 lines
 - `app/views/memoria.js`: Memoria view rendering and actions, about 1020 lines
 - `app/views/home.js`: Home view rendering, about 1020 lines
 - `core/db/repositories/continuity.js`: Shared Line persistence, about 950

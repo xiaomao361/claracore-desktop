@@ -2,6 +2,19 @@
 
 Date: 2026-07-01
 
+## Version Direction
+
+This backlog is the UI/UX direction for the next ClaraCore Desktop version.
+It should guide the next version's product polish and implementation order; it
+is not a required hotfix list for the current build.
+
+Treat the work as staged convergence:
+
+- Keep the current agent-first Desktop product boundary.
+- Improve readability, hierarchy, and operational confidence before adding new
+  product modules.
+- Implement in small reviewable passes instead of a broad redesign.
+
 Source screenshots:
 
 - `/Users/zhouwei/Downloads/Claracore_images/首页1.png`
@@ -648,4 +661,3 @@ Acceptance:
 - Do not add plugin/extension architecture.
 - Do not hide runtime truth behind decorative UI.
 - Do not add broad new product modules before current pages are clearer.
-
