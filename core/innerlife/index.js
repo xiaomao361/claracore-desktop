@@ -6,6 +6,10 @@ async function sessions(core, input = {}) {
   return core.database.listInnerLifeSessionsPage(input);
 }
 
+async function recentSessions(core, agentId, limit = 20) {
+  return core.database.listInnerLifeSessions(agentId, limit);
+}
+
 async function digestRuns(core, input = {}) {
   return core.database.listInnerLifeDigestRunsPage(input);
 }
@@ -16,6 +20,10 @@ async function inbox(core, input = {}) {
 
 async function doctor(core, agentId = "codex") {
   return core.database.getInnerLifeDoctor(agentId);
+}
+
+async function briefing(core, agentId = "codex") {
+  return core.database.getInnerLifeBriefing(agentId);
 }
 
 async function updateProfile(core, input = {}) {
@@ -54,8 +62,20 @@ async function checkShareTiming(core, input) {
   return core.database.checkInnerLifeShareTiming(input);
 }
 
+async function pendingShares(core, status = "pending", limit = 20) {
+  return core.database.listInnerLifeShares(status, limit);
+}
+
+async function shareActions(core, shareId = null, limit = 20) {
+  return core.database.listInnerLifeShareActions(shareId, limit);
+}
+
 async function setDaemon(core, input) {
   return core.database.setInnerLifeDaemonState(input);
+}
+
+async function daemonStatus(core, agentId) {
+  return core.database.ensureInnerLifeDaemonState(agentId);
 }
 
 async function tickDaemon(core, input) {
@@ -101,8 +121,10 @@ async function converge(core, input) {
 module.exports = {
   applyShareToMemory,
   applyShareToSharedLine,
+  briefing,
   checkShareTiming,
   converge,
+  daemonStatus,
   deleteProfile,
   digest,
   digestRuns,
@@ -113,11 +135,14 @@ module.exports = {
   history,
   inbox,
   markShare,
+  pendingShares,
   processOnce,
   profiles,
+  recentSessions,
   reviewShare,
   sessions,
   setDaemon,
+  shareActions,
   snapshot,
   startSession,
   submitInbox,

@@ -2,13 +2,21 @@ async function get(core, input = {}) {
   return core.database.getResumePacket(input || {});
 }
 
+async function list(core, input = {}) {
+  return core.database.listContinuityLines(input || {});
+}
+
 async function gatewayContext(core, input = {}) {
   return core.database.getGatewayContext(input || {});
 }
 
 async function save(core, input) {
-  await core.database.saveCurrentPosition(input);
-  return core.database.getResumePacket({ lineId: input?.lineId });
+  const currentPosition = await core.database.saveCurrentPosition(input);
+  return core.database.getResumePacket({
+    lineId: currentPosition.lineId,
+    agentId: input?.agentId,
+    model: input?.model
+  });
 }
 
 async function create(core, input) {
@@ -59,14 +67,51 @@ async function createHandoff(core, input) {
   };
 }
 
+async function agentState(core, agentId, update) {
+  return update
+    ? core.database.updateContinuityAgentState(agentId, update)
+    : core.database.getContinuityAgentState(agentId);
+}
+
+async function modelAdjustments(core) {
+  return core.database.listContinuityModelAdjustments();
+}
+
+async function modelAdjustment(core, model) {
+  return core.database.getContinuityModelAdjustment(model);
+}
+
+async function setModelAdjustment(core, input = {}) {
+  return core.database.setContinuityModelAdjustment(input);
+}
+
+async function deleteModelAdjustment(core, model) {
+  return core.database.deleteContinuityModelAdjustment(model);
+}
+
+async function compact(core, input = {}) {
+  const result = await core.database.compactContinuityLine(input);
+  return {
+    compact: result,
+    sharedLine: await core.database.getResumePacket({ lineId: result.lineId })
+  };
+}
+
 module.exports = {
   activate,
+  agentState,
   archive,
+  compact,
   create,
   createHandoff,
+  deleteModelAdjustment,
   gatewayContext,
   get,
+  list,
+  modelAdjustment,
+  modelAdjustments,
   rename,
   restore,
-  save
+  save,
+  setModelAdjustment
 };

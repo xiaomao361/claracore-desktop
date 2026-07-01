@@ -17,8 +17,16 @@ async function create(core, input) {
   return core.database.createMemory(input);
 }
 
+async function get(core, id) {
+  return core.database.getMemory(id);
+}
+
 async function update(core, id, input) {
   return core.database.updateMemory(id, input);
+}
+
+async function tag(core, id, input) {
+  return core.database.updateMemoryLabels(id, input);
 }
 
 async function remove(core, id) {
@@ -49,8 +57,20 @@ async function stats(core) {
   return core.database.getMemoryStats();
 }
 
+async function graph(core, input = {}) {
+  return core.database.getMemoryGraph(input || {});
+}
+
 async function createRecord(core, input) {
   return core.database.createMemoryRecord(input);
+}
+
+async function recordSummary(core, input = {}) {
+  return core.database.summarizeMemoryRecords(input || {});
+}
+
+async function recordStats(core) {
+  return core.database.getMemoryRecordStats();
 }
 
 async function records(core, input = {}) {
@@ -105,6 +125,14 @@ async function maintenance(core) {
   return core.database.getMemoryMaintenanceReport();
 }
 
+async function maintenanceRun(core, input = {}) {
+  return core.database.runMemoryMaintenance(input || {});
+}
+
+async function maintenanceAudit(core, input = {}) {
+  return core.database.getMemoryAuditReport(input || {});
+}
+
 async function mergeSuggestions(core, input = {}) {
   return core.database.getMemoryMergeSuggestions(input || {});
 }
@@ -125,6 +153,10 @@ async function embed(core, id) {
   return core.database.embedMemory(id);
 }
 
+async function processEmbeddings(core, limit = 1) {
+  return core.database.processPendingEmbeddings(limit);
+}
+
 module.exports = {
   archive,
   archiveDormant,
@@ -136,11 +168,18 @@ module.exports = {
   deleted,
   deleteLabelAlias,
   embed,
+  get,
+  graph,
   labelAliases,
   list,
   maintenance,
+  maintenanceAudit,
+  maintenanceRun,
   merge,
   mergeSuggestions,
+  processEmbeddings,
+  recordStats,
+  recordSummary,
   records,
   remove,
   restore,
@@ -149,6 +188,7 @@ module.exports = {
   restricted,
   search,
   stats,
+  tag,
   unrestrict,
   update
 };

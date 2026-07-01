@@ -195,11 +195,22 @@ or IPC handler; route through `ensureProductCore` instead.
 
 `core/gateway/mcp-server.js` is the agent-facing MCP transport surface. It owns
 stdio protocol handling, process lifecycle, database connection caching, and
-Gateway trace recording. `core/gateway/tools.js` owns tool schemas and handler
-dispatch.
+Gateway trace recording.
 
-Gateway should expose stable product tools and call `core/runtime`. It should
-not bypass runtime into database internals.
+Gateway behavior is split by responsibility:
+
+- `core/gateway/tool-definitions.js`: MCP tool schemas only
+- `core/gateway/tools.js`: handler dispatch only
+- `core/gateway/tool-handlers/system.js`: Gateway/system tools
+- `core/gateway/tool-handlers/memoria.js`: Memoria tools through
+  `core/memoria`
+- `core/gateway/tool-handlers/shared-line.js`: Shared Line tools through
+  `core/continuity`
+- `core/gateway/tool-handlers/innerlife.js`: InnerLife tools through
+  `core/innerlife`
+
+Gateway should expose stable product tools and call domain/runtime facades. New
+Gateway behavior should not bypass a domain facade into database internals.
 
 The MCP config shown in Agent Setup launches this Gateway as a stdio server.
 Gateway is part of the product runtime, while the Logs view and Gateway trace

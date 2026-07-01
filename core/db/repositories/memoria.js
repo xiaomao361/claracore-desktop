@@ -153,6 +153,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
     async updateMemory(id, input) {
       const memoryId = String(id || "").trim();
       if (!memoryId) throw new Error("Memory id is required.");
+      const updatedAt = new Date().toISOString();
       const body = String(input?.body || "").trim();
       if (!body) throw new Error("Memory body is required.");
       const title = String(input?.title || "").trim();
@@ -173,7 +174,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
           title = ${title ? sqlString(title) : "NULL"},
           body = ${sqlString(body)},
           sensitivity = ${sqlString(sensitivity)},
-          updated_at = CURRENT_TIMESTAMP
+          updated_at = ${sqlString(updatedAt)}
         WHERE id = ${sqlString(memoryId)} AND status = 'active';
     
         DELETE FROM memory_labels WHERE memory_id = ${sqlString(memoryId)};
@@ -187,6 +188,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
     async updateMemoryLabels(id, input = {}) {
       const memoryId = String(id || "").trim();
       if (!memoryId) throw new Error("Memory id is required.");
+      const updatedAt = new Date().toISOString();
       const memory = await this.getMemory(memoryId);
       if (!memory) throw new Error("Memory not found.");
       if (memory.status !== "active") throw new Error("Only active Memory records can be tagged.");
@@ -209,7 +211,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
         DELETE FROM memory_labels WHERE memory_id = ${sqlString(memoryId)};
         ${labelSql}
         UPDATE memories
-        SET updated_at = CURRENT_TIMESTAMP
+        SET updated_at = ${sqlString(updatedAt)}
         WHERE id = ${sqlString(memoryId)};
       `);
       return {
@@ -429,7 +431,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
         ${agentClause}
         ${searchClause}
         GROUP BY m.id
-        ORDER BY m.created_at DESC
+        ORDER BY m.updated_at DESC, m.created_at DESC, m.id DESC
         LIMIT ${safeLimit} OFFSET ${safeOffset};
       `);
       return normalizeSearchRows(rows);

@@ -11,10 +11,10 @@ into focused modules.
 Current largest files after the current split:
 
 - `core/db/repositories/innerlife.js`: InnerLife persistence, about 1920 lines
-- `core/gateway/tools.js`: MCP tool schemas and handlers, about 1740 lines
 - `core/runtime/imports.js`: archive and old-service import workflows, about
   1700 lines
 - `core/db/repositories/memoria.js`: Memoria persistence, about 1560 lines
+- `core/gateway/tool-definitions.js`: MCP tool schemas, about 1310 lines
 - `app.js`: renderer orchestration and event wiring, about 1310 lines
 
 This is acceptable for the current checkpoint. The rule is not "split every
@@ -101,9 +101,14 @@ module can own the behavior."
 8. Gateway split
    - Done: `core/gateway/mcp-server.js` now owns stdio MCP transport, process
      lifecycle, database connection caching, and trace recording.
-   - Done: `core/gateway/tools.js` owns MCP tool schemas and handler dispatch.
-   - Remaining: route more Gateway behavior through domain/runtime facades over
-     time instead of growing direct database method calls.
+   - Done: `core/gateway/tool-definitions.js` owns MCP tool schemas.
+   - Done: `core/gateway/tools.js` owns handler dispatch.
+   - Done: Gateway tool handlers are split under
+     `core/gateway/tool-handlers/`.
+   - Done: Memoria Gateway behavior routes through `core/memoria` instead of
+     direct repository/database calls.
+   - Done: Shared Line Gateway behavior routes through `core/continuity`.
+   - Done: InnerLife Gateway behavior routes through `core/innerlife`.
 
 ## Before New Features
 
@@ -122,14 +127,13 @@ Remaining refinement:
 - Keep shrinking `app.js` only when event wiring naturally belongs with a view.
 - Consider splitting `core/runtime/imports.js` later if old-service migration
   grows again.
-- Consider splitting MCP tool registration groups inside `core/gateway/tools.js`
-  if agent tools continue expanding.
+- Consider grouping MCP tool schemas by domain if
+  `core/gateway/tool-definitions.js` continues expanding.
 - Consider splitting Memoria repository search/records/maintenance sections if
   persistence changes keep growing.
 - Consider a separate gateway repository if gateway trace persistence expands.
-- Move domain behavior currently embedded in repository methods toward
-  `core/memoria`, `core/continuity`, and `core/innerlife` service modules when
-  those areas are next changed.
+- Continue moving deeper domain rules out of repository methods when Memoria,
+  Shared Line, or InnerLife behavior is next changed.
 
 ## Development Target For Tomorrow
 
