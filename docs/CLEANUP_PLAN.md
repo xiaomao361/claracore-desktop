@@ -34,6 +34,24 @@ This is acceptable for the current checkpoint. The rule is not "split every
 large file immediately"; the rule is "do not grow these files when a focused
 module can own the behavior."
 
+## Review-Ready Checkpoint
+
+The cleanup pass is ready for external code review. The remaining large files
+are known and intentionally left for review-guided follow-up rather than
+continued speculative splitting.
+
+- Validation passed: `npm run test:smoke`.
+- Worktree expectation before review: clean.
+- Primary remaining review targets:
+  - `app.js`: event orchestration and cross-view coordination.
+  - `app/views/memoria.js` and `app/views/home.js`: large view renderers.
+  - `core/db/repositories/continuity.js`: current position, handoff, resume
+    packet, and Gateway context composition.
+  - `app/i18n/en.js` and `app/i18n/zh.js`: large dictionaries, low priority
+    unless translation ownership becomes painful.
+- Do not continue splitting solely by line count; require a clear ownership
+  boundary and a narrow verification path.
+
 ## Order
 
 1. Renderer split
