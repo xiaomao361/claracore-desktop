@@ -10,8 +10,6 @@ into focused modules.
 
 Current largest files after the current split:
 
-- `core/db/repositories/innerlife.js`: InnerLife persistence aggregation, about
-  970 lines
 - `core/db/repositories/continuity.js`: Shared Line persistence, about 950
   lines
 - `core/db/database.js`: SQLite adapter, migrations, settings, and runtime
@@ -24,6 +22,8 @@ Current largest files after the current split:
 - `app/views/shared-innerlife.js`: Shared Line and InnerLife rendering, about
   770 lines
 - `electron/main.js`: Electron app lifecycle aggregation, about 710 lines
+- `core/db/repositories/innerlife.js`: InnerLife persistence aggregation, about
+  690 lines
 - `core/runtime/imports/legacy-innerlife.js`: old InnerLife copy import, about
   620 lines
 - `core/db/repositories/memoria.js`: Memoria persistence aggregation, about
@@ -122,6 +122,9 @@ module can own the behavior."
      `core/db/repositories/innerlife/history.js`.
    - Done: InnerLife session count/list/page/start/end persistence moved to
      `core/db/repositories/innerlife/sessions.js`.
+   - Done: InnerLife share listing, timing checks, review/actions, and
+     apply-to-Memory/Shared-Line persistence moved to
+     `core/db/repositories/innerlife/shares.js`.
    - Done: InnerLife prompts/share policy/compact response shaping moved to
      `core/innerlife/policy.js`.
    - Add explicit migrations before new schema-heavy features.

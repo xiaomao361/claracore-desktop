@@ -145,6 +145,8 @@ Repository ownership:
   summary, and digest-summary read models.
 - `core/db/repositories/innerlife/sessions.js`: InnerLife session count, list,
   page, start packet, and session-end persistence.
+- `core/db/repositories/innerlife/shares.js`: InnerLife share list, timing
+  checks, review/mark actions, and apply-to-Memory/Shared-Line persistence.
 
 New schema-heavy behavior should use an explicit migration and repository API.
 Product policy should live in a domain module rather than directly in a
