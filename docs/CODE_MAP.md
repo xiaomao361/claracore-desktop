@@ -123,6 +123,8 @@ Repository ownership:
   digest/exploration/convergence data, and review flows.
 - `core/db/repositories/innerlife/profile.js`: InnerLife profile create,
   update, list, and delete persistence.
+- `core/db/repositories/innerlife/inbox.js`: InnerLife inbox list, count,
+  pagination, and submit persistence.
 
 New schema-heavy behavior should use an explicit migration and repository API.
 Product policy should live in a domain module rather than directly in a
