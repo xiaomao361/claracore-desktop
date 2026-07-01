@@ -12,11 +12,15 @@ Current largest files after the current split:
 
 - `core/db/repositories/innerlife.js`: InnerLife persistence, about 1840 lines
 - `core/db/repositories/memoria.js`: Memoria persistence, about 1560 lines
+- `core/db/database.js`: SQLite adapter, migrations, settings, and shared
+  helpers, about 1170 lines
 - `app.js`: renderer orchestration and event wiring, about 1070 lines
-- `styles/views/home-dashboard.css`: Home dashboard/agent/trace styles, about
-  440 lines
-- `styles/views/home-runtime.css`: Home runtime/orb/attention styles, about 430
+- `app/views/memoria.js`: Memoria view rendering and actions, about 1020 lines
+- `app/views/home.js`: Home view rendering, about 1020 lines
+- `core/db/repositories/continuity.js`: Shared Line persistence, about 950
   lines
+- `app/i18n/en.js` and `app/i18n/zh.js`: locale dictionaries, about 900 lines
+  each
 - `core/runtime/imports/legacy-innerlife.js`: old InnerLife copy import, about
   620 lines
 - `styles/base-layout.css`: shared layout shell styles, about 540 lines
