@@ -83,6 +83,8 @@ Focused renderer modules live under `app/`:
 - `app/views/home-trace.js`: Home Gateway trace and agent activity helpers
 - `app/views/logs.js`: Logs view
 - `app/views/memoria.js`: Memoria workbench, tabs, graph, labels, and embedding
+- `app/views/memoria-list.js`: Memoria list, label overview, agent filter, and
+  memory item render helpers
 - `app/views/settings.js`: model configuration collection plus Settings-page appearance, window, data-path, and about rendering
 - `app/views/shared-innerlife.js`: Shared Line and InnerLife views
 

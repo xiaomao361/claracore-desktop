@@ -65,6 +65,8 @@ Current view owners:
   attention queue, and Gateway trace summaries.
 - `app/views/memoria.js`: Memoria tabs, search, graph, labels, records,
   archive/delete/restrict flows, and embedding actions.
+- `app/views/memoria-list.js`: Memoria list cards, inline labels, label
+  overview, agent filter, and maintenance count helpers.
 - `app/views/shared-innerlife.js`: Shared Line and InnerLife rendering.
 - `app/views/data.js`: backups, restore preview/confirmation, import/export,
   and import preview.

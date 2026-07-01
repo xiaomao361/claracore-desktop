@@ -17,7 +17,7 @@ Current largest files after the current split:
 - `core/db/database.js`: SQLite adapter, migrations, settings, and runtime
   database metadata, about 910 lines
 - `app.js`: renderer orchestration and event wiring, about 850 lines
-- `app/views/memoria.js`: Memoria view rendering and actions, about 1020 lines
+- `app/views/memoria.js`: Memoria view rendering and actions, about 830 lines
 - `core/db/repositories/continuity.js`: Shared Line persistence, about 950
   lines
 - `app/i18n/en.js` and `app/i18n/zh.js`: locale dictionaries, about 900 lines
@@ -62,6 +62,8 @@ module can own the behavior."
    - Done: `app/views/home.js` owns Home/Health/Modules rendering.
    - Done: `app/views/memoria.js` owns Memoria tabs, graph, labels, search, and
      embedding actions.
+   - Done: Memoria list and label rendering helpers moved to
+     `app/views/memoria-list.js`.
    - Done: `app/views/shared-innerlife.js` owns Shared Line and InnerLife
      rendering.
 
