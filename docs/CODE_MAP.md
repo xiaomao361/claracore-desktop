@@ -165,7 +165,8 @@ Start here:
 4. `electron/schedulers.js`
 5. `app/views/shared-innerlife.js`
 6. `core/gateway/tool-handlers/innerlife.js`
-7. `core/gateway/tool-definitions/innerlife.js`
+7. `core/gateway/tool-definitions/innerlife.js` and
+   `core/gateway/tool-definitions/innerlife-*.js`
 
 Use this path for profiles, daemon enable/pause/tick, inbox, sessions, shares,
 digest runs, exploration, convergence, model-backed generation, deterministic
