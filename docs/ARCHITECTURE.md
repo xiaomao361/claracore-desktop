@@ -92,6 +92,8 @@ single stylesheet again.
 for base, runtime, module, dashboard, and event/motion styling.
 `styles/views/innerlife.css` is an InnerLife style entry that imports focused
 layout, runtime, profile, and record/share styling.
+`styles/views/memoria-detail.css` is a Memoria detail style entry that imports
+focused base, graph, label, and result styling.
 
 The Home page is the operational board for the local agent runtime. It should
 make runtime state inspectable at a glance without becoming a generic settings

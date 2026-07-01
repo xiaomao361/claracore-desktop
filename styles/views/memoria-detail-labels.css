@@ -1,0 +1,207 @@
+.memory-label-alias-section .memory-search {
+  grid-template-columns: minmax(120px, 1fr) minmax(120px, 1fr) auto;
+}
+
+.alias-chip span::before {
+  content: "-> ";
+}
+
+.compact-memory-form {
+  margin: 10px 0;
+}
+
+.tag-button {
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.tag-button span {
+  color: var(--muted);
+}
+
+.label-board {
+  display: grid;
+  gap: 10px;
+}
+
+.label-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.label-feature-card,
+.label-mini-card {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(32, 36, 33, 0.1);
+  background: #fbfbf8;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.label-feature-card::before,
+.label-mini-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--label-strength, 0%);
+  background: linear-gradient(90deg, rgba(40, 116, 90, 0.13), rgba(40, 116, 90, 0));
+}
+
+.label-feature-card:hover,
+.label-mini-card:hover {
+  border-color: rgba(40, 116, 90, 0.36);
+  background: #ffffff;
+}
+
+.label-feature-card.agent::before,
+.label-mini-card.agent::before {
+  background: linear-gradient(90deg, rgba(54, 95, 132, 0.14), rgba(54, 95, 132, 0));
+}
+
+.label-feature-card.system::before,
+.label-mini-card.system::before {
+  background: linear-gradient(90deg, rgba(189, 127, 40, 0.16), rgba(189, 127, 40, 0));
+}
+
+.label-feature-card.tool::before,
+.label-mini-card.tool::before {
+  background: linear-gradient(90deg, rgba(106, 88, 148, 0.14), rgba(106, 88, 148, 0));
+}
+
+.label-feature-card.project::before,
+.label-mini-card.project::before {
+  background: linear-gradient(90deg, rgba(40, 116, 90, 0.16), rgba(40, 116, 90, 0));
+}
+
+.label-feature-card {
+  min-height: 76px;
+  display: grid;
+  align-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.label-feature-card span,
+.label-feature-card strong,
+.label-mini-card span,
+.label-mini-card strong {
+  position: relative;
+  z-index: 1;
+}
+
+.label-feature-card span {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 690;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.label-feature-card strong {
+  font-size: 24px;
+  font-weight: 730;
+  font-variant-numeric: tabular-nums;
+}
+
+.label-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.label-mini-card {
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.label-mini-card span {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 610;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.label-mini-card strong {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.label-overview-list {
+  display: grid !important;
+  gap: 6px;
+}
+
+.label-overview-row {
+  position: relative;
+  width: 100%;
+  min-height: 34px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.label-overview-row::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--label-strength, 0%);
+  background: linear-gradient(90deg, rgba(40, 116, 90, 0.14), rgba(40, 116, 90, 0));
+  pointer-events: none;
+}
+
+.label-overview-row:hover {
+  border-color: rgba(40, 116, 90, 0.36);
+  background: #fbfcf8;
+}
+
+.label-overview-name,
+.label-overview-row strong {
+  position: relative;
+  z-index: 1;
+}
+
+.label-overview-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 610;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.label-overview-row strong {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+

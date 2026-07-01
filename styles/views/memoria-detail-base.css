@@ -1,0 +1,121 @@
+.log-terminal {
+  height: calc(100vh - 330px);
+  min-height: 390px;
+  margin: 14px 0 0;
+  padding: 14px;
+  overflow: auto;
+  border: 1px solid rgba(32, 36, 33, 0.18);
+  border-radius: 8px;
+  background: #111310;
+  color: #dbe7d5;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.memory-labels,
+.memory-label-alias-section,
+.memory-graph-section,
+.memory-maintenance-section,
+.memory-merge-section,
+.memory-archive-section,
+.deleted-memory-section,
+.structured-record-section {
+  margin-top: 14px;
+}
+
+.compact-memory-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.compact-memory-form .wide-field,
+.compact-memory-form .settings-actions {
+  grid-column: 1 / -1;
+}
+
+.memory-labels > div,
+.record-type-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.record-summary {
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.structured-record-section > strong {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.memory-label-alias-section > strong {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.memory-graph-section > strong {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.graph-summary {
+  margin-top: 6px;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.maintenance-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.maintenance-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  font-size: 12px;
+}
+
+.maintenance-item span {
+  color: var(--muted);
+}
+
+.maintenance-item strong {
+  color: var(--text);
+}
+
+.merge-item {
+  align-items: center;
+}
+
+.merge-item div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.merge-item small {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+

@@ -59,6 +59,9 @@ module can own the behavior."
      runtime, module, dashboard, and event/motion files.
    - Done: InnerLife styles are split behind `styles/views/innerlife.css` into
      layout, runtime, profile, and record/share files.
+   - Done: Memoria detail styles are split behind
+     `styles/views/memoria-detail.css` into base, graph, labels, and results
+     files.
 
 3. Core runtime split
    - `core/runtime/` is the runtime boundary.
