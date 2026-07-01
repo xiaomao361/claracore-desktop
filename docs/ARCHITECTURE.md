@@ -90,6 +90,8 @@ New renderer work should go into a focused module, not into `app.js`.
 single stylesheet again.
 `styles/views/home.css` is a Home style entry that imports focused Home files
 for base, runtime, module, dashboard, and event/motion styling.
+`styles/views/innerlife.css` is an InnerLife style entry that imports focused
+layout, runtime, profile, and record/share styling.
 
 The Home page is the operational board for the local agent runtime. It should
 make runtime state inspectable at a glance without becoming a generic settings

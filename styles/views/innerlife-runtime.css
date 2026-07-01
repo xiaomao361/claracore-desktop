@@ -1,0 +1,139 @@
+.innerlife-runtime-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.innerlife-runtime-head h2,
+.innerlife-runtime-head p {
+  margin: 0;
+}
+
+.innerlife-runtime-head p {
+  margin-top: 4px;
+  max-width: 260px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.daemon-switch {
+  display: inline-grid;
+  grid-template-columns: 40px minmax(92px, auto);
+  gap: 9px;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 10px 6px 7px;
+  border: 1px solid rgba(145, 101, 31, 0.28);
+  border-radius: 8px;
+  background: var(--amber-bg);
+  color: #5f451b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.metric-list {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.metric-list > div {
+  display: grid;
+  grid-template-columns: minmax(82px, 0.55fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  min-width: 0;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(43, 61, 52, 0.08);
+}
+
+.metric-list > div:last-child {
+  border-bottom: 0;
+}
+
+.metric-list span,
+.metric-list strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.metric-list span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.metric-list strong {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.daemon-switch:hover {
+  border-color: rgba(145, 101, 31, 0.46);
+}
+
+.daemon-switch:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.daemon-switch-track {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(145, 101, 31, 0.28);
+  transition: background 160ms ease;
+}
+
+.daemon-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fffefa;
+  box-shadow: 0 1px 3px rgba(30, 26, 18, 0.24);
+  transition: transform 160ms ease;
+}
+
+.daemon-switch.is-on {
+  border-color: rgba(40, 116, 90, 0.35);
+  background: var(--green-bg);
+  color: #1e5e49;
+}
+
+.daemon-switch.is-on .daemon-switch-track {
+  background: var(--green);
+}
+
+.daemon-switch.is-on .daemon-switch-track::after {
+  transform: translateX(16px);
+}
+
+.daemon-switch.is-error {
+  border-color: rgba(166, 64, 54, 0.36);
+  background: var(--red-bg);
+  color: #8b3129;
+}
+
+.innerlife-command-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.innerlife-command-grid button {
+  min-height: 38px;
+}
+
+.innerlife-command-grid .primary {
+  grid-column: span 2;
+}
+

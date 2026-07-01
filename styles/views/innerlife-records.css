@@ -1,0 +1,148 @@
+.innerlife-record-item {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid rgba(43, 61, 52, 0.1);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fffefa 0%, #fbfaf5 100%);
+  box-shadow: 0 6px 16px rgba(45, 36, 24, 0.04);
+}
+
+.innerlife-record-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  gap: 8px;
+}
+
+.innerlife-record-meta strong,
+.innerlife-record-meta span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.innerlife-record-meta strong {
+  color: #24392f;
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.innerlife-record-meta span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.innerlife-record-item time {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--faint);
+  font-size: 11px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.innerlife-record-item p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.48;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+}
+
+.innerlife-share {
+  position: relative;
+  display: grid;
+  gap: 11px;
+  padding: 14px 14px 14px 18px;
+  border: 1px solid rgba(40, 116, 90, 0.16);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 254, 250, 0.98), rgba(247, 251, 247, 0.96)),
+    #fffefa;
+  box-shadow: 0 10px 24px rgba(45, 36, 24, 0.05);
+}
+
+.innerlife-share::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 0 999px 999px 0;
+  background: rgba(40, 116, 90, 0.48);
+}
+
+.innerlife-share.approved {
+  border-color: rgba(40, 116, 90, 0.28);
+  background: #f2f8f3;
+}
+
+.innerlife-share > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  color: #647169;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.innerlife-share > div:first-child strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #23382f;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.innerlife-share > div:first-child span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.innerlife-share time {
+  overflow: hidden;
+  color: var(--faint);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.innerlife-share pre {
+  margin: 0;
+  max-height: 190px;
+  overflow: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: 14px/1.62 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--text);
+}
+
+.innerlife-side-note {
+  margin: -4px 0 10px;
+  color: var(--faint);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.innerlife-share-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}

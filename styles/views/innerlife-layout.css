@@ -1,0 +1,149 @@
+.innerlife-shell {
+  display: grid;
+  gap: 18px;
+}
+
+.innerlife-status-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.innerlife-status-strip > div {
+  min-width: 0;
+  padding: 14px 16px 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fffefa 0%, #f7f4ec 100%);
+  box-shadow: 0 10px 28px rgba(45, 36, 24, 0.06);
+}
+
+.innerlife-status-strip span,
+.innerlife-status-strip strong {
+  display: block;
+}
+
+.innerlife-status-strip span {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.innerlife-status-strip strong {
+  margin-top: 6px;
+  overflow: hidden;
+  color: #23382f;
+  font-size: 22px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.innerlife-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(340px, 0.82fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.innerlife-panel-heading {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.innerlife-panel-copy {
+  min-width: 0;
+  max-width: 620px;
+}
+
+.innerlife-panel-copy h2 {
+  margin-bottom: 4px;
+}
+
+.innerlife-panel-copy p {
+  margin: 0;
+  max-width: 560px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.innerlife-agent-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  width: auto;
+}
+
+.innerlife-agent-filter span {
+  max-width: none;
+  line-height: 1.15;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.innerlife-agent-filter select {
+  width: 190px;
+  min-width: 0;
+}
+
+.innerlife-side {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  max-height: calc(100vh - 320px);
+  overflow: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  padding-bottom: 84px;
+  position: sticky;
+  top: 18px;
+}
+
+.innerlife-share-heading {
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.innerlife-share-heading-copy {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.innerlife-share-heading-copy strong,
+.innerlife-share-heading-copy span {
+  min-width: 0;
+}
+
+.innerlife-side .panel {
+  min-width: 0;
+}
+
+.innerlife-side .shared-line-history-list,
+.innerlife-side .shared-line-history-item {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.innerlife-side .shared-line-history-item > div {
+  min-width: 0;
+}
+
+.innerlife-side .shared-line-history-item strong,
+.innerlife-side .shared-line-history-item span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.innerlife-side .shared-line-history-item p,
+.innerlife-side .shared-line-history-item small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+

@@ -19,7 +19,7 @@ Current largest files after the current split:
   lines
 - `core/runtime/imports/legacy-innerlife.js`: old InnerLife copy import, about
   620 lines
-- `styles/views/innerlife.css`: InnerLife view styles, about 610 lines
+- `styles/base-layout.css`: shared layout shell styles, about 540 lines
 
 This is acceptable for the current checkpoint. The rule is not "split every
 large file immediately"; the rule is "do not grow these files when a focused
@@ -57,6 +57,8 @@ module can own the behavior."
    - Done: view-specific styles live under `styles/views/`.
    - Done: Home styles are split behind `styles/views/home.css` into base,
      runtime, module, dashboard, and event/motion files.
+   - Done: InnerLife styles are split behind `styles/views/innerlife.css` into
+     layout, runtime, profile, and record/share files.
 
 3. Core runtime split
    - `core/runtime/` is the runtime boundary.
