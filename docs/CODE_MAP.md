@@ -120,6 +120,9 @@ Repository ownership:
 - `core/db/helpers.js`: shared helper functions injected into database
   repositories, including SQL escaping, JSON/date parsing, agent identity,
   label/value normalization, vector math, and JSON HTTP calls.
+- `core/db/repositories/system.js`: settings, secrets, configuration,
+  runtime events, Gateway traces, backup records, LLM calls, and database
+  summary persistence.
 - `core/db/repositories/memoria/labels.js`: Memoria label alias listing,
   creation, deletion, and canonicalization.
 - `core/db/repositories/memoria/records.js`: Memoria structured record create,

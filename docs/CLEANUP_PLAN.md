@@ -10,8 +10,6 @@ into focused modules.
 
 Current largest files after the current split:
 
-- `core/db/database.js`: SQLite adapter, migrations, settings, and runtime
-  database metadata, about 910 lines
 - `app/i18n/en.js` and `app/i18n/zh.js`: locale dictionaries, about 900 lines
   each
 - `app.js`: renderer orchestration and event wiring, about 850 lines
@@ -28,6 +26,8 @@ Current largest files after the current split:
   620 lines
 - `core/db/repositories/memoria.js`: Memoria persistence aggregation, about
   560 lines
+- `core/db/database.js`: SQLite adapter, migrations, and agent identity merge,
+  about 550 lines
 - `styles/base-layout.css`: shared layout shell styles, about 540 lines
 
 This is acceptable for the current checkpoint. The rule is not "split every
@@ -100,6 +100,8 @@ module can own the behavior."
 4. Database split
    - Keep SQLite in Node for the Desktop product.
    - Done: shared database/repository helpers moved to `core/db/helpers.js`.
+   - Done: settings/configuration, logs/traces, backup records, LLM calls, and
+     database summary moved to `core/db/repositories/system.js`.
    - Done: Memoria persistence moved to `core/db/repositories/memoria.js`.
    - Done: Memoria label alias and canonicalization persistence moved to
      `core/db/repositories/memoria/labels.js`.

@@ -180,12 +180,14 @@ database for this Desktop runtime.
 
 Current shape:
 
-- `core/db/database.js`: connection, initialization, settings, runtime events,
-  gateway traces, backup records, configuration, and summary
+- `core/db/database.js`: connection, initialization, migrations, legacy agent
+  identity normalization, and agent identity merge
 - `core/db/helpers.js`: shared repository/database helpers for SQL escaping,
   JSON parsing, agent identity normalization, label/date/value normalization,
   vector math, and JSON HTTP calls
 - `core/db/migrations/`: explicit migrations
+- `core/db/repositories/system.js`: settings, configuration, runtime events,
+  gateway traces, backup records, LLM calls, and database summary
 - `core/db/repositories/memoria.js`: Memoria persistence
 - `core/db/repositories/memoria/`: focused Memoria repository submodules,
   including label alias, canonicalization, structured record, and
