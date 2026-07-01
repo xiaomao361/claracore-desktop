@@ -413,8 +413,8 @@ function graphHash(value) {
 }
 
 function computeGraphLayout(nodes, edges) {
-  const width = 1180;
-  const height = 650;
+  const width = 900;
+  const height = 680;
   const centerX = width / 2;
   const centerY = height / 2;
   const degree = new Map();
@@ -430,35 +430,40 @@ function computeGraphLayout(nodes, edges) {
   const memoryNodes = nodes.filter((node) => node.kind === "memory");
   const otherNodes = nodes.filter((node) => node.kind !== "label" && node.kind !== "memory");
 
-  memoryNodes.forEach((node, index) => {
+  const spherePoint = (index, total, seed, radiusScale = 1) => {
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+    const z = 1 - (2 * (index + 0.5)) / Math.max(1, total);
+    const ring = Math.sqrt(Math.max(0, 1 - z * z));
+    const theta = index * goldenAngle + (seed % 628) / 100;
+    const jitter = ((seed % 200) - 100) / 2500;
+    const nx = (Math.cos(theta) * ring + jitter) * radiusScale;
+    const ny = (z * 0.9 + jitter * 0.6) * radiusScale;
+    const nz = (Math.sin(theta) * ring - jitter) * radiusScale;
+    return { nx, ny, nz };
+  };
+
+  const setSpherePosition = (node, index, total, radiusScale, size) => {
     const seed = graphHash(node.id);
-    const angle = index * 2.399963229728653 + (seed % 1000) / 1000;
-    const radius = Math.sqrt((index + 1) / Math.max(1, memoryNodes.length)) * 245 + ((seed % 70) - 35);
+    const point = spherePoint(index, total, seed, radiusScale);
     positions.set(node.id, {
-      x: Math.max(24, Math.min(width - 24, centerX + Math.cos(angle) * radius * 1.38)),
-      y: Math.max(24, Math.min(height - 24, centerY + Math.sin(angle) * radius * 0.92)),
-      size: 2.5 + Math.min(2.5, (degree.get(node.id) || 1) / 6)
+      ...point,
+      x: centerX + point.nx * width * 0.34,
+      y: centerY + point.ny * height * 0.38,
+      z: point.nz,
+      size
     });
+  };
+
+  memoryNodes.forEach((node, index) => {
+    setSpherePosition(node, index, memoryNodes.length, 0.82, 2.2 + Math.min(3.4, (degree.get(node.id) || 1) / 5));
   });
 
   labelNodes.forEach((node, index) => {
-    const seed = graphHash(node.id);
-    const angle = index * 2.399963229728653 + (seed % 1000) / 700;
-    const radius = 95 + Math.sqrt((index + 1) / Math.max(1, labelNodes.length)) * 285 + ((seed % 80) - 40);
-    positions.set(node.id, {
-      x: Math.max(24, Math.min(width - 24, centerX + Math.cos(angle) * radius * 1.35)),
-      y: Math.max(24, Math.min(height - 24, centerY + Math.sin(angle) * radius * 0.86)),
-      size: 7 + Math.min(7, (degree.get(node.id) || 1) / 7)
-    });
+    setSpherePosition(node, index, labelNodes.length, 1.02, 6 + Math.min(8, (degree.get(node.id) || 1) / 7));
   });
 
   otherNodes.forEach((node, index) => {
-    const angle = (index / Math.max(1, otherNodes.length)) * Math.PI * 2;
-    positions.set(node.id, {
-      x: centerX + Math.cos(angle) * 90,
-      y: centerY + Math.sin(angle) * 90,
-      size: 8
-    });
+    setSpherePosition(node, index, otherNodes.length, 0.5, 8 + Math.min(7, (degree.get(node.id) || 1) / 5));
   });
 
   return { width, height, positions, degree };
@@ -508,7 +513,7 @@ function stopMemoryGraphAnimation() {
 
 function drawMemoryGraphCanvas() {
   if (!memoryGraphState) return;
-  const { canvas, nodes, edges, positions, degree, width, height } = memoryGraphState;
+  const { canvas, nodes, edges, positions, degree } = memoryGraphState;
   if (!canvas) return;
   const rect = canvas.getBoundingClientRect();
   const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
@@ -522,19 +527,37 @@ function drawMemoryGraphCanvas() {
   ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
   ctx.clearRect(0, 0, rect.width, rect.height);
 
-  const fitScale = Math.min(rect.width / width, rect.height / height);
-  const scale = fitScale * memoryGraphZoom;
-  const offsetX = (rect.width - width * scale) / 2 + memoryGraphPan.x;
-  const offsetY = (rect.height - height * scale) / 2 + memoryGraphPan.y;
+  const now = performance.now();
+  const reducedMotion = document.body?.dataset?.motion === "off";
+  const rotation = reducedMotion ? 0.42 : now / 32000;
+  const tilt = -0.18;
+  const centerX = rect.width / 2 + memoryGraphPan.x;
+  const centerY = rect.height / 2 + memoryGraphPan.y;
+  const sphereRadius = Math.min(rect.width, rect.height) * 0.42 * memoryGraphZoom;
   canvas.dataset.zoom = String(memoryGraphZoom);
   canvas.dataset.panX = String(Math.round(memoryGraphPan.x));
   canvas.dataset.panY = String(Math.round(memoryGraphPan.y));
-  const point = (position) => ({
-    x: offsetX + position.x * scale,
-    y: offsetY + position.y * scale,
-    r: Math.max(1.6, position.size * scale)
-  });
-  const now = performance.now();
+  const project = (position) => {
+    const nx = Number.isFinite(position.nx) ? position.nx : 0;
+    const ny = Number.isFinite(position.ny) ? position.ny : 0;
+    const nz = Number.isFinite(position.nz) ? position.nz : position.z || 0;
+    const cosY = Math.cos(rotation);
+    const sinY = Math.sin(rotation);
+    const rx = nx * cosY + nz * sinY;
+    const rz = nz * cosY - nx * sinY;
+    const cosX = Math.cos(tilt);
+    const sinX = Math.sin(tilt);
+    const ry = ny * cosX - rz * sinX;
+    const depth = rz * cosX + ny * sinX;
+    const perspective = 1 / (1.9 - depth * 0.44);
+    return {
+      x: centerX + rx * sphereRadius * perspective,
+      y: centerY + ry * sphereRadius * perspective,
+      r: Math.max(1.4, position.size * perspective * memoryGraphZoom),
+      depth,
+      perspective
+    };
+  };
   const safeDegree = (nodeId) => Math.max(1, degree?.get(nodeId) || 1);
   const isDarkTheme = document.body?.dataset?.theme === "dark";
   const graphTheme = isDarkTheme
@@ -547,6 +570,8 @@ function drawMemoryGraphCanvas() {
         edge: "82, 128, 106",
         memory: "99, 155, 215",
         restricted: "214, 118, 101",
+        core: "121, 201, 164",
+        shell: "121, 201, 164",
         labelHalo: "rgba(215, 159, 75, 0.16)",
         sharedLineHalo: "rgba(121, 201, 164, 0.16)",
         nodeStroke: "rgba(232, 242, 235, 0.58)",
@@ -564,6 +589,8 @@ function drawMemoryGraphCanvas() {
         edge: "82, 107, 98",
         memory: "54, 95, 132",
         restricted: "166, 64, 54",
+        core: "40, 116, 90",
+        shell: "54, 95, 132",
         labelHalo: "rgba(189, 127, 40, 0.13)",
         sharedLineHalo: "rgba(40, 116, 90, 0.13)",
         nodeStroke: "rgba(255, 255, 255, 0.9)",
@@ -606,65 +633,111 @@ function drawMemoryGraphCanvas() {
   ctx.fillStyle = background;
   ctx.fillRect(0, 0, rect.width, rect.height);
 
-  for (const edge of edges) {
+  const shellGradient = ctx.createRadialGradient(centerX - sphereRadius * 0.22, centerY - sphereRadius * 0.28, sphereRadius * 0.06, centerX, centerY, sphereRadius * 1.04);
+  shellGradient.addColorStop(0, `rgba(${graphTheme.core}, ${isDarkTheme ? 0.2 : 0.16})`);
+  shellGradient.addColorStop(0.58, `rgba(${graphTheme.shell}, ${isDarkTheme ? 0.08 : 0.06})`);
+  shellGradient.addColorStop(1, `rgba(${graphTheme.shell}, 0)`);
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, sphereRadius * 1.05, 0, Math.PI * 2);
+  ctx.fillStyle = shellGradient;
+  ctx.fill();
+
+  ctx.save();
+  ctx.translate(centerX, centerY);
+  ctx.strokeStyle = `rgba(${graphTheme.shell}, ${isDarkTheme ? 0.16 : 0.12})`;
+  ctx.lineWidth = 0.8;
+  for (const factor of [0.42, 0.66, 0.86, 1]) {
+    ctx.beginPath();
+    ctx.ellipse(0, 0, sphereRadius * factor, sphereRadius * factor * 0.46, rotation * 0.5, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  for (const angle of [-0.75, -0.32, 0.28, 0.68]) {
+    ctx.beginPath();
+    ctx.ellipse(0, 0, sphereRadius * 0.96, sphereRadius * 0.26, angle + rotation * 0.22, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  const projectedNodes = nodes
+    .map((node) => {
+      const position = positions.get(node.id);
+      return position ? { node, p: project(position) } : null;
+    })
+    .filter(Boolean);
+  const projectedById = new Map(projectedNodes.map((item) => [item.node.id, item.p]));
+
+  const edgeDrawList = edges
+    .map((edge) => {
+      const a = projectedById.get(edge.from);
+      const b = projectedById.get(edge.to);
+      if (!a || !b) return null;
+      return { edge, a, b, depth: (a.depth + b.depth) / 2 };
+    })
+    .filter(Boolean)
+    .sort((left, right) => left.depth - right.depth);
+
+  for (const item of edgeDrawList) {
+    const { edge, a, b, depth } = item;
     const from = positions.get(edge.from);
     const to = positions.get(edge.to);
     if (!from || !to) continue;
-    const a = point(from);
-    const b = point(to);
     const middleX = (a.x + b.x) / 2;
     const middleY = (a.y + b.y) / 2;
-    const curve = Math.max(-22, Math.min(22, (a.x - b.x) * 0.035));
-    const alpha = Math.min(isDarkTheme ? 0.42 : 0.3, (isDarkTheme ? 0.1 : 0.055) + (safeDegree(edge.from) + safeDegree(edge.to)) / 700);
+    const curve = Math.max(-42, Math.min(42, (a.depth - b.depth) * 38 + (a.x - b.x) * 0.02));
+    const depthAlpha = Math.max(0.12, Math.min(1, (depth + 1.1) / 2.1));
+    const alpha = Math.min(isDarkTheme ? 0.4 : 0.28, ((isDarkTheme ? 0.055 : 0.04) + (safeDegree(edge.from) + safeDegree(edge.to)) / 900) * depthAlpha);
     ctx.beginPath();
-    ctx.lineWidth = isDarkTheme ? 0.9 : 0.75;
+    ctx.lineWidth = (isDarkTheme ? 0.72 : 0.62) + Math.max(0, depth) * 0.42;
     ctx.strokeStyle = `rgba(${graphTheme.edge}, ${alpha})`;
     ctx.moveTo(a.x, a.y);
     ctx.quadraticCurveTo(middleX + curve, middleY - curve, b.x, b.y);
     ctx.stroke();
   }
 
-  for (const node of nodes) {
-    const position = positions.get(node.id);
-    if (!position) continue;
-    const p = point(position);
-    if (node.kind !== "memory") continue;
+  const nodeDrawList = projectedNodes.sort((left, right) => left.p.depth - right.p.depth);
+  for (const { node, p } of nodeDrawList) {
     const phase = ((now / 1000) + (graphHash(node.id) % 900) / 1000) * Math.PI * 2 / 2.8;
-    const pulse = 1 + Math.sin(phase) * 0.06;
-    const radius = p.r * pulse;
+    const pulse = reducedMotion ? 1 : 1 + Math.sin(phase) * 0.045;
+    const front = Math.max(0.28, Math.min(1, (p.depth + 1.05) / 2.05));
+    const radius = p.r * pulse * (0.72 + front * 0.42);
     const isRestricted = node.sensitivity === "restricted";
-    if (isRestricted) {
+    if (node.kind !== "memory") continue;
+    if (isRestricted || p.depth > 0.35) {
       ctx.beginPath();
-      ctx.fillStyle = `rgba(${graphTheme.restricted}, ${isDarkTheme ? 0.16 : 0.12})`;
-      ctx.arc(p.x, p.y, radius + 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = isRestricted
+        ? `rgba(${graphTheme.restricted}, ${isDarkTheme ? 0.16 : 0.12})`
+        : `rgba(${graphTheme.memory}, ${isDarkTheme ? 0.12 : 0.08})`;
+      ctx.arc(p.x, p.y, radius + 3.8, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.beginPath();
     ctx.fillStyle = isRestricted
-      ? `rgba(${graphTheme.restricted}, ${isDarkTheme ? 0.86 : 0.72})`
-      : `rgba(${graphTheme.memory}, ${isDarkTheme ? 0.76 : 0.58})`;
+      ? `rgba(${graphTheme.restricted}, ${0.42 + front * 0.44})`
+      : `rgba(${graphTheme.memory}, ${0.28 + front * 0.52})`;
     ctx.strokeStyle = graphTheme.nodeStroke;
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 0.7 + front * 0.5;
     ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
   }
 
-  const hubNodes = nodes
-    .filter((node) => node.kind !== "memory")
-    .sort((left, right) => safeDegree(left.id) - safeDegree(right.id));
-  for (const node of hubNodes) {
-    const position = positions.get(node.id);
-    if (!position) continue;
-    const p = point(position);
+  const hubNodes = projectedNodes
+    .filter((item) => item.node.kind !== "memory")
+    .sort((left, right) => left.p.depth - right.p.depth);
+  for (const { node, p } of hubNodes) {
     const color = nodeColor(node);
-    const radius = Math.max(5, p.r * 0.72);
+    const front = Math.max(0.34, Math.min(1, (p.depth + 1.05) / 2.05));
+    const radius = Math.max(4, p.r * (0.58 + front * 0.48));
     const phase = ((now / 1000) + (graphHash(node.id) % 1000) / 1000) * Math.PI * 2 / 3.6;
-    const halo = radius + 5 + Math.sin(phase) * 1.5;
+    const halo = radius + 5 + (reducedMotion ? 0 : Math.sin(phase) * 1.5);
     ctx.beginPath();
-    ctx.fillStyle = node.kind === "label" ? graphTheme.labelHalo : graphTheme.sharedLineHalo;
+    ctx.fillStyle = node.kind === "label"
+      ? graphTheme.labelHalo
+      : graphTheme.sharedLineHalo;
+    ctx.globalAlpha = 0.45 + front * 0.55;
     ctx.arc(p.x, p.y, halo, 0, Math.PI * 2);
     ctx.fill();
+    ctx.globalAlpha = 1;
     ctx.beginPath();
     ctx.fillStyle = color;
     ctx.strokeStyle = graphTheme.nodeStroke;
@@ -676,17 +749,24 @@ function drawMemoryGraphCanvas() {
 
   ctx.font = "600 10px Inter, ui-sans-serif, system-ui, sans-serif";
   ctx.textBaseline = "middle";
-  for (const node of hubNodes) {
-    const position = positions.get(node.id);
-    if (!position) continue;
-    const p = point(position);
+  const labeledHubs = [...hubNodes]
+    .filter(({ p }) => p.depth > -0.2)
+    .sort((left, right) => {
+      const rank = safeDegree(right.node.id) - safeDegree(left.node.id);
+      return rank || right.p.depth - left.p.depth;
+    })
+    .slice(0, 34)
+    .sort((left, right) => left.p.depth - right.p.depth);
+  for (const { node, p } of labeledHubs) {
     const label = truncateCanvasText(labelForNode(node), node.kind === "label" ? 106 : 132);
     const textWidth = ctx.measureText(label).width;
     const pillWidth = Math.min(148, textWidth + 18);
     const pillHeight = 22;
-    const x = Math.min(rect.width - pillWidth - 8, Math.max(8, p.x + p.r + 7));
+    const x = Math.min(rect.width - pillWidth - 8, Math.max(8, p.x + p.r + 8));
     const y = Math.min(rect.height - pillHeight - 8, Math.max(8, p.y - pillHeight / 2));
     roundRect(x, y, pillWidth, pillHeight, 11);
+    const front = Math.max(0.35, Math.min(1, (p.depth + 1.05) / 2.05));
+    ctx.globalAlpha = 0.58 + front * 0.42;
     ctx.fillStyle = graphTheme.pillFill;
     ctx.fill();
     ctx.strokeStyle = node.kind === "label" ? graphTheme.labelPillStroke : graphTheme.sharedLinePillStroke;
@@ -694,9 +774,12 @@ function drawMemoryGraphCanvas() {
     ctx.stroke();
     ctx.fillStyle = graphTheme.pillText;
     ctx.fillText(label, x + 9, y + pillHeight / 2);
+    ctx.globalAlpha = 1;
   }
 
-  memoryGraphAnimation = requestAnimationFrame(drawMemoryGraphCanvas);
+  if (!reducedMotion) {
+    memoryGraphAnimation = requestAnimationFrame(drawMemoryGraphCanvas);
+  }
 }
 
 function renderMemoryOverview() {
@@ -835,6 +918,7 @@ function renderMemoryGraph() {
   function moveGraphDrag(event) {
     if (!memoryGraphDrag) return;
     memoryGraphPan = { x: memoryGraphDrag.startPan.x + event.clientX - memoryGraphDrag.x, y: memoryGraphDrag.startPan.y + event.clientY - memoryGraphDrag.y };
+    if (!memoryGraphAnimation) drawMemoryGraphCanvas();
   }
 
   function endGraphDrag() {

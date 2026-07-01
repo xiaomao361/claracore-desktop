@@ -66,7 +66,7 @@ Included:
 - Desktop-owned Gateway stdio entry for Gateway context, Memoria, Shared Line, and InnerLife MCP tools
 - Memoria CLI for store, recall, get, update, tag, delete, restore, archive, import/export, records, and maintenance audit/run
 - View-focused Memoria UI for search, graph, labels, all memories, restricted memories, archive/delete review, and manual delete/restore
-- Lazy-loaded Memoria list tabs and cached canvas graph with primary/restricted layers
+- Lazy-loaded Memoria list tabs and cached spherical canvas graph with primary/restricted layers, depth-based links, reduced label noise, and reduced-motion fallback
 - Manual vector rebuild with progress, plus daily small-batch Memoria database maintenance
 - Shared Line CLI and Desktop-owned Gateway MCP tools for agent-driven line create/list/get/activate/rename/archive/restore/update/handoff, agent state, model adjustments, and arc compaction
 - Shared-reality and affective fields as first-class inputs, with a managed arc lifecycle: momentary readings stay transient, duplicates are de-duplicated, persisted arcs are capped, resume packets truncate by default (fullArc for the complete arc), and needs-review nodes are always protected
@@ -84,7 +84,7 @@ Included:
 - Chinese and English UI switching
 - macOS menu bar / Windows tray entry
 - Unified ClaraCore app, tray, favicon, README, and packaging icon assets
-- Real local resource monitor for uptime, CPU, memory, disk, and local time
+- Compact local resource monitor for uptime, CPU, memory, disk, and local time
 
 Not included yet:
 

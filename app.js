@@ -514,7 +514,7 @@ function renderSnapshot() {
 }
 
 function renderResourceSnapshot(resources) {
-  monitorVersion.textContent = resources.appVersion ? `v${resources.appVersion}` : "-";
+  if (monitorVersion) monitorVersion.textContent = resources.appVersion ? `v${resources.appVersion}` : "-";
   monitorUptime.textContent = resources.uptime || "--:--:--";
   monitorCpu.textContent = Number.isFinite(resources.cpuPercent) ? `${resources.cpuPercent}%` : "--";
   monitorRam.textContent =

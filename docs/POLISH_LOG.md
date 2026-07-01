@@ -78,6 +78,16 @@ No known data-loss or launch-blocking issue is currently captured here.
 
 ## Fixed
 
+### 2026-07-01 - Memoria graph and resource monitor polish
+
+- Symptom: the footer repeated ClaraCore/version information already visible in
+  the sidebar, widening the bottom monitor, and the Memoria graph read as a flat
+  label cloud instead of a memory-link surface.
+- Fix: remove the duplicate footer brand slot, center the compact runtime
+  metrics, and redraw the Memoria graph as a spherical canvas projection with
+  depth-aware links, fewer foreground labels, and reduced-motion fallback.
+- Verification: `npm run check`.
+
 ### 2026-06-30 - Gateway share timing and isolated UI smoke tests
 
 - Symptom: `innerlife_share_check` returned `use` for pending InnerLife shares,

@@ -135,9 +135,10 @@ summary {
   bottom: 0;
   z-index: 20;
   min-height: 48px;
-  display: grid;
-  grid-template-columns: minmax(150px, 1fr) repeat(4, auto) minmax(210px, 1fr);
+  display: flex;
   align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
   gap: 18px;
   padding: 10px 18px;
   border-top: 1px solid var(--border);
