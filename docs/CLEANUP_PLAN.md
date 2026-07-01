@@ -16,11 +16,11 @@ Current largest files after the current split:
   helpers, about 1170 lines
 - `app.js`: renderer orchestration and event wiring, about 850 lines
 - `app/views/memoria.js`: Memoria view rendering and actions, about 1020 lines
-- `app/views/home.js`: Home view rendering, about 1020 lines
 - `core/db/repositories/continuity.js`: Shared Line persistence, about 950
   lines
 - `app/i18n/en.js` and `app/i18n/zh.js`: locale dictionaries, about 900 lines
   each
+- `app/views/home.js`: Home view rendering, about 820 lines
 - `core/runtime/imports/legacy-innerlife.js`: old InnerLife copy import, about
   620 lines
 - `styles/base-layout.css`: shared layout shell styles, about 540 lines
