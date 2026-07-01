@@ -294,7 +294,9 @@ const innerLifeActions = window.createClaraCoreInnerLifeActions({
   t,
   getSnapshot: () => snapshot,
   renderInnerLife,
+  refresh,
   refreshRuntimeSnapshotOnly,
+  showCopyNotice,
   splitListInput,
   itemAgentId: sharedItemAgentId
 });
@@ -727,11 +729,6 @@ window.ClaraCoreDom.openSettingsDataRoot?.addEventListener("click", () => {
   }
 });
 
-innerLifeAgentFilter?.addEventListener("change", () => {
-  rendererState.activeInnerLifeAgentFilter = innerLifeAgentFilter.value || "";
-  renderInnerLife();
-});
-
 innerLifeActions.bindEvents();
 memoriaActions.bindEvents();
 
@@ -811,23 +808,6 @@ toggleLogFollow.addEventListener("click", () => {
 
 clearLogs.addEventListener("click", () => {
   logsView.clear();
-});
-
-innerLifeDaemonToggle?.addEventListener("click", async () => {
-  const daemon = snapshot?.innerLife?.daemon || {};
-  const enabled = Boolean(daemon.enabled) && daemon.status !== "paused";
-  innerLifeDaemonToggle.disabled = true;
-  innerLifeDaemonNotice.textContent = t("common.checking");
-  try {
-    await window.ClaraCoreDesktop.setInnerLifeDaemon({ action: enabled ? "pause" : "enable" });
-    await refresh();
-    showCopyNotice(enabled ? t("innerLife.daemonPaused") : t("innerLife.daemonEnabled"), innerLifeDaemonNotice);
-  } catch (error) {
-    console.error(error);
-    innerLifeDaemonNotice.textContent = t("innerLife.daemonFailed");
-  } finally {
-    innerLifeDaemonToggle.disabled = false;
-  }
 });
 
 primaryAction.addEventListener("click", () => {

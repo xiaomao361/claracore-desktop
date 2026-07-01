@@ -5,7 +5,9 @@ function createClaraCoreInnerLifeActions({
   t,
   getSnapshot,
   renderInnerLife,
+  refresh,
   refreshRuntimeSnapshotOnly,
+  showCopyNotice,
   splitListInput,
   itemAgentId
 }) {
@@ -142,7 +144,31 @@ function createClaraCoreInnerLifeActions({
     });
   }
 
+  function changeAgentFilter() {
+    state.activeInnerLifeAgentFilter = dom.innerLifeAgentFilter.value || "";
+    renderInnerLife();
+  }
+
+  async function toggleDaemon() {
+    const daemon = getSnapshot()?.innerLife?.daemon || {};
+    const enabled = Boolean(daemon.enabled) && daemon.status !== "paused";
+    dom.innerLifeDaemonToggle.disabled = true;
+    dom.innerLifeDaemonNotice.textContent = t("common.checking");
+    try {
+      await desktop.setInnerLifeDaemon({ action: enabled ? "pause" : "enable" });
+      await refresh();
+      showCopyNotice(enabled ? t("innerLife.daemonPaused") : t("innerLife.daemonEnabled"), dom.innerLifeDaemonNotice);
+    } catch (error) {
+      console.error(error);
+      dom.innerLifeDaemonNotice.textContent = t("innerLife.daemonFailed");
+    } finally {
+      dom.innerLifeDaemonToggle.disabled = false;
+    }
+  }
+
   function bindEvents() {
+    dom.innerLifeAgentFilter?.addEventListener("change", changeAgentFilter);
+    dom.innerLifeDaemonToggle?.addEventListener("click", () => toggleDaemon().catch(console.error));
     dom.saveInnerLifeProfile?.addEventListener("click", () => saveProfile().catch(console.error));
     dom.loadMoreInnerLifeSessions?.addEventListener("click", () => loadMoreSessions().catch(console.error));
     dom.loadMoreInnerLifeDigestRuns?.addEventListener("click", () => loadMoreDigestRuns().catch(console.error));
@@ -151,10 +177,12 @@ function createClaraCoreInnerLifeActions({
 
   return {
     bindEvents,
+    changeAgentFilter,
     loadMoreDigestRuns,
     loadMoreInbox,
     loadMoreSessions,
-    saveProfile
+    saveProfile,
+    toggleDaemon
   };
 }
 
