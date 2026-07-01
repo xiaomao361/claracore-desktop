@@ -12,21 +12,22 @@ Current largest files after the current split:
 
 - `core/db/repositories/innerlife.js`: InnerLife persistence aggregation, about
   970 lines
-- `core/db/repositories/memoria.js`: Memoria persistence aggregation, about
-  1010 lines
-- `core/db/database.js`: SQLite adapter, migrations, settings, and runtime
-  database metadata, about 910 lines
-- `app.js`: renderer orchestration and event wiring, about 850 lines
-- `app/views/memoria.js`: Memoria view rendering and actions, about 830 lines
 - `core/db/repositories/continuity.js`: Shared Line persistence, about 950
   lines
+- `core/db/database.js`: SQLite adapter, migrations, settings, and runtime
+  database metadata, about 910 lines
 - `app/i18n/en.js` and `app/i18n/zh.js`: locale dictionaries, about 900 lines
   each
+- `app.js`: renderer orchestration and event wiring, about 850 lines
+- `app/views/memoria.js`: Memoria view rendering and actions, about 830 lines
 - `app/views/home.js`: Home view rendering, about 820 lines
-- `core/db/repositories/innerlife/daemon.js`: InnerLife daemon persistence,
-  about 270 lines
+- `app/views/shared-innerlife.js`: Shared Line and InnerLife rendering, about
+  770 lines
+- `electron/main.js`: Electron app lifecycle aggregation, about 710 lines
 - `core/runtime/imports/legacy-innerlife.js`: old InnerLife copy import, about
   620 lines
+- `core/db/repositories/memoria.js`: Memoria persistence aggregation, about
+  560 lines
 - `styles/base-layout.css`: shared layout shell styles, about 540 lines
 
 This is acceptable for the current checkpoint. The rule is not "split every
@@ -106,6 +107,8 @@ module can own the behavior."
      `core/db/repositories/memoria/records.js`.
    - Done: Memoria embedding/search persistence moved to
      `core/db/repositories/memoria/embeddings.js`.
+   - Done: Memoria maintenance/audit/archive/merge persistence moved to
+     `core/db/repositories/memoria/maintenance.js`.
    - Done: Continuity persistence moved to
      `core/db/repositories/continuity.js`.
    - Done: InnerLife persistence moved to `core/db/repositories/innerlife.js`.
