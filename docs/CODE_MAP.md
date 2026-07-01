@@ -119,6 +119,8 @@ Repository ownership:
   creation, deletion, and canonicalization.
 - `core/db/repositories/memoria/records.js`: Memoria structured record create,
   get, list, stats, and summary persistence.
+- `core/db/repositories/memoria/embeddings.js`: Memoria embedding creation,
+  vector candidates, hybrid search, and pending embedding processing.
 - `core/db/repositories/continuity.js`: Shared Line tables, current position,
   history, snapshots, handoffs, agent state, model adjustments, arc lifecycle,
   and Gateway context composition.
