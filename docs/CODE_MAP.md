@@ -130,8 +130,8 @@ Repository ownership:
   history, snapshots, handoffs, agent state, model adjustments, arc lifecycle,
   and Gateway context composition.
 - `core/db/repositories/innerlife.js`: InnerLife repository aggregation plus
-  sessions, events, thoughts, shares, digest/exploration/convergence data, and
-  review flows.
+  events, thoughts, shares, digest/exploration/convergence data, and review
+  flows.
 - `core/db/repositories/innerlife/profile.js`: InnerLife profile create,
   update, list, and delete persistence.
 - `core/db/repositories/innerlife/inbox.js`: InnerLife inbox list, count,
@@ -140,6 +140,8 @@ Repository ownership:
   enable/pause/tick scheduling, and per-agent tick locking.
 - `core/db/repositories/innerlife/history.js`: InnerLife history, experience,
   summary, and digest-summary read models.
+- `core/db/repositories/innerlife/sessions.js`: InnerLife session count, list,
+  page, start packet, and session-end persistence.
 
 New schema-heavy behavior should use an explicit migration and repository API.
 Product policy should live in a domain module rather than directly in a

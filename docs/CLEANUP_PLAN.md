@@ -11,7 +11,7 @@ into focused modules.
 Current largest files after the current split:
 
 - `core/db/repositories/innerlife.js`: InnerLife persistence aggregation, about
-  1190 lines
+  970 lines
 - `core/db/repositories/memoria.js`: Memoria persistence aggregation, about
   1010 lines
 - `core/db/database.js`: SQLite adapter, migrations, settings, and runtime
@@ -117,6 +117,8 @@ module can own the behavior."
      `core/db/repositories/innerlife/daemon.js`.
    - Done: InnerLife history, experience, and summary read models moved to
      `core/db/repositories/innerlife/history.js`.
+   - Done: InnerLife session count/list/page/start/end persistence moved to
+     `core/db/repositories/innerlife/sessions.js`.
    - Done: InnerLife prompts/share policy/compact response shaping moved to
      `core/innerlife/policy.js`.
    - Add explicit migrations before new schema-heavy features.
