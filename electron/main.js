@@ -2,84 +2,21 @@ const { app, BrowserWindow, Menu, Tray, clipboard, dialog, ipcMain, nativeImage,
 const path = require("path");
 const fs = require("fs/promises");
 const os = require("os");
-const http = require("http");
-const crypto = require("crypto");
 const { execFile, spawnSync } = require("child_process");
 const { promisify } = require("util");
 const { PRODUCT_VERSION } = require("../core/version");
+const { createHttpAgentGateway } = require("./http-agent-gateway");
+const { createSchedulers } = require("./schedulers");
+const { registerIpcHandlers } = require("./ipc-handlers");
 const {
-  applyProductInnerLifeShareToMemory,
-  applyProductInnerLifeShareToSharedLine,
   buildProductSnapshot,
-  checkProductInnerLifeShareTiming,
-  activateProductSharedLine,
-  archiveProductDormantMemories,
-  archiveProductMemory,
-  archiveProductSharedLine,
-  clearProductLogs,
-  createProductBackup,
-  createProductMemory,
-  createProductMemoryLabelAlias,
-  createProductMemoryRecord,
-  createProductSharedLine,
-  createProductSharedLineHandoff,
-  deleteProductBackup,
-  deleteProductMemory,
-  deleteProductMemoryLabelAlias,
-  embedProductMemory,
   ensureProductCore,
   ensureProductDirectories,
-  exportProductDataJson,
-  exportProductMemoryArchive,
   getProductGatewayContext,
-  getProductMemories,
-  getProductInnerLife,
-  getProductInnerLifeDigestRuns,
-  getProductImportPreview,
-  getProductInnerLifeInbox,
-  getProductArchivedMemories,
-  getProductMemoryArchiveSuggestions,
-  getProductDeletedMemories,
-  getProductMemoryLabelAliases,
-  getProductMemoryGraph,
-  getProductMemoryMaintenance,
-  getProductMemoryMergeSuggestions,
-  getProductMemoryRecords,
-  getProductMemoryStats,
-  getProductRestrictedMemories,
-  getProductSharedLine,
-  getProductInnerLifeSessions,
-  importProductDataJson,
-  importProductMemoryArchive,
-  importOldContinuityIntoProduct,
-  importOldInnerLifeIntoProduct,
-  importOldMemoriaIntoProduct,
-  markProductInnerLifeShare,
-  mergeProductMemories,
-  previewProductRestore,
-  processProductMemoryEmbeddings,
-  processProductInnerLifeOnce,
   resetCachedDatabase,
-  reviewProductInnerLifeShare,
-  renameProductSharedLine,
-  restoreProductBackup,
-  restoreArchivedProductMemory,
-  restoreProductMemory,
-  restoreProductSharedLine,
-  restrictProductMemory,
-  runProductInnerLifeDigest,
   runProductMemoryMaintenance,
-  setProductInnerLifeDaemon,
   saveProductSettings,
-  saveProductSharedLine,
-  searchProductMemories,
-  submitProductInnerLifeInbox,
   tickProductInnerLifeDaemon,
-  startProductInnerLifeSession,
-  endProductInnerLifeSession,
-  unrestrictProductMemory,
-  updateProductInnerLifeProfile,
-  updateProductMemory,
   desktopSettingsPath,
   readDesktopSettings
 } = require("../core/runtime");
@@ -114,20 +51,10 @@ let isQuitting = false;
 let trayLanguage = "en";
 let windowCloseBehavior = "hide";
 let lastCpuSample = null;
-let innerLifeScheduler = null;
-let innerLifeSchedulerBusy = false;
-let memoryMaintenanceScheduler = null;
-let memoryMaintenanceSchedulerBusy = false;
+let schedulers = null;
 const appStartedAt = Date.now();
-const INNERLIFE_SCHEDULER_INTERVAL_MS = 60 * 1000;
 const RESOURCE_SAMPLE_MAX_AGE_MS = 10 * 60 * 1000;
-const httpAgentGateway = {
-  host: "127.0.0.1",
-  server: null,
-  sockets: new Set(),
-  port: null,
-  token: crypto.randomBytes(32).toString("base64url")
-};
+let httpAgentGateway = null;
 let forceQuitTimer = null;
 const resourceMemorySamples = [];
 
@@ -457,7 +384,7 @@ async function getRuntimeSnapshot() {
   const snapshot = await buildProductSnapshot(app);
   const connections = {
     ...snapshot.connections,
-    httpEndpoints: buildHttpAgentEndpoints()
+    httpEndpoints: httpAgentGateway ? httpAgentGateway.buildEndpoints() : []
   };
   return {
     ...snapshot,
@@ -548,161 +475,6 @@ async function listConfiguredModels(input = {}) {
     return { provider, endpoint: baseUrl, models: uniqueSortedModelNames(models), supported: true };
   }
   return { provider, endpoint: baseUrl, models: [], supported: false };
-}
-
-function httpAgentBaseUrl() {
-  if (!httpAgentGateway.port) return null;
-  return `http://${httpAgentGateway.host}:${httpAgentGateway.port}`;
-}
-
-function buildHttpAgentEndpoints() {
-  const baseUrl = httpAgentBaseUrl();
-  if (!baseUrl) return [];
-  return [
-    {
-      id: "agent-setup-json",
-      method: "GET",
-      url: `${baseUrl}/agent/setup`,
-      openUrl: `${baseUrl}/agent/setup?token=${encodeURIComponent(httpAgentGateway.token)}`,
-      copyUrl: `${baseUrl}/agent/setup?token=${encodeURIComponent(httpAgentGateway.token)}`,
-      healthUrl: `${baseUrl}/health`,
-      auth: "bearer-token",
-      authHeader: `Authorization: Bearer ${httpAgentGateway.token}`,
-      bind: httpAgentGateway.host
-    },
-    {
-      id: "gateway-context-json",
-      method: "GET",
-      url: `${baseUrl}/gateway/context`,
-      openUrl: `${baseUrl}/gateway/context?token=${encodeURIComponent(httpAgentGateway.token)}`,
-      copyUrl: `${baseUrl}/gateway/context?token=${encodeURIComponent(httpAgentGateway.token)}`,
-      healthUrl: `${baseUrl}/health`,
-      auth: "bearer-token",
-      authHeader: `Authorization: Bearer ${httpAgentGateway.token}`,
-      bind: httpAgentGateway.host
-    }
-  ];
-}
-
-function sendHttpJson(response, statusCode, payload) {
-  const body = JSON.stringify(payload, null, 2);
-  response.writeHead(statusCode, {
-    "content-type": "application/json; charset=utf-8",
-    "cache-control": "no-store",
-    "access-control-allow-origin": "*",
-    "access-control-allow-methods": "GET, OPTIONS",
-    "access-control-allow-headers": "authorization, content-type"
-  });
-  response.end(body);
-}
-
-function isHttpAgentRequestAuthorized(request, requestUrl) {
-  const authorization = request.headers.authorization || "";
-  const token = requestUrl.searchParams.get("token") || "";
-  return authorization === `Bearer ${httpAgentGateway.token}` || token === httpAgentGateway.token;
-}
-
-async function handleHttpAgentRequest(request, response) {
-  const baseUrl = httpAgentBaseUrl() || `http://${httpAgentGateway.host}:0`;
-  const requestUrl = new URL(request.url || "/", baseUrl);
-  if (request.method === "OPTIONS") {
-    sendHttpJson(response, 204, {});
-    return;
-  }
-  if (request.method !== "GET") {
-    sendHttpJson(response, 405, { error: "method_not_allowed" });
-    return;
-  }
-  if (requestUrl.pathname === "/health") {
-    sendHttpJson(response, 200, {
-      ok: true,
-      product: "ClaraCore Desktop",
-      bind: httpAgentGateway.host
-    });
-    return;
-  }
-  if (!isHttpAgentRequestAuthorized(request, requestUrl)) {
-    sendHttpJson(response, 401, {
-      error: "unauthorized",
-      message: "Use Authorization: Bearer <token> from Agent Access."
-    });
-    return;
-  }
-  if (requestUrl.pathname === "/agent/setup") {
-    const snapshot = await getRuntimeSnapshot();
-    sendHttpJson(response, 200, {
-      product: "ClaraCore Desktop",
-      principle: "Agent-first: software is built for agents to operate and for humans to inspect.",
-      connectionMode: {
-        current: "localhost-http-url",
-        bind: httpAgentGateway.host,
-        port: httpAgentGateway.port,
-        portPolicy: "runtime-assigned; do not hard-code across app sessions",
-        lan: "disabled-by-default"
-      },
-      auth: {
-        type: "bearer",
-        header: `Authorization: Bearer ${httpAgentGateway.token}`
-      },
-      endpoints: buildHttpAgentEndpoints().map((endpoint) => ({
-        id: endpoint.id,
-        method: endpoint.method,
-        url: endpoint.url,
-        healthUrl: endpoint.healthUrl,
-        auth: endpoint.auth
-      })),
-      mcp: {
-        serverName: snapshot.connections.mcpServerName,
-        command: snapshot.connections.mcpCommand,
-        config: JSON.parse(snapshot.connections.mcpConfig)
-      },
-      firstCall: "GET /gateway/context with the bearer token, or call gateway_context through MCP."
-    });
-    return;
-  }
-  if (requestUrl.pathname === "/gateway/context") {
-    const agentId = requestUrl.searchParams.get("agentId") || process.env.CLARACORE_AGENT_ID || "http-agent";
-    sendHttpJson(response, 200, await getProductGatewayContext(app, { agentId }));
-    return;
-  }
-  sendHttpJson(response, 404, { error: "not_found" });
-}
-
-async function startHttpAgentGateway() {
-  if (httpAgentGateway.server) return;
-  httpAgentGateway.server = http.createServer((request, response) => {
-    handleHttpAgentRequest(request, response).catch((error) => {
-      sendHttpJson(response, 500, {
-        error: "internal_error",
-        message: error?.message || String(error)
-      });
-    });
-  });
-  httpAgentGateway.server.on("connection", (socket) => {
-    httpAgentGateway.sockets.add(socket);
-    socket.on("close", () => {
-      httpAgentGateway.sockets.delete(socket);
-    });
-  });
-  await new Promise((resolve, reject) => {
-    httpAgentGateway.server.once("error", reject);
-    httpAgentGateway.server.listen(0, httpAgentGateway.host, () => {
-      httpAgentGateway.port = httpAgentGateway.server.address().port;
-      httpAgentGateway.server.off("error", reject);
-      resolve();
-    });
-  });
-}
-
-function stopHttpAgentGateway() {
-  if (!httpAgentGateway.server) return;
-  httpAgentGateway.server.close();
-  for (const socket of httpAgentGateway.sockets) {
-    socket.destroy();
-  }
-  httpAgentGateway.sockets.clear();
-  httpAgentGateway.server = null;
-  httpAgentGateway.port = null;
 }
 
 function stopSiblingGatewayProcesses() {
@@ -854,533 +626,36 @@ function notifyRuntimeChanged(reason, payload = {}) {
   });
 }
 
-async function runInnerLifeScheduledTick() {
-  if (innerLifeSchedulerBusy || isQuitting) return;
-  innerLifeSchedulerBusy = true;
-  try {
-    const result = await tickProductInnerLifeDaemon(app, { force: false, includeSnapshot: false });
-    if (result?.reason && result.reason !== "paused" && result.reason !== "not_due") {
-      notifyRuntimeChanged("innerlife-daemon", {
-        daemonReason: result.reason,
-        ran: Boolean(result.ran)
-      });
-    }
-  } catch (error) {
-    console.error("InnerLife scheduler failed:", error);
-    notifyRuntimeChanged("innerlife-daemon-error", {
-      error: error.message || String(error)
-    });
-  } finally {
-    innerLifeSchedulerBusy = false;
-  }
-}
-
-function startInnerLifeScheduler() {
-  if (innerLifeScheduler) return;
-  innerLifeScheduler = setInterval(() => {
-    runInnerLifeScheduledTick().catch(console.error);
-  }, INNERLIFE_SCHEDULER_INTERVAL_MS);
-  if (typeof innerLifeScheduler.unref === "function") innerLifeScheduler.unref();
-}
-
-function stopInnerLifeScheduler() {
-  if (!innerLifeScheduler) return;
-  clearInterval(innerLifeScheduler);
-  innerLifeScheduler = null;
-}
-
-function localDateKey(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function nextMemoryMaintenanceDelayMs(settings, now = new Date()) {
-  const hour = Math.max(0, Math.min(23, Number.parseInt(String(settings["memory.maintenance.hour"] ?? 3), 10) || 3));
-  const today = localDateKey(now);
-  const nextRun = new Date(now);
-  nextRun.setMinutes(0, 0, 0);
-  nextRun.setHours(hour);
-  if (String(settings["memory.maintenance.last_run_date"] || "") === today) {
-    nextRun.setDate(nextRun.getDate() + 1);
-  }
-  return Math.max(0, nextRun.getTime() - now.getTime());
-}
-
-async function runMemoryMaintenanceScheduledTick() {
-  if (memoryMaintenanceSchedulerBusy || isQuitting) return;
-  memoryMaintenanceSchedulerBusy = true;
-  try {
-    const { database } = await ensureProductCore(app);
-    const settings = await database.getSettings();
-    if (settings["memory.maintenance.enabled"] === false) return;
-    const today = localDateKey();
-    const result = await runProductMemoryMaintenance(app, { scheduled: true });
-    await saveProductSettings(app, { "memory.maintenance.last_run_date": today });
-    notifyRuntimeChanged("memory-maintenance-nightly", {
-      actions: result?.actions || [],
-      graphCache: result?.graphCache || null,
-      embeddings: result?.embeddings || null
-    });
-  } catch (error) {
-    console.error("Memoria maintenance scheduler failed:", error);
-    notifyRuntimeChanged("memory-maintenance-error", {
-      error: error.message || String(error)
-    });
-  } finally {
-    memoryMaintenanceSchedulerBusy = false;
-  }
-}
-
-async function scheduleNextMemoryMaintenance() {
-  if (memoryMaintenanceScheduler || isQuitting) return;
-  let delayMs = 24 * 60 * 60 * 1000;
-  try {
-    const { database } = await ensureProductCore(app);
-    const settings = await database.getSettings();
-    delayMs = nextMemoryMaintenanceDelayMs(settings);
-  } catch (error) {
-    console.error("Failed to schedule Memoria maintenance:", error);
-  }
-  memoryMaintenanceScheduler = setTimeout(async () => {
-    memoryMaintenanceScheduler = null;
-    await runMemoryMaintenanceScheduledTick();
-    scheduleNextMemoryMaintenance().catch(console.error);
-  }, delayMs);
-  if (typeof memoryMaintenanceScheduler.unref === "function") memoryMaintenanceScheduler.unref();
-}
-
-function startMemoryMaintenanceScheduler() {
-  scheduleNextMemoryMaintenance().catch(console.error);
-}
-
-function rescheduleMemoryMaintenance() {
-  stopMemoryMaintenanceScheduler();
-  startMemoryMaintenanceScheduler();
-}
-
-function stopMemoryMaintenanceScheduler() {
-  if (!memoryMaintenanceScheduler) return;
-  clearTimeout(memoryMaintenanceScheduler);
-  memoryMaintenanceScheduler = null;
-}
-
-function isPlainObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
 if (!isGatewayMode && hasSingleInstanceLock) {
-  ipcMain.handle("claracore:getRuntimeSnapshot", () => getRuntimeSnapshot());
-  ipcMain.handle("claracore:getResourceSnapshot", () => getResourceSnapshot());
-  ipcMain.handle("claracore:getImportPreview", () => getProductImportPreview(app));
-  ipcMain.handle("claracore:clearLogs", async () => {
-    const result = await clearProductLogs(app);
-    notifyRuntimeChanged("logs-clear");
-    return result;
+  registerIpcHandlers({
+    app,
+    clipboard,
+    currentDataRootPreference,
+    dialog,
+    getMainWindow: () => mainWindow,
+    getResourceSnapshot,
+    getRuntimeSnapshot,
+    getTray: () => tray,
+    getTrayLanguage: () => trayLanguage,
+    ipcMain,
+    listConfiguredModels,
+    notifyRuntimeChanged,
+    rescheduleMemoryMaintenance: () => {
+      if (schedulers) schedulers.rescheduleMemoryMaintenance();
+    },
+    saveDataRootPreference,
+    setWindowCloseBehavior: (preferences = {}) => {
+      windowCloseBehavior = preferences.closeBehavior === "quit" ? "quit" : "hide";
+      return { closeBehavior: windowCloseBehavior };
+    },
+    shell,
+    updateTrayMenu
   });
-  ipcMain.handle("claracore:saveSettings", async (_event, updates) => {
-    if (!isPlainObject(updates)) return false;
-    const result = await saveProductSettings(app, updates);
-    if (Object.keys(updates).some((key) => key.startsWith("memory.maintenance."))) {
-      rescheduleMemoryMaintenance();
-    }
-    return result;
-  });
-  ipcMain.handle("claracore:listModels", async (_event, input) => listConfiguredModels(input));
-  ipcMain.handle("claracore:createMemory", async (_event, input) => {
-    if (!isPlainObject(input)) return false;
-    return createProductMemory(app, input);
-  });
-  ipcMain.handle("claracore:updateMemory", async (_event, id, input) => {
-    if (typeof id !== "string" || !isPlainObject(input)) return false;
-    return updateProductMemory(app, id, input);
-  });
-  ipcMain.handle("claracore:deleteMemory", async (_event, id) => {
-    if (typeof id !== "string") return false;
-    return deleteProductMemory(app, id);
-  });
-  ipcMain.handle("claracore:archiveMemory", async (_event, id) => {
-    if (typeof id !== "string") return false;
-    const result = await archiveProductMemory(app, id);
-    notifyRuntimeChanged("memory-archive");
-    return result;
-  });
-  ipcMain.handle("claracore:restoreMemory", async (_event, id) => {
-    if (typeof id !== "string") return false;
-    return restoreProductMemory(app, id);
-  });
-  ipcMain.handle("claracore:restoreArchivedMemory", async (_event, id) => {
-    if (typeof id !== "string") return false;
-    const result = await restoreArchivedProductMemory(app, id);
-    notifyRuntimeChanged("memory-archive");
-    return result;
-  });
-  ipcMain.handle("claracore:restrictMemory", async (_event, id) => {
-    if (typeof id !== "string") return false;
-    return restrictProductMemory(app, id);
-  });
-  ipcMain.handle("claracore:unrestrictMemory", async (_event, id) => {
-    if (typeof id !== "string") return false;
-    return unrestrictProductMemory(app, id);
-  });
-  ipcMain.handle("claracore:getRestrictedMemories", async (_event, input) => {
-    if (input && typeof input === "object" && Array.isArray(input)) return false;
-    return getProductRestrictedMemories(app, input);
-  });
-  ipcMain.handle("claracore:getMemories", async (_event, input) => {
-    if (input && typeof input === "object" && Array.isArray(input)) return false;
-    return getProductMemories(app, input);
-  });
-  ipcMain.handle("claracore:getDeletedMemories", async (_event, input) => {
-    if (input && typeof input === "object" && Array.isArray(input)) return false;
-    return getProductDeletedMemories(app, input);
-  });
-  ipcMain.handle("claracore:getArchivedMemories", async (_event, input) => {
-    if (input && typeof input === "object" && Array.isArray(input)) return false;
-    return getProductArchivedMemories(app, input);
-  });
-  ipcMain.handle("claracore:getMemoryStats", async () => {
-    return getProductMemoryStats(app);
-  });
-  ipcMain.handle("claracore:createMemoryLabelAlias", async (_event, input) => {
-    if (!isPlainObject(input)) return false;
-    return createProductMemoryLabelAlias(app, input);
-  });
-  ipcMain.handle("claracore:deleteMemoryLabelAlias", async (_event, alias) => {
-    if (typeof alias !== "string") return false;
-    return deleteProductMemoryLabelAlias(app, alias);
-  });
-  ipcMain.handle("claracore:getMemoryLabelAliases", async () => {
-    return getProductMemoryLabelAliases(app);
-  });
-  ipcMain.handle("claracore:getMemoryGraph", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    return getProductMemoryGraph(app, input || {});
-  });
-  ipcMain.handle("claracore:getMemoryMaintenance", async () => {
-    return getProductMemoryMaintenance(app);
-  });
-  ipcMain.handle("claracore:runMemoryMaintenance", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    return runProductMemoryMaintenance(app, input || {});
-  });
-  ipcMain.handle("claracore:getMemoryMergeSuggestions", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    return getProductMemoryMergeSuggestions(app, input || {});
-  });
-  ipcMain.handle("claracore:mergeMemories", async (_event, input) => {
-    if (!isPlainObject(input)) return false;
-    const result = await mergeProductMemories(app, input);
-    notifyRuntimeChanged("memory-merge");
-    return result;
-  });
-  ipcMain.handle("claracore:getMemoryArchiveSuggestions", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    return getProductMemoryArchiveSuggestions(app, input || {});
-  });
-  ipcMain.handle("claracore:archiveDormantMemories", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    const result = await archiveProductDormantMemories(app, input || {});
-    notifyRuntimeChanged("memory-archive");
-    return result;
-  });
-  ipcMain.handle("claracore:createMemoryRecord", async (_event, input) => {
-    if (!isPlainObject(input)) return false;
-    return createProductMemoryRecord(app, input);
-  });
-  ipcMain.handle("claracore:getMemoryRecords", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    return getProductMemoryRecords(app, input || {});
-  });
-  ipcMain.handle("claracore:searchMemories", async (_event, input) => {
-    if (typeof input === "string") return searchProductMemories(app, input);
-    if (input && (typeof input !== "object" || Array.isArray(input))) {
-      return { mode: "list", query: "", results: [], error: null };
-    }
-    return searchProductMemories(app, input || {});
-  });
-  ipcMain.handle("claracore:embedMemory", async (_event, id) => {
-    if (typeof id !== "string") return false;
-    return embedProductMemory(app, id);
-  });
-  ipcMain.handle("claracore:processMemoryEmbeddings", async (_event, limit) => {
-    return processProductMemoryEmbeddings(app, limit);
-  });
-  ipcMain.handle("claracore:getSharedLine", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    return getProductSharedLine(app, input || {});
-  });
-  ipcMain.handle("claracore:saveSharedLine", async (_event, input) => {
-    if (!isPlainObject(input)) return false;
-    return saveProductSharedLine(app, input);
-  });
-  ipcMain.handle("claracore:createSharedLine", async (_event, input) => {
-    if (!isPlainObject(input)) return false;
-    return createProductSharedLine(app, input);
-  });
-  ipcMain.handle("claracore:activateSharedLine", async (_event, lineId) => {
-    if (typeof lineId !== "string") return false;
-    return activateProductSharedLine(app, lineId);
-  });
-  ipcMain.handle("claracore:renameSharedLine", async (_event, lineId, title) => {
-    if (typeof lineId !== "string" || typeof title !== "string") return false;
-    return renameProductSharedLine(app, lineId, title);
-  });
-  ipcMain.handle("claracore:archiveSharedLine", async (_event, lineId) => {
-    if (typeof lineId !== "string") return false;
-    return archiveProductSharedLine(app, lineId);
-  });
-  ipcMain.handle("claracore:restoreSharedLine", async (_event, lineId, makeActive) => {
-    if (typeof lineId !== "string") return false;
-    return restoreProductSharedLine(app, lineId, Boolean(makeActive));
-  });
-  ipcMain.handle("claracore:createSharedLineHandoff", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    return createProductSharedLineHandoff(app, input || {});
-  });
-  ipcMain.handle("claracore:getInnerLife", async () => {
-    return getProductInnerLife(app);
-  });
-  ipcMain.handle("claracore:getInnerLifeSessions", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    return getProductInnerLifeSessions(app, input || {});
-  });
-  ipcMain.handle("claracore:getInnerLifeDigestRuns", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    return getProductInnerLifeDigestRuns(app, input || {});
-  });
-  ipcMain.handle("claracore:getInnerLifeInbox", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    return getProductInnerLifeInbox(app, input || {});
-  });
-  ipcMain.handle("claracore:updateInnerLifeProfile", async (_event, input) => {
-    if (!isPlainObject(input)) return false;
-    const result = await updateProductInnerLifeProfile(app, input);
-    notifyRuntimeChanged("innerlife-profile");
-    return result;
-  });
-  ipcMain.handle("claracore:processInnerLifeOnce", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    return processProductInnerLifeOnce(app, input || {});
-  });
-  ipcMain.handle("claracore:runInnerLifeDigest", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    return runProductInnerLifeDigest(app, input || {});
-  });
-  ipcMain.handle("claracore:checkInnerLifeShareTiming", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    return checkProductInnerLifeShareTiming(app, input || {});
-  });
-  ipcMain.handle("claracore:setInnerLifeDaemon", async (_event, input) => {
-    if (!isPlainObject(input)) return false;
-    const result = await setProductInnerLifeDaemon(app, input);
-    if (result?.enabled) {
-      await tickProductInnerLifeDaemon(app, {
-        agentId: result.agentId,
-        force: true,
-        includeSnapshot: false
-      });
-    }
-    notifyRuntimeChanged("innerlife-daemon");
-    return result;
-  });
-  ipcMain.handle("claracore:tickInnerLifeDaemon", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    const result = await tickProductInnerLifeDaemon(app, input || {});
-    notifyRuntimeChanged("innerlife-daemon", {
-      daemonReason: result?.reason,
-      ran: Boolean(result?.ran)
-    });
-    return result;
-  });
-  ipcMain.handle("claracore:startInnerLifeSession", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    return startProductInnerLifeSession(app, input || {});
-  });
-  ipcMain.handle("claracore:submitInnerLifeInbox", async (_event, input) => {
-    if (!isPlainObject(input)) return false;
-    return submitProductInnerLifeInbox(app, input);
-  });
-  ipcMain.handle("claracore:endInnerLifeSession", async (_event, sessionId, input) => {
-    if (typeof sessionId !== "string" || sessionId.length === 0) return false;
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    return endProductInnerLifeSession(app, sessionId, input || {});
-  });
-  ipcMain.handle("claracore:reviewInnerLifeShare", async (_event, id, decision, reason) => {
-    if (typeof id !== "string" || typeof decision !== "string") return false;
-    return reviewProductInnerLifeShare(app, id, decision, typeof reason === "string" ? reason : "");
-  });
-  ipcMain.handle("claracore:markInnerLifeShare", async (_event, id, action, reason) => {
-    if (typeof id !== "string" || typeof action !== "string") return false;
-    return markProductInnerLifeShare(app, id, action, typeof reason === "string" ? reason : "");
-  });
-  ipcMain.handle("claracore:applyInnerLifeShareToMemory", async (_event, id) => {
-    if (typeof id !== "string") return false;
-    return applyProductInnerLifeShareToMemory(app, id);
-  });
-  ipcMain.handle("claracore:applyInnerLifeShareToSharedLine", async (_event, id) => {
-    if (typeof id !== "string") return false;
-    return applyProductInnerLifeShareToSharedLine(app, id);
-  });
-  ipcMain.handle("claracore:createBackup", async () => {
-    return createProductBackup(app);
-  });
-  ipcMain.handle("claracore:deleteBackup", async (_event, backupId) => {
-    if (typeof backupId !== "string" || backupId.length === 0) return false;
-    const result = await deleteProductBackup(app, backupId);
-    notifyRuntimeChanged("backup-delete");
-    return result;
-  });
-  ipcMain.handle("claracore:exportProductJson", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    const options = input || {};
-    if (!options.targetPath && !options.silent) {
-      const paths = await ensureProductDirectories(app);
-      const defaultPath = path.join(paths.exportsDir, `claracore-product-export-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
-      const result = await dialog.showSaveDialog(mainWindow, {
-        title: "Export ClaraCore Product JSON",
-        defaultPath,
-        filters: [{ name: "JSON", extensions: ["json"] }]
-      });
-      if (result.canceled || !result.filePath) return { canceled: true };
-      options.targetPath = result.filePath;
-      options.allowExternalPath = true;
-    }
-    return exportProductDataJson(app, options);
-  });
-  ipcMain.handle("claracore:importProductJson", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    const options = input || {};
-    if (!options.filePath && !options.silent) {
-      const result = await dialog.showOpenDialog(mainWindow, {
-        title: "Import ClaraCore Product JSON",
-        properties: ["openFile"],
-        filters: [{ name: "JSON", extensions: ["json"] }]
-      });
-      if (result.canceled || !result.filePaths?.[0]) return { canceled: true };
-      options.filePath = result.filePaths[0];
-    }
-    const imported = await importProductDataJson(app, options);
-    notifyRuntimeChanged("product-json-import");
-    return imported;
-  });
-  ipcMain.handle("claracore:exportMemoryArchive", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    const options = input || {};
-    if (!options.targetPath && !options.silent) {
-      const paths = await ensureProductDirectories(app);
-      const defaultPath = path.join(paths.exportsDir, `claracore-memory-export-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
-      const result = await dialog.showSaveDialog(mainWindow, {
-        title: "Export Memory JSON",
-        defaultPath,
-        filters: [{ name: "JSON", extensions: ["json"] }]
-      });
-      if (result.canceled || !result.filePath) return { canceled: true };
-      options.targetPath = result.filePath;
-      options.allowExternalPath = true;
-    }
-    return exportProductMemoryArchive(app, options);
-  });
-  ipcMain.handle("claracore:importMemoryArchive", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    const options = input || {};
-    if (!options.filePath && !options.silent) {
-      const result = await dialog.showOpenDialog(mainWindow, {
-        title: "Import Memory JSON",
-        properties: ["openFile"],
-        filters: [{ name: "JSON", extensions: ["json"] }]
-      });
-      if (result.canceled || !result.filePaths?.[0]) return { canceled: true };
-      options.filePath = result.filePaths[0];
-    }
-    const imported = await importProductMemoryArchive(app, options);
-    notifyRuntimeChanged("memory-import");
-    return imported;
-  });
-  ipcMain.handle("claracore:importOldMemoria", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    const imported = await importOldMemoriaIntoProduct(app, input || {});
-    notifyRuntimeChanged("old-memoria-import");
-    return imported;
-  });
-  ipcMain.handle("claracore:importOldContinuity", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    const imported = await importOldContinuityIntoProduct(app, input || {});
-    notifyRuntimeChanged("old-continuity-import");
-    return imported;
-  });
-  ipcMain.handle("claracore:importOldInnerLife", async (_event, input) => {
-    if (input && (typeof input !== "object" || Array.isArray(input))) return false;
-    const imported = await importOldInnerLifeIntoProduct(app, input || {});
-    notifyRuntimeChanged("old-innerlife-import");
-    return imported;
-  });
-  ipcMain.handle("claracore:restoreBackup", async (_event, backupId) => {
-    if (typeof backupId !== "string" || backupId.length === 0) return false;
-    return restoreProductBackup(app, backupId);
-  });
-  ipcMain.handle("claracore:previewRestore", async (_event, backupId) => {
-    if (typeof backupId !== "string" || backupId.length === 0) return false;
-    return previewProductRestore(app, backupId);
-  });
-  ipcMain.handle("claracore:getDataRootPreference", async () => currentDataRootPreference());
-  ipcMain.handle("claracore:chooseDataRoot", async () => {
-    const preference = currentDataRootPreference();
-    const result = await dialog.showOpenDialog(mainWindow, {
-      title: "Choose ClaraCore data directory",
-      defaultPath: preference.effectiveDataRoot,
-      properties: ["openDirectory", "createDirectory"]
-    });
-    if (result.canceled || !result.filePaths?.[0]) {
-      return { canceled: true, path: preference.configuredDataRoot || preference.effectiveDataRoot };
-    }
-    return { canceled: false, path: result.filePaths[0] };
-  });
-  ipcMain.handle("claracore:saveDataRootPreference", async (_event, dataRoot) => saveDataRootPreference(dataRoot));
-  ipcMain.handle("claracore:relaunch", () => {
-    if (!app.isPackaged) {
-      return { relaunched: false, reason: "development-mode" };
-    }
-    app.relaunch();
-    app.quit();
-    return { relaunched: true };
-  });
-  ipcMain.handle("claracore:openPath", async (_event, targetPath) => {
-    if (typeof targetPath !== "string" || targetPath.length === 0) return false;
-    await shell.openPath(targetPath);
-    return true;
-  });
-  ipcMain.handle("claracore:openExternal", async (_event, targetUrl) => {
-    if (typeof targetUrl !== "string" || !targetUrl.startsWith("http://127.0.0.1:")) return false;
-    await shell.openExternal(targetUrl);
-    return true;
-  });
-  ipcMain.handle("claracore:copyText", (_event, value) => {
-    if (typeof value !== "string" || value.length === 0) return false;
-    clipboard.writeText(value);
-    return true;
-  });
-  ipcMain.handle("claracore:setLanguage", (_event, language) => {
-    updateTrayMenu(language);
-    return trayLanguage;
-  });
-  ipcMain.handle("claracore:setWindowPreferences", (_event, preferences = {}) => {
-    windowCloseBehavior = preferences.closeBehavior === "quit" ? "quit" : "hide";
-    return {
-      closeBehavior: windowCloseBehavior
-    };
-  });
-  ipcMain.handle("claracore:getShellState", () => ({
-    hasTray: Boolean(tray),
-    trayBounds: tray ? tray.getBounds() : null,
-    trayTitle: tray && typeof tray.getTitle === "function" ? tray.getTitle() : "",
-    windowVisible: mainWindow ? mainWindow.isVisible() : false
-  }));
 
   app.whenReady().then(async () => {
     const { database } = await ensureProductCore(app);
-    await startHttpAgentGateway();
+    httpAgentGateway = createHttpAgentGateway({ app, getRuntimeSnapshot, getProductGatewayContext });
+    await httpAgentGateway.start();
     await database.recordRuntimeEvent({
       level: "info",
       source: "desktop",
@@ -1393,8 +668,16 @@ if (!isGatewayMode && hasSingleInstanceLock) {
     });
     createWindow();
     createTray();
-    startInnerLifeScheduler();
-    startMemoryMaintenanceScheduler();
+    schedulers = createSchedulers({
+      app,
+      ensureProductCore,
+      isQuitting: () => isQuitting,
+      notifyRuntimeChanged,
+      runProductMemoryMaintenance,
+      saveProductSettings,
+      tickProductInnerLifeDaemon
+    });
+    schedulers.start();
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -1409,10 +692,9 @@ if (!isGatewayMode && hasSingleInstanceLock) {
   app.on("before-quit", () => {
     isQuitting = true;
     forceExitIfQuitStalls();
-    stopHttpAgentGateway();
+    if (httpAgentGateway) httpAgentGateway.stop();
     stopSiblingGatewayProcesses();
-    stopInnerLifeScheduler();
-    stopMemoryMaintenanceScheduler();
+    if (schedulers) schedulers.stop();
     resetCachedDatabase();
   });
   app.on("will-quit", () => {

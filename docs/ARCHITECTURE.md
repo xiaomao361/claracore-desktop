@@ -10,6 +10,12 @@ The Desktop runtime is Node/Electron.
 
 - Renderer UI: `index.html`, `app.js`, `app/`, `styles.css`
 - Electron host and IPC: `electron/`
+  - `electron/main.js`: app lifecycle, window/tray ownership, runtime snapshots,
+    quit handling, and module wiring
+  - `electron/ipc-handlers.js`: renderer IPC channel registration
+  - `electron/http-agent-gateway.js`: token-protected localhost HTTP Agent
+    Gateway lifecycle and request handling
+  - `electron/schedulers.js`: InnerLife and Memoria maintenance timers
 - Product runtime facade: `core/runtime/index.js`
 - Runtime path helpers: `core/runtime/paths.js`
 - Backup and restore workflows: `core/runtime/backup.js`
@@ -95,8 +101,8 @@ page:
 ## Core Boundary
 
 `core/runtime/index.js` is the public runtime facade used by Electron, CLI,
-Gateway, and tests. It stays small by delegating focused workflows to sibling
-runtime modules.
+Gateway-facing workflows, and tests. It stays small by delegating focused
+workflows to sibling runtime modules.
 
 `core/version.js` is the single product-version source. It reads
 `package.json` and is used by runtime snapshots, resource snapshots, Gateway
@@ -187,7 +193,10 @@ or IPC handler; route through `ensureProductCore` instead.
 
 ## Gateway Boundary
 
-`core/gateway/mcp-server.js` is the agent-facing MCP surface.
+`core/gateway/mcp-server.js` is the agent-facing MCP transport surface. It owns
+stdio protocol handling, process lifecycle, database connection caching, and
+Gateway trace recording. `core/gateway/tools.js` owns tool schemas and handler
+dispatch.
 
 Gateway should expose stable product tools and call `core/runtime`. It should
 not bypass runtime into database internals.
@@ -232,12 +241,25 @@ Old Memoria, Continuity, and InnerLife imports are copy-based and backup-gated.
 - Old InnerLife data maps into Desktop-owned profiles, events, thoughts, and
   shares.
 
+## Packaging Resource Boundary
+
+Packaged builds must not depend on a user-installed `sqlite3` binary. When
+`node:sqlite` is unavailable, Desktop falls back to bundled SQLite tools under
+`resources/sqlite/`, copied outside `app.asar` through `build.extraResources`.
+
+The bundled tools are part of the release contract. `npm run test:sqlite-binary`
+checks that every target binary exists, matches the recorded SHA-256, has an
+executable bit where relevant, and is discoverable through
+`core/sqlite-binary.js`.
+
 ## Validation Boundary
 
 Use these gates for current development:
 
 - `npm run check`: syntax and module-load check across Electron, core, tests,
   and renderer modules.
+- `npm run test:sqlite-binary`: packaged SQLite resource integrity and resolver
+  check.
 - `npm run test:phase5`: InnerLife runtime, UI, and scheduler coverage.
 - `npm run test:backup`: backup and restore coverage.
 - `npm run test:import-preview`: read-only preview and copy import coverage for
@@ -257,3 +279,6 @@ Current docs should answer:
 - where data lives
 - how agents connect
 - how to continue development safely
+
+See `docs/README.md` for the current docs index. Completed bugfix notes and
+single-run polish logs belong in `docs/archive/`.

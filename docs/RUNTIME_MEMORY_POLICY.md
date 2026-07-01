@@ -45,10 +45,10 @@ Every long-lived resource needs one owner and an explicit release path.
 | --- | --- | --- |
 | Product SQLite connection | `core/runtime/index.js` cached `ProductDatabase` | `resetCachedDatabase()` on quit, restore, and import |
 | Gateway SQLite connection | `core/gateway/mcp-server.js` | stdin close, process exit, SIGINT, SIGTERM |
-| HTTP Agent Gateway server | `electron/main.js` | `stopHttpAgentGateway()` |
-| HTTP sockets | `electron/main.js` `httpAgentGateway.sockets` | destroyed in `stopHttpAgentGateway()` |
-| InnerLife scheduler | `electron/main.js` | `stopInnerLifeScheduler()` |
-| Memory maintenance scheduler | `electron/main.js` | `stopMemoryMaintenanceScheduler()` |
+| HTTP Agent Gateway server | `electron/http-agent-gateway.js` | `httpAgentGateway.stop()` from `electron/main.js` quit path |
+| HTTP sockets | `electron/http-agent-gateway.js` | destroyed in `httpAgentGateway.stop()` |
+| InnerLife scheduler | `electron/schedulers.js` | `schedulers.stop()` from `electron/main.js` quit path |
+| Memory maintenance scheduler | `electron/schedulers.js` | `schedulers.stop()` or `schedulers.rescheduleMemoryMaintenance()` |
 | Packaged sibling Gateway process | `electron/main.js` | best-effort `stopSiblingGatewayProcesses()` |
 | Renderer runtime change listener | `electron/preload.js` consumer | unsubscribe function from `onRuntimeChanged()` |
 | Memory graph canvas animation | `app/views/memoria.js` | cancel before scheduling the next frame or when replacing graph state; stop continuous frames when motion is disabled |

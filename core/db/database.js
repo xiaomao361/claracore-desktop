@@ -4,6 +4,7 @@ const http = require("http");
 const https = require("https");
 const path = require("path");
 const { DEFAULT_AGENT_ID, DEFAULT_SETTINGS, WRITABLE_SETTINGS, normalizeSettingValue } = require("../config");
+const { sqliteCommand } = require("../sqlite-binary");
 const { installInnerLifeRepository } = require("./repositories/innerlife");
 const { installMemoriaRepository } = require("./repositories/memoria");
 const { installContinuityRepository } = require("./repositories/continuity");
@@ -299,7 +300,7 @@ function normalizeSearchRows(rows) {
 async function runSqliteCli(dbPath, sql, json = false) {
   const args = ["-cmd", `.timeout ${SQLITE_BUSY_TIMEOUT_MS}`, ...(json ? ["-json"] : []), dbPath];
   const output = await new Promise((resolve, reject) => {
-    const child = spawn("sqlite3", args, { stdio: ["pipe", "pipe", "pipe"] });
+    const child = spawn(sqliteCommand(), args, { stdio: ["pipe", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
     child.stdout.setEncoding("utf8");

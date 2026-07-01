@@ -2,8 +2,12 @@ const { spawn } = require("child_process");
 const fs = require("fs/promises");
 const os = require("os");
 const path = require("path");
+const { sqliteCommand } = require("./sqlite-binary");
 
 function tryBuiltinSqlite() {
+  if (process.env.CLARACORE_DESKTOP_DISABLE_NODE_SQLITE === "1") {
+    return null;
+  }
   try {
     return require("node:sqlite");
   } catch (_error) {
@@ -61,7 +65,7 @@ async function runSqliteReadOnly(dbPath, sql) {
   }
   const uri = `file:${dbPath}?mode=ro`;
   return new Promise((resolve, reject) => {
-    const child = spawn("sqlite3", ["-readonly", "-json", uri], { stdio: ["pipe", "pipe", "pipe"] });
+    const child = spawn(sqliteCommand(), ["-readonly", "-json", uri], { stdio: ["pipe", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
     child.stdout.setEncoding("utf8");

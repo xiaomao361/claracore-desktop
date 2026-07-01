@@ -8,14 +8,14 @@ Keep the new boundaries intact while feature work resumes. The first cleanup
 pass has split the former large renderer, style, runtime, and database files
 into focused modules.
 
-Current largest files after the first split:
+Current largest files after the current split:
 
-- `core/gateway/mcp-server.js`: agent-facing MCP gateway, about 1540 lines
-- `core/db/repositories/memoria.js`: Memoria persistence, about 1510 lines
+- `core/db/repositories/innerlife.js`: InnerLife persistence, about 1920 lines
+- `core/gateway/tools.js`: MCP tool schemas and handlers, about 1740 lines
 - `core/runtime/imports.js`: archive and old-service import workflows, about
-  1460 lines
-- `app.js`: renderer orchestration and event wiring, about 1170 lines
-- `core/db/repositories/innerlife.js`: InnerLife persistence, about 1050 lines
+  1700 lines
+- `core/db/repositories/memoria.js`: Memoria persistence, about 1560 lines
+- `app.js`: renderer orchestration and event wiring, about 1310 lines
 
 This is acceptable for the current checkpoint. The rule is not "split every
 large file immediately"; the rule is "do not grow these files when a focused
@@ -73,6 +73,9 @@ module can own the behavior."
    - Remove placeholder-only directories unless they contain an active boundary.
    - Done: old phase and planning docs live under `docs/archive/`.
    - Done: current architecture and cleanup docs describe the split runtime.
+   - Done: completed bugfix notes and stale polish/install logs live under
+     `docs/archive/`.
+   - Done: `docs/README.md` lists the current doc entry points.
 
 6. Scheduler and runtime reliability
    - Done: InnerLife daemon enable can process pending inbox immediately from
@@ -84,6 +87,23 @@ module can own the behavior."
      samples instead of full product lists.
    - Done: runtime resource ownership and long-run memory policy are documented
      in `docs/RUNTIME_MEMORY_POLICY.md`.
+   - Done: Electron HTTP Agent Gateway ownership moved to
+     `electron/http-agent-gateway.js`.
+   - Done: Electron background schedulers moved to `electron/schedulers.js`.
+   - Done: Electron IPC registration moved to `electron/ipc-handlers.js`.
+
+7. Packaging resource checks
+   - Done: bundled `sqlite3` tools live under `resources/sqlite/` and are copied
+     through `build.extraResources`.
+   - Done: `core/tests/sqlite-binary-smoke.js` verifies target files, SHA-256
+     hashes, executable bits where relevant, and resolver behavior.
+
+8. Gateway split
+   - Done: `core/gateway/mcp-server.js` now owns stdio MCP transport, process
+     lifecycle, database connection caching, and trace recording.
+   - Done: `core/gateway/tools.js` owns MCP tool schemas and handler dispatch.
+   - Remaining: route more Gateway behavior through domain/runtime facades over
+     time instead of growing direct database method calls.
 
 ## Before New Features
 
@@ -102,11 +122,14 @@ Remaining refinement:
 - Keep shrinking `app.js` only when event wiring naturally belongs with a view.
 - Consider splitting `core/runtime/imports.js` later if old-service migration
   grows again.
-- Consider extracting MCP tool registration groups from
-  `core/gateway/mcp-server.js` if agent tools continue expanding.
+- Consider splitting MCP tool registration groups inside `core/gateway/tools.js`
+  if agent tools continue expanding.
 - Consider splitting Memoria repository search/records/maintenance sections if
   persistence changes keep growing.
 - Consider a separate gateway repository if gateway trace persistence expands.
+- Move domain behavior currently embedded in repository methods toward
+  `core/memoria`, `core/continuity`, and `core/innerlife` service modules when
+  those areas are next changed.
 
 ## Development Target For Tomorrow
 
@@ -120,6 +143,9 @@ Tomorrow's new features should start only after:
   `app.js`.
 - New product behavior goes into a domain module, not directly into
   `core/runtime/index.js` or `core/db/database.js`.
+- New Electron host behavior goes into `electron/ipc-handlers.js`,
+  `electron/http-agent-gateway.js`, `electron/schedulers.js`, or another
+  focused Electron module, not directly into `electron/main.js`.
 
 ## Rules For Future Changes
 
@@ -133,3 +159,5 @@ Tomorrow's new features should start only after:
 - Do not leave placeholder directories with only aspirational README files.
 - Keep `memoria` as the product name; do not introduce new `memory` module
   directories.
+- Keep packaged runtime resources covered by a smoke check before depending on
+  them in `electron-builder` config.

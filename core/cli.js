@@ -3,9 +3,10 @@
 const os = require("os");
 const path = require("path");
 const runtime = require("./runtime");
+const { defaultUserDataPath } = require("./platform-paths");
 
 function createCliApp() {
-  const userData = process.env.CLARACORE_DESKTOP_USER_DATA_DIR || path.join(os.homedir(), "Library", "Application Support", "claracore-desktop");
+  const userData = process.env.CLARACORE_DESKTOP_USER_DATA_DIR || defaultUserDataPath();
   return {
     isPackaged: false,
     getPath(name) {

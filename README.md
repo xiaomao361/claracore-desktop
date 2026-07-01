@@ -34,10 +34,10 @@ Read these before adding new features:
   Gateway, and documentation boundaries.
 - [Cleanup Plan](docs/CLEANUP_PLAN.md): active technical-debt cleanup order before
   feature expansion.
-- [Polish Log](docs/POLISH_LOG.md): daily-stable target, focused verification
-  matrix, and active runtime issues.
 - [Runtime Memory Policy](docs/RUNTIME_MEMORY_POLICY.md): small snapshot,
   pagination, resource ownership, memory telemetry, and long-run checks.
+- [macOS Packaging](docs/mac-packaging.md): current local packaging and packaged
+  Gateway validation notes.
 - Module boundary notes:
   - [Renderer modules](app/README.md)
   - [Runtime](core/runtime/README.md)
