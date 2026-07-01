@@ -14,7 +14,8 @@ async function main() {
       cwd: path.resolve(__dirname, "..", ".."),
       env: {
         ...process.env,
-        CLARACORE_DESKTOP_DATA_DIR: productRoot
+        CLARACORE_DESKTOP_DATA_DIR: productRoot,
+        CLARACORE_DESKTOP_TEST_INSTANCE: "1"
       }
     });
     const page = await app.firstWindow();

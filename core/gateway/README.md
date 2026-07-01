@@ -22,8 +22,16 @@ fallback when MCP is unavailable.
   stdin close, process exit, `SIGINT`, and `SIGTERM`.
 - Packaged Gateway mode is the app executable plus `--gateway`; development
   mode is `node core/gateway/mcp-server.js`.
-- Agents must use stable ids such as `hermes:lara`, `claude-code:clara`, or
-  `codex`. Do not share one id across multiple agents.
+- Agents must use stable ids such as `lara`, `clara`, or `codex`. Do not share
+  one id across multiple agents.
+- `CLARACORE_AGENT_ID` is the authoritative stdio Gateway process identity.
+  Gateway uses it before any `agentId` or `agent_id` tool argument and rewrites
+  trace request metadata to that process identity. Tool arguments should not be
+  used to override the caller identity.
+- Changing an agent's configured identity does not update an already-running
+  stdio Gateway process. Restart the agent client, or stop stale packaged
+  `--gateway` processes, before trusting new traces.
+- Use `agent_identity_merge` to consolidate data after renaming an agent id.
 - Agent setup should tell agents to call `gateway_context` first. The old
   `claracore_connection_test` is only a lightweight status probe.
 

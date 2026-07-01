@@ -47,15 +47,15 @@ data safe.
 
 No known data-loss or launch-blocking issue is currently captured here.
 
-### P1 - Gateway and packaged runtime reliability
+### P1 - Packaged runtime replacement check
 
 - Symptom: packaged or agent-launched Gateway processes can outlive the visible
   Desktop UI and interfere with replacement, locks, or stale state.
 - Impact: agent operations and development replacement become unreliable.
-- Current status: fixes are documented in `docs/BUGFIX-2026-06-30.md`; keep
-  watching Gateway traces after real packaged use.
-- Verification: `npm run check`, `npm run test:phase4`, packaged replacement
-  check when building a `.app`.
+- Current status: Gateway contract and trace UI pass in isolated test
+  instances. Packaged replacement still needs one real `.app` check when
+  preparing a release build.
+- Verification: packaged replacement check when building a `.app`.
 
 ### P1 - Shared Line current-position correctness
 
@@ -77,6 +77,28 @@ No known data-loss or launch-blocking issue is currently captured here.
   snapshots, schedulers, Gateway lifetime, or caches.
 
 ## Fixed
+
+### 2026-06-30 - Gateway share timing and isolated UI smoke tests
+
+- Symptom: `innerlife_share_check` returned `use` for pending InnerLife shares,
+  and Electron UI smoke tests exited when a live Desktop instance already held
+  the single-instance lock.
+- Fix: pending shares now return `review_first`; approved matching shares return
+  `use`. UI smoke tests opt into `CLARACORE_DESKTOP_TEST_INSTANCE=1`, which
+  skips the single-instance lock only for test instances.
+- Verification: `npm run check`, `CLARACORE_DESKTOP_DATA_DIR=/tmp/... npm run
+  test:phase4`.
+
+### 2026-06-30 - InnerLife daemon and digest polish
+
+- Symptom: phase 5 InnerLife checks had agent-id drift, digest runs created
+  extra pending convergence shares, and enabling the daemon from UI waited for
+  the 60-second scheduler instead of processing pending inbox immediately.
+- Fix: phase 5 tests now keep InnerLife operations scoped to one agent, digest
+  runs no longer auto-create convergence shares, digest UI previews skip profile
+  JSON noise, and UI daemon enable triggers an immediate tick for that agent.
+- Verification: `npm run check`, `CLARACORE_DESKTOP_DATA_DIR=/tmp/... npm run
+  test:phase5`.
 
 ### 2026-06-30 - Product JSON import, backup restore, SQLite WAL boundary
 

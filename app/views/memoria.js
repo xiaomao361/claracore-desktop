@@ -536,11 +536,47 @@ function drawMemoryGraphCanvas() {
   });
   const now = performance.now();
   const safeDegree = (nodeId) => Math.max(1, degree?.get(nodeId) || 1);
+  const isDarkTheme = document.body?.dataset?.theme === "dark";
+  const graphTheme = isDarkTheme
+    ? {
+        backgroundStops: [
+          [0, "rgba(32, 42, 36, 0.96)"],
+          [0.46, "rgba(24, 30, 27, 0.98)"],
+          [1, "rgba(18, 23, 20, 1)"]
+        ],
+        edge: "82, 128, 106",
+        memory: "99, 155, 215",
+        restricted: "214, 118, 101",
+        labelHalo: "rgba(215, 159, 75, 0.16)",
+        sharedLineHalo: "rgba(121, 201, 164, 0.16)",
+        nodeStroke: "rgba(232, 242, 235, 0.58)",
+        pillFill: "rgba(34, 41, 37, 0.92)",
+        pillText: "#edf4ee",
+        labelPillStroke: "rgba(215, 159, 75, 0.36)",
+        sharedLinePillStroke: "rgba(121, 201, 164, 0.34)"
+      }
+    : {
+        backgroundStops: [
+          [0, "rgba(232, 242, 235, 0.88)"],
+          [0.46, "rgba(250, 250, 247, 0.98)"],
+          [1, "rgba(244, 245, 239, 1)"]
+        ],
+        edge: "82, 107, 98",
+        memory: "54, 95, 132",
+        restricted: "166, 64, 54",
+        labelHalo: "rgba(189, 127, 40, 0.13)",
+        sharedLineHalo: "rgba(40, 116, 90, 0.13)",
+        nodeStroke: "rgba(255, 255, 255, 0.9)",
+        pillFill: "rgba(255, 255, 252, 0.88)",
+        pillText: "#202421",
+        labelPillStroke: "rgba(189, 127, 40, 0.28)",
+        sharedLinePillStroke: "rgba(40, 116, 90, 0.28)"
+      };
   const nodeColor = (node) => {
-    if (node.kind === "label") return "#bd7f28";
-    if (node.kind === "shared_line") return "#28745a";
-    if (node.sensitivity === "restricted") return "#a64036";
-    return "#365f84";
+    if (node.kind === "label") return isDarkTheme ? "#d79f4b" : "#bd7f28";
+    if (node.kind === "shared_line") return isDarkTheme ? "#79c9a4" : "#28745a";
+    if (node.sensitivity === "restricted") return isDarkTheme ? "#d67665" : "#a64036";
+    return isDarkTheme ? "#639bd7" : "#365f84";
   };
   const labelForNode = (node) => String(node.label || node.id || "");
   const truncateCanvasText = (text, maxWidth) => {
@@ -564,9 +600,9 @@ function drawMemoryGraphCanvas() {
   };
 
   const background = ctx.createRadialGradient(rect.width * 0.55, rect.height * 0.44, 40, rect.width * 0.55, rect.height * 0.44, Math.max(rect.width, rect.height) * 0.72);
-  background.addColorStop(0, "rgba(232, 242, 235, 0.88)");
-  background.addColorStop(0.46, "rgba(250, 250, 247, 0.98)");
-  background.addColorStop(1, "rgba(244, 245, 239, 1)");
+  for (const [stop, color] of graphTheme.backgroundStops) {
+    background.addColorStop(stop, color);
+  }
   ctx.fillStyle = background;
   ctx.fillRect(0, 0, rect.width, rect.height);
 
@@ -579,10 +615,10 @@ function drawMemoryGraphCanvas() {
     const middleX = (a.x + b.x) / 2;
     const middleY = (a.y + b.y) / 2;
     const curve = Math.max(-22, Math.min(22, (a.x - b.x) * 0.035));
-    const alpha = Math.min(0.3, 0.055 + (safeDegree(edge.from) + safeDegree(edge.to)) / 700);
+    const alpha = Math.min(isDarkTheme ? 0.42 : 0.3, (isDarkTheme ? 0.1 : 0.055) + (safeDegree(edge.from) + safeDegree(edge.to)) / 700);
     ctx.beginPath();
-    ctx.lineWidth = 0.75;
-    ctx.strokeStyle = `rgba(82, 107, 98, ${alpha})`;
+    ctx.lineWidth = isDarkTheme ? 0.9 : 0.75;
+    ctx.strokeStyle = `rgba(${graphTheme.edge}, ${alpha})`;
     ctx.moveTo(a.x, a.y);
     ctx.quadraticCurveTo(middleX + curve, middleY - curve, b.x, b.y);
     ctx.stroke();
@@ -599,13 +635,15 @@ function drawMemoryGraphCanvas() {
     const isRestricted = node.sensitivity === "restricted";
     if (isRestricted) {
       ctx.beginPath();
-      ctx.fillStyle = "rgba(166, 64, 54, 0.12)";
+      ctx.fillStyle = `rgba(${graphTheme.restricted}, ${isDarkTheme ? 0.16 : 0.12})`;
       ctx.arc(p.x, p.y, radius + 3.5, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.beginPath();
-    ctx.fillStyle = isRestricted ? "rgba(166, 64, 54, 0.72)" : "rgba(54, 95, 132, 0.58)";
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+    ctx.fillStyle = isRestricted
+      ? `rgba(${graphTheme.restricted}, ${isDarkTheme ? 0.86 : 0.72})`
+      : `rgba(${graphTheme.memory}, ${isDarkTheme ? 0.76 : 0.58})`;
+    ctx.strokeStyle = graphTheme.nodeStroke;
     ctx.lineWidth = 1;
     ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
     ctx.fill();
@@ -624,12 +662,12 @@ function drawMemoryGraphCanvas() {
     const phase = ((now / 1000) + (graphHash(node.id) % 1000) / 1000) * Math.PI * 2 / 3.6;
     const halo = radius + 5 + Math.sin(phase) * 1.5;
     ctx.beginPath();
-    ctx.fillStyle = node.kind === "label" ? "rgba(189, 127, 40, 0.13)" : "rgba(40, 116, 90, 0.13)";
+    ctx.fillStyle = node.kind === "label" ? graphTheme.labelHalo : graphTheme.sharedLineHalo;
     ctx.arc(p.x, p.y, halo, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
     ctx.fillStyle = color;
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.94)";
+    ctx.strokeStyle = graphTheme.nodeStroke;
     ctx.lineWidth = 1.4;
     ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
     ctx.fill();
@@ -649,12 +687,12 @@ function drawMemoryGraphCanvas() {
     const x = Math.min(rect.width - pillWidth - 8, Math.max(8, p.x + p.r + 7));
     const y = Math.min(rect.height - pillHeight - 8, Math.max(8, p.y - pillHeight / 2));
     roundRect(x, y, pillWidth, pillHeight, 11);
-    ctx.fillStyle = "rgba(255, 255, 252, 0.88)";
+    ctx.fillStyle = graphTheme.pillFill;
     ctx.fill();
-    ctx.strokeStyle = node.kind === "label" ? "rgba(189, 127, 40, 0.28)" : "rgba(40, 116, 90, 0.28)";
+    ctx.strokeStyle = node.kind === "label" ? graphTheme.labelPillStroke : graphTheme.sharedLinePillStroke;
     ctx.lineWidth = 1;
     ctx.stroke();
-    ctx.fillStyle = "#202421";
+    ctx.fillStyle = graphTheme.pillText;
     ctx.fillText(label, x + 9, y + pillHeight / 2);
   }
 

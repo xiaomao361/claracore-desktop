@@ -4,7 +4,7 @@ const fs = require("fs/promises");
 const os = require("os");
 const http = require("http");
 const crypto = require("crypto");
-const { execFile, spawn, spawnSync } = require("child_process");
+const { execFile, spawnSync } = require("child_process");
 const { promisify } = require("util");
 const { PRODUCT_VERSION } = require("../core/version");
 const {
@@ -143,18 +143,6 @@ function hideGatewayFromDock() {
   });
 }
 
-function openUiFromGatewayActivation() {
-  if (!isGatewayMode || !app.isPackaged) return;
-  const child = spawn(process.execPath, [], {
-    detached: true,
-    stdio: "ignore",
-    env: {
-      ...process.env
-    }
-  });
-  child.unref();
-}
-
 function defaultDataRoot() {
   return path.join(app.getPath("userData"), "data");
 }
@@ -206,22 +194,20 @@ async function saveDataRootPreference(dataRoot) {
 
 if (isGatewayMode) {
   hideGatewayFromDock();
-  app.on("activate", openUiFromGatewayActivation);
   app.on("open-file", (event) => {
     event.preventDefault();
-    openUiFromGatewayActivation();
   });
   app.on("open-url", (event) => {
     event.preventDefault();
-    openUiFromGatewayActivation();
   });
   require("../core/gateway/mcp-server").start();
 }
 
-const hasSingleInstanceLock = isGatewayMode || app.requestSingleInstanceLock();
+const isTestInstance = process.env.CLARACORE_DESKTOP_TEST_INSTANCE === "1";
+const hasSingleInstanceLock = isGatewayMode || isTestInstance || app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) {
   app.quit();
-} else if (!isGatewayMode) {
+} else if (!isGatewayMode && !isTestInstance) {
   app.on("second-instance", () => {
     if (isQuitting) return;
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -723,9 +709,28 @@ function stopSiblingGatewayProcesses() {
   if (isGatewayMode) return;
   if (process.platform !== "darwin") return;
   try {
-    spawnSync("/usr/bin/pkill", ["-f", `${process.execPath} --gateway`], {
-      stdio: "ignore"
-    });
+    const output = spawnSync("/bin/ps", ["-axo", "pid=,command="], {
+      encoding: "utf8",
+      maxBuffer: 1024 * 1024
+    }).stdout || "";
+    const executableName = path.basename(process.execPath);
+    for (const line of output.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || !trimmed.includes("--gateway")) continue;
+      const [pidText, ...commandParts] = trimmed.split(/\s+/);
+      const pid = Number.parseInt(pidText, 10);
+      if (!pid || pid === process.pid) continue;
+      const command = commandParts.join(" ");
+      const isPackagedGateway =
+        command.includes(`${executableName}.app/Contents/MacOS/${executableName}`) ||
+        (command.includes(process.execPath) && command.includes("--gateway"));
+      if (!isPackagedGateway) continue;
+      try {
+        process.kill(pid, "SIGTERM");
+      } catch (_error) {
+        // The helper may have already exited after stdio closed.
+      }
+    }
   } catch (_error) {
     // Best effort: quitting the UI should release packaged Gateway helpers.
   }
@@ -891,6 +896,18 @@ function localDateKey(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
+function nextMemoryMaintenanceDelayMs(settings, now = new Date()) {
+  const hour = Math.max(0, Math.min(23, Number.parseInt(String(settings["memory.maintenance.hour"] ?? 3), 10) || 3));
+  const today = localDateKey(now);
+  const nextRun = new Date(now);
+  nextRun.setMinutes(0, 0, 0);
+  nextRun.setHours(hour);
+  if (String(settings["memory.maintenance.last_run_date"] || "") === today) {
+    nextRun.setDate(nextRun.getDate() + 1);
+  }
+  return Math.max(0, nextRun.getTime() - now.getTime());
+}
+
 async function runMemoryMaintenanceScheduledTick() {
   if (memoryMaintenanceSchedulerBusy || isQuitting) return;
   memoryMaintenanceSchedulerBusy = true;
@@ -898,11 +915,7 @@ async function runMemoryMaintenanceScheduledTick() {
     const { database } = await ensureProductCore(app);
     const settings = await database.getSettings();
     if (settings["memory.maintenance.enabled"] === false) return;
-    const hour = Math.max(0, Math.min(23, Number.parseInt(String(settings["memory.maintenance.hour"] ?? 3), 10) || 3));
-    const now = new Date();
-    const today = localDateKey(now);
-    if (String(settings["memory.maintenance.last_run_date"] || "") === today) return;
-    if (now.getHours() < hour) return;
+    const today = localDateKey();
     const result = await runProductMemoryMaintenance(app, { scheduled: true });
     await saveProductSettings(app, { "memory.maintenance.last_run_date": today });
     notifyRuntimeChanged("memory-maintenance-nightly", {
@@ -920,18 +933,36 @@ async function runMemoryMaintenanceScheduledTick() {
   }
 }
 
-function startMemoryMaintenanceScheduler() {
-  if (memoryMaintenanceScheduler) return;
-  memoryMaintenanceScheduler = setInterval(() => {
-    runMemoryMaintenanceScheduledTick().catch(console.error);
-  }, 60 * 1000);
+async function scheduleNextMemoryMaintenance() {
+  if (memoryMaintenanceScheduler || isQuitting) return;
+  let delayMs = 24 * 60 * 60 * 1000;
+  try {
+    const { database } = await ensureProductCore(app);
+    const settings = await database.getSettings();
+    delayMs = nextMemoryMaintenanceDelayMs(settings);
+  } catch (error) {
+    console.error("Failed to schedule Memoria maintenance:", error);
+  }
+  memoryMaintenanceScheduler = setTimeout(async () => {
+    memoryMaintenanceScheduler = null;
+    await runMemoryMaintenanceScheduledTick();
+    scheduleNextMemoryMaintenance().catch(console.error);
+  }, delayMs);
   if (typeof memoryMaintenanceScheduler.unref === "function") memoryMaintenanceScheduler.unref();
-  runMemoryMaintenanceScheduledTick().catch(console.error);
+}
+
+function startMemoryMaintenanceScheduler() {
+  scheduleNextMemoryMaintenance().catch(console.error);
+}
+
+function rescheduleMemoryMaintenance() {
+  stopMemoryMaintenanceScheduler();
+  startMemoryMaintenanceScheduler();
 }
 
 function stopMemoryMaintenanceScheduler() {
   if (!memoryMaintenanceScheduler) return;
-  clearInterval(memoryMaintenanceScheduler);
+  clearTimeout(memoryMaintenanceScheduler);
   memoryMaintenanceScheduler = null;
 }
 
@@ -950,7 +981,11 @@ if (!isGatewayMode && hasSingleInstanceLock) {
   });
   ipcMain.handle("claracore:saveSettings", async (_event, updates) => {
     if (!isPlainObject(updates)) return false;
-    return saveProductSettings(app, updates);
+    const result = await saveProductSettings(app, updates);
+    if (Object.keys(updates).some((key) => key.startsWith("memory.maintenance."))) {
+      rescheduleMemoryMaintenance();
+    }
+    return result;
   });
   ipcMain.handle("claracore:listModels", async (_event, input) => listConfiguredModels(input));
   ipcMain.handle("claracore:createMemory", async (_event, input) => {
@@ -1140,6 +1175,13 @@ if (!isGatewayMode && hasSingleInstanceLock) {
   ipcMain.handle("claracore:setInnerLifeDaemon", async (_event, input) => {
     if (!isPlainObject(input)) return false;
     const result = await setProductInnerLifeDaemon(app, input);
+    if (result?.enabled) {
+      await tickProductInnerLifeDaemon(app, {
+        agentId: result.agentId,
+        force: true,
+        includeSnapshot: false
+      });
+    }
     notifyRuntimeChanged("innerlife-daemon");
     return result;
   });

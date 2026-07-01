@@ -38,11 +38,27 @@ function pickFirst(row, keys, fallback = "") {
 }
 
 function normalizeImportLabels(labels) {
-  if (Array.isArray(labels)) return labels.map((label) => String(label || "").trim().toLowerCase()).filter(Boolean);
-  return String(labels || "")
+  if (Array.isArray(labels)) return labels.map(normalizeImportLabel).filter(Boolean);
+  const text = String(labels || "").trim();
+  if (!text) return [];
+  try {
+    const parsed = JSON.parse(text);
+    if (Array.isArray(parsed)) return parsed.map(normalizeImportLabel).filter(Boolean);
+  } catch (_error) {
+    // Fall through to comma-separated legacy labels.
+  }
+  return text
     .split(",")
-    .map((label) => label.trim().toLowerCase())
+    .map(normalizeImportLabel)
     .filter(Boolean);
+}
+
+function normalizeImportLabel(label) {
+  const normalized = String(label || "").trim().toLowerCase();
+  if (!normalized) return "";
+  if (/^[,;:|，；：、.。]+$/.test(normalized)) return "";
+  if (Array.from(normalized).length < 2) return "";
+  return normalized;
 }
 
 function normalizeContinuityStatus(status) {
@@ -672,8 +688,8 @@ function createImportRuntime({ createProductBackup, ensureProductCore, productVe
     const old = await readOldMemoriaRows(dbPath);
     const labelsByMemory = new Map();
     for (const row of old.labels) {
-      const memoryId = String(pickFirst(row, ["memory_id", "memoryId", "id"], "") || "").trim();
-      const label = String(pickFirst(row, ["label", "name", "tag"], "") || "").trim().toLowerCase();
+      const memoryId = String(pickFirst(row, ["memory_id", "memoryId"], "") || "").trim();
+      const label = normalizeImportLabel(pickFirst(row, ["label", "name", "tag"], ""));
       if (!memoryId || !label) continue;
       if (!labelsByMemory.has(memoryId)) labelsByMemory.set(memoryId, []);
       labelsByMemory.get(memoryId).push(label);

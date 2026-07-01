@@ -161,6 +161,14 @@ or scheduler-driven workflows should still protect their own product semantics;
 for example InnerLife daemon ticks are guarded so background scheduler ticks and
 manual UI ticks do not create duplicate share candidates.
 
+Desktop schedulers should match the product cadence they represent. Memoria
+database maintenance is a once-per-local-day cleanup job, not a high-frequency
+poll: the Electron host computes the next scheduled local hour from product
+settings, sets a single timer, runs a missed same-day job immediately if the app
+starts after the scheduled hour, then schedules the following day after
+completion. Use short polling only for loops that are genuinely interactive,
+such as InnerLife daemon due checks.
+
 The Node runtime uses a cached `ProductDatabase` connection per process. In
 packaged mode, `node:sqlite` may be unavailable, so the database helper can
 fall back to the `sqlite3` CLI. Both paths must set WAL mode and a non-zero busy
@@ -194,6 +202,14 @@ writes must also be correct under SQLite's cross-process WAL and busy-timeout
 rules. The Desktop UI's quit path best-effort stops packaged sibling Gateway
 processes so replacing `/Applications/ClaraCore Desktop.app` is not blocked by
 a stale `--gateway` process.
+
+Agent identity is a process boundary, not a tool-call override. Gateway treats
+`CLARACORE_AGENT_ID` as authoritative, uses it before any request-level
+`agentId` or `agent_id`, and normalizes trace request metadata to that value.
+When an agent changes identity, restart its MCP client or stop stale packaged
+Gateway processes so the launched stdio environment changes too. After an
+identity rename, `agent_identity_merge` is the supported repair path; it updates
+agent-owned tables and stored Gateway trace request JSON.
 
 Gateway tool responses must describe the actual record a write changed. For
 example `shared_line_update` saves one current position and then reads the

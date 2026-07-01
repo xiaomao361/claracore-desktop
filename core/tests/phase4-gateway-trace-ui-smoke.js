@@ -40,11 +40,19 @@ async function main() {
       cwd: path.resolve(__dirname, "..", ".."),
       env: {
         ...process.env,
-        CLARACORE_DESKTOP_DATA_DIR: dataRoot
+        CLARACORE_DESKTOP_DATA_DIR: dataRoot,
+        CLARACORE_DESKTOP_TEST_INSTANCE: "1"
       }
     });
     const page = await app.firstWindow();
     await page.waitForSelector("[data-view='agent-setup']", { timeout: 15000 });
+    await page.waitForFunction(
+      () =>
+        document.querySelector("#homeTraceList")?.textContent.includes("missing_gateway_tool") &&
+        document.querySelector("#homeTraceList")?.textContent.includes("Unknown tool"),
+      null,
+      { timeout: 15000 }
+    );
     await page.click("[data-view='agent-setup']");
     await page.waitForFunction(
       () =>
@@ -58,13 +66,20 @@ async function main() {
       return {
         databasePath: snapshot.data.databasePath,
         traceCount: snapshot.gatewayTraces.length,
-        traceText: document.querySelector("#gatewayTraceList").textContent
+        hasErrorTrace: snapshot.gatewayTraces.some((trace) => trace.toolName === "missing_gateway_tool" && trace.status === "error"),
+        agentTraceText: document.querySelector("#gatewayTraceList").textContent,
+        homeTraceText: document.querySelector("#homeTraceList").textContent
       };
     });
     if (!result.databasePath.startsWith(dataRoot)) {
       throw new Error(`Gateway trace UI wrote outside product data root: ${result.databasePath}`);
     }
-    if (result.traceCount < 2 || !result.traceText.includes("Unknown tool")) {
+    if (
+      result.traceCount < 2 ||
+      !result.hasErrorTrace ||
+      !result.agentTraceText.includes("missing_gateway_tool") ||
+      !result.homeTraceText.includes("Unknown tool")
+    ) {
       throw new Error(`Gateway trace UI did not render traces: ${JSON.stringify(result)}`);
     }
     await app.close();

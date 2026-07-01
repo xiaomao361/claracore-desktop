@@ -131,7 +131,7 @@ function textResult(value) {
 }
 
 function currentMcpAgentId(args = {}) {
-  return String(args.agentId || args.agent_id || process.env.CLARACORE_AGENT_ID || "").trim() || UNKNOWN_AGENT_ID;
+  return String(process.env.CLARACORE_AGENT_ID || args.agentId || args.agent_id || "").trim() || UNKNOWN_AGENT_ID;
 }
 
 function toolDefinitions() {
@@ -155,7 +155,7 @@ function toolDefinitions() {
         properties: {
           agentId: {
             type: "string",
-            description: "Stable id for the calling agent, for example claude-code:clara, codex, or hermes:lara."
+            description: "Stable id for the calling agent, for example clara, lara, or codex."
           }
         },
         additionalProperties: false
@@ -1495,7 +1495,7 @@ async function callToolBody(name, args = {}, paths, database) {
             "",
             "Use this MCP server as the single local entry for ClaraCore Desktop product data.",
             "Each agent must set its own stable CLARACORE_AGENT_ID. Do not reuse another agent's id.",
-            "Recommended ids: hermes:lara, claude-code:clara, codex.",
+            "Recommended ids: lara, clara, codex.",
             "",
             "## MCP Config",
             "",
@@ -1525,7 +1525,7 @@ async function callToolBody(name, args = {}, paths, database) {
             "",
             "## Verify The Connection",
             "",
-            "After installing the MCP config, call gateway_context with your stable agentId. Desktop records successful MCP calls as recent agent activity in Agent Access.",
+            "After installing the MCP config, call gateway_context. Desktop uses CLARACORE_AGENT_ID as the MCP process identity and records successful MCP calls as recent agent activity in Agent Access.",
             "",
             "## CLI Fallback",
             "",
@@ -1890,7 +1890,8 @@ async function callTool(name, args = {}) {
   const startedAt = Date.now();
   const { paths, database } = await openDatabase();
   const agentId = currentMcpAgentId(args);
-  const callArgs = args.agentId || args.agent_id ? args : { ...args, agentId };
+  const callArgs = { ...args, agentId };
+  delete callArgs.agent_id;
   try {
     const result = await callToolBody(name, callArgs, paths, database);
     await database.recordGatewayTrace({

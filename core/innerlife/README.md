@@ -62,9 +62,10 @@ not generate duplicate share candidates. Enabling the daemon while inbox items
 are pending may immediately process that inbox instead of waiting for the next
 interval.
 
-Agent IDs should use the product identity shape `tool:agent`, for example
-`claude-code:clara` or `hermes:lara`. A single tool/name such as `codex` is also
-valid for agents that do not need a two-part identity.
+Agent IDs come from the Gateway process `CLARACORE_AGENT_ID`. Use short, stable
+product identities such as `lara`, `clara`, or `codex`; do not rely on
+per-tool-call `agentId` arguments to override the caller identity. If an agent is
+renamed, run `agent_identity_merge` to consolidate legacy rows.
 
 ## Agent Access
 

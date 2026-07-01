@@ -1138,6 +1138,12 @@
   text-align: center;
 }
 
+.health-action {
+  margin-top: 8px;
+  padding: 0;
+  font-size: 12px;
+}
+
 .event-list li.info {
   border-left-color: var(--blue);
 }
@@ -1148,6 +1154,14 @@
 
 .event-list li.error {
   border-left-color: var(--red);
+}
+
+.event-list li.gateway {
+  border-left-color: var(--green);
+}
+
+.event-list li.startup {
+  border-left-color: var(--border-strong);
 }
 
 @keyframes homeRuntimeBreath {

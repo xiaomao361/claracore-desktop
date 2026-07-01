@@ -67,7 +67,7 @@ Included:
 - Memoria CLI for store, recall, get, update, tag, delete, restore, archive, import/export, records, and maintenance audit/run
 - View-focused Memoria UI for search, graph, labels, all memories, restricted memories, archive/delete review, and manual delete/restore
 - Lazy-loaded Memoria list tabs and cached canvas graph with primary/restricted layers
-- Manual vector rebuild with progress, plus daily small-batch Memoria maintenance
+- Manual vector rebuild with progress, plus daily small-batch Memoria database maintenance
 - Shared Line CLI and Desktop-owned Gateway MCP tools for agent-driven line create/list/get/activate/rename/archive/restore/update/handoff, agent state, model adjustments, and arc compaction
 - Shared-reality and affective fields as first-class inputs, with a managed arc lifecycle: momentary readings stay transient, duplicates are de-duplicated, persisted arcs are capped, resume packets truncate by default (fullArc for the complete arc), and needs-review nodes are always protected
 - View-focused Shared Line UI for line browsing, agent filtering, current position, metadata, history, snapshots, handoffs, and resume packet review; selecting a line only changes the reviewed detail, not the agent-active line
@@ -78,7 +78,7 @@ Included:
 - InnerLife runtime panel for daemon enable/pause/tick, doctor status, pending shares, inbox, sessions, and digest review
 - Verified SQLite product backups with restore preview and safety-backup restore
 - Full product JSON export/import for portable ClaraCore Desktop data
-- Agent identity labels using `tool:agent` form, such as `claude-code:clara` and `hermes:lara`, with single-name agents such as `codex` supported
+- Agent identity uses each MCP process `CLARACORE_AGENT_ID`; preferred stable ids are `lara`, `clara`, and `codex`, while legacy tool-prefixed ids can be consolidated with `agent_identity_merge`
 - Settings page for language, theme, motion preference, close-window behavior, local data paths, and read-only app/runtime details
 - Terminal-style runtime log view for maintenance and Gateway traces
 - Chinese and English UI switching

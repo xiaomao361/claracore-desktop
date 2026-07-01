@@ -18,6 +18,8 @@ pnpm-debug.log*
 coverage/
 .nyc_output/
 
+data/
+
 *.local
 *.tmp
 *.swp

@@ -550,55 +550,27 @@ class ProductDatabase {
       `);
     }
 
-    const defaultAgentRows = await this.query(`
-      SELECT agent_id, communication_style, relationship_position, long_term_preferences_json,
-             boundaries_json, stable_patterns_json, notes
-      FROM continuity_agent_state
-      WHERE agent_id IN ('default', ${sqlString(DEFAULT_AGENT_ID)});
-    `);
-    const defaultState = defaultAgentRows.find((row) => row.agent_id === "default");
-    if (!defaultState) return;
-    const codexState = defaultAgentRows.find((row) => row.agent_id === DEFAULT_AGENT_ID);
-    if (!codexState) {
-      await this.exec(`
-        UPDATE continuity_agent_state
-        SET agent_id = ${sqlString(DEFAULT_AGENT_ID)},
-            updated_at = CURRENT_TIMESTAMP
-        WHERE agent_id = 'default';
-      `);
-      return;
-    }
     await this.exec(`
-      UPDATE continuity_agent_state
-      SET communication_style = CASE
-            WHEN communication_style = '' THEN ${sqlString(defaultState.communication_style || "")}
-            ELSE communication_style
-          END,
-          relationship_position = CASE
-            WHEN relationship_position = '' THEN ${sqlString(defaultState.relationship_position || "")}
-            ELSE relationship_position
-          END,
-          long_term_preferences_json = CASE
-            WHEN long_term_preferences_json = '[]' THEN ${sqlString(defaultState.long_term_preferences_json || "[]")}
-            ELSE long_term_preferences_json
-          END,
-          boundaries_json = CASE
-            WHEN boundaries_json = '[]' THEN ${sqlString(defaultState.boundaries_json || "[]")}
-            ELSE boundaries_json
-          END,
-          stable_patterns_json = CASE
-            WHEN stable_patterns_json = '[]' THEN ${sqlString(defaultState.stable_patterns_json || "[]")}
-            ELSE stable_patterns_json
-          END,
-          notes = CASE
-            WHEN notes = '' THEN ${sqlString(defaultState.notes || "")}
-            ELSE notes
-          END,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE agent_id = ${sqlString(DEFAULT_AGENT_ID)};
-
       DELETE FROM continuity_agent_state
       WHERE agent_id = 'default';
+
+      UPDATE continuity_agent_state
+      SET communication_style = '',
+          relationship_position = '',
+          long_term_preferences_json = '[]',
+          boundaries_json = '[]',
+          stable_patterns_json = '[]',
+          notes = '',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE agent_id = ${sqlString(DEFAULT_AGENT_ID)}
+        AND (
+          communication_style LIKE '%毛仔%' OR
+          relationship_position LIKE '%姐姐%' OR
+          relationship_position LIKE '%弟弟%' OR
+          notes LIKE '%毛仔%' OR
+          notes LIKE '%Clara%' OR
+          notes LIKE '%Lara%'
+        );
     `);
   }
 
@@ -786,7 +758,7 @@ class ProductDatabase {
     const positionMatchRows = await this.query(`
       SELECT COUNT(*) AS c
       FROM current_positions
-      WHERE json_extract(metadata_json, '$.agentId') = ${sqlString(sourceAgentId)};
+      WHERE CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.agentId') ELSE NULL END = ${sqlString(sourceAgentId)};
     `);
     const currentPositionMetadataUpdated = Number(positionMatchRows[0]?.c || 0);
 
@@ -808,12 +780,20 @@ class ProductDatabase {
       UPDATE innerlife_digest_runs SET agent_id = ${sqlString(targetAgentId)} WHERE agent_id = ${sqlString(sourceAgentId)};
       UPDATE innerlife_share_checks SET agent_id = ${sqlString(targetAgentId)} WHERE agent_id = ${sqlString(sourceAgentId)};
       UPDATE gateway_sessions SET agent_id = ${sqlString(targetAgentId)} WHERE agent_id = ${sqlString(sourceAgentId)};
+      UPDATE gateway_traces
+      SET request_json = json_remove(
+        json_set(CASE WHEN json_valid(request_json) THEN request_json ELSE '{}' END, '$.agentId', ${sqlString(targetAgentId)}),
+        '$.agent_id'
+      )
+      WHERE agent_id = ${sqlString(sourceAgentId)}
+         OR CASE WHEN json_valid(request_json) THEN json_extract(request_json, '$.agentId') ELSE NULL END = ${sqlString(sourceAgentId)}
+         OR CASE WHEN json_valid(request_json) THEN json_extract(request_json, '$.agent_id') ELSE NULL END = ${sqlString(sourceAgentId)};
       UPDATE gateway_traces SET agent_id = ${sqlString(targetAgentId)} WHERE agent_id = ${sqlString(sourceAgentId)};
       UPDATE memory_records SET source_agent = ${sqlString(targetAgentId)}, updated_at = CURRENT_TIMESTAMP WHERE source_agent = ${sqlString(sourceAgentId)};
 
       UPDATE current_positions
-      SET metadata_json = json_set(metadata_json, '$.agentId', ${sqlString(targetAgentId)})
-      WHERE json_extract(metadata_json, '$.agentId') = ${sqlString(sourceAgentId)};
+      SET metadata_json = json_set(CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END, '$.agentId', ${sqlString(targetAgentId)})
+      WHERE CASE WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.agentId') ELSE NULL END = ${sqlString(sourceAgentId)};
 
       UPDATE innerlife_sessions
       SET external_session_id = external_session_id || ':' || id

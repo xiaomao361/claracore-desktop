@@ -34,6 +34,7 @@ async function main() {
   if (!sessionStart.share_plan || sessionStart.briefing) {
     throw new Error("InnerLife session start should return compact share_plan and omit full briefing by default.");
   }
+  const core = await runtime.ensureProductCore(app);
   const fullBriefing = await core.database.getInnerLifeBriefing("my-agent");
   if (!fullBriefing.text.includes("Current position")) {
     throw new Error("InnerLife lazy briefing did not include current position.");
@@ -65,6 +66,7 @@ async function main() {
   if (!inboxItem?.id) throw new Error("InnerLife inbox submit did not create an inbox item.");
 
   const firstRun = await runtime.processProductInnerLifeOnce(app, {
+    agentId: "my-agent",
     prompt: "Create a reviewable share candidate for this current state."
   });
   if (!firstRun.share?.id) throw new Error("InnerLife process once did not create a pending share.");
@@ -84,6 +86,16 @@ async function main() {
     throw new Error(`InnerLife inbox counts are wrong after process once: ${JSON.stringify(firstRun.snapshot.counts)}`);
   }
 
+  const pendingShareCheck = await runtime.checkProductInnerLifeShareTiming(app, {
+    shareId: firstRun.share.id,
+    context: "The user asked to use the Phase 5 position and Manual InnerLife review now."
+  });
+  if (pendingShareCheck.check?.decision !== "review_first") {
+    throw new Error(`InnerLife pending share timing should require review first: ${JSON.stringify(pendingShareCheck.check)}`);
+  }
+  if (pendingShareCheck.share.status !== "pending") {
+    throw new Error("InnerLife pending share timing check should not change share status.");
+  }
   const approved = await runtime.reviewProductInnerLifeShare(app, firstRun.share.id, "approve", "phase5 smoke approve");
   if (approved.status !== "approved") throw new Error("InnerLife approve did not mark the share approved.");
   const shareCheck = await runtime.checkProductInnerLifeShareTiming(app, {
@@ -114,11 +126,11 @@ async function main() {
   const usedAgain = await runtime.markProductInnerLifeShare(app, approved.id, "used", "shared in the conversation");
   if (usedAgain.share.status !== "used") throw new Error("InnerLife used action did not update share status.");
 
-  const pausedDaemon = await runtime.tickProductInnerLifeDaemon(app, { force: true });
+  const pausedDaemon = await runtime.tickProductInnerLifeDaemon(app, { agentId: "my-agent", force: true });
   if (pausedDaemon.reason !== "paused" || pausedDaemon.ran !== false) {
     throw new Error(`InnerLife daemon should stay paused by default: ${JSON.stringify(pausedDaemon.daemon)}`);
   }
-  const enabledDaemon = await runtime.setProductInnerLifeDaemon(app, { action: "enable" });
+  const enabledDaemon = await runtime.setProductInnerLifeDaemon(app, { agentId: "my-agent", action: "enable" });
   if (!enabledDaemon.enabled || enabledDaemon.status !== "enabled") {
     throw new Error(`InnerLife daemon did not enable: ${JSON.stringify(enabledDaemon)}`);
   }
@@ -128,7 +140,7 @@ async function main() {
     body: "Daemon inbox material should be processed by daemon tick."
   });
   if (!daemonInbox?.id) throw new Error("InnerLife daemon inbox submit did not create an inbox item.");
-  const daemonTick = await runtime.tickProductInnerLifeDaemon(app, { force: true });
+  const daemonTick = await runtime.tickProductInnerLifeDaemon(app, { agentId: "my-agent", force: true });
   if (!daemonTick.ran || daemonTick.reason !== "processed" || !daemonTick.result?.share?.id) {
     throw new Error(`InnerLife daemon did not process pending inbox: ${JSON.stringify(daemonTick)}`);
   }
@@ -137,12 +149,12 @@ async function main() {
   }
   const daemonRejected = await runtime.reviewProductInnerLifeShare(app, daemonTick.result.share.id, "reject", "phase5 daemon reject");
   if (daemonRejected.status !== "rejected") throw new Error("InnerLife daemon share reject did not update status.");
-  const pausedAgain = await runtime.setProductInnerLifeDaemon(app, { action: "pause" });
+  const pausedAgain = await runtime.setProductInnerLifeDaemon(app, { agentId: "my-agent", action: "pause" });
   if (pausedAgain.enabled || pausedAgain.status !== "paused") {
     throw new Error(`InnerLife daemon did not pause: ${JSON.stringify(pausedAgain)}`);
   }
 
-  const recoveryEnabled = await runtime.setProductInnerLifeDaemon(app, { action: "enable" });
+  const recoveryEnabled = await runtime.setProductInnerLifeDaemon(app, { agentId: "my-agent", action: "enable" });
   if (!recoveryEnabled.enabled) throw new Error("InnerLife daemon did not enable for recovery test.");
   const recoveryInbox = await runtime.submitProductInnerLifeInbox(app, {
     agentId: "my-agent",
@@ -157,7 +169,7 @@ async function main() {
   };
   let failureThrown = false;
   try {
-    await recoveryDatabase.tickInnerLifeDaemon({ force: true });
+    await recoveryDatabase.tickInnerLifeDaemon({ agentId: "my-agent", force: true });
   } catch (error) {
     failureThrown = error.message.includes("phase5 forced daemon failure");
   } finally {
@@ -185,7 +197,7 @@ async function main() {
   ) {
     throw new Error(`InnerLife doctor did not report daemon recovery guidance: ${JSON.stringify(failedDoctor)}`);
   }
-  const recoveredTick = await recoveryDatabase.tickInnerLifeDaemon({ force: true });
+  const recoveredTick = await recoveryDatabase.tickInnerLifeDaemon({ agentId: "my-agent", force: true });
   if (!recoveredTick.ran || recoveredTick.reason !== "processed" || !recoveredTick.result?.share?.id) {
     throw new Error(`InnerLife daemon did not recover after failure: ${JSON.stringify(recoveredTick)}`);
   }
@@ -194,7 +206,7 @@ async function main() {
   }
   const recoveryRejected = await runtime.reviewProductInnerLifeShare(app, recoveredTick.result.share.id, "reject", "phase5 daemon recovery reject");
   if (recoveryRejected.status !== "rejected") throw new Error("InnerLife daemon recovery share reject did not update status.");
-  const recoveryPaused = await runtime.setProductInnerLifeDaemon(app, { action: "pause" });
+  const recoveryPaused = await runtime.setProductInnerLifeDaemon(app, { agentId: "my-agent", action: "pause" });
   if (recoveryPaused.status !== "paused") throw new Error("InnerLife daemon did not pause after recovery test.");
   const recoveredDoctor = await recoveryDatabase.getInnerLifeDoctor("my-agent");
   if (recoveredDoctor.status !== "ok" || !recoveredDoctor.nextActions.includes("No recovery action is needed.")) {
@@ -208,6 +220,7 @@ async function main() {
   });
   if (!digestInbox?.id) throw new Error("InnerLife digest inbox submit did not create an inbox item.");
   const digest = await runtime.runProductInnerLifeDigest(app, {
+    agentId: "my-agent",
     mode: "light",
     prompt: "Create a digest record without making a share."
   });
@@ -218,7 +231,7 @@ async function main() {
     throw new Error(`InnerLife digest counts are wrong: ${JSON.stringify(digest.snapshot.counts)}`);
   }
 
-  const secondRun = await runtime.processProductInnerLifeOnce(app, {});
+  const secondRun = await runtime.processProductInnerLifeOnce(app, { agentId: "my-agent" });
   if (!secondRun.share?.id) throw new Error("Second InnerLife process once did not create a pending share.");
   const rejected = await runtime.reviewProductInnerLifeShare(app, secondRun.share.id, "reject", "phase5 smoke reject");
   if (rejected.status !== "rejected") throw new Error("InnerLife reject did not mark the share rejected.");
@@ -265,7 +278,7 @@ async function main() {
     row.processed_inbox_count !== 5 ||
     row.share_actions_count !== 3 ||
     row.digest_runs_count !== 1 ||
-    row.share_checks_count !== 1 ||
+    row.share_checks_count !== 2 ||
     row.daemon_tick_count !== 3 ||
     row.daemon_status !== "paused"
   ) {

@@ -3,7 +3,7 @@ function createClaraCoreAgentSetupView({ dom, t, getSnapshot, copyValue }) {
     const snapshot = getSnapshot();
     if (!snapshot?.connections) return t("common.checking");
     const agentIdentity = snapshot.connections.agentIdentity || {};
-    const agentExamples = agentIdentity.examples || ["hermes:lara", "claude-code:clara", "codex"];
+    const agentExamples = agentIdentity.examples || ["lara", "clara", "codex"];
     const endpoints =
       (snapshot.connections.httpEndpoints || [])
         .map((endpoint) => {
@@ -25,7 +25,7 @@ Desktop owns the product Gateway, Memoria, Shared Line, and InnerLife state for 
 
 1. Install ClaraCore Desktop as an MCP server in your own agent client.
 2. Set \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\` to your own stable agent id.
-3. Call \`gateway_context\` first for the current working packet.
+3. Call \`gateway_context\` first for the current working packet. Desktop uses your configured \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\` as the MCP process identity.
 4. Use exposed product Gateway tools for Memory, Shared Line, InnerLife, traces, diagnostics, import/export, and maintenance.
 5. Use CLI fallback only when MCP is unavailable or when a local recovery script needs it.
 
@@ -55,7 +55,7 @@ ${snapshot.connections.mcpConfig}
 
 ## First Context Call
 
-After installing, call \`gateway_context\` with your stable \`agentId\`.
+After installing, call \`gateway_context\`.
 
 \`gateway_context\` returns the current Shared Line, recent Memory, InnerLife state, Doctor guidance, and recovery advice in one packet.
 Any successful MCP call appears in Agent Access as recent agent activity.

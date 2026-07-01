@@ -112,6 +112,12 @@ The Desktop scheduler runs Memoria maintenance at most once per local day. The d
 - `memory.maintenance.hour`
 - `memory.maintenance.last_run_date`
 
+This is database cleanup, not an inner loop. The Electron host computes the next
+daily maintenance window and sets one timer for that moment. If the app starts
+after today's configured hour and maintenance has not run today, it runs the
+missed job immediately; after completion it schedules the next local day. It
+should not use a 60-second clock poll for this job.
+
 Current nightly maintenance includes:
 
 - Requeue missing, failed, or stale embeddings for normal active memories.

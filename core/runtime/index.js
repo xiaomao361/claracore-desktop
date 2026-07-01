@@ -145,7 +145,7 @@ function gatewayLaunchConfig(app, paths) {
 
 function productAgentSetup(app, paths, configuration) {
   const launch = gatewayLaunchConfig(app, paths);
-  const agentIdentityExamples = ["hermes:lara", "claude-code:clara", "codex"];
+  const agentIdentityExamples = ["lara", "clara", "codex"];
   return {
     gatewayStatus: "available",
     mcpServerName: "claracore-desktop",

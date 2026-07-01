@@ -34,3 +34,13 @@ requires them. Source databases are read only.
 If a new import source is added, put the source-specific reading and copy logic
 in `imports.js` or a focused helper under `core/runtime/`, then expose only a
 small facade from `index.js`.
+
+Old Memoria imports have additional label constraints:
+
+- treat `labels` / `tags` as JSON arrays when possible,
+- only fall back to comma-separated strings for legacy text,
+- ignore label rows that do not carry a real `memory_id`,
+- drop single-character and pure-punctuation labels.
+
+This keeps copied data useful for Memoria search, filtering, and graph views
+without importing tokenizer-like noise from old service tables.

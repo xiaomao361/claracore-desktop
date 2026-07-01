@@ -700,11 +700,13 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
     
     async listInnerLifeShareChecks(agentId = DEFAULT_AGENT_ID, limit = 10) {
       const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 10));
+      const agentFilter = String(agentId || DEFAULT_AGENT_ID).trim();
+      const whereClause = agentFilter === "all" ? "" : `WHERE c.agent_id = ${sqlString(agentFilter)}`;
       const rows = await this.query(`
         SELECT c.id, c.share_id, c.agent_id, c.session_id, c.context, c.decision, c.reason, c.created_at, c.metadata_json, s.body AS share_body, s.status AS share_status
         FROM innerlife_share_checks c
         LEFT JOIN innerlife_shares s ON s.id = c.share_id
-        WHERE c.agent_id = ${sqlString(agentId)}
+        ${whereClause}
         ORDER BY c.created_at DESC, c.id DESC
         LIMIT ${safeLimit};
       `);
@@ -761,7 +763,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       const inbox = inboxPage.items;
       const digestRunsPage = await this.listInnerLifeDigestRunsPage({ agentId: "all", limit: 10, offset: 0 });
       const digestRuns = digestRunsPage.items;
-      const shareChecks = profile ? await this.listInnerLifeShareChecks(profile.agent_id, 10) : [];
+      const shareChecks = await this.listInnerLifeShareChecks("all", 20);
       const history = await this.getInnerLifeHistory("all", 20);
       const experiences = await this.listInnerLifeExperiences("all", 10);
       const summaries = await this.listInnerLifeSummaries("all", 10);
@@ -1051,17 +1053,11 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
           WHERE id IN (${inboxItems.map((item) => sqlString(item.id)).join(", ")});
         `);
       }
-      const convergence = await this.convergeInnerLife({
-        agentId: profile.agent_id,
-        sourceThoughtId: thoughtId,
-        automated: true,
-        reason: "digest"
-      });
       return {
         digest: (await this.listInnerLifeDigestRuns(profile.agent_id, 100)).find((run) => run.id === digestId),
         eventId,
         thoughtId,
-        convergence,
+        convergence: null,
         processedInboxIds: inboxItems.map((item) => item.id),
         snapshot: await this.getInnerLifeSnapshot()
       };
@@ -1121,9 +1117,14 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       if (!context) {
         decision = "defer";
         reason = "No current context was provided.";
-      } else if ((share.status === "approved" || share.status === "pending") && (hasAsk || overlap.length > 0 || context.length >= 20)) {
+      } else if (share.status === "pending" && (hasAsk || overlap.length > 0 || context.length >= 20)) {
+        decision = "review_first";
+        reason = overlap.length > 0
+          ? `Pending share matches: ${overlap.slice(0, 5).join(", ")}. Review before use.`
+          : "Pending share may fit the current context, but it still requires review before use.";
+      } else if (share.status === "approved" && (hasAsk || overlap.length > 0 || context.length >= 20)) {
         decision = "use";
-        reason = overlap.length > 0 ? `Context matches: ${overlap.slice(0, 5).join(", ")}.` : "Waiting share fits the current context.";
+        reason = overlap.length > 0 ? `Approved share matches: ${overlap.slice(0, 5).join(", ")}.` : "Approved share fits the current context.";
       } else if (share.status === "deferred") {
         decision = overlap.length > 0 || hasAsk ? "use" : "defer";
         reason = decision === "use" ? "Deferred share now matches the current context." : "Deferred share still does not match the current context.";

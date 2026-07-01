@@ -723,12 +723,15 @@ function createClaraCoreHomeView(context) {
     healthList.innerHTML = (health.checks || [])
       .map((check) => {
         const level = check.level || "warn";
+        const actionView = healthActionView(check.id);
+        const actionLabel = healthActionLabel(check.id);
         return `
           <div class="health-item ${escapeHtml(level)}">
             <span class="health-dot"></span>
             <div>
               <strong>${escapeHtml(t(check.labelKey) || check.id)}</strong>
               <small>${escapeHtml(check.detail || "")}</small>
+              ${actionView ? `<button class="link-button health-action" data-view-target="${escapeHtml(actionView)}">${escapeHtml(actionLabel)}</button>` : ""}
             </div>
           </div>
         `;
@@ -736,9 +739,27 @@ function createClaraCoreHomeView(context) {
       .join("");
   }
 
+  function healthActionView(checkId) {
+    return {
+      "data-root": "data",
+      database: "data",
+      gateway: "agent-setup",
+      embedding: "models"
+    }[checkId] || "";
+  }
+
+  function healthActionLabel(checkId) {
+    return {
+      "data-root": t("health.action.openData"),
+      database: t("health.action.openData"),
+      gateway: t("health.action.openGateway"),
+      embedding: t("health.action.openModels")
+    }[checkId] || t("actions.open");
+  }
+
   function eventDetail(event) {
     const metadata = safeJsonObject(event.metadataJson || event.metadata_json || event.metadata, {});
-    return metadata.action || metadata.backupId || metadata.path || event.createdAt || "";
+    return metadata.action || metadata.backupId || metadata.path || "";
   }
 
   function eventMessage(event) {
@@ -765,11 +786,52 @@ function createClaraCoreHomeView(context) {
     return t(knownSources[source] || "") || source;
   }
 
+  function isStartupEvent(event) {
+    return String(event?.message || "").trim() === "ClaraCore Desktop started";
+  }
+
+  function eventTimestamp(event) {
+    return traceTimestamp({ createdAt: event?.createdAt || event?.created_at });
+  }
+
+  function recentActivitySignals(snapshot) {
+    const runtimeEvents = snapshot.runtimeEvents || [];
+    const startupEvents = runtimeEvents.filter(isStartupEvent);
+    const runtimeSignals = runtimeEvents
+      .filter((event) => !isStartupEvent(event))
+      .map((event) => ({
+        kind: "event",
+        level: event.level || "info",
+        title: eventMessage(event),
+        detail: `${eventSource(event)}${eventDetail(event) ? ` · ${eventDetail(event)}` : ""}`,
+        time: eventTimestamp(event)
+      }));
+    const gatewaySignals = (snapshot.gatewayTraces || []).slice(0, 10).map((trace) => ({
+      kind: "gateway",
+      level: trace.status === "error" ? "error" : "info",
+      title: trace.toolName || t("home.trace.unknownTool"),
+      detail: `${trace.agentId || t("home.trace.unknownAgent")} · ${trace.status === "error" ? t("home.trace.statusError") : t("home.trace.statusOk")} · ${trace.durationMs ?? 0}ms`,
+      time: traceTimestamp(trace)
+    }));
+    const startupSignal = startupEvents[0]
+      ? [{
+          kind: "startup",
+          level: "info",
+          title: t("home.events.startupSummary"),
+          detail: t("home.events.startupSummaryDetail", { count: String(startupEvents.length) }),
+          time: eventTimestamp(startupEvents[0])
+        }]
+      : [];
+    return [...runtimeSignals, ...gatewaySignals, ...startupSignal]
+      .sort((left, right) => right.time - left.time)
+      .slice(0, 6);
+  }
+
   function renderEvents() {
     const snapshot = getSnapshot();
     if (!snapshot) return;
-    const events = snapshot.runtimeEvents || [];
-    if (!events.length) {
+    const signals = recentActivitySignals(snapshot);
+    if (!signals.length) {
       eventList.innerHTML = `
         <li>
           <strong>${escapeHtml(t("home.events.empty"))}</strong>
@@ -778,13 +840,12 @@ function createClaraCoreHomeView(context) {
       `;
       return;
     }
-    eventList.innerHTML = events
-      .slice(0, 6)
+    eventList.innerHTML = signals
       .map(
-        (event) => `
-          <li class="${escapeHtml(event.level || "info")}">
-            <strong>${escapeHtml(eventMessage(event))}</strong>
-            <span>${escapeHtml(eventSource(event))}${eventDetail(event) ? ` · ${escapeHtml(eventDetail(event))}` : ""}</span>
+        (signal) => `
+          <li class="${escapeHtml(signal.level || "info")} ${escapeHtml(signal.kind)}">
+            <strong>${escapeHtml(signal.title)}</strong>
+            <span>${escapeHtml(signal.detail)}${signal.time ? ` · ${escapeHtml(formatRelativeTime(signal.time))}` : ""}</span>
           </li>
         `
       )

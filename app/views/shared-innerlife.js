@@ -63,6 +63,17 @@ function previewInnerLifeText(value, maxLength = 180) {
   return text.length > maxLength ? `${text.slice(0, maxLength).trim()}...` : text;
 }
 
+function previewInnerLifeDigest(value) {
+  const lines = String(value || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !/^Agent profile:/i.test(line))
+    .filter((line) => !/^Profile JSON:/i.test(line))
+    .filter((line) => !/^Current inner state:/i.test(line));
+  return previewInnerLifeText(lines.slice(0, 8).join("\n"), 360);
+}
+
 function innerLifeKindLabel(kind) {
   const normalized = String(kind || "").toLowerCase();
   if (normalized.includes("autonomous_experience")) return t("innerLife.kind.experience");
@@ -608,7 +619,7 @@ function renderInnerLife() {
               <strong>${escapeHtml(run.mode || "manual")}</strong>
               <span>${escapeHtml(run.completedAt || run.createdAt || "")}</span>
             </div>
-            <p>${escapeHtml((run.summary || "").split("\n").filter((line) => line.trim()).slice(0, 4).join("\n") || run.status || "")}</p>
+            <p>${escapeHtml(previewInnerLifeDigest(run.summary) || run.status || "")}</p>
             <small>${escapeHtml(run.status || "")}</small>
           </article>
         `
