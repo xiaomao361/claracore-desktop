@@ -118,9 +118,11 @@ Repository ownership:
 - `core/db/repositories/continuity.js`: Shared Line tables, current position,
   history, snapshots, handoffs, agent state, model adjustments, arc lifecycle,
   and Gateway context composition.
-- `core/db/repositories/innerlife.js`: InnerLife profiles, daemon state, inbox,
-  sessions, events, thoughts, shares, digest/exploration/convergence data, and
-  review flows.
+- `core/db/repositories/innerlife.js`: InnerLife repository aggregation plus
+  daemon state, inbox, sessions, events, thoughts, shares,
+  digest/exploration/convergence data, and review flows.
+- `core/db/repositories/innerlife/profile.js`: InnerLife profile create,
+  update, list, and delete persistence.
 
 New schema-heavy behavior should use an explicit migration and repository API.
 Product policy should live in a domain module rather than directly in a

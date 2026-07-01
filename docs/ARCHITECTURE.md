@@ -184,6 +184,8 @@ Current shape:
 - `core/db/repositories/memoria.js`: Memoria persistence
 - `core/db/repositories/continuity.js`: Shared Line persistence
 - `core/db/repositories/innerlife.js`: InnerLife persistence
+- `core/db/repositories/innerlife/`: focused InnerLife repository submodules,
+  starting with profile create/update/list/delete persistence
 
 Future schema-heavy changes should keep using repositories instead of growing
 `core/db/database.js` again.
