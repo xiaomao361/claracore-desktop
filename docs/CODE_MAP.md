@@ -133,6 +133,8 @@ Repository ownership:
   pagination, and submit persistence.
 - `core/db/repositories/innerlife/daemon.js`: InnerLife daemon state,
   enable/pause/tick scheduling, and per-agent tick locking.
+- `core/db/repositories/innerlife/history.js`: InnerLife history, experience,
+  summary, and digest-summary read models.
 
 New schema-heavy behavior should use an explicit migration and repository API.
 Product policy should live in a domain module rather than directly in a

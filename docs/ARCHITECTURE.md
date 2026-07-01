@@ -188,7 +188,7 @@ Current shape:
 - `core/db/repositories/continuity.js`: Shared Line persistence
 - `core/db/repositories/innerlife.js`: InnerLife persistence
 - `core/db/repositories/innerlife/`: focused InnerLife repository submodules,
-  including profile, inbox, and daemon persistence
+  including profile, inbox, daemon, and history persistence
 
 Future schema-heavy changes should keep using repositories instead of growing
 `core/db/database.js` again.
