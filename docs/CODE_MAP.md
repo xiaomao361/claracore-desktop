@@ -135,7 +135,8 @@ Start here:
 3. `core/runtime/memoria.js`
 4. `app/views/memoria.js`
 5. `core/gateway/tool-handlers/memoria.js`
-6. `core/gateway/tool-definitions/memoria.js`
+6. `core/gateway/tool-definitions/memoria.js` and
+   `core/gateway/tool-definitions/memoria-*.js`
 
 Use this path for memory create/update/delete/archive/restore/restrict,
 records, labels, graph, search, and embedding maintenance.
@@ -257,4 +258,3 @@ Choose the smallest validation that matches the changed surface.
 
 Do not default to the broadest gate when a targeted gate proves the changed
 path.
-

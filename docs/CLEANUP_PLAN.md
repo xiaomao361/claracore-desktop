@@ -19,8 +19,8 @@ Current largest files after the current split:
   lines
 - `core/runtime/imports/legacy-innerlife.js`: old InnerLife copy import, about
   620 lines
-- `core/gateway/tool-definitions/memoria.js`: Memoria MCP tool schemas, about
-  680 lines
+- `core/gateway/tool-definitions/innerlife.js`: InnerLife MCP tool schemas,
+  about 560 lines
 
 This is acceptable for the current checkpoint. The rule is not "split every
 large file immediately"; the rule is "do not grow these files when a focused
@@ -123,6 +123,8 @@ module can own the behavior."
    - Done: `core/gateway/tool-definitions.js` owns MCP tool schemas.
    - Done: MCP tool schemas are grouped by domain under
      `core/gateway/tool-definitions/`.
+   - Done: Memoria MCP tool schemas are split into core, maintenance/import/export/merge,
+     label alias, and structured-record files.
    - Done: `core/gateway/tools.js` owns handler dispatch.
    - Done: Gateway tool handlers are split under
      `core/gateway/tool-handlers/`.

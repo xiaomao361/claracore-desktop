@@ -220,6 +220,8 @@ Gateway behavior is split by responsibility:
 
 - `core/gateway/tool-definitions.js`: MCP tool schema aggregation only
 - `core/gateway/tool-definitions/`: MCP tool schemas grouped by domain
+- `core/gateway/tool-definitions/memoria-*.js`: Memoria schemas grouped by
+  core operations, maintenance/import/export/merge, label aliases, and records
 - `core/gateway/tools.js`: handler dispatch only
 - `core/gateway/tool-handlers/system.js`: Gateway/system tools
 - `core/gateway/tool-handlers/memoria.js`: Memoria tools through
