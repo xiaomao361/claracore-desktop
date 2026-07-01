@@ -182,6 +182,8 @@ Current shape:
   gateway traces, backup records, configuration, and summary
 - `core/db/migrations/`: explicit migrations
 - `core/db/repositories/memoria.js`: Memoria persistence
+- `core/db/repositories/memoria/`: focused Memoria repository submodules,
+  including label alias and canonicalization persistence
 - `core/db/repositories/continuity.js`: Shared Line persistence
 - `core/db/repositories/innerlife.js`: InnerLife persistence
 - `core/db/repositories/innerlife/`: focused InnerLife repository submodules,

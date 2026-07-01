@@ -10,7 +10,7 @@ into focused modules.
 
 Current largest files after the current split:
 
-- `core/db/repositories/memoria.js`: Memoria persistence, about 1560 lines
+- `core/db/repositories/memoria.js`: Memoria persistence, about 1500 lines
 - `core/db/repositories/innerlife.js`: InnerLife persistence aggregation, about
   1330 lines
 - `core/db/database.js`: SQLite adapter, migrations, settings, and shared
@@ -96,6 +96,8 @@ module can own the behavior."
 4. Database split
    - Keep SQLite in Node for the Desktop product.
    - Done: Memoria persistence moved to `core/db/repositories/memoria.js`.
+   - Done: Memoria label alias and canonicalization persistence moved to
+     `core/db/repositories/memoria/labels.js`.
    - Done: Continuity persistence moved to
      `core/db/repositories/continuity.js`.
    - Done: InnerLife persistence moved to `core/db/repositories/innerlife.js`.

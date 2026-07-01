@@ -115,6 +115,8 @@ Repository ownership:
 
 - `core/db/repositories/memoria.js`: Memoria tables, labels, search, graph,
   records, maintenance, embeddings, archive/delete/restrict flows.
+- `core/db/repositories/memoria/labels.js`: Memoria label alias listing,
+  creation, deletion, and canonicalization.
 - `core/db/repositories/continuity.js`: Shared Line tables, current position,
   history, snapshots, handoffs, agent state, model adjustments, arc lifecycle,
   and Gateway context composition.
