@@ -243,6 +243,18 @@ const memoriaView = window.createClaraCoreMemoriaView({
   appendLiveLogLine,
   setEmbeddingProgress
 });
+const memoriaActions = window.createClaraCoreMemoriaActions({
+  desktop: window.ClaraCoreDesktop,
+  dom: window.ClaraCoreDom,
+  memoriaView,
+  state: rendererState,
+  t,
+  refresh,
+  showCopyNotice,
+  renderMemoryResults,
+  renderMemoryTabs,
+  loadMemoryTabData
+});
 const homeView = window.createClaraCoreHomeView({
   dom: window.ClaraCoreDom,
   t,
@@ -715,67 +727,13 @@ window.ClaraCoreDom.openSettingsDataRoot?.addEventListener("click", () => {
   }
 });
 
-searchMemory.addEventListener("click", async () => {
-  const selectedAgentId = memoryAgentFilter?.value || rendererState.activeMemoryAgentFilter || "";
-  rendererState.activeMemoryAgentFilter = selectedAgentId;
-  memoriaView.setActiveAgentFilter(selectedAgentId);
-  const response = await window.ClaraCoreDesktop.searchMemories({
-    query: memorySearchInput.value,
-    agentId: selectedAgentId
-  });
-  const results = Array.isArray(response) ? response : response?.results || [];
-  renderMemoryResults(results);
-  if (response?.error) showCopyNotice(t("memory.search.fallback"));
-});
-
-memoryAgentFilter?.addEventListener("change", async () => {
-  rendererState.activeMemoryAgentFilter = memoryAgentFilter.value || "";
-  memoriaView.setActiveAgentFilter(rendererState.activeMemoryAgentFilter);
-  if (memoriaView.getActiveTab() === "search") {
-    searchMemory.click();
-  } else {
-    await loadMemoryTabData(memoriaView.getActiveTab(), { force: true });
-  }
-});
-
 innerLifeAgentFilter?.addEventListener("change", () => {
   rendererState.activeInnerLifeAgentFilter = innerLifeAgentFilter.value || "";
   renderInnerLife();
 });
 
 innerLifeActions.bindEvents();
-
-processMemoryEmbeddings.addEventListener("click", () => {
-  memoriaView.processEmbeddings().catch(console.error);
-});
-
-memorySearchInput.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    searchMemory.click();
-  }
-});
-
-function searchMemoryLabel(label) {
-  memoriaView.searchMemoryLabel(label);
-}
-
-memoryTabs.forEach((tab) => {
-  tab.addEventListener("click", async () => {
-    const nextTab = tab.dataset.memoryTab || "search";
-    if (nextTab === "restricted" && memoriaView.getActiveTab() !== "restricted" && !window.confirm(t("memory.restricted.confirm"))) {
-      renderMemoryTabs();
-      return;
-    }
-    memoriaView.setActiveTab(nextTab);
-    renderMemoryTabs();
-    try {
-      await loadMemoryTabData(nextTab);
-    } catch (error) {
-      console.error(error);
-      showCopyNotice(t("runtime.unavailable"));
-    }
-  });
-});
+memoriaActions.bindEvents();
 
 function setSharedLineTab(tabName) {
   sharedLineTabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.sharedLineTab === tabName));
@@ -789,122 +747,6 @@ sharedLineTabs.forEach((tab) => {
 sharedLineAgentFilter.addEventListener("change", () => {
   rendererState.activeSharedLineAgentFilter = sharedLineAgentFilter.value || "";
   renderSharedLine();
-});
-
-memoryLabelList.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-memory-label]");
-  if (!button) return;
-  searchMemoryLabel(button.dataset.memoryLabel || "");
-});
-
-memoryAllLabelList.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-memory-label]");
-  if (!button) return;
-  searchMemoryLabel(button.dataset.memoryLabel || "");
-});
-
-document.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-load-more]");
-  if (!button) return;
-  button.disabled = true;
-  loadMemoryTabData(button.dataset.loadMore, { append: true })
-    .catch((error) => {
-      console.error(error);
-      showCopyNotice(t("runtime.unavailable"));
-    })
-    .finally(() => {
-      button.disabled = false;
-    });
-});
-
-memoryGraph.addEventListener("click", (event) => {
-  const zoomButton = event.target.closest("[data-graph-zoom]");
-  if (zoomButton) {
-    memoriaView.setMemoryGraphZoom(zoomButton.dataset.graphZoom || "fit");
-    return;
-  }
-  const layerButton = event.target.closest("[data-graph-layer]");
-  if (layerButton) {
-    memoriaView.setMemoryGraphLayer(layerButton.dataset.graphLayer || "primary").catch((error) => {
-      console.error(error);
-      showCopyNotice(t("runtime.unavailable"));
-    });
-  }
-});
-
-memoryGraph.addEventListener("wheel", (event) => {
-  if (!event.target.closest(".graph-canvas")) return;
-  event.preventDefault();
-  memoriaView.setMemoryGraphZoom(event.deltaY < 0 ? "in" : "out");
-});
-
-memoryGraph.addEventListener("mousedown", (event) => {
-  memoriaView.beginGraphDrag(event);
-});
-
-window.addEventListener("mousemove", (event) => {
-  memoriaView.moveGraphDrag(event);
-});
-
-window.addEventListener("mouseup", () => {
-  memoriaView.endGraphDrag();
-});
-
-async function handleMemoryListAction(event) {
-  const button = event.target.closest("[data-memory-action]");
-  if (!button) return;
-  const memoryId = button.dataset.memoryId;
-  if (button.dataset.memoryAction === "delete") {
-    if (!window.confirm(t("memory.delete.confirm"))) return;
-    button.disabled = true;
-    await window.ClaraCoreDesktop.deleteMemory(memoryId);
-    await refresh();
-    showCopyNotice(t("memory.form.deleted"));
-  }
-}
-
-memoryList.addEventListener("click", handleMemoryListAction);
-allMemoryList.addEventListener("click", handleMemoryListAction);
-
-restrictedMemoryList.addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-memory-action]");
-  if (!button) return;
-  const memoryId = button.dataset.memoryId;
-  if (button.dataset.memoryAction === "delete-restricted") {
-    if (!window.confirm(t("memory.delete.confirm"))) return;
-    button.disabled = true;
-    await window.ClaraCoreDesktop.deleteMemory(memoryId);
-    await refresh();
-    showCopyNotice(t("memory.form.deleted"));
-  }
-});
-
-archivedMemoryList.addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-memory-action='restore-archived']");
-  if (!button) return;
-  button.disabled = true;
-  try {
-    await window.ClaraCoreDesktop.restoreArchivedMemory(button.dataset.memoryId);
-    await refresh();
-    showCopyNotice(t("memory.archive.restoreDone"));
-  } catch (error) {
-    console.error(error);
-    showCopyNotice(t("memory.form.saveFailed"));
-  }
-});
-
-deletedMemoryList.addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-memory-action='restore']");
-  if (!button) return;
-  button.disabled = true;
-  try {
-    await window.ClaraCoreDesktop.restoreMemory(button.dataset.memoryId);
-    await refresh();
-    showCopyNotice(t("memory.form.restored"));
-  } catch (error) {
-    console.error(error);
-    showCopyNotice(t("memory.form.saveFailed"));
-  }
 });
 
 sharedLineList.addEventListener("click", async (event) => {
