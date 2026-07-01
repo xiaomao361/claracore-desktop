@@ -28,7 +28,8 @@ Large surfaces must page or lazy-load:
 - Memoria All, Restricted, Deleted, and Archived lists use `limit` and `offset`.
 - Memory graph loads only when the Graph tab is opened. Its renderer uses the
   bounded graph cache to draw a spherical canvas projection; it should avoid
-  adding DOM nodes per graph item.
+  adding DOM nodes per graph item. Canvas labels should stay selective and use
+  simple collision avoidance so dense graphs do not become text clouds.
 - InnerLife sessions, inbox, and digest runs use page objects.
 - Gateway trace review should stay recent by default; deep trace browsing should
   be a separate paged surface before trace volume grows.

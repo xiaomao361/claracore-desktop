@@ -85,7 +85,8 @@ No known data-loss or launch-blocking issue is currently captured here.
   label cloud instead of a memory-link surface.
 - Fix: remove the duplicate footer brand slot, center the compact runtime
   metrics, and redraw the Memoria graph as a spherical canvas projection with
-  depth-aware links, fewer foreground labels, and reduced-motion fallback.
+  depth-aware links, selected label callouts, collision avoidance, and
+  reduced-motion fallback.
 - Verification: `npm run check`.
 
 ### 2026-06-30 - Gateway share timing and isolated UI smoke tests

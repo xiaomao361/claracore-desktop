@@ -747,31 +747,71 @@ function drawMemoryGraphCanvas() {
     ctx.stroke();
   }
 
-  ctx.font = "600 10px Inter, ui-sans-serif, system-ui, sans-serif";
+  ctx.font = "620 10.5px Inter, ui-sans-serif, system-ui, sans-serif";
   ctx.textBaseline = "middle";
-  const labeledHubs = [...hubNodes]
-    .filter(({ p }) => p.depth > -0.2)
+  const selectedLabelHubs = [];
+  const labelCandidates = [...hubNodes]
+    .filter(({ p }) => p.depth > -0.28)
     .sort((left, right) => {
-      const rank = safeDegree(right.node.id) - safeDegree(left.node.id);
-      return rank || right.p.depth - left.p.depth;
-    })
-    .slice(0, 34)
-    .sort((left, right) => left.p.depth - right.p.depth);
+      const leftRank = safeDegree(left.node.id) + Math.max(0, left.p.depth) * 10;
+      const rightRank = safeDegree(right.node.id) + Math.max(0, right.p.depth) * 10;
+      return rightRank - leftRank;
+    });
+  for (const item of labelCandidates) {
+    const tooClose = selectedLabelHubs.some((selected) => {
+      const dx = selected.p.x - item.p.x;
+      const dy = selected.p.y - item.p.y;
+      return Math.sqrt(dx * dx + dy * dy) < 58;
+    });
+    if (!tooClose) selectedLabelHubs.push(item);
+    if (selectedLabelHubs.length >= 18) break;
+  }
+  const placedLabels = [];
+  const labeledHubs = selectedLabelHubs.sort((left, right) => left.p.y - right.p.y);
   for (const { node, p } of labeledHubs) {
-    const label = truncateCanvasText(labelForNode(node), node.kind === "label" ? 106 : 132);
+    const label = truncateCanvasText(labelForNode(node), node.kind === "label" ? 92 : 118);
     const textWidth = ctx.measureText(label).width;
-    const pillWidth = Math.min(148, textWidth + 18);
-    const pillHeight = 22;
-    const x = Math.min(rect.width - pillWidth - 8, Math.max(8, p.x + p.r + 8));
-    const y = Math.min(rect.height - pillHeight - 8, Math.max(8, p.y - pillHeight / 2));
-    roundRect(x, y, pillWidth, pillHeight, 11);
+    const pillWidth = Math.min(128, textWidth + 18);
+    const pillHeight = 21;
+    const fromCenterX = p.x - centerX;
+    const fromCenterY = p.y - centerY;
+    const side = fromCenterX < 0 ? -1 : 1;
+    const verticalBias = Math.max(-1, Math.min(1, fromCenterY / Math.max(1, sphereRadius)));
+    let x = side < 0 ? p.x - pillWidth - 24 : p.x + 24;
+    let y = p.y - pillHeight / 2 + verticalBias * 14;
+    x = Math.min(rect.width - pillWidth - 10, Math.max(10, x));
+    y = Math.min(rect.height - pillHeight - 10, Math.max(10, y));
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const overlaps = placedLabels.some((box) =>
+        x < box.x + box.w + 7 &&
+        x + pillWidth + 7 > box.x &&
+        y < box.y + box.h + 6 &&
+        y + pillHeight + 6 > box.y
+      );
+      if (!overlaps) break;
+      const direction = p.y < centerY ? -1 : 1;
+      y = Math.min(rect.height - pillHeight - 10, Math.max(10, y + direction * (pillHeight + 7)));
+    }
+    placedLabels.push({ x, y, w: pillWidth, h: pillHeight });
     const front = Math.max(0.35, Math.min(1, (p.depth + 1.05) / 2.05));
-    ctx.globalAlpha = 0.58 + front * 0.42;
+    const anchorX = x + (side < 0 ? pillWidth : 0);
+    const anchorY = y + pillHeight / 2;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.quadraticCurveTo((p.x + anchorX) / 2, p.y + (anchorY - p.y) * 0.18, anchorX, anchorY);
+    ctx.strokeStyle = node.kind === "label"
+      ? `rgba(${isDarkTheme ? "215, 159, 75" : "189, 127, 40"}, ${0.16 + front * 0.12})`
+      : `rgba(${graphTheme.core}, ${0.14 + front * 0.12})`;
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+    roundRect(x, y, pillWidth, pillHeight, 10.5);
+    ctx.globalAlpha = 0.5 + front * 0.36;
     ctx.fillStyle = graphTheme.pillFill;
     ctx.fill();
     ctx.strokeStyle = node.kind === "label" ? graphTheme.labelPillStroke : graphTheme.sharedLinePillStroke;
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 0.85;
     ctx.stroke();
+    ctx.globalAlpha = 0.72 + front * 0.28;
     ctx.fillStyle = graphTheme.pillText;
     ctx.fillText(label, x + 9, y + pillHeight / 2);
     ctx.globalAlpha = 1;
