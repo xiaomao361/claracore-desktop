@@ -74,7 +74,7 @@ function usage() {
       "restore --id <memory_id>",
       "archive --id <memory_id>",
       "restore-archived --id <memory_id>",
-      "tag --id <memory_id> [--add a,b] [--remove c,d]",
+      "tag --id <memory_id> [--labels a,b] [--add a,b] [--remove c,d]",
       "stats",
       "labels",
       "maintenance check|run|audit [--dry-run]",
@@ -175,7 +175,21 @@ async function runMemoryCommand(app, command, subcommand, options) {
   if (command === "restore-archived") return { memory: await runtime.restoreArchivedProductMemory(app, requireOption(options, "id")) };
   if (command === "tag") {
     const { database } = await runtime.ensureProductCore(app);
-    return database.updateMemoryLabels(requireOption(options, "id"), {
+    const memoryId = requireOption(options, "id");
+    if (options.labels !== undefined && options.add === undefined && options.remove === undefined) {
+      const memory = await database.getMemory(memoryId);
+      if (!memory) throw new Error("Memory not found.");
+      return {
+        memory: await runtime.updateProductMemory(app, memoryId, {
+          title: memory.title || "",
+          body: memory.body || "",
+          labels: splitLabels(options.labels),
+          sensitivity: memory.sensitivity || "normal"
+        }),
+        replaced: true
+      };
+    }
+    return database.updateMemoryLabels(memoryId, {
       add: splitLabels(options.add || options.labels),
       remove: splitLabels(options.remove)
     });
