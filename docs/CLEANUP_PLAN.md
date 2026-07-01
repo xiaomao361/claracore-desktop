@@ -12,7 +12,7 @@ Current largest files after the current split:
 
 - `core/db/repositories/innerlife.js`: InnerLife persistence, about 1840 lines
 - `core/db/repositories/memoria.js`: Memoria persistence, about 1560 lines
-- `app.js`: renderer orchestration and event wiring, about 1230 lines
+- `app.js`: renderer orchestration and event wiring, about 1070 lines
 - `styles/views/home-dashboard.css`: Home dashboard/agent/trace styles, about
   440 lines
 - `styles/views/home-runtime.css`: Home runtime/orb/attention styles, about 430
