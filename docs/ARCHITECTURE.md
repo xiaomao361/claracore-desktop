@@ -87,6 +87,8 @@ New renderer work should go into a focused module, not into `app.js`.
 `styles.css` is an import entry. Shared and view-specific styles live under
 `styles/`; add new CSS near the view or component it serves instead of growing a
 single stylesheet again.
+`styles/views/home.css` is a Home style entry that imports focused Home files
+for base, runtime, module, dashboard, and event/motion styling.
 
 The Home page is the operational board for the local agent runtime. It should
 make runtime state inspectable at a glance without becoming a generic settings

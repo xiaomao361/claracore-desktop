@@ -1,0 +1,249 @@
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 0;
+}
+
+.module-card {
+  min-width: 0;
+  padding: 14px;
+}
+
+.module-card header {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  min-height: 64px;
+}
+
+.module-card strong {
+  display: block;
+  font-size: 16px;
+  line-height: 1.15;
+}
+
+.module-card p {
+  margin-top: 9px;
+}
+
+.module-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  position: relative;
+  border-radius: 8px;
+  background: var(--blue-bg);
+  color: var(--blue);
+  font-weight: 760;
+}
+
+.module-icon span,
+.module-icon::before,
+.module-icon::after {
+  display: block;
+}
+
+.module-icon svg {
+  width: 25px;
+  height: 25px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.gateway .module-icon {
+  background: var(--blue-bg);
+  color: var(--blue);
+}
+
+.gateway .module-icon span {
+  width: 22px;
+  height: 22px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  position: relative;
+}
+
+.gateway .module-icon span::before,
+.gateway .module-icon span::after {
+  content: "";
+  position: absolute;
+  background: currentColor;
+}
+
+.gateway .module-icon span::before {
+  left: 3px;
+  right: 3px;
+  top: 9px;
+  height: 2px;
+}
+
+.gateway .module-icon span::after {
+  top: 3px;
+  bottom: 3px;
+  left: 9px;
+  width: 2px;
+}
+
+.memoria .module-icon {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.memoria .module-icon span {
+  width: 22px;
+  height: 18px;
+  position: relative;
+  border: 2px solid currentColor;
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+}
+
+.memoria .module-icon span::before,
+.memoria .module-icon span::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  width: 22px;
+  height: 8px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.memoria .module-icon span::before {
+  top: -6px;
+}
+
+.memoria .module-icon span::after {
+  top: 3px;
+  border-top: 0;
+}
+
+.continuity .module-icon {
+  background: var(--amber-bg);
+  color: var(--amber);
+}
+
+.continuity .module-icon span {
+  width: 23px;
+  height: 23px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  position: relative;
+}
+
+.continuity .module-icon span::before,
+.continuity .module-icon span::after {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 5px;
+  width: 2px;
+  height: 7px;
+  background: currentColor;
+  border-radius: 2px;
+}
+
+.continuity .module-icon span::after {
+  left: 10px;
+  top: 10px;
+  width: 7px;
+  height: 2px;
+}
+
+.innerlife .module-icon {
+  background: #eef0ea;
+  color: var(--muted);
+}
+
+.innerlife .module-icon span {
+  width: 23px;
+  height: 20px;
+  position: relative;
+  transform: rotate(-45deg);
+}
+
+.innerlife .module-icon span::before,
+.innerlife .module-icon span::after {
+  content: "";
+  position: absolute;
+  width: 13px;
+  height: 20px;
+  border: 2px solid currentColor;
+  border-radius: 13px 13px 0 0;
+  border-bottom: 0;
+}
+
+.innerlife .module-icon span::before {
+  left: 0;
+  transform: rotate(90deg);
+  transform-origin: 10px 12px;
+}
+
+.innerlife .module-icon span::after {
+  left: 8px;
+}
+
+.module-card.is-ready {
+  border-top: 0;
+}
+
+.module-card.is-paused {
+  border-top: 0;
+  background: linear-gradient(180deg, #fffdf8 0%, #ffffff 70%);
+}
+
+.module-card.is-planned {
+  border-top: 0;
+  background: linear-gradient(180deg, #f8faf7 0%, #ffffff 70%);
+}
+
+.module-card.needs-attention {
+  border-top: 0;
+}
+
+.module-details {
+  display: grid;
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.module-detail {
+  display: grid;
+  grid-template-columns: 0.8fr minmax(0, 1fr);
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.module-detail span {
+  color: var(--muted);
+}
+
+.module-detail strong {
+  min-width: 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 520;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.home-module-board {
+  margin-bottom: 16px;
+}
+
+.home-module-board .panel-heading {
+  margin-bottom: 14px;
+}
+
+.home-module-board .link-button {
+  margin-top: 10px;
+}
+

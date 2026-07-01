@@ -10,14 +10,17 @@ into focused modules.
 
 Current largest files after the current split:
 
-- `core/db/repositories/innerlife.js`: InnerLife persistence, about 1920 lines
+- `core/db/repositories/innerlife.js`: InnerLife persistence, about 1840 lines
 - `core/db/repositories/memoria.js`: Memoria persistence, about 1560 lines
-- `app.js`: renderer orchestration and event wiring, about 1310 lines
-- `styles/views/home.css`: Home view styles, about 1280 lines
+- `app.js`: renderer orchestration and event wiring, about 1230 lines
+- `styles/views/home-dashboard.css`: Home dashboard/agent/trace styles, about
+  440 lines
+- `styles/views/home-runtime.css`: Home runtime/orb/attention styles, about 430
+  lines
 - `core/runtime/imports/legacy-innerlife.js`: old InnerLife copy import, about
   620 lines
 - `core/gateway/tool-definitions/memoria.js`: Memoria MCP tool schemas, about
-  580 lines
+  680 lines
 
 This is acceptable for the current checkpoint. The rule is not "split every
 large file immediately"; the rule is "do not grow these files when a focused
@@ -51,6 +54,8 @@ module can own the behavior."
    - Done: `styles.css` is now only an ordered import entry.
    - Done: shared layout/component styles live under `styles/`.
    - Done: view-specific styles live under `styles/views/`.
+   - Done: Home styles are split behind `styles/views/home.css` into base,
+     runtime, module, dashboard, and event/motion files.
 
 3. Core runtime split
    - `core/runtime/` is the runtime boundary.

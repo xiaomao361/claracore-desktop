@@ -1,0 +1,23 @@
+.module-card,
+.panel {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.module-card p,
+.panel p {
+  margin-bottom: 0;
+}
+
+.mini-label {
+  display: block;
+  color: var(--faint);
+  font-size: 11px;
+  font-weight: 720;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
