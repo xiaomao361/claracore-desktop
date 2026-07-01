@@ -66,7 +66,8 @@ The renderer currently uses plain script tags and no frontend build step.
 Focused renderer modules live under `app/`:
 
 - `app/dom.js`: DOM bindings only
-- `app/i18n.js`: translation dictionaries only
+- `app/i18n.js`: translation aggregation only
+- `app/i18n/`: locale dictionaries
 - `app/view-registry.js`: view metadata only
 - `app/utils.js`: pure formatting and HTML helpers
 - `app/views/agent-setup.js`: Agent Access view

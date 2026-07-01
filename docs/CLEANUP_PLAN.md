@@ -13,6 +13,7 @@ Current largest files after the current split:
 - `core/db/repositories/innerlife.js`: InnerLife persistence, about 1920 lines
 - `core/db/repositories/memoria.js`: Memoria persistence, about 1560 lines
 - `app.js`: renderer orchestration and event wiring, about 1310 lines
+- `styles/views/home.css`: Home view styles, about 1280 lines
 - `core/runtime/imports/legacy-innerlife.js`: old InnerLife copy import, about
   620 lines
 - `core/gateway/tool-definitions/memoria.js`: Memoria MCP tool schemas, about
@@ -26,7 +27,8 @@ module can own the behavior."
 
 1. Renderer split
    - Done: `app/dom.js` contains DOM bindings only.
-   - Done: `app/i18n.js` contains translation dictionaries only.
+   - Done: `app/i18n.js` aggregates locale dictionaries only.
+   - Done: locale dictionaries live under `app/i18n/`.
    - Done: `app/view-registry.js` contains the view registry only.
    - Done: `app/utils.js` contains pure formatting and HTML helpers.
    - Done: extract view renderers into focused files under `app/views/`.
