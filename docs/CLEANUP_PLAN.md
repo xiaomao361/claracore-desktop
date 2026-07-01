@@ -47,6 +47,8 @@ module can own the behavior."
    - Done: `app/views/logs.js` owns log rendering, live UI log lines, follow
      state, and log auto-refresh.
    - Done: `app/views/settings.js` owns settings and model config form logic.
+   - Done: `app/views/home-trace.js` owns Home Gateway trace and agent
+     activity helpers.
    - Done: `app/memoria-actions.js` owns Memoria search, tab, graph, and list
      action wiring.
    - Done: `app/shared-line-actions.js` owns Shared Line tab, filter, line

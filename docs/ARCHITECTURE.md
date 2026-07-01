@@ -80,6 +80,7 @@ Focused renderer modules live under `app/`:
 - `app/views/agent-setup.js`: Agent Access view
 - `app/views/data.js`: Data, backup, import, export, and restore view
 - `app/views/home.js`: overview, modules, health, and trace summary view
+- `app/views/home-trace.js`: Home Gateway trace and agent activity helpers
 - `app/views/logs.js`: Logs view
 - `app/views/memoria.js`: Memoria workbench, tabs, graph, labels, and embedding
 - `app/views/settings.js`: model configuration collection plus Settings-page appearance, window, data-path, and about rendering
