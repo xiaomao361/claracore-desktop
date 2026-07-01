@@ -11,11 +11,12 @@ into focused modules.
 Current largest files after the current split:
 
 - `core/db/repositories/innerlife.js`: InnerLife persistence, about 1920 lines
-- `core/runtime/imports.js`: archive and old-service import workflows, about
-  1700 lines
 - `core/db/repositories/memoria.js`: Memoria persistence, about 1560 lines
-- `core/gateway/tool-definitions.js`: MCP tool schemas, about 1310 lines
 - `app.js`: renderer orchestration and event wiring, about 1310 lines
+- `core/runtime/imports/legacy-innerlife.js`: old InnerLife copy import, about
+  620 lines
+- `core/gateway/tool-definitions/memoria.js`: Memoria MCP tool schemas, about
+  580 lines
 
 This is acceptable for the current checkpoint. The rule is not "split every
 large file immediately"; the rule is "do not grow these files when a focused
@@ -54,6 +55,8 @@ module can own the behavior."
    - Done: backup and restore moved to `core/runtime/backup.js`.
    - Done: archive import/export and old-service imports moved to
      `core/runtime/imports.js`.
+   - Done: focused archive/import implementations are split under
+     `core/runtime/imports/`.
    - Runtime coordinates paths, initialization, snapshots, and cross-module
      orchestration.
    - Domain behavior belongs in `core/memoria`, `core/continuity`, and
@@ -65,6 +68,8 @@ module can own the behavior."
    - Done: Continuity persistence moved to
      `core/db/repositories/continuity.js`.
    - Done: InnerLife persistence moved to `core/db/repositories/innerlife.js`.
+   - Done: InnerLife prompts/share policy/compact response shaping moved to
+     `core/innerlife/policy.js`.
    - Add explicit migrations before new schema-heavy features.
 
 5. Documentation cleanup
@@ -102,6 +107,8 @@ module can own the behavior."
    - Done: `core/gateway/mcp-server.js` now owns stdio MCP transport, process
      lifecycle, database connection caching, and trace recording.
    - Done: `core/gateway/tool-definitions.js` owns MCP tool schemas.
+   - Done: MCP tool schemas are grouped by domain under
+     `core/gateway/tool-definitions/`.
    - Done: `core/gateway/tools.js` owns handler dispatch.
    - Done: Gateway tool handlers are split under
      `core/gateway/tool-handlers/`.
@@ -125,10 +132,10 @@ Complete these first:
 Remaining refinement:
 
 - Keep shrinking `app.js` only when event wiring naturally belongs with a view.
-- Consider splitting `core/runtime/imports.js` later if old-service migration
-  grows again.
-- Consider grouping MCP tool schemas by domain if
-  `core/gateway/tool-definitions.js` continues expanding.
+- Consider splitting `core/runtime/imports/legacy-innerlife.js` further if old
+  InnerLife migration grows again.
+- Consider smaller schema helper builders only if individual Gateway schema
+  groups become repetitive.
 - Consider splitting Memoria repository search/records/maintenance sections if
   persistence changes keep growing.
 - Consider a separate gateway repository if gateway trace persistence expands.

@@ -20,6 +20,7 @@ The Desktop runtime is Node/Electron.
 - Runtime path helpers: `core/runtime/paths.js`
 - Backup and restore workflows: `core/runtime/backup.js`
 - Archive import/export and old-service copy imports: `core/runtime/imports.js`
+  and `core/runtime/imports/`
 - Product database: `core/db/`
 - Domain modules: `core/memoria`, `core/continuity`, `core/innerlife`
 - Agent Gateway: `core/gateway`
@@ -114,7 +115,9 @@ Runtime should coordinate cross-module workflows:
 - initialize the product database
 - create snapshots
 - delegate backup and restore to `core/runtime/backup.js`
-- delegate archive import/export and old-service imports to `core/runtime/imports.js`
+- delegate archive import/export and old-service imports through
+  `core/runtime/imports.js`; focused implementation modules live under
+  `core/runtime/imports/`
 - delegate domain behavior
 
 Product data portability is the normal Data page contract: use verified SQLite
@@ -129,6 +132,12 @@ Domain behavior belongs in:
   adjustments, shared-reality/affective arc lifecycle (cap, truncation, compaction)
 - `core/innerlife`: sessions, inbox, digest, exploration, convergence,
   model-backed generation, share timing, daemon state
+
+Domain policy should live with the domain module even when persistence still
+uses repository methods. For example, InnerLife prompts, share policy defaults,
+compact response shaping, and model-generation fallback live in
+`core/innerlife/policy.js`; `core/db/repositories/innerlife.js` should keep
+moving toward persistence and query orchestration only.
 
 Runtime modules may compose multiple domains for product workflows, such as
 snapshots, backup-gated imports, or archive export. They should not become the
@@ -199,7 +208,8 @@ Gateway trace recording.
 
 Gateway behavior is split by responsibility:
 
-- `core/gateway/tool-definitions.js`: MCP tool schemas only
+- `core/gateway/tool-definitions.js`: MCP tool schema aggregation only
+- `core/gateway/tool-definitions/`: MCP tool schemas grouped by domain
 - `core/gateway/tools.js`: handler dispatch only
 - `core/gateway/tool-handlers/system.js`: Gateway/system tools
 - `core/gateway/tool-handlers/memoria.js`: Memoria tools through
