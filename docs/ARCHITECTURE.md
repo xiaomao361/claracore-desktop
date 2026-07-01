@@ -191,6 +191,8 @@ Current shape:
   including label alias, canonicalization, structured record, and
   embedding/search/maintenance persistence
 - `core/db/repositories/continuity.js`: Shared Line persistence
+- `core/db/repositories/continuity/`: focused Shared Line repository
+  submodules, including agent state and model adjustment persistence
 - `core/db/repositories/innerlife.js`: InnerLife persistence
 - `core/db/repositories/innerlife/`: focused InnerLife repository submodules,
   including profile, inbox, daemon, history, session, and share persistence

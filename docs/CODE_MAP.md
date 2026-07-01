@@ -130,8 +130,9 @@ Repository ownership:
   maintenance reports and repair, audit reports, merge suggestions, and merge
   persistence.
 - `core/db/repositories/continuity.js`: Shared Line tables, current position,
-  history, snapshots, handoffs, agent state, model adjustments, arc lifecycle,
-  and Gateway context composition.
+  history, snapshots, handoffs, arc lifecycle, and Gateway context composition.
+- `core/db/repositories/continuity/agents.js`: Shared Line agent state and
+  model adjustment persistence.
 - `core/db/repositories/innerlife.js`: InnerLife repository aggregation plus
   events, thoughts, shares, digest/exploration/convergence data, and review
   flows.

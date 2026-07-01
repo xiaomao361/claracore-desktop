@@ -10,14 +10,14 @@ into focused modules.
 
 Current largest files after the current split:
 
-- `core/db/repositories/continuity.js`: Shared Line persistence, about 950
-  lines
 - `core/db/database.js`: SQLite adapter, migrations, settings, and runtime
   database metadata, about 910 lines
 - `app/i18n/en.js` and `app/i18n/zh.js`: locale dictionaries, about 900 lines
   each
 - `app.js`: renderer orchestration and event wiring, about 850 lines
 - `app/views/memoria.js`: Memoria view rendering and actions, about 830 lines
+- `core/db/repositories/continuity.js`: Shared Line persistence, about 800
+  lines
 - `app/views/home.js`: Home view rendering, about 820 lines
 - `app/views/shared-innerlife.js`: Shared Line and InnerLife rendering, about
   770 lines
@@ -111,6 +111,8 @@ module can own the behavior."
      `core/db/repositories/memoria/maintenance.js`.
    - Done: Continuity persistence moved to
      `core/db/repositories/continuity.js`.
+   - Done: Continuity agent state and model adjustment persistence moved to
+     `core/db/repositories/continuity/agents.js`.
    - Done: InnerLife persistence moved to `core/db/repositories/innerlife.js`.
    - Done: InnerLife profile persistence moved to
      `core/db/repositories/innerlife/profile.js`.
