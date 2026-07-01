@@ -55,6 +55,8 @@ module can own the behavior."
    - `core/runtime/index.js` is the public entry for Electron, CLI, Gateway, and
      tests.
    - Done: Home/status snapshot assembly moved to `core/runtime/snapshot.js`.
+   - Done: Memoria runtime workflows, graph cache refresh, maintenance, and
+     embedding batch processing moved to `core/runtime/memoria.js`.
    - Done: backup and restore moved to `core/runtime/backup.js`.
    - Done: archive import/export and old-service imports moved to
      `core/runtime/imports.js`.
