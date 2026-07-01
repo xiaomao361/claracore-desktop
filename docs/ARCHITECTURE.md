@@ -231,6 +231,20 @@ level so schema initialization and migrations only run once per process. Do not
 call `initializeProductDatabase` directly from code that runs on every request
 or IPC handler; route through `ensureProductCore` instead.
 
+Repositories build SQL by string interpolation and escape values by
+convention (`sqlString()`/`jsonSql()` from `core/db/helpers.js`), not by
+parameter binding. This is a direct consequence of the dual execution path
+above: the `node:sqlite` path could bind parameters, but the `sqlite3` CLI
+fallback pipes a full SQL text blob over stdin and has no bind-parameter
+protocol, so both paths have to go through the same string-built `query(sql)`/
+`exec(sql)` interface. `core/tests/sql-interpolation-lint.js` (part of
+`npm run check`) statically checks every SQL template literal under
+`core/db/repositories/` and `core/db/database.js` and fails the build if a
+`${}` interpolation is not provably escaped, numeric, or an explicitly
+verified pre-built SQL fragment. Extend its allowlist only after reading
+where the flagged identifier is declared and confirming it cannot carry
+unescaped external input.
+
 ## Gateway Boundary
 
 `core/gateway/mcp-server.js` is the agent-facing MCP transport surface. It owns
@@ -313,7 +327,8 @@ executable bit where relevant, and is discoverable through
 Use these gates for current development:
 
 - `npm run check`: syntax and module-load check across Electron, core, tests,
-  and renderer modules.
+  and renderer modules; also runs the SQL interpolation lint
+  (`npm run test:sql-lint` runs it alone).
 - `npm run test:sqlite-binary`: packaged SQLite resource integrity and resolver
   check.
 - `npm run test:phase5`: InnerLife runtime, UI, and scheduler coverage.

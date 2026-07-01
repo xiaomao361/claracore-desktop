@@ -15,6 +15,22 @@ function createInnerLifeSessionRepository(helpers) {
     sqlString
   } = helpers;
 
+  function mapSessionRow(row) {
+    return {
+      id: row.id,
+      agentId: row.agent_id,
+      userId: row.user_id,
+      host: row.host,
+      externalSessionId: row.external_session_id,
+      status: row.status,
+      startedAt: row.started_at,
+      endedAt: row.ended_at,
+      briefing: parseJson(row.briefing_json, {}),
+      summary: row.summary || "",
+      metadata: parseJson(row.metadata_json, {})
+    };
+  }
+
   return {
     async countInnerLifeSessions(agentId = "all") {
       const agentFilter = String(agentId || "all").trim();
@@ -39,19 +55,19 @@ function createInnerLifeSessionRepository(helpers) {
         ORDER BY started_at DESC, id DESC
         LIMIT ${safeLimit} OFFSET ${safeOffset};
       `);
-      return rows.map((row) => ({
-        id: row.id,
-        agentId: row.agent_id,
-        userId: row.user_id,
-        host: row.host,
-        externalSessionId: row.external_session_id,
-        status: row.status,
-        startedAt: row.started_at,
-        endedAt: row.ended_at,
-        briefing: parseJson(row.briefing_json, {}),
-        summary: row.summary || "",
-        metadata: parseJson(row.metadata_json, {})
-      }));
+      return rows.map(mapSessionRow);
+    },
+
+    async getInnerLifeSession(id) {
+      const sessionId = String(id || "").trim();
+      if (!sessionId) throw new Error("InnerLife session id is required.");
+      const rows = await this.query(`
+        SELECT id, agent_id, user_id, host, external_session_id, status, started_at, ended_at, briefing_json, summary, metadata_json
+        FROM innerlife_sessions
+        WHERE id = ${sqlString(sessionId)}
+        LIMIT 1;
+      `);
+      return rows[0] ? mapSessionRow(rows[0]) : null;
     },
 
     async listInnerLifeSessionsPage(input = {}) {
@@ -124,7 +140,7 @@ function createInnerLifeSessionRepository(helpers) {
         LIMIT 1;
       `);
       if (existing[0]?.id) {
-        const session = (await this.listInnerLifeSessions(profile.agent_id, 100)).find((item) => item.id === existing[0].id);
+        const session = await this.getInnerLifeSession(existing[0].id);
         const briefing = parseJson((await this.query(`SELECT briefing_json FROM innerlife_sessions WHERE id = ${sqlString(existing[0].id)};`))[0]?.briefing_json, {});
         return buildStartPacket(session, briefing, true);
       }
@@ -143,7 +159,7 @@ function createInnerLifeSessionRepository(helpers) {
           ${jsonSql({ startedBy: "desktop" })}
         );
       `);
-      const session = (await this.listInnerLifeSessions(profile.agent_id, 100)).find((item) => item.id === id);
+      const session = await this.getInnerLifeSession(id);
       return buildStartPacket(session, briefing, false);
     },
 
@@ -218,11 +234,11 @@ function createInnerLifeSessionRepository(helpers) {
         reason: "session_end"
       });
       return {
-        session: (await this.listInnerLifeSessions(session.agent_id, 100)).find((item) => item.id === id),
+        session: await this.getInnerLifeSession(id),
         inboxId,
         eventId,
         thoughtId,
-        share: (await this.listInnerLifeShares("pending", 20)).find((share) => share.id === shareId),
+        share: await this.getInnerLifeShare(shareId),
         convergence,
         snapshot: await this.getInnerLifeSnapshot()
       };

@@ -159,6 +159,47 @@ function installContinuityRepository(ProductDatabase, helpers) {
     return metadata;
   }
 
+  const CONTINUITY_LINE_SELECT = `
+    SELECT
+      l.id,
+      l.agent_id,
+      l.title,
+      l.status,
+      l.created_at,
+      l.updated_at,
+      p.summary,
+      p.interpretation_status,
+      p.metadata_json,
+      p.updated_at AS position_updated_at
+    FROM continuity_lines l
+    LEFT JOIN current_positions p ON p.rowid = (
+      SELECT candidate.rowid
+      FROM current_positions candidate
+      WHERE candidate.line_id = l.id
+      ORDER BY
+        candidate.updated_at DESC,
+        CASE WHEN candidate.id = 'position_' || candidate.line_id THEN 0 ELSE 1 END,
+        candidate.id DESC
+      LIMIT 1
+    )
+  `;
+
+  function mapContinuityLineRow(row, activeLineId) {
+    return {
+      id: row.id,
+      agentId: row.agent_id || DEFAULT_AGENT_ID,
+      title: row.title || "Shared Line",
+      status: row.status || "active",
+      active: row.id === activeLineId,
+      summary: row.summary || "",
+      interpretationStatus: row.interpretation_status || "draft",
+      metadata: parseJson(row.metadata_json, {}),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      positionUpdatedAt: row.position_updated_at
+    };
+  }
+
   Object.assign(ProductDatabase.prototype, {
     async ensureDefaultContinuityLine() {
       const lineId = "line_default";
@@ -174,9 +215,8 @@ function installContinuityRepository(ProductDatabase, helpers) {
         WHERE continuity_lines.status != 'active';
       `);
       return lineId;
-    }
-    ,
-    
+    },
+
     async getActiveContinuityLineId() {
       const defaultLineId = await this.ensureDefaultContinuityLine();
       const settings = await this.getSettings();
@@ -192,9 +232,8 @@ function installContinuityRepository(ProductDatabase, helpers) {
         await this.setActiveContinuityLine(lineId);
       }
       return lineId;
-    }
-    ,
-    
+    },
+
     async resolveContinuityLineId(lineId = null) {
       const requested = String(lineId || "").trim();
       if (!requested) return this.getActiveContinuityLineId();
@@ -207,8 +246,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
       `);
       if (!rows[0]?.id) throw new Error("Shared Line not found.");
       return rows[0].id;
-    }
-    ,
+    },
 
     async findContinuityLineIdForAgent(agentIdInput = "") {
       const agentId = String(agentIdInput || "").trim();
@@ -222,9 +260,8 @@ function installContinuityRepository(ProductDatabase, helpers) {
         LIMIT 1;
       `);
       return rows[0]?.id || null;
-    }
-    ,
-    
+    },
+
     async listContinuityLines(input = 20) {
       await this.ensureDefaultContinuityLine();
       const activeLineId = await this.getActiveContinuityLineId();
@@ -237,28 +274,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
       if (status === "archived") filters.push("l.status = 'archived'");
       if (agentId && !options.allAgents) filters.push(`l.agent_id = ${sqlString(agentId)}`);
       const rows = await this.query(`
-        SELECT
-          l.id,
-          l.agent_id,
-          l.title,
-          l.status,
-          l.created_at,
-          l.updated_at,
-          p.summary,
-          p.interpretation_status,
-          p.metadata_json,
-          p.updated_at AS position_updated_at
-        FROM continuity_lines l
-        LEFT JOIN current_positions p ON p.rowid = (
-          SELECT candidate.rowid
-          FROM current_positions candidate
-          WHERE candidate.line_id = l.id
-          ORDER BY
-            candidate.updated_at DESC,
-            CASE WHEN candidate.id = 'position_' || candidate.line_id THEN 0 ELSE 1 END,
-            candidate.id DESC
-          LIMIT 1
-        )
+        ${CONTINUITY_LINE_SELECT}
         WHERE ${filters.join(" AND ")}
         ORDER BY
           CASE WHEN l.id = ${sqlString(activeLineId)} THEN 0 ELSE 1 END,
@@ -266,22 +282,21 @@ function installContinuityRepository(ProductDatabase, helpers) {
           l.created_at DESC
         LIMIT ${safeLimit};
       `);
-      return rows.map((row) => ({
-        id: row.id,
-        agentId: row.agent_id || DEFAULT_AGENT_ID,
-        title: row.title || "Shared Line",
-        status: row.status || "active",
-        active: row.id === activeLineId,
-        summary: row.summary || "",
-        interpretationStatus: row.interpretation_status || "draft",
-        metadata: parseJson(row.metadata_json, {}),
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        positionUpdatedAt: row.position_updated_at
-      }));
-    }
-    ,
-    
+      return rows.map((row) => mapContinuityLineRow(row, activeLineId));
+    },
+
+    async getContinuityLine(lineId) {
+      const id = String(lineId || "").trim();
+      if (!id) return null;
+      const activeLineId = await this.getActiveContinuityLineId();
+      const rows = await this.query(`
+        ${CONTINUITY_LINE_SELECT}
+        WHERE l.id = ${sqlString(id)} AND l.status != 'deleted'
+        LIMIT 1;
+      `);
+      return rows[0] ? mapContinuityLineRow(rows[0], activeLineId) : null;
+    },
+
     async createContinuityLine(input = {}) {
       const title = String(input.title || "").trim();
       if (!title) throw new Error("Shared Line title is required.");
@@ -294,10 +309,9 @@ function installContinuityRepository(ProductDatabase, helpers) {
       if (input.makeActive !== false) {
         await this.setActiveContinuityLine(id);
       }
-      return (await this.listContinuityLines(100)).find((line) => line.id === id);
-    }
-    ,
-    
+      return this.getContinuityLine(id);
+    },
+
     async renameContinuityLine(lineId, title) {
       const id = await this.resolveContinuityLineId(lineId);
       const nextTitle = String(title || "").trim();
@@ -308,10 +322,9 @@ function installContinuityRepository(ProductDatabase, helpers) {
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ${sqlString(id)} AND status = 'active';
       `);
-      return (await this.listContinuityLines(100)).find((line) => line.id === id);
-    }
-    ,
-    
+      return this.getContinuityLine(id);
+    },
+
     async archiveContinuityLine(lineId) {
       const id = String(lineId || "").trim();
       if (!id) throw new Error("Shared Line id is required.");
@@ -334,10 +347,9 @@ function installContinuityRepository(ProductDatabase, helpers) {
       if (activeLineId === id) {
         await this.setActiveContinuityLine("line_default");
       }
-      return (await this.listContinuityLines(100)).find((line) => line.id === id);
-    }
-    ,
-    
+      return this.getContinuityLine(id);
+    },
+
     async restoreContinuityLine(lineId, makeActive = false) {
       const id = String(lineId || "").trim();
       if (!id) throw new Error("Shared Line id is required.");
@@ -358,10 +370,9 @@ function installContinuityRepository(ProductDatabase, helpers) {
       if (makeActive) {
         await this.setActiveContinuityLine(id);
       }
-      return (await this.listContinuityLines(100)).find((line) => line.id === id);
-    }
-    ,
-    
+      return this.getContinuityLine(id);
+    },
+
     async setActiveContinuityLine(lineId) {
       const id = await this.resolveContinuityLineId(lineId);
       await this.exec(`
@@ -371,10 +382,9 @@ function installContinuityRepository(ProductDatabase, helpers) {
           value_json = excluded.value_json,
           updated_at = CURRENT_TIMESTAMP;
       `);
-      return (await this.listContinuityLines(100)).find((line) => line.id === id);
-    }
-    ,
-    
+      return this.getContinuityLine(id);
+    },
+
     async getCurrentPosition(lineIdInput = null) {
       const lineId = await this.resolveContinuityLineId(lineIdInput);
       const rows = await this.query(`
@@ -408,9 +418,8 @@ function installContinuityRepository(ProductDatabase, helpers) {
         metadata: parseJson(row.metadata_json, {}),
         updatedAt: row.updated_at || null
       };
-    }
-    ,
-    
+    },
+
     async saveCurrentPosition(input) {
       const lineId = await this.resolveContinuityLineId(input?.lineId || null);
       const summary = String(input?.summary || "").trim();
@@ -465,9 +474,8 @@ function installContinuityRepository(ProductDatabase, helpers) {
         `);
       }
       return this.getCurrentPosition(lineId);
-    }
-    ,
-    
+    },
+
     async listContinuitySnapshots(limit = 8, lineIdInput = null) {
       const lineId = await this.resolveContinuityLineId(lineIdInput);
       const safeLimit = Math.max(1, Math.min(Number.parseInt(String(limit), 10) || 8, 30));
@@ -488,9 +496,8 @@ function installContinuityRepository(ProductDatabase, helpers) {
         reason: row.reason || "save",
         createdAt: row.created_at
       }));
-    }
-    ,
-    
+    },
+
     async listContinuityPositionHistory(limit = 8, lineIdInput = null) {
       const lineId = await this.resolveContinuityLineId(lineIdInput);
       const safeLimit = Math.max(1, Math.min(Number.parseInt(String(limit), 10) || 8, 30));
@@ -511,9 +518,8 @@ function installContinuityRepository(ProductDatabase, helpers) {
         source: row.source || "desktop",
         createdAt: row.created_at
       }));
-    }
-    ,
-    
+    },
+
     async listContinuityHandoffs(limit = 5, lineIdInput = null) {
       const lineId = await this.resolveContinuityLineId(lineIdInput);
       const safeLimit = Math.max(1, Math.min(Number.parseInt(String(limit), 10) || 5, 20));
@@ -533,9 +539,8 @@ function installContinuityRepository(ProductDatabase, helpers) {
         nextStep: row.next_step || "",
         createdAt: row.created_at
       }));
-    }
-    ,
-    
+    },
+
     async createContinuityHandoff(input = {}) {
       const currentPosition = await this.getCurrentPosition(input.lineId || null);
       const id = newId("handoff");
@@ -563,8 +568,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
         );
       `);
       return this.getContinuityHandoff(id);
-    }
-    ,
+    },
 
     ...createContinuityAgentRepository(helpers),
     
@@ -586,21 +590,22 @@ function installContinuityRepository(ProductDatabase, helpers) {
         nextStep: row.next_step || "",
         createdAt: row.created_at
       };
-    }
-    ,
-    
+    },
+
     async getResumePacket(input = {}) {
       const agentLineId = input?.lineId ? null : await this.findContinuityLineIdForAgent(input?.agentId || input?.agent_id || "");
       const currentPosition = await this.getCurrentPosition(input.lineId || agentLineId || null);
       const metadata = currentPosition.metadata || {};
-      const lines = await this.listContinuityLines({ limit: 100, agentId: input.agentId || input.agent_id || "", allAgents: true, status: "active" });
-      const archivedLines = await this.listContinuityLines({ limit: 100, agentId: input.agentId || input.agent_id || "", allAgents: true, status: "archived" });
-      const history = await this.listContinuityPositionHistory(5, currentPosition.lineId);
-      const snapshots = await this.listContinuitySnapshots(5, currentPosition.lineId);
-      const handoffs = await this.listContinuityHandoffs(3, currentPosition.lineId);
-      const agentState = await this.getContinuityAgentState(currentPosition.agentId || DEFAULT_AGENT_ID);
-      const agentStates = await this.listContinuityAgentStates();
-      const modelAdjustment = input.model ? await this.getContinuityModelAdjustment(input.model) : null;
+      const [lines, archivedLines, history, snapshots, handoffs, agentState, agentStates, modelAdjustment] = await Promise.all([
+        this.listContinuityLines({ limit: 100, agentId: input.agentId || input.agent_id || "", allAgents: true, status: "active" }),
+        this.listContinuityLines({ limit: 100, agentId: input.agentId || input.agent_id || "", allAgents: true, status: "archived" }),
+        this.listContinuityPositionHistory(5, currentPosition.lineId),
+        this.listContinuitySnapshots(5, currentPosition.lineId),
+        this.listContinuityHandoffs(3, currentPosition.lineId),
+        this.getContinuityAgentState(currentPosition.agentId || DEFAULT_AGENT_ID),
+        this.listContinuityAgentStates(),
+        input.model ? this.getContinuityModelAdjustment(input.model) : null
+      ]);
       const sharedReality = {
         realityLine: metadata.realityLine || "",
         entryPosture: metadata.entryPosture || "",
@@ -678,9 +683,8 @@ function installContinuityRepository(ProductDatabase, helpers) {
           `Next step: ${nextStep}`
         ].join("\n")
       };
-    }
-    ,
-    
+    },
+
     async compactContinuityLine(input = {}) {
       const lineId = await this.resolveContinuityLineId(input?.lineId || null);
       const positionId = `position_${lineId}`;
@@ -710,20 +714,19 @@ function installContinuityRepository(ProductDatabase, helpers) {
         protectedAffective: beforeTrace.filter(isProtectedAffective).length,
         currentPosition: await this.getCurrentPosition(lineId)
       };
-    }
-    ,
+    },
 
     async getGatewayContext(input = {}) {
       const identity = resolveAgentIdentity(input || {});
       const agentId = identity.id;
       const query = String(input.query || "").trim();
       const limit = Math.max(1, Math.min(Number.parseInt(String(input.limit || 5), 10) || 5, 20));
-      const sharedLine = await this.getResumePacket(input.lineId ? { lineId: input.lineId } : {});
-      const memories = query
-        ? (await this.searchMemories(query, limit)).results.slice(0, limit)
-        : await this.listMemories(limit);
-      const innerLife = await this.getInnerLifeSnapshot();
-      const doctor = await this.getInnerLifeDoctor(agentId);
+      const [sharedLine, memories, innerLife, doctor] = await Promise.all([
+        this.getResumePacket(input.lineId ? { lineId: input.lineId } : {}),
+        query ? this.searchMemories(query, limit).then((result) => result.results.slice(0, limit)) : this.listMemories(limit),
+        this.getInnerLifeSnapshot(),
+        this.getInnerLifeDoctor(agentId)
+      ]);
       const sameAgent = (item) => String(item?.agentId || item?.agent_id || "").trim() === agentId;
       const pendingShares = (innerLife.pendingShares || []).filter(sameAgent).slice(0, limit);
       const pendingInbox = (innerLife.inbox || []).filter((item) => item.status === "pending" && sameAgent(item)).slice(0, limit);

@@ -9,6 +9,22 @@ function createInnerLifeShareRepository(helpers) {
     sqlString
   } = helpers;
 
+  function mapShareCheckRow(row) {
+    return {
+      id: row.id,
+      shareId: row.share_id,
+      agentId: row.agent_id,
+      sessionId: row.session_id,
+      context: row.context || "",
+      decision: row.decision,
+      reason: row.reason || "",
+      createdAt: row.created_at,
+      shareBody: row.share_body || "",
+      shareStatus: row.share_status || "",
+      metadata: parseJson(row.metadata_json, {})
+    };
+  }
+
   return {
     async listInnerLifeShares(status = "pending", limit = 20) {
       const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 20));
@@ -47,19 +63,20 @@ function createInnerLifeShareRepository(helpers) {
         ORDER BY c.created_at DESC, c.id DESC
         LIMIT ${safeLimit};
       `);
-      return rows.map((row) => ({
-        id: row.id,
-        shareId: row.share_id,
-        agentId: row.agent_id,
-        sessionId: row.session_id,
-        context: row.context || "",
-        decision: row.decision,
-        reason: row.reason || "",
-        createdAt: row.created_at,
-        shareBody: row.share_body || "",
-        shareStatus: row.share_status || "",
-        metadata: parseJson(row.metadata_json, {})
-      }));
+      return rows.map(mapShareCheckRow);
+    },
+
+    async getInnerLifeShareCheck(id) {
+      const checkId = String(id || "").trim();
+      if (!checkId) throw new Error("InnerLife share check id is required.");
+      const rows = await this.query(`
+        SELECT c.id, c.share_id, c.agent_id, c.session_id, c.context, c.decision, c.reason, c.created_at, c.metadata_json, s.body AS share_body, s.status AS share_status
+        FROM innerlife_share_checks c
+        LEFT JOIN innerlife_shares s ON s.id = c.share_id
+        WHERE c.id = ${sqlString(checkId)}
+        LIMIT 1;
+      `);
+      return rows[0] ? mapShareCheckRow(rows[0]) : null;
     },
 
     async checkInnerLifeShareTiming(input = {}) {
@@ -101,7 +118,7 @@ function createInnerLifeShareRepository(helpers) {
           );
         `);
         return {
-          check: (await this.listInnerLifeShareChecks(profile.agent_id, 100)).find((item) => item.id === checkId),
+          check: await this.getInnerLifeShareCheck(checkId),
           share: null,
           snapshot: await this.getInnerLifeSnapshot()
         };
@@ -142,7 +159,7 @@ function createInnerLifeShareRepository(helpers) {
         );
       `);
       return {
-        check: (await this.listInnerLifeShareChecks(profile.agent_id, 100)).find((item) => item.id === checkId),
+        check: await this.getInnerLifeShareCheck(checkId),
         share,
         snapshot: await this.getInnerLifeSnapshot()
       };
@@ -278,7 +295,7 @@ function createInnerLifeShareRepository(helpers) {
       const sharedLine = await this.getResumePacket();
       await this.exec(`
         UPDATE innerlife_shares
-        SET decision_reason = ${sqlString(`${share.decision_reason || ""}\nApplied to Shared Line: ${sharedLine.positionId}`.trim())},
+        SET decision_reason = ${sqlString(`${share.decision_reason || ""}\nApplied to Shared Line: ${sharedLine.currentPosition.positionId}`.trim())},
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ${sqlString(share.id)};
       `);

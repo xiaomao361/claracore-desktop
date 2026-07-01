@@ -20,6 +20,20 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
     sqlString
   } = helpers;
 
+  function mapDigestRunRow(row) {
+    return {
+      id: row.id,
+      agentId: row.agent_id,
+      mode: row.mode,
+      status: row.status,
+      input: parseJson(row.input_json, {}),
+      summary: row.summary || "",
+      createdAt: row.created_at,
+      completedAt: row.completed_at,
+      metadata: parseJson(row.metadata_json, {})
+    };
+  }
+
   Object.assign(ProductDatabase.prototype, {
     ...createInnerLifeProfileRepository(helpers),
     ...createInnerLifeShareRepository(helpers),
@@ -37,27 +51,27 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         ORDER BY created_at DESC, id DESC
         LIMIT ${safeLimit} OFFSET ${safeOffset};
       `);
-      return rows.map((row) => ({
-        id: row.id,
-        agentId: row.agent_id,
-        mode: row.mode,
-        status: row.status,
-        input: parseJson(row.input_json, {}),
-        summary: row.summary || "",
-        createdAt: row.created_at,
-        completedAt: row.completed_at,
-        metadata: parseJson(row.metadata_json, {})
-      }));
-    }
-    ,
+      return rows.map(mapDigestRunRow);
+    },
+
+    async getInnerLifeDigestRun(id) {
+      const digestId = String(id || "").trim();
+      if (!digestId) throw new Error("InnerLife digest run id is required.");
+      const rows = await this.query(`
+        SELECT id, agent_id, mode, status, input_json, summary, created_at, completed_at, metadata_json
+        FROM innerlife_digest_runs
+        WHERE id = ${sqlString(digestId)}
+        LIMIT 1;
+      `);
+      return rows[0] ? mapDigestRunRow(rows[0]) : null;
+    },
 
     async countInnerLifeDigestRuns(agentId = "all") {
       const agentFilter = String(agentId || "all").trim();
       const whereClause = agentFilter === "all" ? "" : `WHERE agent_id = ${sqlString(agentFilter)}`;
       const rows = await this.query(`SELECT COUNT(*) AS count FROM innerlife_digest_runs ${whereClause};`);
       return rows[0]?.count || 0;
-    }
-    ,
+    },
 
     async listInnerLifeDigestRunsPage(input = {}) {
       const agentId = String(input.agentId || input.agent_id || "all").trim() || "all";
@@ -75,9 +89,8 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         total,
         hasMore: offset + items.length < total
       };
-    }
-    ,
-    
+    },
+
     async getInnerLifeSnapshot() {
       const profileRows = await this.query(`
         SELECT agent_id, display_name, enabled, profile_json, state_json, created_at, updated_at
@@ -177,9 +190,8 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         daemon,
         doctor: profile ? await this.getInnerLifeDoctor(profile.agent_id) : { status: "ok", summary: "No InnerLife profiles configured.", issues: [], nextActions: [] }
       };
-    }
-    ,
-    
+    },
+
     async getInnerLifeDoctor(agentId = DEFAULT_AGENT_ID) {
       const identity = resolveAgentIdentity(agentId || DEFAULT_AGENT_ID);
       const profileRows = await this.query(`
@@ -280,9 +292,8 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
           retrySeconds
         }
       };
-    }
-    ,
-    
+    },
+
     async getInnerLifeBriefing(agentId = DEFAULT_AGENT_ID) {
       const profile = await this.ensureInnerLifeProfile(agentId);
       const resumePacket = await this.getResumePacket();
@@ -324,9 +335,8 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
           `Recent thoughts: ${rows.length}`
         ].join("\n")
       };
-    }
-    ,
-    
+    },
+
     async runInnerLifeDigest(input = {}) {
       const agentId = resolveAgentIdentity(input || {}).id;
       const profile = await this.ensureInnerLifeProfile(agentId);
@@ -406,16 +416,15 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         `);
       }
       return {
-        digest: (await this.listInnerLifeDigestRuns(profile.agent_id, 100)).find((run) => run.id === digestId),
+        digest: await this.getInnerLifeDigestRun(digestId),
         eventId,
         thoughtId,
         convergence: null,
         processedInboxIds: inboxItems.map((item) => item.id),
         snapshot: await this.getInnerLifeSnapshot()
       };
-    }
-    ,
-    
+    },
+
     ...createInnerLifeSessionRepository(helpers),
     async processInnerLifeOnce(input = {}) {
       const agentId = resolveAgentIdentity(input || {}).id;
@@ -491,13 +500,12 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       return {
         eventId,
         thoughtId,
-        share: (await this.listInnerLifeShares("pending", 20)).find((share) => share.id === shareId),
+        share: await this.getInnerLifeShare(shareId),
         convergence,
         snapshot: await this.getInnerLifeSnapshot()
       };
-    }
-    ,
-    
+    },
+
     ...createInnerLifeHistoryRepository(helpers),
     async exploreInnerLife(input = {}) {
       const agentId = resolveAgentIdentity(input || {}).id;
@@ -561,8 +569,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         convergence,
         snapshot: await this.getInnerLifeSnapshot()
       };
-    }
-    ,
+    },
 
     async convergeInnerLife(input = {}) {
       const agentId = resolveAgentIdentity(input || {}).id;
@@ -679,8 +686,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         pendingShareCount: agentPendingShares.length,
         snapshot: await this.getInnerLifeSnapshot()
       };
-    }
-    ,
+    },
 
   });
 }

@@ -11,6 +11,31 @@ function createSystemRepository(helpers) {
     sqlString
   } = helpers;
 
+  function mapRuntimeEventRow(row) {
+    return {
+      id: row.id,
+      level: row.level,
+      source: row.source,
+      message: row.message,
+      metadata: parseJson(row.metadata_json, {}),
+      createdAt: row.created_at
+    };
+  }
+
+  function mapGatewayTraceRow(row) {
+    return {
+      id: row.id,
+      agentId: row.agent_id,
+      toolName: row.tool_name,
+      status: row.status,
+      durationMs: row.duration_ms,
+      request: parseJson(row.request_json, {}),
+      responseSummary: row.response_summary || "",
+      error: row.error || "",
+      createdAt: row.created_at
+    };
+  }
+
   return {
     async updateSettings(updates) {
       const entries = Object.entries(updates || {}).filter(([key]) => WRITABLE_SETTINGS.has(key));
@@ -73,7 +98,19 @@ function createSystemRepository(helpers) {
         INSERT INTO runtime_events (id, level, source, message, metadata_json)
         VALUES (${sqlString(id)}, ${sqlString(level)}, ${sqlString(source)}, ${sqlString(message)}, ${jsonSql(input.metadata || {})});
       `);
-      return (await this.listRuntimeEvents({ limit: 1 })).find((event) => event.id === id);
+      return this.getRuntimeEvent(id);
+    },
+
+    async getRuntimeEvent(id) {
+      const eventId = String(id || "").trim();
+      if (!eventId) throw new Error("Runtime event id is required.");
+      const rows = await this.query(`
+        SELECT id, level, source, message, metadata_json, created_at
+        FROM runtime_events
+        WHERE id = ${sqlString(eventId)}
+        LIMIT 1;
+      `);
+      return rows[0] ? mapRuntimeEventRow(rows[0]) : null;
     },
 
     async listRuntimeEvents(input = {}) {
@@ -91,14 +128,7 @@ function createSystemRepository(helpers) {
         ORDER BY created_at DESC, id DESC
         LIMIT ${safeLimit};
       `);
-      return rows.map((row) => ({
-        id: row.id,
-        level: row.level,
-        source: row.source,
-        message: row.message,
-        metadata: parseJson(row.metadata_json, {}),
-        createdAt: row.created_at
-      }));
+      return rows.map(mapRuntimeEventRow);
     },
 
     async recordGatewayTrace(input = {}) {
@@ -122,7 +152,19 @@ function createSystemRepository(helpers) {
           ${sqlString(error)}
         );
       `);
-      return (await this.listGatewayTraces({ limit: 1 })).find((trace) => trace.id === id);
+      return this.getGatewayTrace(id);
+    },
+
+    async getGatewayTrace(id) {
+      const traceId = String(id || "").trim();
+      if (!traceId) throw new Error("Gateway trace id is required.");
+      const rows = await this.query(`
+        SELECT id, agent_id, tool_name, status, duration_ms, request_json, response_summary, error, created_at
+        FROM gateway_traces
+        WHERE id = ${sqlString(traceId)}
+        LIMIT 1;
+      `);
+      return rows[0] ? mapGatewayTraceRow(rows[0]) : null;
     },
 
     async listGatewayTraces(input = {}) {
@@ -140,17 +182,7 @@ function createSystemRepository(helpers) {
         ORDER BY created_at DESC, id DESC
         LIMIT ${safeLimit};
       `);
-      return rows.map((row) => ({
-        id: row.id,
-        agentId: row.agent_id,
-        toolName: row.tool_name,
-        status: row.status,
-        durationMs: row.duration_ms,
-        request: parseJson(row.request_json, {}),
-        responseSummary: row.response_summary || "",
-        error: row.error || "",
-        createdAt: row.created_at
-      }));
+      return rows.map(mapGatewayTraceRow);
     },
 
     async clearLogs() {

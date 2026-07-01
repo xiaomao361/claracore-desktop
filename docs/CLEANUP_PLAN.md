@@ -45,12 +45,44 @@ continued speculative splitting.
 - Primary remaining review targets:
   - `app.js`: event orchestration and cross-view coordination.
   - `app/views/memoria.js` and `app/views/home.js`: large view renderers.
-  - `core/db/repositories/continuity.js`: current position, handoff, resume
-    packet, and Gateway context composition.
   - `app/i18n/en.js` and `app/i18n/zh.js`: large dictionaries, low priority
     unless translation ownership becomes painful.
 - Do not continue splitting solely by line count; require a clear ownership
   boundary and a narrow verification path.
+- Done: `core/db/repositories/continuity.js` (current position, handoff,
+  resume packet, and Gateway context composition) went through review. See
+  "Database Review Findings" below for what was found and fixed.
+
+### Database Review Findings
+
+A review pass over `core/db/repositories/` found and fixed:
+
+- A logic bug in `applyInnerLifeShareToSharedLine`
+  (`core/db/repositories/innerlife/shares.js`): it read
+  `sharedLine.positionId`, which does not exist on the `getResumePacket()`
+  return shape (the field is nested at `sharedLine.currentPosition.positionId`,
+  as every other call site already used). The share's `decision_reason` was
+  recording the literal string `undefined` instead of the real position id.
+- A repeated "mutate, then re-list up to N rows and `.find()` the one just
+  written" pattern across `continuity.js`, `system.js`,
+  `innerlife/shares.js`, `innerlife/sessions.js`, `innerlife.js`, and
+  `innerlife/inbox.js`. Besides the wasted query, the list-based version had a
+  real correctness edge: once a table holds more rows than the re-list limit,
+  `.find()` can miss the row that was just written. Replaced with direct
+  point-lookup methods: `getContinuityLine`, `getRuntimeEvent`,
+  `getGatewayTrace`, `getInnerLifeShareCheck`, `getInnerLifeSession`,
+  `getInnerLifeDigestRun`, `getInnerLifeInboxItem`, plus reuse of the
+  already-existing `getInnerLifeShare`.
+- Several independent, sequentially-awaited reads inside
+  `getResumePacket()`/`getGatewayContext()` (`continuity.js`) now run through
+  `Promise.all`, since none of them depend on each other.
+- Added `core/tests/sql-interpolation-lint.js` (wired into `npm run check`
+  and `npm run test:sql-lint`): the database layer builds SQL by string
+  interpolation instead of parameter binding (see "Database Boundary" in
+  `ARCHITECTURE.md` for why), so this is a guardrail that flags any `${}`
+  interpolation in a SQL template literal that is not provably escaped
+  (`sqlString()`/`jsonSql()`, a numeric expression, or a small
+  hand-verified allowlist of pre-built fragment identifiers).
 
 ## Order
 
@@ -149,6 +181,10 @@ continued speculative splitting.
      `core/db/repositories/innerlife/shares.js`.
    - Done: InnerLife prompts/share policy/compact response shaping moved to
      `core/innerlife/policy.js`.
+   - Done: repository "mutate then re-list and find" call sites replaced with
+     direct point-lookup methods (see "Database Review Findings" above).
+   - Done: `core/tests/sql-interpolation-lint.js` guards SQL template
+     interpolation across `core/db/repositories/` and `core/db/database.js`.
    - Add explicit migrations before new schema-heavy features.
 
 5. Documentation cleanup

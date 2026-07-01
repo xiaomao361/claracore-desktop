@@ -7,6 +7,19 @@ function createInnerLifeInboxRepository(helpers) {
     sqlString
   } = helpers;
 
+  function mapInboxRow(row) {
+    return {
+      id: row.id,
+      agentId: row.agent_id,
+      source: row.source,
+      body: row.body,
+      status: row.status,
+      createdAt: row.created_at,
+      processedAt: row.processed_at,
+      metadata: parseJson(row.metadata_json, {})
+    };
+  }
+
   return {
     async listInnerLifeInbox(status = "pending", limit = 20, offset = 0) {
       const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 20));
@@ -20,18 +33,20 @@ function createInnerLifeInboxRepository(helpers) {
         ORDER BY created_at DESC, id DESC
         LIMIT ${safeLimit} OFFSET ${safeOffset};
       `);
-      return rows.map((row) => ({
-        id: row.id,
-        agentId: row.agent_id,
-        source: row.source,
-        body: row.body,
-        status: row.status,
-        createdAt: row.created_at,
-        processedAt: row.processed_at,
-        metadata: parseJson(row.metadata_json, {})
-      }));
-    }
-    ,
+      return rows.map(mapInboxRow);
+    },
+
+    async getInnerLifeInboxItem(id) {
+      const inboxId = String(id || "").trim();
+      if (!inboxId) throw new Error("InnerLife inbox id is required.");
+      const rows = await this.query(`
+        SELECT id, agent_id, source, body, status, created_at, processed_at, metadata_json
+        FROM innerlife_inbox
+        WHERE id = ${sqlString(inboxId)}
+        LIMIT 1;
+      `);
+      return rows[0] ? mapInboxRow(rows[0]) : null;
+    },
 
     async countInnerLifeInbox(input = {}) {
       const agentId = String(input.agentId || input.agent_id || "all").trim() || "all";
@@ -42,8 +57,7 @@ function createInnerLifeInboxRepository(helpers) {
       const whereClause = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
       const rows = await this.query(`SELECT COUNT(*) AS count FROM innerlife_inbox ${whereClause};`);
       return rows[0]?.count || 0;
-    }
-    ,
+    },
 
     async listInnerLifeInboxPage(input = {}) {
       const agentId = String(input.agentId || input.agent_id || "all").trim() || "all";
@@ -65,24 +79,14 @@ function createInnerLifeInboxRepository(helpers) {
       return {
         agentId,
         status,
-        items: rows.map((row) => ({
-          id: row.id,
-          agentId: row.agent_id,
-          source: row.source,
-          body: row.body,
-          status: row.status,
-          createdAt: row.created_at,
-          processedAt: row.processed_at,
-          metadata: parseJson(row.metadata_json, {})
-        })),
+        items: rows.map(mapInboxRow),
         limit,
         offset,
         total,
         hasMore: offset + rows.length < total
       };
-    }
-    ,
-    
+    },
+
     async submitInnerLifeInbox(input = {}) {
       const agentId = resolveAgentIdentity(input || {}).id;
       const profile = await this.ensureInnerLifeProfile(agentId);
@@ -94,11 +98,8 @@ function createInnerLifeInboxRepository(helpers) {
         INSERT INTO innerlife_inbox (id, agent_id, source, body, status, metadata_json)
         VALUES (${sqlString(id)}, ${sqlString(profile.agent_id)}, ${sqlString(source)}, ${sqlString(body)}, 'pending', ${jsonSql(input.metadata || {})});
       `);
-      return (await this.listInnerLifeInbox("all", 100)).find((item) => item.id === id);
+      return this.getInnerLifeInboxItem(id);
     }
-    ,
-    
-
   };
 }
 
