@@ -48,18 +48,24 @@ function createHttpAgentGateway({ app, getRuntimeSnapshot, getProductGatewayCont
     const body = JSON.stringify(payload, null, 2);
     response.writeHead(statusCode, {
       "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store",
-      "access-control-allow-origin": "*",
-      "access-control-allow-methods": "GET, OPTIONS",
-      "access-control-allow-headers": "authorization, content-type"
+      "cache-control": "no-store"
     });
     response.end(body);
   }
 
+  function tokenMatches(candidate) {
+    const value = String(candidate || "");
+    const expected = state.token;
+    const valueBuffer = Buffer.from(value);
+    const expectedBuffer = Buffer.from(expected);
+    return valueBuffer.length === expectedBuffer.length && crypto.timingSafeEqual(valueBuffer, expectedBuffer);
+  }
+
   function isAuthorized(request, requestUrl) {
     const authorization = request.headers.authorization || "";
+    const bearer = authorization.startsWith("Bearer ") ? authorization.slice("Bearer ".length).trim() : "";
     const token = requestUrl.searchParams.get("token") || "";
-    return authorization === `Bearer ${state.token}` || token === state.token;
+    return tokenMatches(bearer) || tokenMatches(token);
   }
 
   async function handleRequest(request, response) {
