@@ -179,6 +179,7 @@ function createClaraCoreHomeView(context) {
     moduleGrid.innerHTML = modules
       .map((module) => {
         const details = moduleDetails(module)
+          .slice(0, 2)
           .map(
             ([label, value]) => `
               <div class="module-detail">

@@ -68,6 +68,8 @@ const {
   memoriaModelOptions,
   memoriaModelNotice,
   refreshMemoriaModels,
+  testMemoriaConnection,
+  memoriaConnectionNotice,
   memoriaApiKey,
   copyMemoriaApiKey,
   memoriaModelStatus,
@@ -78,6 +80,8 @@ const {
   innerLifeModelOptions,
   innerLifeModelNotice,
   refreshInnerLifeModels,
+  testInnerLifeConnection,
+  innerLifeConnectionNotice,
   innerLifePollSeconds,
   innerLifeApiKey,
   innerLifeApiKeySummary,
@@ -376,6 +380,10 @@ async function loadModelOptions(kind, { silent = false } = {}) {
   return modelOptions.loadModelOptions(kind, { silent });
 }
 
+async function testModelConnection(kind) {
+  return modelOptions.testModelConnection(kind);
+}
+
 function renderSettings() {
   settingsView.renderSettings();
   settingsView.renderAppearanceSettings();
@@ -456,6 +464,205 @@ function renderTopbarStatus() {
   topbarDataLabel.textContent = snapshot?.data?.databasePresent ? t("status.databaseReady") : t("status.databaseMissing");
 }
 
+function ensurePageFocus(viewName) {
+  const panel = views[viewName]?.panel;
+  if (!panel) return null;
+  let focus = panel.querySelector(":scope > .page-focus");
+  if (!focus) {
+    focus = document.createElement("section");
+    focus.className = "page-focus";
+    focus.setAttribute("aria-label", t("focus.label"));
+    panel.prepend(focus);
+  }
+  return focus;
+}
+
+function focusMetric(label, value) {
+  return { label, value: value == null || value === "" ? "-" : String(value) };
+}
+
+function renderFocusBlock(viewName, config) {
+  const focus = ensurePageFocus(viewName);
+  if (!focus) return;
+  const tone = config.tone || "ok";
+  focus.className = `page-focus ${tone}`;
+  focus.innerHTML = `
+    <div class="page-focus-copy">
+      <span class="page-focus-kicker">${escapeHtml(t("focus.kicker"))}</span>
+      <h2>${escapeHtml(config.title)}</h2>
+      <p>${escapeHtml(config.body)}</p>
+    </div>
+    <div class="page-focus-side">
+      <div class="page-focus-metrics">
+        ${(config.metrics || [])
+          .map((metric) => `<span>${escapeHtml(metric.label)} <strong>${escapeHtml(metric.value)}</strong></span>`)
+          .join("")}
+      </div>
+      ${
+        config.actionTarget
+          ? `<button class="secondary page-focus-action" data-view-target="${escapeHtml(config.actionTarget)}">${escapeHtml(config.actionLabel)}</button>`
+          : ""
+      }
+    </div>
+  `;
+}
+
+function renderPageFocus() {
+  if (!snapshot) return;
+  const healthStatus = snapshot.health?.status || "warn";
+  const stats = snapshot.memoryStats || {};
+  const maintenance = snapshot.memoryMaintenance || {};
+  const gatewayTraces = snapshot.gatewayTraces || [];
+  const gatewayErrors = gatewayTraces.filter((trace) => trace.status === "error").length;
+  const sharedLine = snapshot.sharedLine || {};
+  const currentLine = sharedLine.currentPosition || {};
+  const innerLife = snapshot.innerLife || {};
+  const innerCounts = innerLife.counts || {};
+  const daemon = innerLife.daemon || {};
+  const modules = snapshot.modules || [];
+  const missingRequired = modules.filter((module) => module.required && !module.present).length;
+  const attentionCount =
+    gatewayErrors +
+    Number(stats.pendingEmbeddingCount || 0) +
+    Number(stats.failedEmbeddingCount || 0) +
+    Number(innerCounts.pending_shares_count || 0) +
+    missingRequired;
+
+  renderFocusBlock("home", {
+    tone: healthStatus === "error" || gatewayErrors ? "error" : attentionCount ? "warn" : "ok",
+    title: attentionCount ? t("focus.home.attention", { count: String(attentionCount) }) : t("focus.home.ok"),
+    body: currentLine.summary
+      ? t("focus.home.line", { summary: currentLine.summary })
+      : t("focus.home.noLine"),
+    metrics: [
+      focusMetric(t("focus.metric.attention"), attentionCount),
+      focusMetric(t("focus.metric.gatewayErrors"), gatewayErrors),
+      focusMetric(t("focus.metric.pendingShares"), innerCounts.pending_shares_count || 0)
+    ],
+    actionLabel: attentionCount ? t("focus.action.reviewAttention") : t("focus.action.openSharedLine"),
+    actionTarget: attentionCount
+      ? Number(innerCounts.pending_shares_count || 0)
+        ? "innerlife"
+        : Number(stats.pendingEmbeddingCount || 0) || Number(stats.failedEmbeddingCount || 0)
+          ? "memory"
+          : "agent-setup"
+      : "shared-line"
+  });
+
+  const vectorIssues = Number(stats.pendingEmbeddingCount || 0) + Number(stats.failedEmbeddingCount || 0);
+  renderFocusBlock("memory", {
+    tone: vectorIssues ? "warn" : maintenance.status && maintenance.status !== "ok" ? "warn" : "ok",
+    title: vectorIssues ? t("focus.memory.vectors", { count: String(vectorIssues) }) : t("focus.memory.ok"),
+    body: t("focus.memory.body"),
+    metrics: [
+      focusMetric(t("memory.stats.active"), stats.activeCount || 0),
+      focusMetric(t("memory.stats.pending"), stats.pendingEmbeddingCount || 0),
+      focusMetric(t("memory.stats.restricted"), stats.restrictedCount || 0)
+    ],
+    actionLabel: vectorIssues ? t("memory.embedding.processPending") : t("focus.action.searchMemory"),
+    actionTarget: "memory"
+  });
+
+  const activeLines = (sharedLine.lines || []).filter((line) => line.status !== "archived");
+  renderFocusBlock("shared-line", {
+    tone: currentLine.summary ? "ok" : "warn",
+    title: currentLine.summary ? t("focus.sharedLine.ok") : t("focus.sharedLine.empty"),
+    body: currentLine.summary || t("sharedLine.currentEmpty"),
+    metrics: [
+      focusMetric(t("sharedLine.stats.lines"), activeLines.length),
+      focusMetric(t("sharedLine.stats.history"), (sharedLine.history || []).length),
+      focusMetric(t("sharedLine.stats.archived"), (sharedLine.archivedLines || []).length)
+    ],
+    actionLabel: t("focus.action.copyResume"),
+    actionTarget: "shared-line"
+  });
+
+  renderFocusBlock("innerlife", {
+    tone: innerCounts.pending_shares_count ? "warn" : daemon.status === "error" ? "error" : "ok",
+    title: innerCounts.pending_shares_count
+      ? t("focus.innerLife.pending", { count: String(innerCounts.pending_shares_count) })
+      : daemon.enabled
+        ? t("focus.innerLife.running")
+        : t("focus.innerLife.paused"),
+    body: t("focus.innerLife.body"),
+    metrics: [
+      focusMetric(t("innerLife.daemonStatus"), daemon.enabled ? daemon.status || t("common.ready") : t("common.paused")),
+      focusMetric(t("innerLife.pendingShares"), innerCounts.pending_shares_count || 0),
+      focusMetric(t("innerLife.thoughts"), innerCounts.thoughts_count || 0)
+    ],
+    actionLabel: innerCounts.pending_shares_count ? t("focus.action.reviewShares") : t("focus.action.openInnerLife"),
+    actionTarget: "innerlife"
+  });
+
+  const agents = new Set(gatewayTraces.map((trace) => trace.agentId).filter(Boolean));
+  renderFocusBlock("agent-setup", {
+    tone: gatewayErrors ? "error" : "ok",
+    title: gatewayTraces.length ? t("focus.agent.active") : t("focus.agent.ready"),
+    body: t("focus.agent.body"),
+    metrics: [
+      focusMetric(t("focus.metric.agents"), agents.size),
+      focusMetric(t("home.gateway.calls"), gatewayTraces.length),
+      focusMetric(t("home.gateway.errors"), gatewayErrors)
+    ],
+    actionLabel: t("connections.copyMcpConfig"),
+    actionTarget: "agent-setup"
+  });
+
+  renderFocusBlock("data", {
+    tone: snapshot.data?.databasePresent ? "ok" : "warn",
+    title: snapshot.data?.databasePresent ? t("focus.data.ready") : t("focus.data.missing"),
+    body: t("focus.data.body"),
+    metrics: [
+      focusMetric(t("settings.databaseState"), snapshot.data?.databasePresent ? t("common.ready") : t("common.notCreated")),
+      focusMetric(t("data.location"), snapshot.mode || "-")
+    ],
+    actionLabel: t("data.openDataDir"),
+    actionTarget: "data"
+  });
+
+  renderFocusBlock("logs", {
+    tone: gatewayErrors ? "error" : "ok",
+    title: gatewayErrors ? t("focus.logs.errors", { count: String(gatewayErrors) }) : t("focus.logs.ok"),
+    body: t("focus.logs.body"),
+    metrics: [
+      focusMetric(t("logs.runtimeEvents"), (snapshot.runtimeEvents || []).length),
+      focusMetric(t("logs.gatewayTraces"), gatewayTraces.length),
+      focusMetric(t("logs.filterErrors"), gatewayErrors)
+    ],
+    actionLabel: t("logs.filterErrors"),
+    actionTarget: "logs"
+  });
+
+  const config = snapshot.configuration || {};
+  const memoria = config.memoria || {};
+  const innerlife = config.innerlife || {};
+  renderFocusBlock("models", {
+    tone: innerlife.backend === "disabled" ? "warn" : "ok",
+    title: innerlife.backend === "disabled" ? t("focus.models.needsInnerLife") : t("focus.models.configured"),
+    body: t("focus.models.body"),
+    metrics: [
+      focusMetric(t("settings.memoryRole"), memoria.provider || "-"),
+      focusMetric(t("settings.innerLifeRole"), innerlife.backend || "-"),
+      focusMetric(t("settings.connectionTestRole"), t("settings.connectionNotTested"))
+    ],
+    actionLabel: t("settings.testConnection"),
+    actionTarget: "models"
+  });
+
+  renderFocusBlock("settings", {
+    tone: "ok",
+    title: t("focus.settings.ready"),
+    body: t("focus.settings.body"),
+    metrics: [
+      focusMetric(t("settings.appVersion"), snapshot.productVersion || "-"),
+      focusMetric(t("settings.runtimeMode"), snapshot.mode || "-"),
+      focusMetric(t("settings.currentTheme"), getAppearancePreferences().resolvedTheme || "-")
+    ],
+    actionLabel: t("settings.saveAppearance"),
+    actionTarget: "settings"
+  });
+}
+
 function renderSnapshot() {
   if (brandVersion) brandVersion.textContent = `Desktop v${snapshot.productVersion || "-"}`;
   if (runtimeMode) runtimeMode.textContent = formatMode(snapshot.mode);
@@ -466,6 +673,7 @@ function renderSnapshot() {
   memoryStore.textContent = snapshot.data.databasePath;
   if (memoryStoreShort) memoryStoreShort.textContent = snapshot.data.databasePresent ? t("common.found") : t("common.notCreated");
   renderTopbarStatus();
+  renderPageFocus();
   renderModules(snapshot.modules);
   renderHomeDashboard();
   renderHealth();
@@ -659,6 +867,14 @@ refreshInnerLifeModels?.addEventListener("click", () => {
   loadModelOptions("innerlife").catch(console.error);
 });
 
+testMemoriaConnection?.addEventListener("click", () => {
+  testModelConnection("memoria").catch(console.error);
+});
+
+testInnerLifeConnection?.addEventListener("click", () => {
+  testModelConnection("innerlife").catch(console.error);
+});
+
 memoriaEndpoint?.addEventListener("blur", () => {
   loadModelOptions("memoria", { silent: true }).catch(console.error);
 });
@@ -763,6 +979,10 @@ toggleLogFollow.addEventListener("click", () => {
 
 clearLogs.addEventListener("click", () => {
   logsView.clear();
+});
+
+window.ClaraCoreDom.logFilter?.addEventListener("change", (event) => {
+  logsView.setFilter(event.target.value);
 });
 
 primaryAction.addEventListener("click", () => {

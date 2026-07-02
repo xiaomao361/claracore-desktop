@@ -477,6 +477,44 @@ async function listConfiguredModels(input = {}) {
   return { provider, endpoint: baseUrl, models: [], supported: false };
 }
 
+async function testConfiguredModel(input = {}) {
+  const provider = String(input.provider || "").trim();
+  const model = String(input.model || "").trim();
+  if (["disabled", "claracore-built-in", "custom-command"].includes(provider)) {
+    return {
+      provider,
+      model,
+      ok: false,
+      supported: false,
+      checkedAt: new Date().toISOString(),
+      error: "Connection testing is not available for this provider."
+    };
+  }
+  if (!model) {
+    return {
+      provider,
+      model,
+      ok: false,
+      supported: true,
+      checkedAt: new Date().toISOString(),
+      error: "Select a model before testing the connection."
+    };
+  }
+  const result = await listConfiguredModels(input);
+  const models = Array.isArray(result.models) ? result.models : [];
+  const found = models.includes(model);
+  return {
+    provider,
+    endpoint: result.endpoint,
+    model,
+    ok: found,
+    supported: result.supported !== false,
+    checkedAt: new Date().toISOString(),
+    modelCount: models.length,
+    error: found ? "" : `Endpoint reachable, but model "${model}" was not listed.`
+  };
+}
+
 function stopSiblingGatewayProcesses() {
   if (isGatewayMode) return;
   if (process.platform !== "darwin") return;
@@ -639,6 +677,7 @@ if (!isGatewayMode && hasSingleInstanceLock) {
     getTrayLanguage: () => trayLanguage,
     ipcMain,
     listConfiguredModels,
+    testConfiguredModel,
     notifyRuntimeChanged,
     rescheduleMemoryMaintenance: () => {
       if (schedulers) schedulers.rescheduleMemoryMaintenance();

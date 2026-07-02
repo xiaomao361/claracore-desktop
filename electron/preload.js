@@ -19,6 +19,9 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   listModels(input) {
     return ipcRenderer.invoke("claracore:listModels", input);
   },
+  testModelConnection(input) {
+    return ipcRenderer.invoke("claracore:testModelConnection", input);
+  },
   setWindowPreferences(preferences) {
     return ipcRenderer.invoke("claracore:setWindowPreferences", preferences);
   },

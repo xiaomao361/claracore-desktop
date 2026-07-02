@@ -16,11 +16,11 @@ function createClaraCoreSharedInnerLifeView(context) {
   const {
     memoryAgentFilter, memoryList, sharedLineSummary, sharedLineUpdated, sharedLineList, sharedLineAgentFilter,
     sharedLineLineCount, sharedLineHistoryCount, sharedLineSnapshotCount, sharedLineArchivedCount,
-    sharedLineDetailStatus, sharedLineAgentStatePanel, sharedLineMetadataPanel, sharedLineResume,
+    sharedLineDetailStatus, sharedLineContextBar, sharedLineAgentStatePanel, sharedLineMetadataPanel, sharedLineResume,
     sharedLineHistoryList, sharedLineSnapshotList, sharedLineArchiveList, innerLifeAgentFilter, innerLifeSessionList,
     loadMoreInnerLifeSessions, innerLifeDigestList, loadMoreInnerLifeDigestRuns, innerLifeInboxList, loadMoreInnerLifeInbox,
     innerLifeShareCheckList, innerLifeShareList, innerLifeDaemonStatus,
-    innerLifeHistoryList, innerLifeExperienceList, innerLifeSummaryList,
+    innerLifeHistoryList, innerLifeExperienceList, innerLifeSummaryList, innerLifeContextBar,
     innerLifeDaemonToggle, innerLifeDaemonToggleLabel, innerLifeNextRun, innerLifeLastResult, innerLifeRecovery,
     innerLifeDoctorStatus, innerLifeDoctorList, innerLifePendingCount, innerLifeEventCount, innerLifeThoughtCount,
     innerLifeProfileDisplayName, innerLifeProfileRecentFocus, innerLifeProfileInterests,
@@ -373,6 +373,38 @@ function renderSharedLineCards(lines) {
     .join("");
 }
 
+function renderSharedLineContext(sharedLine = {}, current = {}, selectedLine = {}) {
+  if (!sharedLineContextBar) return;
+  const metadata = { ...(selectedLine.metadata || {}), ...(current.metadata || {}) };
+  const title = selectedLine.title || selectedLine.id || sharedLine.lineId || t("sharedLine.detail.title");
+  const agentId = selectedLine.agentId || metadata.agentId || current.agentId || sharedLine.agentId || "-";
+  const status = selectedLine.status || current.interpretationStatus || "active";
+  const updatedAt = current.updatedAt || selectedLine.updatedAt || selectedLine.createdAt || "-";
+  const nextStep = metadata.nextStep || current.nextStep || current.metadata?.nextStep || "";
+  sharedLineContextBar.innerHTML = `
+    <div>
+      <span>${escapeHtml(t("sharedLine.selectedLine"))}</span>
+      <strong>${escapeHtml(title)}</strong>
+    </div>
+    <div>
+      <span>${escapeHtml(t("sharedLine.meta.agent"))}</span>
+      <strong>${escapeHtml(agentId)}</strong>
+    </div>
+    <div>
+      <span>${escapeHtml(t("sharedLine.statusLabel"))}</span>
+      <strong>${escapeHtml(status)}</strong>
+    </div>
+    <div>
+      <span>${escapeHtml(t("sharedLine.updated"))}</span>
+      <strong>${escapeHtml(updatedAt)}</strong>
+    </div>
+    <p>
+      <span>${escapeHtml(t("sharedLine.meta.nextStep"))}</span>
+      <strong>${escapeHtml(nextStep || t("sharedLine.noNextStep"))}</strong>
+    </p>
+  `;
+}
+
 function renderMemoryList() {
   const snapshot = getSnapshot();
   const memories = snapshot?.memories || [];
@@ -391,6 +423,7 @@ function renderSharedLine() {
   const snapshots = sharedLine?.snapshots || [];
   const activeLine = lines.find((line) => line.active) || {};
   state.selectedSharedLineId = sharedLine?.lineId || state.selectedSharedLineId || activeLine.id || "";
+  const selectedLine = lines.find((line) => line.id === state.selectedSharedLineId) || activeLine || {};
   sharedLineDetailStatus.textContent = current.interpretationStatus || activeLine.status || "active";
   sharedLineDetailStatus.className = `badge ${current.interpretationStatus === "confirmed" ? "ok" : "planned"}`;
   const activeLines = lines.filter((line) => line.status !== "archived");
@@ -420,6 +453,7 @@ function renderSharedLine() {
     ? archivedLines.filter((line) => (line.agentId || line.metadata?.agentId || "") === state.activeSharedLineAgentFilter)
     : archivedLines;
   renderSharedLineAgentState(sharedLine || {}, current, state.activeSharedLineAgentFilter);
+  renderSharedLineContext(sharedLine || {}, current, selectedLine);
   const lineCards = renderSharedLineCards(visibleLines);
   if (!lineCards) {
     sharedLineList.innerHTML = `<div class="endpoint-empty">${t("sharedLine.linesEmpty")}</div>`;
@@ -723,6 +757,36 @@ function renderInnerLife() {
   const pendingShares = filterByAgent(innerLife.pendingShares || [], state.activeInnerLifeAgentFilter);
   const approvedShares = filterByAgent(innerLife.recentShares || [], state.activeInnerLifeAgentFilter).filter((share) => share.status === "approved").slice(0, 5);
   innerLifePendingCount.textContent = pendingShares.length;
+  if (innerLifeContextBar) {
+    const selectedAgent = state.activeInnerLifeAgentFilter || t("sharedLine.filter.allAgents");
+    const nextAction = pendingShares.length
+      ? t("innerLife.nextActionReviewShares", { count: String(pendingShares.length) })
+      : daemonEnabled
+        ? t("innerLife.nextActionObserve")
+        : t("innerLife.nextActionEnableDaemon");
+    innerLifeContextBar.innerHTML = `
+      <div>
+        <span>${escapeHtml(t("innerLife.agentLabel"))}</span>
+        <strong>${escapeHtml(selectedAgent)}</strong>
+      </div>
+      <div>
+        <span>${escapeHtml(t("innerLife.daemonStatus"))}</span>
+        <strong>${escapeHtml(daemon.status || "paused")}</strong>
+      </div>
+      <div>
+        <span>${escapeHtml(t("innerLife.pendingShares"))}</span>
+        <strong>${escapeHtml(pendingShares.length)}</strong>
+      </div>
+      <div>
+        <span>${escapeHtml(t("innerLife.approvedOutput"))}</span>
+        <strong>${escapeHtml(approvedShares.length)}</strong>
+      </div>
+      <p>
+        <span>${escapeHtml(t("innerLife.nextAction"))}</span>
+        <strong>${escapeHtml(nextAction)}</strong>
+      </p>
+    `;
+  }
   if (pendingShares.length === 0 && approvedShares.length === 0) {
     innerLifeShareList.innerHTML = `<div class="endpoint-empty">${t("innerLife.empty")}</div>`;
     return;
@@ -754,7 +818,10 @@ function renderInnerLife() {
       `
     )
     .join("");
-  innerLifeShareList.innerHTML = `${pendingHtml}${approvedHtml}`;
+  innerLifeShareList.innerHTML = `
+    ${pendingHtml ? `<section class="innerlife-share-section"><h3>${escapeHtml(t("innerLife.pendingReview"))}</h3>${pendingHtml}</section>` : ""}
+    ${approvedHtml ? `<section class="innerlife-share-section"><h3>${escapeHtml(t("innerLife.approvedMaterial"))}</h3>${approvedHtml}</section>` : ""}
+  `;
 }
 
   return {

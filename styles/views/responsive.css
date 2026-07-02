@@ -20,6 +20,11 @@
     grid-template-columns: 1fr;
   }
 
+  .home-runtime-panel,
+  .home-attention-panel {
+    min-height: auto;
+  }
+
   .status-rail {
     display: none;
   }

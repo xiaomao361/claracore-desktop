@@ -87,6 +87,7 @@ function registerIpcHandlers({
   currentDataRootPreference,
   ipcMain,
   listConfiguredModels,
+  testConfiguredModel,
   notifyRuntimeChanged,
   rescheduleMemoryMaintenance,
   saveDataRootPreference,
@@ -111,6 +112,7 @@ function registerIpcHandlers({
     return result;
   });
   ipcMain.handle("claracore:listModels", async (_event, input) => listConfiguredModels(input));
+  ipcMain.handle("claracore:testModelConnection", async (_event, input) => testConfiguredModel(input));
   ipcMain.handle("claracore:createMemory", async (_event, input) => {
     if (!isPlainObject(input)) return false;
     return createProductMemory(app, input);

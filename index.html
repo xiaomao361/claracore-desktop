@@ -183,6 +183,7 @@
               <button id="processMemoryEmbeddings" class="primary" data-i18n="memory.embedding.processPending">Generate all missing vectors</button>
               <span id="memoryEmbeddingNotice"></span>
             </div>
+            <p class="module-guidance" data-i18n="memory.vectorGuidance">Vector maintenance is only needed when pending or failed items appear.</p>
             <div class="memory-embedding-progress" aria-hidden="true">
               <div id="memoryEmbeddingProgressBar"></div>
             </div>
@@ -220,6 +221,11 @@
             <section class="memoria-tab-panel" data-memory-panel="graph">
               <div class="memory-graph-section">
                 <strong data-i18n="memory.graph.title">Memory graph</strong>
+                <div class="graph-legend">
+                  <span data-i18n="memory.graph.legendMemory">Small points are memories</span>
+                  <span data-i18n="memory.graph.legendLabels">Larger nodes are labels</span>
+                  <span data-i18n="memory.graph.legendClick">Click a node to inspect related records</span>
+                </div>
                 <div id="memoryGraphSummary" class="graph-summary"></div>
                 <div id="memoryGraph" class="memory-graph"></div>
               </div>
@@ -307,6 +313,7 @@
               </div>
               <span id="sharedLineDetailStatus" class="badge ok">active</span>
             </div>
+            <div id="sharedLineContextBar" class="shared-line-context-bar"></div>
             <div class="shared-line-current">
               <strong data-i18n="sharedLine.current">Latest progress</strong>
               <p id="sharedLineSummary" data-i18n="sharedLine.currentEmpty">No agent-written progress yet.</p>
@@ -360,24 +367,36 @@
                   <select id="innerLifeAgentFilter"></select>
                 </div>
               </div>
+              <div id="innerLifeContextBar" class="innerlife-context-bar"></div>
               <div id="innerLifeShareList" class="innerlife-share-list"></div>
-              <div class="innerlife-record-grid">
-                <section>
-                  <h3 data-i18n="innerLife.history">History</h3>
-                  <p data-i18n="innerLife.historyBody">Raw inner changes and traces.</p>
-                  <div id="innerLifeHistoryList" class="shared-line-history-list compact-list"></div>
-                </section>
-                <section>
-                  <h3 data-i18n="innerLife.experiences">Experiences</h3>
-                  <p data-i18n="innerLife.experiencesBody">Things the agent has already lived through or used.</p>
-                  <div id="innerLifeExperienceList" class="shared-line-history-list compact-list"></div>
-                </section>
-                <section>
-                  <h3 data-i18n="innerLife.summaries">Summaries</h3>
-                  <p data-i18n="innerLife.summariesBody">Stable understandings distilled from prior activity.</p>
-                  <div id="innerLifeSummaryList" class="shared-line-history-list compact-list"></div>
-                </section>
-              </div>
+              <details class="innerlife-deep-section">
+                <summary>
+                  <span data-i18n="innerLife.deepInspection">Deep inspection</span>
+                  <small data-i18n="innerLife.deepInspectionHint">History, experiences, stable summaries, and profile configuration.</small>
+                </summary>
+                <div class="innerlife-record-grid">
+                  <section>
+                    <h3 data-i18n="innerLife.history">History</h3>
+                    <p data-i18n="innerLife.historyBody">Raw inner changes and traces.</p>
+                    <div id="innerLifeHistoryList" class="shared-line-history-list compact-list"></div>
+                  </section>
+                  <section>
+                    <h3 data-i18n="innerLife.experiences">Experiences</h3>
+                    <p data-i18n="innerLife.experiencesBody">Things the agent has already lived through or used.</p>
+                    <div id="innerLifeExperienceList" class="shared-line-history-list compact-list"></div>
+                  </section>
+                  <section>
+                    <h3 data-i18n="innerLife.summaries">Summaries</h3>
+                    <p data-i18n="innerLife.summariesBody">Stable understandings distilled from prior activity.</p>
+                    <div id="innerLifeSummaryList" class="shared-line-history-list compact-list"></div>
+                  </section>
+                </div>
+              </details>
+              <details class="innerlife-deep-section">
+                <summary>
+                  <span data-i18n="innerLife.profileTitle">Inner profile</span>
+                  <small data-i18n="innerLife.profileBody">What this agent tends to watch, avoid, and surface.</small>
+                </summary>
               <section class="innerlife-profile-panel">
                 <div class="section-heading-line">
                   <div>
@@ -428,6 +447,7 @@
                 </details>
                 <p id="innerLifeProfileNotice" class="quiet"></p>
               </section>
+              </details>
             </article>
             <aside class="innerlife-side">
               <article class="panel">
@@ -485,6 +505,7 @@
             <p data-i18n="data.body">Import and restore are separated so destructive actions stay clear.</p>
             <div class="action-row"><span data-i18n="data.exportBackup">Create backup (.db + manifest)</span><button id="exportBackup" class="secondary" data-i18n="actions.create">Create</button></div>
             <div class="action-row"><span data-i18n="data.exportProductJson">Export JSON</span><button id="exportProductJson" class="secondary" data-i18n="actions.export">Export</button></div>
+            <p class="module-guidance" data-i18n="data.importRiskCopy">JSON import merges product records into the current data root; create a backup first if you need a rollback point.</p>
             <div class="action-row danger"><span data-i18n="data.importProductJson">Import JSON</span><button id="importProductJson" class="secondary" data-i18n="actions.import">Import</button></div>
             <span id="productJsonNotice" class="quiet" aria-live="polite"></span>
             <span id="backupNotice" class="quiet" aria-live="polite"></span>
@@ -530,6 +551,19 @@
               <div><span data-i18n="logs.visibleLines">Visible lines</span><strong id="logLineCount">0</strong></div>
               <div><span data-i18n="logs.lastRefresh">Last refresh</span><strong id="logLastRefresh">-</strong></div>
             </div>
+            <div class="log-filter-row">
+              <label>
+                <span data-i18n="logs.filter">Filter</span>
+                <select id="logFilter">
+                  <option value="all" data-i18n="logs.filterAll">All logs</option>
+                  <option value="runtime" data-i18n="logs.filterRuntime">Runtime</option>
+                  <option value="gateway" data-i18n="logs.filterGateway">Gateway</option>
+                  <option value="ui" data-i18n="logs.filterUi">UI</option>
+                  <option value="errors" data-i18n="logs.filterErrors">Errors</option>
+                </select>
+              </label>
+              <span data-i18n="logs.filterHint">Filtering only changes the visible view; raw logs remain available.</span>
+            </div>
             <pre id="logTerminal" class="log-terminal" aria-live="polite"></pre>
           </article>
         </div>
@@ -566,30 +600,43 @@
           </article>
           <article class="panel agent-access-side">
             <div class="panel-heading">
-              <h2 data-i18n="agentSetup.actions">Actions</h2>
+              <h2 data-i18n="agentSetup.console">Access console</h2>
               <span id="copyNotice" class="quiet" aria-live="polite"></span>
             </div>
-            <button id="copyAgentSetup" class="secondary full" data-i18n="agentSetup.copy">Copy agent install brief</button>
-            <button class="secondary full" data-copy="mcp-command" data-i18n="connections.copyMcpCommand">Copy MCP command</button>
-            <button class="secondary full" data-copy="mcp-config" data-i18n="connections.copyMcpConfig">Copy MCP config</button>
-            <button id="openGatewayFolder" class="secondary full" data-i18n="connections.openGatewayFolder">Open runtime folder</button>
-            <h2 class="section-title" data-i18n="agentSetup.identityContract">Agent identity</h2>
-            <div id="agentIdentityList" class="endpoint-list"></div>
-            <details class="agent-access-details">
-              <summary data-i18n="connections.title">Connection details</summary>
-              <div class="snippet">
-                <span data-i18n="connections.mcpCommand">MCP command</span>
-                <code id="mcpCommand">Checking...</code>
-              </div>
-              <div class="snippet large">
-                <span data-i18n="connections.mcpConfig">MCP config</span>
-                <pre><code id="mcpConfig">Checking...</code></pre>
-              </div>
-            </details>
-            <details class="agent-access-details">
-              <summary data-i18n="connections.httpEndpoints">HTTP endpoints</summary>
-              <div id="httpEndpointList" class="endpoint-list"></div>
-            </details>
+            <section class="agent-console-group">
+              <h3 data-i18n="agentSetup.quickCopy">Quick copy</h3>
+              <button id="copyAgentSetup" class="secondary full" data-i18n="agentSetup.copy">Copy agent install brief</button>
+              <button class="secondary full" data-copy="mcp-config" data-i18n="connections.copyMcpConfig">Copy MCP config</button>
+              <button class="secondary full" data-copy="mcp-command" data-i18n="connections.copyMcpCommand">Copy MCP command</button>
+            </section>
+            <section class="agent-console-group">
+              <h3 data-i18n="agentSetup.currentIdentity">Current identity</h3>
+              <div id="agentIdentityList" class="endpoint-list"></div>
+            </section>
+            <section class="agent-console-group">
+              <h3 data-i18n="agentSetup.connectionMode">Connection mode</h3>
+              <button id="openGatewayFolder" class="secondary full" data-i18n="connections.openGatewayFolder">Open runtime folder</button>
+              <details class="agent-access-details">
+                <summary data-i18n="connections.title">Connection details</summary>
+                <div class="snippet">
+                  <span data-i18n="connections.mcpCommand">MCP command</span>
+                  <code id="mcpCommand">Checking...</code>
+                </div>
+                <div class="snippet large">
+                  <span data-i18n="connections.mcpConfig">MCP config</span>
+                  <pre><code id="mcpConfig">Checking...</code></pre>
+                </div>
+              </details>
+              <details class="agent-access-details">
+                <summary data-i18n="connections.httpEndpoints">HTTP endpoints</summary>
+                <div id="httpEndpointList" class="endpoint-list"></div>
+              </details>
+            </section>
+            <section class="source-map-card">
+              <h3 data-i18n="agentSetup.sourceMapTitle">Debug / Source Map</h3>
+              <p data-i18n="agentSetup.sourceMapBody">Maintenance agents should start from docs/CODE_MAP.md for ownership boundaries.</p>
+              <code>docs/CODE_MAP.md</code>
+            </section>
             <details class="agent-access-details">
               <summary data-i18n="agentSetup.installBrief">Install brief</summary>
               <div class="doc-preview compact">
@@ -647,6 +694,10 @@
                     </span>
                   </label>
                 </div>
+                <div class="connection-test-row">
+                  <button id="testMemoriaConnection" class="secondary" type="button" data-i18n="settings.testConnection">Test connection</button>
+                  <span id="memoriaConnectionNotice" class="connection-test-notice" aria-live="polite" data-i18n="settings.connectionNotTested">Not tested this session.</span>
+                </div>
               </section>
               <section class="model-config-card">
                 <div class="model-config-head">
@@ -690,6 +741,10 @@
                     </span>
                   </label>
                 </div>
+                <div class="connection-test-row">
+                  <button id="testInnerLifeConnection" class="secondary" type="button" data-i18n="settings.testConnection">Test connection</button>
+                  <span id="innerLifeConnectionNotice" class="connection-test-notice" aria-live="polite" data-i18n="settings.connectionNotTested">Not tested this session.</span>
+                </div>
               </section>
             </div>
             <div class="settings-actions">
@@ -697,12 +752,16 @@
             </div>
           </article>
           <article class="panel">
-            <h2 data-i18n="settings.simpleBoundaryTitle">Boundary</h2>
+            <h2 data-i18n="settings.usageSummaryTitle">Usage summary</h2>
+            <p class="quiet" data-i18n="settings.usageSummaryBody">Where each model setting is used inside ClaraCore Desktop.</p>
             <div class="metric-list">
               <div><span data-i18n="settings.memoryRole">Memory</span><strong data-i18n="settings.memoryRoleBody">Embedding only</strong></div>
               <div><span data-i18n="settings.innerLifeRole">InnerLife</span><strong data-i18n="settings.innerLifeRoleBody">Daemon model</strong></div>
-              <div><span data-i18n="settings.secretsRole">Secrets</span><strong id="innerLifeApiKeySummary">not configured</strong></div>
+              <div><span data-i18n="settings.secretReferenceRole">Secret reference</span><strong id="innerLifeApiKeySummary">not configured</strong></div>
+              <div><span data-i18n="settings.fetchModelsRole">Fetch models</span><strong data-i18n="settings.fetchModelsRoleBody">Discovery only, not health</strong></div>
+              <div><span data-i18n="settings.connectionTestRole">Test connection</span><strong data-i18n="settings.connectionTestRoleBody">Endpoint plus model check</strong></div>
             </div>
+            <p class="module-guidance" data-i18n="settings.connectionTestBody">Connection tests use the provider model-list endpoint to prove reachability and selected model availability without running a generation request.</p>
           </article>
         </div>
       </section>
@@ -824,6 +883,12 @@
               <div><span data-i18n="settings.electronVersion">Electron</span><strong id="settingsElectronVersion">-</strong></div>
               <div><span data-i18n="settings.nodeVersion">Node</span><strong id="settingsNodeVersion">-</strong></div>
             </div>
+            <section class="source-map-card settings-source-card">
+              <h3 data-i18n="settings.docsSourceTitle">Docs and source</h3>
+              <p data-i18n="settings.docsSourceBody">Read-only entry points for operators and maintenance agents.</p>
+              <code>docs/ARCHITECTURE.md</code>
+              <code>docs/CODE_MAP.md</code>
+            </section>
             <details class="settings-path-details">
               <summary data-i18n="settings.showRuntimeDetails">Show runtime details</summary>
               <div class="path-detail-list">
@@ -843,12 +908,12 @@
     </main>
 
     <footer class="resource-monitor" aria-label="System resources">
-      <span><span data-i18n="monitor.uptime">Uptime</span>: <strong id="monitorUptime">--:--:--</strong></span>
-      <span><span data-i18n="monitor.cpu">CPU</span>: <strong id="monitorCpu">--</strong><b class="monitor-dot"></b></span>
-      <span><span data-i18n="monitor.ram">RAM</span>: <strong id="monitorRam">--</strong></span>
-      <span><span data-i18n="monitor.process">Process</span>: <strong id="monitorProcess">--</strong></span>
-      <span><span data-i18n="monitor.disk">Disk</span>: <strong id="monitorDisk">--</strong><b class="monitor-dot"></b></span>
-      <span><span data-i18n="monitor.localTime">Local time</span>: <strong id="monitorTime">--</strong></span>
+      <span class="monitor-primary"><span data-i18n="monitor.uptime">Uptime</span>: <strong id="monitorUptime">--:--:--</strong></span>
+      <span class="monitor-secondary"><span data-i18n="monitor.cpu">CPU</span>: <strong id="monitorCpu">--</strong><b class="monitor-dot"></b></span>
+      <span class="monitor-secondary"><span data-i18n="monitor.ram">RAM</span>: <strong id="monitorRam">--</strong></span>
+      <span class="monitor-secondary"><span data-i18n="monitor.process">Process</span>: <strong id="monitorProcess">--</strong></span>
+      <span class="monitor-secondary"><span data-i18n="monitor.disk">Disk</span>: <strong id="monitorDisk">--</strong><b class="monitor-dot"></b></span>
+      <span class="monitor-primary"><span data-i18n="monitor.localTime">Local time</span>: <strong id="monitorTime">--</strong></span>
     </footer>
 
     <script src="./app/dom.js"></script>

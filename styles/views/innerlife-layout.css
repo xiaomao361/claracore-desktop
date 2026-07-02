@@ -106,6 +106,65 @@
   margin-bottom: 12px;
 }
 
+.innerlife-context-bar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.innerlife-context-bar > div,
+.innerlife-context-bar > p {
+  min-width: 0;
+  margin: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(43, 61, 52, 0.08);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.innerlife-context-bar > p {
+  grid-column: 1 / -1;
+}
+
+.innerlife-context-bar span,
+.innerlife-context-bar strong {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.innerlife-context-bar span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
+.innerlife-context-bar strong {
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.innerlife-share-section {
+  display: grid;
+  gap: 9px;
+}
+
+.innerlife-share-section + .innerlife-share-section {
+  margin-top: 12px;
+}
+
+.innerlife-share-section h3 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
 .innerlife-share-heading-copy {
   display: flex;
   align-items: baseline;
@@ -147,3 +206,42 @@
   word-break: break-word;
 }
 
+.innerlife-deep-section {
+  margin-top: 12px;
+  padding: 10px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fafaf7;
+}
+
+.innerlife-deep-section > summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.innerlife-deep-section > summary span {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 720;
+}
+
+.innerlife-deep-section > summary small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.innerlife-deep-section[open] > summary {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(43, 61, 52, 0.08);
+}
+
+.innerlife-record-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}

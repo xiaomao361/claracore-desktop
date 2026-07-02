@@ -2,6 +2,64 @@
 
 Date: 2026-07-01
 
+## v0.2.0 Implementation Status
+
+Updated: 2026-07-02
+
+This backlog has been implemented as the v0.2.0 polish baseline on
+`develop/0.2.0`. The work stays within the existing quiet, local,
+agent-first Desktop product boundary; it does not introduce a new chat surface
+or broad new product module.
+
+Completed:
+
+- Added a dynamic "What matters now" strip to every primary page so the first
+  read answers current state, whether action is needed, key metrics, and the
+  most relevant next entry.
+- Reframed Agent Access as an access console with grouped quick copy actions,
+  current identity, connection mode, recent MCP activity, and a debug/source
+  map entry for `docs/CODE_MAP.md`.
+- Reduced raw text dominance by using summary-first Memory cards, compact Home
+  Gateway traces, and expandable raw evidence where inspection is still needed.
+- Standardized the core module reading pattern around current state, key
+  metrics, recent changes, recommended action, and deep inspection.
+- Simplified InnerLife's first screen around selected agent, daemon state,
+  pending shares, approved output, and next action; deeper history,
+  experiences, stable summaries, and profile configuration now sit behind
+  secondary disclosure sections.
+- Added Memory graph legend and vector-maintenance guidance.
+- Added Shared Line selected-line context so line name, agent, status, updated
+  time, and next step stay visible near detail content.
+- Added Data import risk copy.
+- Added Logs filters and a confirmation before clearing diagnostic evidence.
+- Added Models connection tests, last success/error feedback, and a clearer
+  usage-summary panel.
+- Added Settings docs/source entry and tightened runtime facts.
+- Reduced bottom runtime bar visual weight while preserving resource truth.
+- Added an isolated next-version launcher so `npm start` runs v0.2.0 against a
+  separate data root without affecting the daily-use v0.1.0 app.
+
+Verification completed:
+
+```bash
+npm run check
+npm run test:smoke
+npm run test:home:orb
+npm run test:backup:ui
+npm run test:import-preview:ui
+```
+
+Visual QA screenshots were also taken for Home, Memory, InnerLife, Agent
+Access, and Models to confirm that the top-level reading path is visible.
+
+Remaining polish candidates:
+
+- Home still has a dense first screen; the new summary strip gives a clearer
+  reading path, but a future pass can further reduce secondary cards.
+- The cognitive-core visual is intentionally lightweight for performance and
+  should be revisited after the broader v0.2.0 acceptance pass.
+- Backup artifact labels can be made more explicit in a later narrow pass.
+
 ## Version Direction
 
 This backlog is the UI/UX direction for the next ClaraCore Desktop version.

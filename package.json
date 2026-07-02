@@ -5,7 +5,8 @@
   "description": "ClaraCore desktop manager for the local personal cognitive core",
   "main": "electron/main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "node scripts/start-next-dev.js",
+    "start:product": "electron .",
     "start:next": "node scripts/start-next-dev.js",
     "gateway": "node core/gateway/mcp-server.js",
     "memoria": "node core/cli.js",
