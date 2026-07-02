@@ -49,6 +49,7 @@ window.ClaraCoreDom = {
   homeCognitiveUpdated: document.querySelector("#homeCognitiveUpdated"),
   homeCognitiveSystems: document.querySelector("#homeCognitiveSystems"),
   homeRuntimePanel: document.querySelector("#homeRuntimePanel"),
+  homeOrbCanvas: document.querySelector("#homeOrbCanvas"),
   homeRuntimeStatus: document.querySelector("#homeRuntimeStatus"),
   homeRuntimeDetail: document.querySelector("#homeRuntimeDetail"),
   homeRuntimeStrip: document.querySelector("#homeRuntimeStrip"),

@@ -161,6 +161,25 @@
   will-change: transform, box-shadow;
 }
 
+.home-orb-canvas {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 50%;
+  width: 224px;
+  height: 224px;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.home-runtime-panel[data-canvas-ready="1"] .orb-ring,
+.home-runtime-panel[data-canvas-ready="1"] .orb-core,
+.home-runtime-panel[data-canvas-ready="1"] .orb-node,
+.home-runtime-panel[data-canvas-ready="1"] .orb-signal,
+.home-runtime-panel[data-canvas-ready="1"] .orb-particle {
+  opacity: 0.24;
+}
+
 .home-orb::before {
   content: "";
   position: absolute;
@@ -430,3 +449,8 @@
   font-weight: 680;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .home-orb-canvas {
+    display: none;
+  }
+}

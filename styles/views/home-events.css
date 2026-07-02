@@ -114,6 +114,10 @@
   .orb-particle {
     animation: none;
   }
+
+  .home-orb-canvas {
+    display: none;
+  }
 }
 
 body[data-motion="off"] .home-runtime-field,
@@ -124,6 +128,10 @@ body[data-motion="off"] .ring-two,
 body[data-motion="off"] .orb-signal,
 body[data-motion="off"] .orb-particle {
   animation: none;
+}
+
+body[data-motion="off"] .home-orb-canvas {
+  display: none;
 }
 
 body[data-motion="off"] .home-runtime-field {
@@ -137,4 +145,3 @@ body[data-motion="off"] .orb-signal {
 body[data-motion="off"] .orb-particle {
   opacity: 0.66;
 }
-

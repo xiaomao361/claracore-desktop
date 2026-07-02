@@ -14,6 +14,7 @@ function createClaraCoreHomeView(context) {
     eventList,
     homeCognitiveUpdated,
     homeRuntimePanel,
+    homeOrbCanvas,
     homeRuntimeStatus,
     homeRuntimeDetail,
     homeRuntimeStrip,
@@ -30,6 +31,10 @@ function createClaraCoreHomeView(context) {
     gatewayTraceList,
     httpEndpointList
   } = dom;
+  const homeOrb = window.createClaraCoreHomeOrb?.({
+    canvas: homeOrbCanvas,
+    fallback: homeRuntimePanel
+  });
   const {
     actionableGatewayErrors,
     agentActivityState,
@@ -251,6 +256,7 @@ function createClaraCoreHomeView(context) {
     if (homeRuntimePanel) {
       homeRuntimePanel.dataset.orbState = orbState;
     }
+    homeOrb?.render(snapshot, orbState);
     homeRuntimeStatus.textContent =
       healthStatus === "ok" ? t("common.ready") : healthStatus === "error" ? t("status.healthError") : t("common.needsAttention");
     homeRuntimeStatus.className = `runtime-state ${healthStatus === "ok" ? "ok" : healthStatus === "error" ? "error" : "warn"}`;
