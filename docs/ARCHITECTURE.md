@@ -36,6 +36,11 @@ uses an OS-assigned runtime port. Do not document or depend on a fixed port;
 agents should read the current URL from Agent Access or `/agent/setup` each app
 session.
 
+The HTTP Agent Gateway is a localhost setup surface, not a browser API. It does
+not emit permissive CORS headers, and token checks use the same comparison path
+for bearer and setup-query tokens. Query tokens are retained only for the
+browser-open setup flow; normal agent calls should prefer bearer tokens.
+
 Do not show or bind a LAN URL by default. A LAN Agent Gateway must be an
 explicit product mode with visible bind address, bearer token, token
 regeneration, and disable controls because Gateway context includes product
@@ -57,6 +62,9 @@ highest-priority override for test and scripted launches.
 ## Renderer Boundary
 
 The renderer currently uses plain script tags and no frontend build step.
+It runs with Electron renderer sandboxing enabled. `index.html` also owns the
+renderer CSP, which currently allows local scripts, local/data images, and
+inline styles for the existing stylesheet-free HTML attributes.
 
 `app.js` is orchestration:
 

@@ -15,18 +15,21 @@ ClaraCore Desktop is a local Electron product around four agent-facing domains:
 - InnerLife: agent profiles, inbox, sessions, thoughts, shares, digests, and
   daemon state.
 
-The renderer has no build step. `index.html` loads classic scripts from `app/`.
-The product runtime is Node/Electron plus a Desktop-owned SQLite database.
+The renderer has no build step. `index.html` loads classic scripts from `app/`
+and owns the renderer CSP. The Electron BrowserWindow runs with renderer
+sandboxing enabled. The product runtime is Node/Electron plus a Desktop-owned
+SQLite database.
 
 ## Top-Level Entry Points
 
 - `package.json`: scripts, packaging config, Electron Builder file list, and
   validation commands.
 - `electron/main.js`: app lifecycle, BrowserWindow, tray/menu, packaged
-  Gateway mode, runtime snapshot wiring, and quit behavior.
+  Gateway mode, renderer sandbox policy, runtime snapshot wiring, and quit
+  behavior.
 - `electron/preload.js`: safe renderer bridge over Electron IPC.
 - `index.html`: static renderer shell, navigation, page sections, and script
-  ordering.
+  ordering, plus the renderer CSP.
 - `app.js`: renderer state, refresh loop, cross-view event wiring, and view
   orchestration.
 - `core/runtime/index.js`: public runtime facade used by Electron, CLI,
@@ -46,7 +49,8 @@ Start here:
 4. `electron/schedulers.js`
 
 Use this path for Dock/tray behavior, close/quit rules, packaged `--gateway`
-behavior, HTTP Agent Gateway lifecycle, and background timers.
+behavior, BrowserWindow security policy, HTTP Agent Gateway lifecycle, and
+background timers.
 
 ### Renderer Navigation And UI Behavior
 
