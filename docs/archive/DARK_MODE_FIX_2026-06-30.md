@@ -47,3 +47,20 @@ data, Gateway behavior, or Electron IPC.
 If future views add new hard-coded light backgrounds, prefer moving them to
 existing theme variables first. Keep `styles/dark-fixes.css` as the compatibility
 layer for older view-specific selectors until the view CSS is fully tokenized.
+
+## Follow-up - 2026-07-02
+
+The Memory Labels tab still had light-mode cards in dark mode because
+`label-feature-card`, `label-mini-card`, and `label-overview-row` kept
+hard-coded light backgrounds from `memoria-detail-labels.css`.
+
+The compatibility layer now covers those label cards, their hover states, their
+count text, and the category strength overlays for agent, system, tool, and
+project labels.
+
+Verification:
+
+- `npm run check`
+- `npm run test:phase2:ui`
+- Electron visual QA screenshot:
+  `/tmp/claracore-memory-labels-dark-fixed.png`

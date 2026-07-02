@@ -365,6 +365,9 @@ body[data-theme="dark"] .memory-meta div span,
 body[data-theme="dark"] .memory-search-rank,
 body[data-theme="dark"] .maintenance-item,
 body[data-theme="dark"] .record-summary,
+body[data-theme="dark"] .label-feature-card,
+body[data-theme="dark"] .label-mini-card,
+body[data-theme="dark"] .label-overview-row,
 body[data-theme="dark"] .memory-graph,
 body[data-theme="dark"] .graph-layer,
 body[data-theme="dark"] .graph-canvas {
@@ -403,6 +406,51 @@ body[data-theme="dark"] .memory-search input {
 
 body[data-theme="dark"] .memory-search input::placeholder {
   color: #768078;
+}
+
+body[data-theme="dark"] .label-feature-card::before,
+body[data-theme="dark"] .label-mini-card::before,
+body[data-theme="dark"] .label-overview-row::before {
+  background: linear-gradient(90deg, rgba(121, 201, 164, 0.18), rgba(121, 201, 164, 0));
+}
+
+body[data-theme="dark"] .label-feature-card.agent::before,
+body[data-theme="dark"] .label-mini-card.agent::before {
+  background: linear-gradient(90deg, rgba(99, 155, 215, 0.18), rgba(99, 155, 215, 0));
+}
+
+body[data-theme="dark"] .label-feature-card.system::before,
+body[data-theme="dark"] .label-mini-card.system::before {
+  background: linear-gradient(90deg, rgba(215, 159, 75, 0.2), rgba(215, 159, 75, 0));
+}
+
+body[data-theme="dark"] .label-feature-card.tool::before,
+body[data-theme="dark"] .label-mini-card.tool::before {
+  background: linear-gradient(90deg, rgba(154, 132, 210, 0.18), rgba(154, 132, 210, 0));
+}
+
+body[data-theme="dark"] .label-feature-card.project::before,
+body[data-theme="dark"] .label-mini-card.project::before {
+  background: linear-gradient(90deg, rgba(121, 201, 164, 0.22), rgba(121, 201, 164, 0));
+}
+
+body[data-theme="dark"] .label-feature-card:hover,
+body[data-theme="dark"] .label-mini-card:hover,
+body[data-theme="dark"] .label-overview-row:hover {
+  border-color: rgba(121, 201, 164, 0.38);
+  background: #26302b;
+}
+
+body[data-theme="dark"] .label-feature-card span,
+body[data-theme="dark"] .label-feature-card strong,
+body[data-theme="dark"] .label-mini-card span,
+body[data-theme="dark"] .label-overview-name {
+  color: var(--text);
+}
+
+body[data-theme="dark"] .label-mini-card strong,
+body[data-theme="dark"] .label-overview-row strong {
+  color: var(--muted);
 }
 
 body[data-theme="dark"] .memoria-tabs button.active,
