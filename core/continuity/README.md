@@ -96,6 +96,12 @@ always `position_${lineId}`. The write path must:
 - append to `continuity_snapshots`,
 - return a resume packet for the line that was actually written.
 
+MCP write tools (`shared_line_update`, `create`, `activate`, `rename`,
+`archive`, `restore`, `handoff_create`) return a lite resume packet: the saved
+position, recent history/snapshots/handoffs, shared reality, and the text
+packet, with `lines`, `archivedLines`, and `agentStates` empty. Full packets
+come from `shared_line_get`; full line lists come from `shared_line_list`.
+
 `shared_line_update` and the CLI `shared-line update` follow this rule. Passing
 `lineId` updates that exact active line. Omitting `lineId` updates the current
 active line, not an agent-inferred recent line. Agents that maintain several

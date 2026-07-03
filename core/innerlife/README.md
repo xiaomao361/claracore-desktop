@@ -77,7 +77,9 @@ Useful MCP tools include:
 - `innerlife_briefing`
 - `innerlife_sessions`
 - `innerlife_session_start`
-- `innerlife_session_end`
+- `innerlife_session_end` (returns a compact acknowledgement: closed session,
+  created ids, afterthought share, converged/reason; full state comes from
+  `innerlife_status` / `innerlife_briefing`)
 - `innerlife_submit_inbox`
 - `innerlife_submit_fact`
 - `innerlife_submit_continuity`

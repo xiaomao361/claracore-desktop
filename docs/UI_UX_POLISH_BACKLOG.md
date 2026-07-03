@@ -155,7 +155,7 @@ Verification: `npm run check` plus shell, ux-polish, phase1, phase2, phase3,
 phase4 trace, phase5 (ui + scheduler), backup, and import-preview UI smoke
 tests.
 
-## v0.2.4 / v0.2.5 Follow-up
+## v0.2.4 – v0.2.6 Follow-up
 
 Updated: 2026-07-03
 
@@ -174,6 +174,13 @@ Updated: 2026-07-03
   the InnerLife focus copy now states that thoughts wait for the agent to
   share in conversation. Gateway errors older than 30 minutes age out of
   attention and remain reviewable in Agent Access.
+- v0.2.6: MCP write acknowledgements slimmed for agent context budgets.
+  `innerlife_session_end` returns a compact acknowledgement (~1KB instead of
+  ~730KB of full InnerLife snapshot), and Shared Line write tools return lite
+  resume packets (~2KB instead of ~68KB with every line's metadata). Read
+  tools (`shared_line_get`, `innerlife_status`/`briefing`) and the Desktop UI
+  keep full payloads. Also fixed an unescaped template backtick in the Agent
+  Access install brief before it shipped.
 
 ## Version Direction
 
