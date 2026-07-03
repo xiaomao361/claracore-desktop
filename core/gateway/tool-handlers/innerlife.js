@@ -8,7 +8,9 @@ async function handleInnerLifeTool(name, args, context) {
   }
 
   if (name === "innerlife_session_end") {
-    return textResult(await innerlife.endSession(core, args.sessionId, args));
+    return textResult(
+      await innerlife.endSession(core, args.sessionId, { ...args, agentId: currentMcpAgentId(args) })
+    );
   }
 
   if (name === "innerlife_sessions") {

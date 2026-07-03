@@ -164,16 +164,39 @@ function createInnerLifeSessionRepository(helpers) {
     },
 
     async endInnerLifeSession(sessionId, input = {}) {
-      const id = String(sessionId || "").trim();
-      if (!id) throw new Error("InnerLife session id is required.");
+      const requestedId = String(sessionId || "").trim();
+      if (!requestedId) throw new Error("InnerLife session id is required.");
+      const callerAgentId = String(input.agentId || "").trim();
       const rows = await this.query(`
         SELECT id, agent_id, status
         FROM innerlife_sessions
-        WHERE id = ${sqlString(id)}
+        WHERE id = ${sqlString(requestedId)}
         LIMIT 1;
       `);
-      const session = rows[0];
+      let session = rows[0];
+      if (!session) {
+        // Agents often pass the external session id they registered at start
+        // instead of the internal id; accept it, preferring active sessions.
+        const fallbackRows = await this.query(`
+          SELECT id, agent_id, status
+          FROM innerlife_sessions
+          WHERE external_session_id = ${sqlString(requestedId)}
+            AND (${sqlString(callerAgentId)} = '' OR agent_id = ${sqlString(callerAgentId)})
+          ORDER BY CASE status WHEN 'active' THEN 0 ELSE 1 END, started_at DESC
+          LIMIT 1;
+        `);
+        session = fallbackRows[0];
+      }
       if (!session) throw new Error("InnerLife session not found.");
+      const id = session.id;
+      if (session.status === "ended") {
+        // Ending the same session twice is documented as safe; do not write
+        // duplicate events, thoughts, or shares.
+        return {
+          session: await this.getInnerLifeSession(id),
+          repeated: true
+        };
+      }
       const summary = String(input.summary || input.transcript || "").trim();
       const eventId = newId("inner_event");
       const thoughtId = newId("inner_thought");
