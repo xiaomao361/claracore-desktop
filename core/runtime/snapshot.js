@@ -47,16 +47,20 @@ function productModules(input = {}) {
 function gatewayLaunchConfig(app, paths) {
   const gatewayScript = path.join(paths.appRoot, "core", "gateway", "mcp-server.js");
   if (app?.isPackaged) {
+    // ELECTRON_RUN_AS_NODE keeps the Gateway a single Node process instead of
+    // a full Electron instance with GPU and network helper processes.
     return {
       command: process.execPath,
-      args: ["--gateway"],
-      displayCommand: `"${process.execPath}" --gateway`,
+      args: [gatewayScript],
+      env: { ELECTRON_RUN_AS_NODE: "1" },
+      displayCommand: `ELECTRON_RUN_AS_NODE=1 "${process.execPath}" "${gatewayScript}"`,
       source: "packaged app"
     };
   }
   return {
     command: "node",
     args: [gatewayScript],
+    env: {},
     displayCommand: `node ${gatewayScript}`,
     source: "development checkout"
   };
@@ -84,6 +88,7 @@ function productAgentSetup(app, paths) {
             command: launch.command,
             args: launch.args,
             env: {
+              ...launch.env,
               CLARACORE_AGENT_ID: "<agent-stable-id>",
               CLARACORE_DESKTOP_DATA_DIR: paths.dataRoot
             }

@@ -568,14 +568,16 @@ function stopSiblingGatewayProcesses() {
     const executableName = path.basename(process.execPath);
     for (const line of output.split(/\r?\n/)) {
       const trimmed = line.trim();
-      if (!trimmed || !trimmed.includes("--gateway")) continue;
+      const isLegacyGatewayLine = trimmed.includes("--gateway");
+      const isRunAsNodeGatewayLine = trimmed.includes(".asar/core/gateway/mcp-server.js");
+      if (!trimmed || (!isLegacyGatewayLine && !isRunAsNodeGatewayLine)) continue;
       const [pidText, ...commandParts] = trimmed.split(/\s+/);
       const pid = Number.parseInt(pidText, 10);
       if (!pid || pid === process.pid) continue;
       const command = commandParts.join(" ");
       const isPackagedGateway =
         command.includes(`${executableName}.app/Contents/MacOS/${executableName}`) ||
-        (command.includes(process.execPath) && command.includes("--gateway"));
+        (command.includes(process.execPath) && (isLegacyGatewayLine || isRunAsNodeGatewayLine));
       if (!isPackagedGateway) continue;
       try {
         process.kill(pid, "SIGTERM");
