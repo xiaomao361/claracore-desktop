@@ -19,6 +19,9 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   listModels(input) {
     return ipcRenderer.invoke("claracore:listModels", input);
   },
+  testModelConnection(input) {
+    return ipcRenderer.invoke("claracore:testModelConnection", input);
+  },
   setWindowPreferences(preferences) {
     return ipcRenderer.invoke("claracore:setWindowPreferences", preferences);
   },
@@ -237,6 +240,12 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   },
   setLanguage(language) {
     return ipcRenderer.invoke("claracore:setLanguage", language);
+  },
+  getUiPreferences() {
+    return ipcRenderer.invoke("claracore:getUiPreferences");
+  },
+  saveUiPreferences(updates) {
+    return ipcRenderer.invoke("claracore:saveUiPreferences", updates);
   },
   getShellState() {
     return ipcRenderer.invoke("claracore:getShellState");

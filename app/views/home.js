@@ -12,8 +12,6 @@ function createClaraCoreHomeView(context) {
   const {
     moduleGrid,
     eventList,
-    homeCognitiveUpdated,
-    homeRuntimePanel,
     homeRuntimeStatus,
     homeRuntimeDetail,
     homeRuntimeStrip,
@@ -171,9 +169,11 @@ function createClaraCoreHomeView(context) {
   }
 
   function renderModules(modules) {
+    if (!moduleGrid) return;
     moduleGrid.innerHTML = modules
       .map((module) => {
         const details = moduleDetails(module)
+          .slice(0, 2)
           .map(
             ([label, value]) => `
               <div class="module-detail">
@@ -247,10 +247,6 @@ function createClaraCoreHomeView(context) {
     const snapshot = getSnapshot();
     if (!snapshot) return;
     const healthStatus = snapshot.health?.status || "warn";
-    const orbState = runtimeOrbState(snapshot);
-    if (homeRuntimePanel) {
-      homeRuntimePanel.dataset.orbState = orbState;
-    }
     homeRuntimeStatus.textContent =
       healthStatus === "ok" ? t("common.ready") : healthStatus === "error" ? t("status.healthError") : t("common.needsAttention");
     homeRuntimeStatus.className = `runtime-state ${healthStatus === "ok" ? "ok" : healthStatus === "error" ? "error" : "warn"}`;
@@ -265,34 +261,6 @@ function createClaraCoreHomeView(context) {
         `
       )
       .join("");
-  }
-
-  function runtimeOrbState(snapshot) {
-    const traces = snapshot?.gatewayTraces || [];
-    const counts = snapshot?.innerLife?.counts || {};
-    const daemon = snapshot?.innerLife?.daemon || {};
-    const stats = snapshot?.memoryStats || {};
-    const hasError =
-      snapshot?.health?.status === "error" ||
-      daemon.status === "error" ||
-      actionableGatewayErrors(traces).length > 0 ||
-      Boolean(stats.failedEmbeddingCount);
-    if (hasError) return "error";
-
-    const pendingWork =
-      snapshot?.health?.status === "warn" ||
-      Boolean(stats.pendingEmbeddingCount) ||
-      Boolean(counts.pending_shares_count) ||
-      Boolean(counts.pending_inbox_count);
-    if (pendingWork) return "warning";
-
-    const activeWork =
-      traces.length > 0 ||
-      Boolean(counts.active_sessions_count) ||
-      Boolean((snapshot?.sharedLine?.currentPosition || {}).summary);
-    if (activeWork) return "active";
-
-    return "quiet";
   }
 
   function attentionItems() {
@@ -311,17 +279,22 @@ function createClaraCoreHomeView(context) {
       });
 
     const stats = snapshot?.memoryStats || {};
+    const hasVectorIssues = Boolean(stats.failedEmbeddingCount || stats.pendingEmbeddingCount);
     if (stats.failedEmbeddingCount) {
       items.push({
         tone: "error",
         title: t("home.attention.embeddingFailed"),
-        detail: `${stats.failedEmbeddingCount} ${t("home.attention.items")}`
+        detail: `${stats.failedEmbeddingCount} ${t("home.attention.items")}`,
+        actionCommand: "memory-vectors",
+        actionLabel: t("home.attention.rebuildMemoryVectors")
       });
     } else if (stats.pendingEmbeddingCount) {
       items.push({
         tone: "warn",
         title: t("home.attention.embeddingPending"),
-        detail: `${stats.pendingEmbeddingCount} ${t("home.attention.items")}`
+        detail: `${stats.pendingEmbeddingCount} ${t("home.attention.items")}`,
+        actionCommand: "memory-vectors",
+        actionLabel: t("home.attention.rebuildMemoryVectors")
       });
     }
 
@@ -329,16 +302,18 @@ function createClaraCoreHomeView(context) {
     if (maintenance.status && maintenance.status !== "ok") {
       const issue = (maintenance.issues || [])[0];
       const issueKey = issue?.code ? `memory.maintenance.${issue.code}` : "";
-      items.push({
-        tone: "warn",
-        title: issueKey ? t(issueKey) : t("module.memoria.maintenance"),
-        detail: t("home.attention.memoryMaintenanceDetail", {
-          count: issue?.count ?? "",
-          action: t("memory.embedding.processPending")
-        }),
-        actionCommand: "memory-vectors",
-        actionLabel: t("home.attention.rebuildMemoryVectors")
-      });
+      if (!hasVectorIssues || !["failed_embeddings", "pending_embeddings"].includes(issue?.code)) {
+        items.push({
+          tone: "warn",
+          title: issueKey ? t(issueKey) : t("module.memoria.maintenance"),
+          detail: t("home.attention.memoryMaintenanceDetail", {
+            count: issue?.count ?? "",
+            action: t("memory.embedding.processPending")
+          }),
+          actionCommand: "memory-vectors",
+          actionLabel: t("home.attention.rebuildMemoryVectors")
+        });
+      }
     }
 
     const daemon = snapshot?.innerLife?.daemon || {};
@@ -364,7 +339,7 @@ function createClaraCoreHomeView(context) {
 
   function renderAttentionQueue() {
     const items = attentionItems();
-    homeAttentionSummary.textContent = items.length ? `${items.length} ${t("common.needsAttention")}` : t("home.attention.clear");
+    homeAttentionSummary.textContent = items.length ? t("home.attention.actionCount", { count: String(items.length) }) : t("home.attention.clear");
     if (!items.length) {
       homeAttentionList.innerHTML = `
         <div class="attention-empty">
@@ -500,7 +475,6 @@ function createClaraCoreHomeView(context) {
   function renderHomeDashboard() {
     const snapshot = getSnapshot();
     if (!snapshot) return;
-    homeCognitiveUpdated.textContent = t("home.cognitive.updated");
     renderRuntimeOverview();
     renderAttentionQueue();
 
@@ -521,49 +495,50 @@ function createClaraCoreHomeView(context) {
               <div><span>${escapeHtml(t("home.agentView.pendingThoughts"))}</span><strong>${escapeHtml(agent.pendingThoughts)}</strong></div>
               <div><span>${escapeHtml(t("home.agentView.gatewayDecisions"))}</span><strong>${escapeHtml(agent.gatewayDecisions)}</strong></div>
             </div>
-            <div class="home-agent-meta">
-              <div><span>${escapeHtml(t("home.agentView.currentScene"))}</span><strong>${escapeHtml(agent.currentScene)}</strong></div>
-              <div><span>${escapeHtml(t("home.agentView.recentFocus"))}</span><strong>${escapeHtml(agent.recentFocus)}</strong></div>
-            </div>
           </article>
         `
       )
       .join("");
 
-    const traces = [...(snapshot.gatewayTraces || [])].sort((a, b) => {
-      const priorityDiff = tracePriority(b) - tracePriority(a);
-      if (priorityDiff) return priorityDiff;
-      return traceTimeValue(b) - traceTimeValue(a);
-    });
-    if (!traces.length) {
-      homeTraceList.innerHTML = `<div class="endpoint-empty">${escapeHtml(t("home.trace.empty"))}</div>`;
-    } else {
-      const featuredTrace = traces[0];
-      const compactTraces = traces.slice(1, 5);
-      const hiddenCount = Math.max(0, traces.length - 5);
-      homeTraceList.innerHTML = `
-        ${renderTraceFlow(featuredTrace)}
-        ${
-          compactTraces.length
-            ? `
-              <section class="trace-compact-list">
-                <div class="trace-compact-heading">
-                  <span>${escapeHtml(t("home.trace.recent"))}</span>
-                  <strong>${escapeHtml(t("home.trace.showing", { shown: compactTraces.length + 1, total: traces.length }))}</strong>
-                </div>
-                ${compactTraces.map((trace) => traceCompactRow(trace)).join("")}
-              </section>
-            `
-            : ""
-        }
-        ${hiddenCount ? `<div class="trace-more">${escapeHtml(t("home.trace.more", { count: hiddenCount }))}</div>` : ""}
-      `;
+    if (homeTraceList) {
+      const traces = [...(snapshot.gatewayTraces || [])].sort((a, b) => {
+        const priorityDiff = tracePriority(b) - tracePriority(a);
+        if (priorityDiff) return priorityDiff;
+        return traceTimeValue(b) - traceTimeValue(a);
+      });
+      if (!traces.length) {
+        homeTraceList.innerHTML = `<div class="endpoint-empty">${escapeHtml(t("home.trace.empty"))}</div>`;
+      } else {
+        const featuredTrace = traces[0];
+        const showExpandedTrace = featuredTrace.status === "error";
+        const compactTraces = traces.slice(showExpandedTrace ? 1 : 0, showExpandedTrace ? 5 : 4);
+        const shownCount = compactTraces.length + (showExpandedTrace ? 1 : 0);
+        const hiddenCount = Math.max(0, traces.length - shownCount);
+        homeTraceList.innerHTML = `
+          ${showExpandedTrace ? renderTraceFlow(featuredTrace) : ""}
+          ${
+            compactTraces.length
+              ? `
+                <section class="trace-compact-list">
+                  <div class="trace-compact-heading">
+                    <span>${escapeHtml(t("home.trace.recent"))}</span>
+                    <strong>${escapeHtml(t("home.trace.showing", { shown: shownCount, total: traces.length }))}</strong>
+                  </div>
+                  ${compactTraces.map((trace) => traceCompactRow(trace)).join("")}
+                </section>
+              `
+              : ""
+          }
+          ${hiddenCount ? `<div class="trace-more">${escapeHtml(t("home.trace.more", { count: hiddenCount }))}</div>` : ""}
+        `;
+      }
     }
   }
 
   function renderHealth() {
     const snapshot = getSnapshot();
     const health = snapshot?.health;
+    if (!healthSummary || !healthList) return;
     if (!health) return;
     healthSummary.textContent = t(`health.${health.status}`) || health.status;
     healthSummary.className = `quiet health-summary ${health.status}`;
@@ -572,13 +547,14 @@ function createClaraCoreHomeView(context) {
         const level = check.level || "warn";
         const actionView = healthActionView(check.id);
         const actionLabel = healthActionLabel(check.id);
+        const actionTab = healthActionSettingsTab(check.id);
         return `
           <div class="health-item ${escapeHtml(level)}">
             <span class="health-dot"></span>
             <div>
               <strong>${escapeHtml(t(check.labelKey) || check.id)}</strong>
               <small>${escapeHtml(check.detail || "")}</small>
-              ${actionView ? `<button class="link-button health-action" data-view-target="${escapeHtml(actionView)}">${escapeHtml(actionLabel)}</button>` : ""}
+              ${actionView ? `<button class="link-button health-action" data-view-target="${escapeHtml(actionView)}"${actionTab ? ` data-settings-target="${escapeHtml(actionTab)}"` : ""}>${escapeHtml(actionLabel)}</button>` : ""}
             </div>
           </div>
         `;
@@ -588,9 +564,17 @@ function createClaraCoreHomeView(context) {
 
   function healthActionView(checkId) {
     return {
+      "data-root": "settings",
+      database: "settings",
+      gateway: "agent-setup",
+      embedding: "settings"
+    }[checkId] || "";
+  }
+
+  function healthActionSettingsTab(checkId) {
+    return {
       "data-root": "data",
       database: "data",
-      gateway: "agent-setup",
       embedding: "models"
     }[checkId] || "";
   }
@@ -676,6 +660,7 @@ function createClaraCoreHomeView(context) {
 
   function renderEvents() {
     const snapshot = getSnapshot();
+    if (!eventList) return;
     if (!snapshot) return;
     const signals = recentActivitySignals(snapshot);
     if (!signals.length) {

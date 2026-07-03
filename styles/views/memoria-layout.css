@@ -4,10 +4,6 @@
   margin: 16px 0;
 }
 
-.memoria-workbench {
-  margin-bottom: 14px;
-}
-
 .memoria-grid {
   align-items: start;
   grid-template-columns: minmax(280px, 0.45fr) minmax(560px, 1fr);
@@ -17,14 +13,12 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.memoria-status-strip,
 .shared-line-status-strip {
   display: grid;
   grid-template-columns: minmax(180px, 0.8fr) minmax(260px, 1.5fr) minmax(160px, 0.7fr);
   gap: 10px;
 }
 
-.memoria-status-strip > div,
 .shared-line-status-strip > div {
   min-width: 0;
   padding: 10px 12px;
@@ -33,7 +27,6 @@
   background: var(--surface);
 }
 
-.memoria-status-strip span,
 .shared-line-status-strip span,
 .memoria-section > strong {
   display: block;
@@ -41,7 +34,6 @@
   font-size: 12px;
 }
 
-.memoria-status-strip strong,
 .shared-line-status-strip strong {
   display: block;
   margin-top: 4px;
@@ -57,32 +49,6 @@
   grid-template-columns: minmax(320px, 1.05fr) minmax(340px, 0.78fr);
   gap: 12px;
   align-items: start;
-}
-
-.shared-line-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin: 0 0 12px;
-}
-
-.shared-line-stats-grid div {
-  display: grid;
-  gap: 4px;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #fafaf7;
-}
-
-.shared-line-stats-grid span {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.shared-line-stats-grid strong {
-  font-size: 20px;
-  font-weight: 680;
 }
 
 .memoria-section {
@@ -239,4 +205,31 @@
   border-radius: inherit;
   background: linear-gradient(90deg, #36855c, #7aa866);
   transition: width 180ms ease;
+}
+
+.memory-maintenance-details {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fafaf7;
+}
+
+.memory-maintenance-details > summary {
+  cursor: pointer;
+  display: grid;
+  gap: 2px;
+}
+
+.memory-maintenance-details > summary span {
+  font-weight: 650;
+}
+
+.memory-maintenance-details > summary small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.memory-maintenance-details[open] > summary {
+  margin-bottom: 10px;
 }

@@ -10,7 +10,7 @@ function createClaraCoreMemoriaView(context) {
     setEmbeddingProgress
   } = context;
   const {
-    memorySearchInput, searchMemory, memoryList, memoryAgentFilter, allMemoryList, memoryGraphSummary, memoryGraph,
+    memorySearchInput, searchMemory, memoryList, memoryAgentFilter, memoryGraphSummary, memoryGraph,
     deletedMemoryList, restrictedMemoryList, archivedMemoryList, memoryAllLabelList, memoryAllHint, memoryRestrictedHint,
     memoryActiveCount, memoryDeletedCount, memoryEmbeddedCount, memoryPendingEmbeddingCount, memoryRestrictedCount,
     memoryArchivedCount, memoryLabelList, processMemoryEmbeddings, memoryEmbeddingNotice, memoryEmbeddingProgressBar,
@@ -92,7 +92,7 @@ function renderLoadMore(kind) {
   const loaded = loadedByKind[kind] || 0;
   const container =
     kind === "all"
-      ? allMemoryList
+      ? memoryList
       : kind === "restricted"
         ? restrictedMemoryList
         : kind === "archive"
@@ -112,20 +112,20 @@ async function loadMemoryTabData(tabName, options = {}) {
   if (!snapshot) return;
   const force = Boolean(options.force);
   const append = Boolean(options.append);
-  if (tabName === "all" && (force || append || !loadedMemoryTabs.all)) {
+  if ((tabName === "all" || tabName === "search") && (force || append || !loadedMemoryTabs.all)) {
     const offset = append ? memoryPaging.all.loaded : 0;
     const rows = await window.ClaraCoreDesktop.getMemories({ limit: memoryPaging.pageSize, offset, agentId: activeMemoryAgentFilter });
     snapshot.memories = append ? [...(snapshot.memories || []), ...rows] : rows;
     memoryPaging.all.loaded = snapshot.memories.length;
     loadedMemoryTabs.all = true;
-    if ((rows || []).length > 0) renderMemoryResults(filterByAgent(rows || [], activeMemoryAgentFilter, memoryAgentId), allMemoryList, { append });
+    renderMemoryResults(filterByAgent(snapshot.memories || [], activeMemoryAgentFilter, memoryAgentId), memoryList);
     memoryAllHint.textContent = t("memory.list.sample", {
       shown: snapshot?.memories?.length || 0,
       total: snapshot?.memoryStats?.activeCount ?? 0
     });
     renderLoadMore("all");
   }
-  if (tabName === "restricted" && (force || append || !loadedMemoryTabs.restricted)) {
+  if (tabName === "archive" && (force || append || !loadedMemoryTabs.restricted)) {
     const offset = append ? memoryPaging.restricted.loaded : 0;
     const rows = await window.ClaraCoreDesktop.getRestrictedMemories({ limit: memoryPaging.pageSize, offset, agentId: activeMemoryAgentFilter });
     snapshot.restrictedMemories = append ? [...(snapshot.restrictedMemories || []), ...rows] : rows;
@@ -662,13 +662,15 @@ function renderMemoryOverview() {
   activeMemoryAgentFilter = renderAgentFilter(memoryAgentFilter, agentIds.length ? agentIds : fallbackAgentIds, activeMemoryAgentFilter);
   renderLabelOverview(labels);
   renderMemoryLabels(labels);
-  if (!loadedMemoryTabs.all) {
-    allMemoryList.innerHTML = `<div class="endpoint-empty">${t("memory.lazy.openTab")}</div>`;
-  }
   memoryAllHint.textContent = t("memory.list.sample", {
-    shown: loadedMemoryTabs.all ? snapshot?.memories?.length || 0 : 0,
+    shown: snapshot?.memories?.length || 0,
     total: stats.activeCount ?? 0
   });
+  const maintenanceDetails = document.querySelector("#memoryMaintenanceDetails");
+  if (maintenanceDetails) {
+    const vectorIssues = Number(stats.pendingEmbeddingCount || 0) + Number(stats.failedEmbeddingCount || 0);
+    if (vectorIssues > 0) maintenanceDetails.open = true;
+  }
   memoryRestrictedHint.textContent = t("memory.list.sample", {
     shown: loadedMemoryTabs.restricted ? snapshot?.restrictedMemories?.length || 0 : 0,
     total: stats.restrictedCount ?? 0

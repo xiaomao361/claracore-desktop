@@ -20,7 +20,9 @@ fallback when MCP is unavailable.
 - Each agent client normally launches Gateway as its own stdio process.
 - The process keeps one cached product database connection and closes it on
   stdin close, process exit, `SIGINT`, and `SIGTERM`.
-- Packaged Gateway mode is the app executable plus `--gateway`; development
+- Packaged Gateway mode runs the app executable with `ELECTRON_RUN_AS_NODE=1`
+  plus the `app.asar` path of `mcp-server.js`, so each agent connection is a
+  single Node process (the legacy `--gateway` flag still works); development
   mode is `node core/gateway/mcp-server.js`.
 - Agents must use stable ids such as `lara`, `clara`, or `codex`. Do not share
   one id across multiple agents.

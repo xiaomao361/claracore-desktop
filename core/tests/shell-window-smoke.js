@@ -27,7 +27,6 @@ async function main() {
       const topbarRegion = getComputedStyle(document.querySelector(".topbar")).webkitAppRegion;
       const sidebarRegion = getComputedStyle(document.querySelector(".sidebar")).webkitAppRegion;
       const navRegion = getComputedStyle(document.querySelector("nav")).webkitAppRegion;
-      const refreshRegion = getComputedStyle(document.querySelector("#refreshButton")).webkitAppRegion;
       return {
         title: document.title,
         shellState,
@@ -35,7 +34,6 @@ async function main() {
         topbarRegion,
         sidebarRegion,
         navRegion,
-        refreshRegion,
         text: document.body.textContent
       };
     });
@@ -55,7 +53,7 @@ async function main() {
     if (result.bodyRegion !== "drag" || result.topbarRegion !== "drag" || result.sidebarRegion !== "drag") {
       throw new Error(`Shell drag regions are not enabled: ${JSON.stringify(result)}`);
     }
-    if (result.navRegion !== "no-drag" || result.refreshRegion !== "no-drag") {
+    if (result.navRegion !== "no-drag") {
       throw new Error(`Interactive controls are not excluded from drag regions: ${JSON.stringify(result)}`);
     }
 
@@ -71,8 +69,7 @@ async function main() {
             body: result.bodyRegion,
             topbar: result.topbarRegion,
             sidebar: result.sidebarRegion,
-            nav: result.navRegion,
-            refresh: result.refreshRegion
+            nav: result.navRegion
           }
         },
         null,

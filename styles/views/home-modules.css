@@ -1,36 +1,38 @@
 .module-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
   margin-bottom: 0;
 }
 
 .module-card {
   min-width: 0;
-  padding: 14px;
+  padding: 9px;
 }
 
 .module-card header {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) auto;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
   align-items: start;
-  gap: 12px;
-  min-height: 64px;
+  gap: 8px;
+  min-height: 44px;
 }
 
 .module-card strong {
   display: block;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.15;
 }
 
 .module-card p {
-  margin-top: 9px;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.25;
 }
 
 .module-icon {
-  width: 40px;
-  height: 40px;
+  width: 30px;
+  height: 30px;
   display: grid;
   place-items: center;
   position: relative;
@@ -47,8 +49,8 @@
 }
 
 .module-icon svg {
-  width: 25px;
-  height: 25px;
+  width: 19px;
+  height: 19px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
@@ -210,40 +212,48 @@
 
 .module-details {
   display: grid;
-  margin-top: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 7px;
   border-top: 1px solid var(--border);
+  padding-top: 7px;
 }
 
 .module-detail {
   display: grid;
-  grid-template-columns: 0.8fr minmax(0, 1fr);
-  gap: 12px;
-  padding: 9px 0;
-  border-bottom: 1px solid var(--border);
+  gap: 2px;
+  padding: 0;
+  border-bottom: 0;
 }
 
 .module-detail span {
   color: var(--muted);
+  font-size: 12px;
 }
 
 .module-detail strong {
   min-width: 0;
   color: var(--text);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 520;
-  text-align: right;
+  text-align: left;
   overflow-wrap: anywhere;
 }
 
-.home-module-board {
-  margin-bottom: 16px;
+.home-status-board {
+  margin-bottom: 0;
+  padding: 12px;
 }
 
-.home-module-board .panel-heading {
-  margin-bottom: 14px;
+.home-status-board .panel-heading {
+  margin-bottom: 10px;
 }
 
-.home-module-board .link-button {
-  margin-top: 10px;
+.home-status-board .link-button {
+  margin-top: 6px;
+  font-size: 12px;
 }
 
+.home-status-board .module-card p {
+  display: none;
+}

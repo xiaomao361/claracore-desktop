@@ -82,8 +82,8 @@ async function main() {
     ) {
       throw new Error(`Memoria UI exposed write/maintenance controls: ${JSON.stringify(writeControls)}`);
     }
-    if (writeControls.memoriaTabs < 6) {
-      throw new Error(`Memoria UI did not render viewing tabs: ${JSON.stringify(writeControls)}`);
+    if (writeControls.memoriaTabs !== 4) {
+      throw new Error(`Memoria UI should render exactly 4 viewing tabs: ${JSON.stringify(writeControls)}`);
     }
 
     await page.fill("#memorySearchInput", "prioritize viewing");
@@ -186,16 +186,16 @@ async function main() {
     }
 
     page.once("dialog", (dialog) => dialog.dismiss());
-    await page.click("[data-memory-tab='restricted']");
+    await page.click("[data-memory-tab='archive']");
     const restrictedCancelled = await page.evaluate(() => ({
-      activeRestrictedTab: document.querySelector("[data-memory-tab='restricted']")?.classList.contains("active"),
-      activeRestrictedPanel: document.querySelector("[data-memory-panel='restricted']")?.classList.contains("active")
+      activeRestrictedTab: document.querySelector("[data-memory-tab='archive']")?.classList.contains("active"),
+      activeRestrictedPanel: document.querySelector("[data-memory-panel='archive']")?.classList.contains("active")
     }));
     if (restrictedCancelled.activeRestrictedTab || restrictedCancelled.activeRestrictedPanel) {
       throw new Error(`Memoria UI entered restricted view after cancelled confirmation: ${JSON.stringify(restrictedCancelled)}`);
     }
     page.once("dialog", (dialog) => dialog.accept());
-    await page.click("[data-memory-tab='restricted']");
+    await page.click("[data-memory-tab='archive']");
     await page.waitForFunction(() => document.querySelector("#restrictedMemoryList")?.textContent.includes("UI Memoria restricted fact"), null, {
       timeout: 15000
     });
@@ -210,6 +210,7 @@ async function main() {
     await page.waitForFunction(() => document.querySelector("#memoryDeletedCount")?.textContent === "1", null, {
       timeout: 15000
     });
+    page.once("dialog", (dialog) => dialog.accept());
     await page.click("[data-memory-tab='archive']");
     await page.waitForFunction(
       (title) => document.querySelector("#deletedMemoryList")?.textContent.includes(title),

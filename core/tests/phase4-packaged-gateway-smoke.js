@@ -23,9 +23,18 @@ async function main() {
   );
   await fs.access(executablePath);
 
+  const gatewayScript = path.join(
+    path.dirname(path.dirname(executablePath)),
+    "Resources",
+    "app.asar",
+    "core",
+    "gateway",
+    "mcp-server.js"
+  );
   const client = createGatewayClient(dataRoot, {
     command: executablePath,
-    args: ["--gateway"]
+    args: [gatewayScript],
+    env: { ELECTRON_RUN_AS_NODE: "1" }
   });
   try {
     const initialized = await client.request("initialize", {
@@ -38,7 +47,7 @@ async function main() {
 
     const docsResponse = await client.callTool("gateway_docs");
     const docsText = docsResponse.result?.content?.[0]?.text || "";
-    if (!docsText.includes("--gateway")) throw new Error("Packaged Gateway docs do not include --gateway fallback.");
+    if (!docsText.includes("ELECTRON_RUN_AS_NODE")) throw new Error("Packaged Gateway docs do not include run-as-node launch.");
     if (!docsText.includes("packaged app")) throw new Error("Packaged Gateway docs do not report packaged app source.");
     if (!docsText.includes(dataRoot)) throw new Error("Packaged Gateway docs do not include active data root.");
 

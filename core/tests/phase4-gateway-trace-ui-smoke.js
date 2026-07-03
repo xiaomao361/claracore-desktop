@@ -48,8 +48,8 @@ async function main() {
     await page.waitForSelector("[data-view='agent-setup']", { timeout: 15000 });
     await page.waitForFunction(
       () =>
-        document.querySelector("#homeTraceList")?.textContent.includes("missing_gateway_tool") &&
-        document.querySelector("#homeTraceList")?.textContent.includes("Unknown tool"),
+        document.querySelector("#homeAttentionList")?.textContent.includes("网关轨迹") ||
+        document.querySelector("#homeAttentionList")?.textContent.includes("Gateway Trace"),
       null,
       { timeout: 15000 }
     );
@@ -68,7 +68,7 @@ async function main() {
         traceCount: snapshot.gatewayTraces.length,
         hasErrorTrace: snapshot.gatewayTraces.some((trace) => trace.toolName === "missing_gateway_tool" && trace.status === "error"),
         agentTraceText: document.querySelector("#gatewayTraceList").textContent,
-        homeTraceText: document.querySelector("#homeTraceList").textContent
+        homeAttentionText: document.querySelector("#homeAttentionList").textContent
       };
     });
     if (!result.databasePath.startsWith(dataRoot)) {
@@ -78,7 +78,7 @@ async function main() {
       result.traceCount < 2 ||
       !result.hasErrorTrace ||
       !result.agentTraceText.includes("missing_gateway_tool") ||
-      !result.homeTraceText.includes("Unknown tool")
+      !result.homeAttentionText.includes("Unknown tool")
     ) {
       throw new Error(`Gateway trace UI did not render traces: ${JSON.stringify(result)}`);
     }

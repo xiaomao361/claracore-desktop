@@ -39,6 +39,16 @@ function createClaraCoreMemoriaList(context) {
     return renderMarkdownPreview ? renderMarkdownPreview(body) : `<p>${escapeHtml(body)}</p>`;
   }
 
+  function memoryBodySummary(body, maxLength = 220) {
+    const text = String(body || "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .join(" ");
+    if (!text) return "";
+    return text.length > maxLength ? `${text.slice(0, maxLength).trim()}...` : text;
+  }
+
   function renderMemoryLabelsInline(labels) {
     return (labels || [])
       .slice(0, 8)
@@ -102,10 +112,20 @@ function createClaraCoreMemoriaList(context) {
           sourceLabel || scoreLabel
             ? `<div class="memory-search-rank"><span>${escapeHtml(sourceLabel)}</span><span>${escapeHtml(scoreLabel)}</span></div>`
             : "";
+        const summary = memoryBodySummary(memory.body);
+        const hasFullText = String(memory.body || "").trim().length > summary.length;
         return `
           <article class="memory-item ${itemClass}" data-memory-id="${escapeHtml(memory.id)}">
             <strong>${escapeHtml(memory.title || t("memory.form.body"))}</strong>
-            ${renderMemoryBody(memory.body)}
+            <p class="memory-summary">${escapeHtml(summary || t("memory.empty"))}</p>
+            ${
+              hasFullText
+                ? `<details class="memory-raw-details">
+                    <summary>${escapeHtml(t("memory.showFullText"))}</summary>
+                    <div class="memory-raw-body">${renderMemoryBody(memory.body)}</div>
+                  </details>`
+                : ""
+            }
             ${searchMeta}
             <div class="memory-meta">
               <span>${escapeHtml(memory.created_at || memory.updated_at || "")}</span>

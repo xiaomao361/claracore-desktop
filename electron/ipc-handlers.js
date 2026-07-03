@@ -84,12 +84,15 @@ function registerIpcHandlers({
   getRuntimeSnapshot,
   getTray,
   getTrayLanguage,
+  getUiPreferences,
   currentDataRootPreference,
   ipcMain,
   listConfiguredModels,
+  testConfiguredModel,
   notifyRuntimeChanged,
   rescheduleMemoryMaintenance,
   saveDataRootPreference,
+  saveUiPreferences,
   setWindowCloseBehavior,
   shell,
   updateTrayMenu
@@ -111,6 +114,7 @@ function registerIpcHandlers({
     return result;
   });
   ipcMain.handle("claracore:listModels", async (_event, input) => listConfiguredModels(input));
+  ipcMain.handle("claracore:testModelConnection", async (_event, input) => testConfiguredModel(input));
   ipcMain.handle("claracore:createMemory", async (_event, input) => {
     if (!isPlainObject(input)) return false;
     return createProductMemory(app, input);
@@ -487,6 +491,13 @@ function registerIpcHandlers({
   ipcMain.handle("claracore:setLanguage", (_event, language) => {
     updateTrayMenu(language);
     return getTrayLanguage();
+  });
+  ipcMain.handle("claracore:getUiPreferences", () => getUiPreferences());
+  ipcMain.handle("claracore:saveUiPreferences", async (_event, updates = {}) => {
+    const preferences = await saveUiPreferences(updates);
+    updateTrayMenu(preferences.language);
+    setWindowCloseBehavior({ closeBehavior: preferences.closeBehavior });
+    return preferences;
   });
   ipcMain.handle("claracore:setWindowPreferences", (_event, preferences = {}) => {
     return setWindowCloseBehavior(preferences);

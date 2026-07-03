@@ -6,8 +6,6 @@ const {
   topbarHealthIcon,
   topbarHealthLabel,
   topbarDataLabel,
-  refreshButton,
-  primaryAction,
   openDevelopmentPlan,
   openDesignPlan,
   dataLocation,
@@ -46,19 +44,15 @@ const {
   eventList,
   healthSummary,
   healthList,
-  homeCognitiveUpdated,
   homeCognitiveSystems,
   homeAgentViewList,
   homeTraceList,
   viewTitle,
   viewSubtitle,
-  monitorVersion,
-  monitorUptime,
-  monitorCpu,
+  resourceMonitor,
   monitorRam,
   monitorProcess,
   monitorDisk,
-  monitorTime,
   agentSetupMarkdown,
   agentSetupNotice,
   copyAgentSetup,
@@ -68,6 +62,8 @@ const {
   memoriaModelOptions,
   memoriaModelNotice,
   refreshMemoriaModels,
+  testMemoriaConnection,
+  memoriaConnectionNotice,
   memoriaApiKey,
   copyMemoriaApiKey,
   memoriaModelStatus,
@@ -78,6 +74,8 @@ const {
   innerLifeModelOptions,
   innerLifeModelNotice,
   refreshInnerLifeModels,
+  testInnerLifeConnection,
+  innerLifeConnectionNotice,
   innerLifePollSeconds,
   innerLifeApiKey,
   innerLifeApiKeySummary,
@@ -102,8 +100,6 @@ const {
   innerLifeDoctorStatus,
   innerLifeDoctorList,
   innerLifePendingCount,
-  innerLifeEventCount,
-  innerLifeThoughtCount,
   innerLifeProfileDisplayName,
   innerLifeProfileRecentFocus,
   innerLifeProfileInterests,
@@ -122,7 +118,6 @@ const {
   searchMemory,
   memoryList,
   memoryAgentFilter,
-  allMemoryList,
   memoryGraphSummary,
   memoryGraph,
   deletedMemoryList,
@@ -147,10 +142,6 @@ const {
   sharedLineUpdated,
   sharedLineList,
   sharedLineAgentFilter,
-  sharedLineLineCount,
-  sharedLineHistoryCount,
-  sharedLineSnapshotCount,
-  sharedLineArchivedCount,
   sharedLineDetailStatus,
   sharedLineNotice,
   sharedLineAgentStatePanel,
@@ -179,7 +170,11 @@ const {
   renderAgentFilter: sharedRenderAgentFilter
 } = window.ClaraCoreUtils;
 
-let currentLanguage = localStorage.getItem("claracore.language") || "en";
+function initialLanguage() {
+  return String(navigator.language || "").toLowerCase().startsWith("zh") ? "zh" : "en";
+}
+
+let currentLanguage = initialLanguage();
 
 function t(key, values = {}) {
   const template = translations[currentLanguage]?.[key] || translations.en[key] || key;
@@ -376,6 +371,10 @@ async function loadModelOptions(kind, { silent = false } = {}) {
   return modelOptions.loadModelOptions(kind, { silent });
 }
 
+async function testModelConnection(kind) {
+  return modelOptions.testModelConnection(kind);
+}
+
 function renderSettings() {
   settingsView.renderSettings();
   settingsView.renderAppearanceSettings();
@@ -456,6 +455,182 @@ function renderTopbarStatus() {
   topbarDataLabel.textContent = snapshot?.data?.databasePresent ? t("status.databaseReady") : t("status.databaseMissing");
 }
 
+function ensurePageFocus(viewName) {
+  const panel = views[viewName]?.panel;
+  if (!panel) return null;
+  let focus = panel.querySelector(":scope > .page-focus");
+  if (!focus) {
+    focus = document.createElement("section");
+    focus.className = "page-focus";
+    focus.setAttribute("aria-label", t("focus.label"));
+    panel.prepend(focus);
+  }
+  return focus;
+}
+
+function focusMetric(label, value) {
+  return { label, value: value == null || value === "" ? "-" : String(value) };
+}
+
+function renderFocusBlock(viewName, config) {
+  const focus = ensurePageFocus(viewName);
+  if (!focus) return;
+  const tone = config.tone || "ok";
+  const actionTarget = String(config.actionTarget || "").trim();
+  const shouldShowAction = actionTarget && actionTarget !== viewName;
+  focus.className = `page-focus ${tone}`;
+  focus.innerHTML = `
+    <div class="page-focus-copy">
+      <span class="page-focus-kicker">${escapeHtml(t("focus.kicker"))}</span>
+      <h2>${escapeHtml(config.title)}</h2>
+      <p>${escapeHtml(config.body)}</p>
+    </div>
+    <div class="page-focus-side">
+      <div class="page-focus-metrics">
+        ${(config.metrics || [])
+          .map((metric) => `<span>${escapeHtml(metric.label)} <strong>${escapeHtml(metric.value)}</strong></span>`)
+          .join("")}
+      </div>
+      ${
+        shouldShowAction
+          ? `<button class="secondary page-focus-action" data-view-target="${escapeHtml(actionTarget)}">${escapeHtml(config.actionLabel)}</button>`
+          : ""
+      }
+    </div>
+  `;
+}
+
+function renderPageFocus() {
+  if (!snapshot) return;
+  const healthStatus = snapshot.health?.status || "warn";
+  const stats = snapshot.memoryStats || {};
+  const maintenance = snapshot.memoryMaintenance || {};
+  const gatewayTraces = snapshot.gatewayTraces || [];
+  const gatewayErrors = gatewayTraces.filter((trace) => trace.status === "error").length;
+  const sharedLine = snapshot.sharedLine || {};
+  const currentLine = sharedLine.currentPosition || {};
+  const innerLife = snapshot.innerLife || {};
+  const innerCounts = innerLife.counts || {};
+  const daemon = innerLife.daemon || {};
+  const modules = snapshot.modules || [];
+  const missingRequired = modules.filter((module) => module.required && !module.present).length;
+  const attentionCount =
+    gatewayErrors +
+    Number(stats.pendingEmbeddingCount || 0) +
+    Number(stats.failedEmbeddingCount || 0) +
+    Number(innerCounts.pending_shares_count || 0) +
+    missingRequired;
+
+  renderFocusBlock("home", {
+    tone: healthStatus === "error" || gatewayErrors ? "error" : attentionCount ? "warn" : "ok",
+    title: attentionCount ? t("focus.home.attention", { count: String(attentionCount) }) : t("focus.home.ok"),
+    body: currentLine.summary
+      ? t("focus.home.line", { summary: currentLine.summary })
+      : t("focus.home.noLine"),
+    metrics: [
+      focusMetric(t("focus.metric.attention"), attentionCount),
+      focusMetric(t("focus.metric.gatewayErrors"), gatewayErrors),
+      focusMetric(t("focus.metric.pendingShares"), innerCounts.pending_shares_count || 0)
+    ],
+    actionLabel: attentionCount ? t("focus.action.reviewAttention") : t("focus.action.openSharedLine"),
+    actionTarget: attentionCount
+      ? Number(innerCounts.pending_shares_count || 0)
+        ? "innerlife"
+        : Number(stats.pendingEmbeddingCount || 0) || Number(stats.failedEmbeddingCount || 0)
+          ? "memory"
+          : "agent-setup"
+      : "shared-line"
+  });
+
+  const vectorIssues = Number(stats.pendingEmbeddingCount || 0) + Number(stats.failedEmbeddingCount || 0);
+  renderFocusBlock("memory", {
+    tone: vectorIssues ? "warn" : maintenance.status && maintenance.status !== "ok" ? "warn" : "ok",
+    title: vectorIssues ? t("focus.memory.vectors", { count: String(vectorIssues) }) : t("focus.memory.ok"),
+    body: t("focus.memory.body"),
+    metrics: [
+      focusMetric(t("memory.stats.active"), stats.activeCount || 0),
+      focusMetric(t("memory.stats.pending"), stats.pendingEmbeddingCount || 0),
+      focusMetric(t("memory.stats.restricted"), stats.restrictedCount || 0)
+    ],
+    actionLabel: vectorIssues ? t("focus.action.openMemory") : t("focus.action.searchMemory"),
+    actionTarget: "memory"
+  });
+
+  const activeLines = (sharedLine.lines || []).filter((line) => line.status !== "archived");
+  renderFocusBlock("shared-line", {
+    tone: currentLine.summary ? "ok" : "warn",
+    title: currentLine.summary ? t("focus.sharedLine.ok") : t("focus.sharedLine.empty"),
+    body: currentLine.summary || t("sharedLine.currentEmpty"),
+    metrics: [
+      focusMetric(t("sharedLine.stats.lines"), activeLines.length),
+      focusMetric(t("sharedLine.stats.history"), (sharedLine.history || []).length),
+      focusMetric(t("sharedLine.stats.archived"), (sharedLine.archivedLines || []).length)
+    ],
+    actionLabel: t("focus.action.openSharedLine"),
+    actionTarget: "shared-line"
+  });
+
+  renderFocusBlock("innerlife", {
+    tone: innerCounts.pending_shares_count ? "warn" : daemon.status === "error" ? "error" : "ok",
+    title: innerCounts.pending_shares_count
+      ? t("focus.innerLife.pending", { count: String(innerCounts.pending_shares_count) })
+      : daemon.enabled
+        ? t("focus.innerLife.running")
+        : t("focus.innerLife.paused"),
+    body: t("focus.innerLife.body"),
+    metrics: [
+      focusMetric(t("innerLife.daemonStatus"), daemon.enabled ? daemon.status || t("common.ready") : t("common.paused")),
+      focusMetric(t("innerLife.pendingShares"), innerCounts.pending_shares_count || 0),
+      focusMetric(t("innerLife.thoughts"), innerCounts.thoughts_count || 0)
+    ],
+    actionLabel: innerCounts.pending_shares_count ? t("focus.action.reviewShares") : t("focus.action.openInnerLife"),
+    actionTarget: "innerlife"
+  });
+
+  const agents = new Set(gatewayTraces.map((trace) => trace.agentId).filter(Boolean));
+  renderFocusBlock("agent-setup", {
+    tone: gatewayErrors ? "error" : "ok",
+    title: gatewayTraces.length ? t("focus.agent.active") : t("focus.agent.ready"),
+    body: t("focus.agent.body"),
+    metrics: [
+      focusMetric(t("focus.metric.agents"), agents.size),
+      focusMetric(t("home.gateway.calls"), gatewayTraces.length),
+      focusMetric(t("home.gateway.errors"), gatewayErrors)
+    ],
+    actionLabel: t("focus.action.openAgentAccess"),
+    actionTarget: "agent-setup"
+  });
+
+  renderFocusBlock("logs", {
+    tone: gatewayErrors ? "error" : "ok",
+    title: gatewayErrors ? t("focus.logs.errors", { count: String(gatewayErrors) }) : t("focus.logs.ok"),
+    body: t("focus.logs.body"),
+    metrics: [
+      focusMetric(t("logs.runtimeEvents"), (snapshot.runtimeEvents || []).length),
+      focusMetric(t("logs.gatewayTraces"), gatewayTraces.length),
+      focusMetric(t("logs.filterErrors"), gatewayErrors)
+    ],
+    actionLabel: t("focus.action.openLogs"),
+    actionTarget: "logs"
+  });
+
+  const config = snapshot.configuration || {};
+  const memoria = config.memoria || {};
+  const innerlife = config.innerlife || {};
+  renderFocusBlock("settings", {
+    tone: innerlife.backend === "disabled" ? "warn" : "ok",
+    title: innerlife.backend === "disabled" ? t("focus.models.needsInnerLife") : t("focus.settings.ready"),
+    body: t("focus.settings.body"),
+    metrics: [
+      focusMetric(t("settings.appVersion"), snapshot.productVersion || "-"),
+      focusMetric(t("settings.memoryRole"), memoria.provider || "-"),
+      focusMetric(t("settings.innerLifeRole"), innerlife.backend || "-")
+    ],
+    actionLabel: t("focus.action.openSettings"),
+    actionTarget: "settings"
+  });
+}
+
 function renderSnapshot() {
   if (brandVersion) brandVersion.textContent = `Desktop v${snapshot.productVersion || "-"}`;
   if (runtimeMode) runtimeMode.textContent = formatMode(snapshot.mode);
@@ -463,9 +638,10 @@ function renderSnapshot() {
   if (dataLocation) dataLocation.textContent = snapshot.data.root;
   if (dataHint) dataHint.textContent = snapshot.data.databasePresent ? t("runtime.databaseReady") : t("runtime.databaseNotCreated");
   dataRootPath.textContent = snapshot.data.root;
-  memoryStore.textContent = snapshot.data.databasePath;
+  if (memoryStore) memoryStore.textContent = snapshot.data.databasePath;
   if (memoryStoreShort) memoryStoreShort.textContent = snapshot.data.databasePresent ? t("common.found") : t("common.notCreated");
   renderTopbarStatus();
+  renderPageFocus();
   renderModules(snapshot.modules);
   renderHomeDashboard();
   renderHealth();
@@ -481,33 +657,38 @@ function renderSnapshot() {
   renderBackups();
 }
 
+const RESOURCE_WARN_MEMORY_PERCENT = 85;
+const RESOURCE_WARN_DISK_PERCENT = 90;
+
 function renderResourceSnapshot(resources) {
-  if (monitorVersion) monitorVersion.textContent = resources.appVersion ? `v${resources.appVersion}` : "-";
-  monitorUptime.textContent = resources.uptime || "--:--:--";
-  monitorCpu.textContent = Number.isFinite(resources.cpuPercent) ? `${resources.cpuPercent}%` : "--";
-  monitorRam.textContent =
-    resources.memory?.text && Number.isFinite(resources.memory?.percent)
-      ? `${resources.memory.text} (${resources.memory.percent}%)`
-      : "--";
+  const memoryPercent = Number(resources.memory?.percent);
+  const diskPercent = Number(resources.disk?.percent);
+  const warning =
+    (Number.isFinite(memoryPercent) && memoryPercent >= RESOURCE_WARN_MEMORY_PERCENT) ||
+    (Number.isFinite(diskPercent) && diskPercent >= RESOURCE_WARN_DISK_PERCENT);
+  if (resourceMonitor) resourceMonitor.hidden = !warning;
+  if (!warning) return;
+  if (monitorRam) {
+    monitorRam.textContent =
+      resources.memory?.text && Number.isFinite(memoryPercent)
+        ? `${resources.memory.text} (${memoryPercent}%)`
+        : "--";
+  }
   if (monitorProcess) {
     const processMemory = resources.processMemory || {};
-    const oneMinute = processMemory.trend?.oneMinute?.text || "0 B";
-    const tenMinutes = processMemory.trend?.tenMinutes?.text || "0 B";
-    monitorProcess.textContent = processMemory.totalRssText
-      ? `${processMemory.totalRssText} (1m ${oneMinute}, 10m ${tenMinutes})`
-      : "--";
+    monitorProcess.textContent = processMemory.totalRssText || "--";
     monitorProcess.title = [
       `main rss: ${processMemory.main?.rssText || "-"}`,
-      `main heap: ${processMemory.main?.heapUsedText || "-"}`,
       `renderer rss: ${processMemory.renderer?.rssText || "-"}`,
       `gateway rss: ${processMemory.gateway?.rssText || "-"}`
     ].join("\n");
   }
-  monitorDisk.textContent =
-    resources.disk?.text && Number.isFinite(resources.disk?.percent)
-      ? `${resources.disk.text} (${resources.disk.percent}%)`
-      : "--";
-  monitorTime.textContent = resources.localTime || "--";
+  if (monitorDisk) {
+    monitorDisk.textContent =
+      resources.disk?.text && Number.isFinite(diskPercent)
+        ? `${resources.disk.text} (${diskPercent}%)`
+        : "--";
+  }
 }
 
 function applyStaticTranslations() {
@@ -543,11 +724,29 @@ function setView(viewName) {
 function setLanguage(language) {
   if (!translations[language]) return;
   currentLanguage = language;
-  localStorage.setItem("claracore.language", language);
   applyStaticTranslations();
   setView(activeView);
   if (snapshot) renderSnapshot();
+  window.ClaraCoreDesktop.saveUiPreferences?.({ language }).catch(console.error);
   window.ClaraCoreDesktop.setLanguage(language).catch(console.error);
+}
+
+function applyUiPreferences(preferences = {}) {
+  const nextLanguage = translations[preferences.language] ? preferences.language : currentLanguage;
+  const languageChanged = nextLanguage !== currentLanguage;
+  currentLanguage = nextLanguage;
+  appearance.applyPreferences(preferences);
+  if (languageChanged) {
+    applyStaticTranslations();
+    setView(activeView);
+    if (snapshot) renderSnapshot();
+  }
+  window.ClaraCoreDesktop.setLanguage(currentLanguage).catch(console.error);
+}
+
+async function hydrateUiPreferences() {
+  const preferences = await window.ClaraCoreDesktop.getUiPreferences?.();
+  if (preferences) applyUiPreferences(preferences);
 }
 
 async function refresh() {
@@ -557,9 +756,7 @@ async function refresh() {
   ]);
   memoriaView.resetLoadedTabs();
   renderSnapshot();
-  if (memoriaView.getActiveTab() !== "search" && memoriaView.getActiveTab() !== "labels" && memoriaView.getActiveTab() !== "graph") {
-    loadMemoryTabData(memoriaView.getActiveTab()).catch(console.error);
-  }
+  loadMemoryTabData(memoriaView.getActiveTab()).catch(console.error);
 }
 
 async function refreshRuntimeSnapshotOnly() {
@@ -587,6 +784,24 @@ function scheduleRuntimeRefresh() {
   }, 250);
 }
 
+const settingsTabButtons = window.ClaraCoreDom.settingsTabs || [];
+const settingsTabPanelList = window.ClaraCoreDom.settingsTabPanels || [];
+
+function setSettingsTab(tabName) {
+  const next = settingsTabPanelList.some((panel) => panel.dataset.settingsPanel === tabName) ? tabName : "general";
+  settingsTabButtons.forEach((button) => {
+    button.classList.toggle("active", button.dataset.settingsTab === next);
+    button.setAttribute("aria-selected", button.dataset.settingsTab === next ? "true" : "false");
+  });
+  settingsTabPanelList.forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.settingsPanel === next);
+  });
+}
+
+settingsTabButtons.forEach((button) => {
+  button.addEventListener("click", () => setSettingsTab(button.dataset.settingsTab));
+});
+
 document.querySelectorAll("[data-view]").forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.view));
 });
@@ -595,6 +810,7 @@ document.addEventListener("click", (event) => {
   const target = event.target.closest("[data-view-target]");
   if (!target) return;
   setView(target.dataset.viewTarget);
+  if (target.dataset.settingsTarget) setSettingsTab(target.dataset.settingsTarget);
 });
 
 document.addEventListener("click", (event) => {
@@ -657,6 +873,14 @@ refreshMemoriaModels?.addEventListener("click", () => {
 
 refreshInnerLifeModels?.addEventListener("click", () => {
   loadModelOptions("innerlife").catch(console.error);
+});
+
+testMemoriaConnection?.addEventListener("click", () => {
+  testModelConnection("memoria").catch(console.error);
+});
+
+testInnerLifeConnection?.addEventListener("click", () => {
+  testModelConnection("innerlife").catch(console.error);
 });
 
 memoriaEndpoint?.addEventListener("blur", () => {
@@ -747,12 +971,6 @@ sharedLineActions.bindEvents();
 
 dataView.bindEvents();
 
-refreshButton.addEventListener("click", () => {
-  refresh().catch((error) => {
-    console.error(error);
-  });
-});
-
 refreshLogs.addEventListener("click", () => {
   logsView.refreshNow();
 });
@@ -765,10 +983,8 @@ clearLogs.addEventListener("click", () => {
   logsView.clear();
 });
 
-primaryAction.addEventListener("click", () => {
-  if (snapshot?.data?.root) {
-    window.ClaraCoreDesktop.openPath(snapshot.data.root);
-  }
+window.ClaraCoreDom.logFilter?.addEventListener("change", (event) => {
+  logsView.setFilter(event.target.value);
 });
 
 openGatewayFolder.addEventListener("click", () => {
@@ -826,6 +1042,10 @@ openDesignPlan?.addEventListener("click", () => {
   }
 });
 
+window.ClaraCoreTestHooks = {
+  refresh: () => refresh()
+};
+
 refresh().catch((error) => {
   if (runtimeMode) runtimeMode.textContent = t("runtime.unavailable");
   if (rootPath) rootPath.textContent = t("runtime.unableSnapshot");
@@ -833,10 +1053,7 @@ refresh().catch((error) => {
 
 refreshResources().catch((error) => {
   console.error(error);
-  monitorCpu.textContent = "--";
-  monitorRam.textContent = "--";
-  if (monitorProcess) monitorProcess.textContent = "--";
-  monitorDisk.textContent = "--";
+  if (resourceMonitor) resourceMonitor.hidden = true;
 });
 window.setInterval(() => {
   refreshResources().catch(console.error);
@@ -845,6 +1062,7 @@ window.setInterval(() => {
 applyStaticTranslations();
 appearance.initialize();
 window.ClaraCoreDesktop.setLanguage(currentLanguage).catch(console.error);
+hydrateUiPreferences().catch(console.error);
 if (typeof window.ClaraCoreDesktop.onRuntimeChanged === "function") {
   window.ClaraCoreDesktop.onRuntimeChanged(() => scheduleRuntimeRefresh());
 }

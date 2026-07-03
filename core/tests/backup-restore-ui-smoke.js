@@ -22,7 +22,7 @@ async function main() {
     page.on("dialog", async (dialog) => {
       await dialog.accept();
     });
-    await page.waitForSelector("[data-view='data']", { timeout: 15000 });
+    await page.waitForSelector("[data-view='settings']", { timeout: 15000 });
     await page.waitForFunction(() => window.ClaraCoreDesktop && document.querySelector("#backupList"));
 
     const before = await page.evaluate(() =>
@@ -39,7 +39,8 @@ async function main() {
         factsUsed: [id]
       }), before.id);
 
-    await page.click("[data-view='data']");
+    await page.click("[data-view='settings']");
+    await page.click("[data-settings-tab='data']");
     await page.click("#exportBackup");
     await page.waitForSelector("[data-backup-action='restore']", { timeout: 15000 });
     const backupText = await page.textContent("#backupList");

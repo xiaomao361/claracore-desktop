@@ -48,3 +48,46 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.log-filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.log-filter-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.log-filter-row label span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.log-filter-row select {
+  min-height: 32px;
+  min-width: 150px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 6px 9px;
+}
+
+.log-filter-row > span {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: right;
+}

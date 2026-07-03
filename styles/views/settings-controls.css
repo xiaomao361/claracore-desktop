@@ -100,6 +100,41 @@
   margin: 0;
 }
 
+.connection-test-row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  margin-top: 2px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(43, 61, 52, 0.08);
+}
+
+.connection-test-row .secondary {
+  min-height: 34px;
+  margin: 0;
+}
+
+.connection-test-notice {
+  min-width: 0;
+  color: var(--faint);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.connection-test-notice.ok {
+  color: var(--green);
+}
+
+.connection-test-notice.missing {
+  color: var(--red);
+}
+
+.connection-test-notice.checking {
+  color: var(--muted);
+}
+
 .field small.quiet {
   display: block;
   min-height: 16px;
@@ -134,13 +169,13 @@ summary {
   right: 0;
   bottom: 0;
   z-index: 20;
-  min-height: 48px;
+  min-height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 18px;
-  padding: 10px 18px;
+  gap: 10px;
+  padding: 7px 18px;
   border-top: 1px solid var(--border);
   background: var(--sidebar);
   color: var(--muted);
@@ -151,7 +186,7 @@ summary {
   min-width: 0;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   white-space: nowrap;
 }
 
@@ -160,10 +195,72 @@ summary {
   font-weight: 620;
 }
 
+.resource-monitor .monitor-secondary {
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.resource-monitor .monitor-secondary strong {
+  color: var(--muted);
+  font-weight: 560;
+}
+
+.resource-monitor .monitor-secondary + .monitor-primary {
+  margin-left: 8px;
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+}
+
 .monitor-dot {
   width: 6px;
   height: 6px;
   display: inline-block;
   border-radius: 50%;
   background: var(--green);
+}
+
+.resource-monitor[hidden] {
+  display: none;
+}
+
+.resource-monitor {
+  border-top-color: var(--amber);
+}
+
+.monitor-warning {
+  color: var(--amber);
+  font-weight: 720;
+}
+
+.settings-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-tabs button {
+  min-height: 32px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.settings-tabs button.active {
+  border-color: var(--green);
+  background: var(--green-bg);
+  color: var(--green);
+  font-weight: 650;
+}
+
+.settings-tab-panel {
+  display: none;
+}
+
+.settings-tab-panel.active {
+  display: block;
 }

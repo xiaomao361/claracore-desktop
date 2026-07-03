@@ -14,11 +14,17 @@ function createClaraCoreMemoriaActions({
     const selectedAgentId = dom.memoryAgentFilter?.value || state.activeMemoryAgentFilter || "";
     state.activeMemoryAgentFilter = selectedAgentId;
     memoriaView.setActiveAgentFilter(selectedAgentId);
+    const query = String(dom.memorySearchInput.value || "").trim();
+    if (!query) {
+      await loadMemoryTabData("search", { force: true });
+      return;
+    }
     const response = await desktop.searchMemories({
-      query: dom.memorySearchInput.value,
+      query,
       agentId: selectedAgentId
     });
     const results = Array.isArray(response) ? response : response?.results || [];
+    document.querySelector('[data-load-more="all"]')?.remove();
     renderMemoryResults(results);
     if (response?.error) showCopyNotice(t("memory.search.fallback"));
   }
@@ -35,7 +41,7 @@ function createClaraCoreMemoriaActions({
 
   async function selectTab(tab) {
     const nextTab = tab.dataset.memoryTab || "search";
-    if (nextTab === "restricted" && memoriaView.getActiveTab() !== "restricted" && !window.confirm(t("memory.restricted.confirm"))) {
+    if (nextTab === "archive" && memoriaView.getActiveTab() !== "archive" && !window.confirm(t("memory.restricted.confirm"))) {
       renderMemoryTabs();
       return;
     }
@@ -171,7 +177,6 @@ function createClaraCoreMemoriaActions({
     bindLoadMore();
     bindGraph();
     bindActiveList(dom.memoryList);
-    bindActiveList(dom.allMemoryList);
     bindActiveList(dom.restrictedMemoryList, "delete-restricted");
     bindArchivedList();
     bindDeletedList();

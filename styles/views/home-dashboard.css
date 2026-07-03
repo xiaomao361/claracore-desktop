@@ -6,7 +6,7 @@
 
 .home-dashboard-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -16,8 +16,7 @@
 }
 
 .home-cognitive-panel .panel-heading,
-.home-agent-panel .panel-heading,
-.home-trace-panel .panel-heading {
+.home-agent-panel .panel-heading {
   align-items: start;
 }
 
@@ -82,7 +81,7 @@
 }
 
 .home-agent-card {
-  padding: 14px;
+  padding: 10px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(250, 250, 247, 0.96)),
     #fafaf7;
@@ -93,11 +92,11 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .home-agent-head strong {
-  font-size: 18px;
+  font-size: 15px;
 }
 
 .home-agent-head span {
@@ -109,8 +108,8 @@
 }
 
 .home-agent-card p {
-  min-height: 48px;
-  margin-bottom: 12px;
+  min-height: 0;
+  margin-bottom: 9px;
   overflow: hidden;
   color: var(--text);
   font-size: 13px;
@@ -120,20 +119,19 @@
 .home-agent-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 7px;
-  margin-bottom: 12px;
+  gap: 6px;
+  margin-bottom: 8px;
 }
 
 .home-agent-stats div {
   min-width: 0;
-  padding: 7px;
+  padding: 6px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
 }
 
-.home-agent-stats span,
-.home-agent-meta span {
+.home-agent-stats span {
   display: block;
   color: var(--muted);
   font-size: 11px;
@@ -142,28 +140,9 @@
 
 .home-agent-stats strong {
   display: block;
-  margin-top: 4px;
-  font-size: 17px;
+  margin-top: 3px;
+  font-size: 15px;
   line-height: 1;
-}
-
-.home-agent-meta {
-  display: grid;
-  gap: 7px;
-}
-
-.home-agent-meta div {
-  display: grid;
-  grid-template-columns: minmax(90px, 0.4fr) minmax(0, 1fr);
-  gap: 8px;
-}
-
-.home-agent-meta strong {
-  min-width: 0;
-  font-size: 12px;
-  font-weight: 520;
-  text-align: right;
-  overflow-wrap: anywhere;
 }
 
 .home-trace-flow {
@@ -433,4 +412,3 @@
   font-size: 12px;
   text-align: center;
 }
-

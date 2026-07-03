@@ -24,16 +24,6 @@
   border-left-color: var(--border-strong);
 }
 
-@keyframes homeRuntimeBreath {
-  0%,
-  100% {
-    opacity: 0.54;
-  }
-  50% {
-    opacity: 0.95;
-  }
-}
-
 @keyframes homeStatusPulse {
   0%,
   100% {
@@ -44,97 +34,12 @@
   }
 }
 
-@keyframes homeOrbBreathe {
-  0%,
-  100% {
-    transform: scale(0.985);
-    box-shadow:
-      inset 0 0 32px rgba(255, 255, 255, 0.72),
-      inset 0 -18px 36px rgba(var(--orb-rgb), 0.16),
-      0 14px 42px rgba(var(--orb-rgb), 0.18);
-  }
-  50% {
-    transform: scale(1.035);
-    box-shadow:
-      inset 0 0 38px rgba(255, 255, 255, 0.86),
-      inset 0 -20px 42px rgba(var(--orb-rgb), 0.22),
-      0 20px 62px rgba(var(--orb-rgb), 0.27);
-  }
-}
-
-@keyframes homeOrbSignal {
-  0%,
-  100% {
-    opacity: 0.16;
-    transform: rotate(var(--signal-rotate, -14deg)) scaleX(0.86);
-  }
-  50% {
-    opacity: 0.74;
-    transform: rotate(var(--signal-rotate, -14deg)) scaleX(1.08);
-  }
-}
-
-@keyframes homeOrbParticle {
-  0%,
-  100% {
-    opacity: 0.32;
-    transform: translate3d(0, 0, 0) scale(0.88);
-  }
-  50% {
-    opacity: 0.98;
-    transform: translate3d(4px, -5px, 0) scale(1.28);
-  }
-}
-
-@keyframes homeOrbRotate {
-  from {
-    transform: rotateX(62deg) rotateZ(-18deg);
-  }
-  to {
-    transform: rotateX(62deg) rotateZ(342deg);
-  }
-}
-
-@keyframes homeOrbRotateReverse {
-  from {
-    transform: rotateX(68deg) rotateZ(54deg);
-  }
-  to {
-    transform: rotateX(68deg) rotateZ(-306deg);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .home-runtime-field,
-  .runtime-state.ok,
-  .home-orb,
-  .ring-one,
-  .ring-two,
-  .orb-signal,
-  .orb-particle {
+  .runtime-state.ok {
     animation: none;
   }
 }
 
-body[data-motion="off"] .home-runtime-field,
-body[data-motion="off"] .runtime-state.ok,
-body[data-motion="off"] .home-orb,
-body[data-motion="off"] .ring-one,
-body[data-motion="off"] .ring-two,
-body[data-motion="off"] .orb-signal,
-body[data-motion="off"] .orb-particle {
+body[data-motion="off"] .runtime-state.ok {
   animation: none;
 }
-
-body[data-motion="off"] .home-runtime-field {
-  opacity: 0.56;
-}
-
-body[data-motion="off"] .orb-signal {
-  opacity: 0.28;
-}
-
-body[data-motion="off"] .orb-particle {
-  opacity: 0.66;
-}
-

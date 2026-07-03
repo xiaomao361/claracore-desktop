@@ -2,7 +2,14 @@ function createClaraCoreLogsView({ dom, t, getSnapshot, refreshSnapshot }) {
   let followEnabled = true;
   let refreshTimer = null;
   let refreshInFlight = false;
+  let activeFilter = "all";
   const liveLines = [];
+
+  function matchesFilter(entry) {
+    if (activeFilter === "all") return true;
+    if (activeFilter === "errors") return entry.status === "error";
+    return entry.kind === activeFilter;
+  }
 
   function render() {
     const snapshot = getSnapshot();
@@ -10,18 +17,23 @@ function createClaraCoreLogsView({ dom, t, getSnapshot, refreshSnapshot }) {
     const gatewaySource = snapshot?.gatewayTraces || [];
     const runtimeEvents = runtimeSource.map((event) => ({
       createdAt: event.createdAt || "",
+      kind: "runtime",
+      status: event.level || "info",
       line: `[${event.createdAt || ""}] [${event.level || "info"}/${event.source || "runtime"}] ${event.message || ""}${
         event.metadata && Object.keys(event.metadata).length ? ` ${JSON.stringify(event.metadata)}` : ""
       }`
     }));
     const gatewayEvents = gatewaySource.map((trace) => ({
       createdAt: trace.createdAt || "",
+      kind: "gateway",
+      status: trace.status || "ok",
       line: `[${trace.createdAt || ""}] [gateway/${trace.status || "ok"}] ${trace.toolName || "unknown"} ${String(trace.durationMs ?? 0)}ms ${
         trace.error || trace.responseSummary || ""
       }`
     }));
     const lines = [...runtimeEvents, ...gatewayEvents, ...liveLines]
       .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
+      .filter(matchesFilter)
       .slice(-200)
       .map((entry) => entry.line);
 
@@ -30,6 +42,7 @@ function createClaraCoreLogsView({ dom, t, getSnapshot, refreshSnapshot }) {
     dom.logGatewayCount.textContent = String(gatewaySource.length);
     dom.logLineCount.textContent = String(lines.length);
     dom.logLastRefresh.textContent = new Date().toLocaleTimeString();
+    if (dom.logFilter) dom.logFilter.value = activeFilter;
     dom.toggleLogFollow.classList.toggle("active", followEnabled);
     if (followEnabled) {
       dom.logTerminal.scrollTop = dom.logTerminal.scrollHeight;
@@ -40,6 +53,8 @@ function createClaraCoreLogsView({ dom, t, getSnapshot, refreshSnapshot }) {
     const createdAt = new Date().toISOString();
     liveLines.push({
       createdAt,
+      kind: "ui",
+      status: "info",
       line: `[${createdAt}] [ui/${source}] ${message}`
     });
     while (liveLines.length > 80) liveLines.shift();
@@ -69,6 +84,11 @@ function createClaraCoreLogsView({ dom, t, getSnapshot, refreshSnapshot }) {
     followEnabled = !followEnabled;
     dom.toggleLogFollow.classList.toggle("active", followEnabled);
     syncRefreshTimer(activeView);
+    render();
+  }
+
+  function setFilter(value) {
+    activeFilter = value || "all";
     render();
   }
 
@@ -116,6 +136,7 @@ function createClaraCoreLogsView({ dom, t, getSnapshot, refreshSnapshot }) {
     clear,
     refreshNow,
     render,
+    setFilter,
     syncRefreshTimer,
     toggleFollow
   };

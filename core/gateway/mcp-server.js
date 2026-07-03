@@ -57,6 +57,24 @@ function exitWhenTransportCloses() {
   process.exit(0);
 }
 
+function isPackagedGatewayProcess() {
+  // Legacy full-Electron mode uses --gateway; run-as-node mode is detected by
+  // the script living inside the packaged app.asar archive.
+  return process.argv.includes("--gateway") || __filename.includes(".asar");
+}
+
+const ORPHAN_CHECK_INTERVAL_MS = 60 * 1000;
+function watchForOrphanedParent() {
+  if (process.platform === "win32") return;
+  const timer = setInterval(() => {
+    // ppid 1 means the MCP client that spawned this Gateway died without
+    // closing the stdio pipes (crash, sleep/wake edge cases). Exit so the
+    // packaged app bundle is not held open by orphaned helpers.
+    if (process.ppid === 1) exitWhenTransportCloses();
+  }, ORPHAN_CHECK_INTERVAL_MS);
+  timer.unref();
+}
+
 function defaultUserDataPath() {
   if (process.versions.electron) {
     try {
@@ -98,22 +116,24 @@ function runtimeAppForGateway() {
     getPath(name) {
       return path.join(paths.dataRoot, name);
     },
-    isPackaged: Boolean(process.versions.electron && process.argv.includes("--gateway"))
+    isPackaged: isPackagedGatewayProcess()
   };
 }
 
 function gatewayLaunchConfig(paths) {
-  if (process.versions.electron && process.argv.includes("--gateway")) {
+  if (isPackagedGatewayProcess()) {
     return {
       command: process.execPath,
-      args: ["--gateway"],
-      displayCommand: `CLARACORE_DESKTOP_DATA_DIR=${paths.dataRoot} "${process.execPath}" --gateway`,
+      args: [__filename],
+      env: { ELECTRON_RUN_AS_NODE: "1" },
+      displayCommand: `ELECTRON_RUN_AS_NODE=1 CLARACORE_DESKTOP_DATA_DIR=${paths.dataRoot} "${process.execPath}" "${__filename}"`,
       source: "packaged app"
     };
   }
   return {
     command: "node",
     args: [__filename],
+    env: {},
     displayCommand: `CLARACORE_DESKTOP_DATA_DIR=${paths.dataRoot} node ${__filename}`,
     source: "development checkout"
   };
@@ -276,6 +296,7 @@ function start() {
   });
   process.stdin.once("end", exitWhenTransportCloses);
   process.stdin.once("close", exitWhenTransportCloses);
+  watchForOrphanedParent();
 }
 
 if (require.main === module) {

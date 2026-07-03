@@ -6,6 +6,11 @@ function candidateResourceRoots() {
   if (process.resourcesPath) {
     roots.push(path.join(process.resourcesPath, "sqlite"));
   }
+  if (__dirname.includes(".asar")) {
+    // ELECTRON_RUN_AS_NODE has no process.resourcesPath; resolve the packaged
+    // Resources directory relative to app.asar instead.
+    roots.push(path.join(path.resolve(__dirname, "..", ".."), "sqlite"));
+  }
   roots.push(path.resolve(__dirname, "..", "resources", "sqlite"));
   return roots;
 }

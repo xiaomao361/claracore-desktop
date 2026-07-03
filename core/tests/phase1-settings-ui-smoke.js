@@ -19,8 +19,9 @@ async function main() {
       }
     });
     const page = await app.firstWindow();
-    await page.waitForSelector("[data-view='models']", { timeout: 15000 });
-    await page.click("[data-view='models']");
+    await page.waitForSelector("[data-view='settings']", { timeout: 15000 });
+    await page.click("[data-view='settings']");
+    await page.click("[data-settings-tab='models']");
     await page.waitForFunction(() => document.querySelector("#memoriaEndpoint")?.value, null, { timeout: 15000 });
 
     const defaults = await page.evaluate(() => ({
