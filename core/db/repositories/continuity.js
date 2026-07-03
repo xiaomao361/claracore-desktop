@@ -593,17 +593,20 @@ function installContinuityRepository(ProductDatabase, helpers) {
     },
 
     async getResumePacket(input = {}) {
+      // lite skips the full line lists and other agents' states; write
+      // acknowledgements only need the saved position plus recent context.
+      const lite = input.lite === true;
       const agentLineId = input?.lineId ? null : await this.findContinuityLineIdForAgent(input?.agentId || input?.agent_id || "");
       const currentPosition = await this.getCurrentPosition(input.lineId || agentLineId || null);
       const metadata = currentPosition.metadata || {};
       const [lines, archivedLines, history, snapshots, handoffs, agentState, agentStates, modelAdjustment] = await Promise.all([
-        this.listContinuityLines({ limit: 100, agentId: input.agentId || input.agent_id || "", allAgents: true, status: "active" }),
-        this.listContinuityLines({ limit: 100, agentId: input.agentId || input.agent_id || "", allAgents: true, status: "archived" }),
+        lite ? [] : this.listContinuityLines({ limit: 100, agentId: input.agentId || input.agent_id || "", allAgents: true, status: "active" }),
+        lite ? [] : this.listContinuityLines({ limit: 100, agentId: input.agentId || input.agent_id || "", allAgents: true, status: "archived" }),
         this.listContinuityPositionHistory(5, currentPosition.lineId),
         this.listContinuitySnapshots(5, currentPosition.lineId),
         this.listContinuityHandoffs(3, currentPosition.lineId),
         this.getContinuityAgentState(currentPosition.agentId || DEFAULT_AGENT_ID),
-        this.listContinuityAgentStates(),
+        lite ? [] : this.listContinuityAgentStates(),
         input.model ? this.getContinuityModelAdjustment(input.model) : null
       ]);
       const sharedReality = {

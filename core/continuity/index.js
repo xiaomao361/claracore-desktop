@@ -10,60 +10,61 @@ async function gatewayContext(core, input = {}) {
   return core.database.getGatewayContext(input || {});
 }
 
-async function save(core, input) {
+async function save(core, input, options = {}) {
   const currentPosition = await core.database.saveCurrentPosition(input);
   return core.database.getResumePacket({
     lineId: currentPosition.lineId,
     agentId: input?.agentId,
-    model: input?.model
+    model: input?.model,
+    lite: options.lite === true
   });
 }
 
-async function create(core, input) {
+async function create(core, input, options = {}) {
   const line = await core.database.createContinuityLine(input || {});
   return {
     line,
-    sharedLine: await core.database.getResumePacket({ lineId: line.id })
+    sharedLine: await core.database.getResumePacket({ lineId: line.id, lite: options.lite === true })
   };
 }
 
-async function activate(core, lineId) {
+async function activate(core, lineId, options = {}) {
   const line = await core.database.setActiveContinuityLine(lineId);
   return {
     line,
-    sharedLine: await core.database.getResumePacket({ lineId: line.id })
+    sharedLine: await core.database.getResumePacket({ lineId: line.id, lite: options.lite === true })
   };
 }
 
-async function rename(core, lineId, title) {
+async function rename(core, lineId, title, options = {}) {
   const line = await core.database.renameContinuityLine(lineId, title);
   return {
     line,
-    sharedLine: await core.database.getResumePacket({ lineId: line.active ? line.id : undefined })
+    sharedLine: await core.database.getResumePacket({ lineId: line.active ? line.id : undefined, lite: options.lite === true })
   };
 }
 
-async function archive(core, lineId) {
+async function archive(core, lineId, options = {}) {
   const line = await core.database.archiveContinuityLine(lineId);
   return {
     line,
-    sharedLine: await core.database.getResumePacket()
+    sharedLine: await core.database.getResumePacket({ lite: options.lite === true })
   };
 }
 
-async function restore(core, lineId, makeActive = false) {
+async function restore(core, lineId, makeActive = false, options = {}) {
   const line = await core.database.restoreContinuityLine(lineId, makeActive);
   return {
     line,
-    sharedLine: await core.database.getResumePacket({ lineId: line.active ? line.id : undefined })
+    sharedLine: await core.database.getResumePacket({ lineId: line.active ? line.id : undefined, lite: options.lite === true })
   };
 }
 
-async function createHandoff(core, input) {
+async function createHandoff(core, input, options = {}) {
   const handoff = await core.database.createContinuityHandoff(input);
   return {
     handoff,
-    sharedLine: await core.database.getResumePacket({ lineId: input?.lineId })
+    sharedLine: await core.database.getResumePacket({ lineId: input?.lineId, lite: options.lite === true })
   };
 }
 

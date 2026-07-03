@@ -14,31 +14,31 @@ async function handleSharedLineTool(name, args, context) {
   }
 
   if (name === "shared_line_create") {
-    return textResult(await continuity.create(core, args));
+    return textResult(await continuity.create(core, args, { lite: true }));
   }
 
   if (name === "shared_line_activate") {
-    return textResult(await continuity.activate(core, args.lineId));
+    return textResult(await continuity.activate(core, args.lineId, { lite: true }));
   }
 
   if (name === "shared_line_rename") {
-    return textResult(await continuity.rename(core, args.lineId, args.title));
+    return textResult(await continuity.rename(core, args.lineId, args.title, { lite: true }));
   }
 
   if (name === "shared_line_archive") {
-    return textResult(await continuity.archive(core, args.lineId));
+    return textResult(await continuity.archive(core, args.lineId, { lite: true }));
   }
 
   if (name === "shared_line_restore") {
-    return textResult(await continuity.restore(core, args.lineId, Boolean(args.makeActive)));
+    return textResult(await continuity.restore(core, args.lineId, Boolean(args.makeActive), { lite: true }));
   }
 
   if (name === "shared_line_update") {
-    return textResult(await continuity.save(core, args));
+    return textResult(await continuity.save(core, args, { lite: true }));
   }
 
   if (name === "shared_line_handoff_create") {
-    return textResult(await continuity.createHandoff(core, args));
+    return textResult(await continuity.createHandoff(core, args, { lite: true }));
   }
 
   if (name === "shared_line_agent_state") {
