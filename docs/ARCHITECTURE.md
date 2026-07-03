@@ -112,8 +112,12 @@ The Home page is the operational board for the local agent runtime. It should
 make runtime state inspectable at a glance without becoming a generic settings
 page:
 
-- The runtime overview owns the breathing core visualization. Its color and
-  cadence derive from current snapshot state: quiet, active, warning, or error.
+- The Home status board is a compact runtime strip plus module readiness rail;
+  state tones (ok, warn, error) derive from the current snapshot.
+- Home attention only counts human-actionable signals: missing required
+  modules, embedding failures, daemon errors, and Gateway errors from the last
+  30 minutes. Agent-owned waiting state such as pending InnerLife shares is
+  ambient information, never an attention item.
 - Motion must respect the Settings motion preference and system reduced-motion
   preference. Disabling motion should leave a readable static state.
 - The Gateway trace panel should show one expanded priority call chain and keep

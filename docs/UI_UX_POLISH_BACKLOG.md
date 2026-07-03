@@ -155,6 +155,26 @@ Verification: `npm run check` plus shell, ux-polish, phase1, phase2, phase3,
 phase4 trace, phase5 (ui + scheduler), backup, and import-preview UI smoke
 tests.
 
+## v0.2.4 / v0.2.5 Follow-up
+
+Updated: 2026-07-03
+
+- v0.2.3 (release engineering): the packaged Gateway now launches with
+  `ELECTRON_RUN_AS_NODE=1` plus the `app.asar` path of `mcp-server.js`, so each
+  agent connection is one Node process (~65MB) instead of a full Electron
+  instance with GPU and network helpers (~200MB+). A ppid watchdog exits the
+  Gateway if its client dies without closing stdio, so orphaned helpers can no
+  longer hold the app bundle open.
+- v0.2.4: `innerlife_session_end` accepts the external session id an agent
+  registered at start (scoped to the calling agent, preferring active
+  sessions), and repeated session_end is a documented-safe no-op instead of
+  writing duplicate events, thoughts, and shares.
+- v0.2.5: Home attention counts only human-actionable signals. Pending
+  InnerLife shares are agent-owned waiting state and moved to ambient counts;
+  the InnerLife focus copy now states that thoughts wait for the agent to
+  share in conversation. Gateway errors older than 30 minutes age out of
+  attention and remain reviewable in Agent Access.
+
 ## Version Direction
 
 This backlog is the UI/UX direction for the next ClaraCore Desktop version.

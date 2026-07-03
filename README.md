@@ -59,11 +59,11 @@ Included:
 - ClaraCore root detection
 - Product-owned SQLite data root under Desktop user data
 - Home, Memoria, Shared Line, InnerLife, Agent Access, Logs, and Settings pages (model and data management live inside Settings tabs)
-- Home dashboard with Gateway, Memoria, Shared Line, InnerLife, agent-view, attention queue, and Gateway trace summaries
+- Home dashboard with Gateway, Memoria, Shared Line, InnerLife, agent-view, attention queue, and Gateway trace summaries; attention counts only human-actionable signals (agent-owned waiting state like pending shares stays ambient, and Gateway errors age out of attention after 30 minutes)
 - Compact Home status board that merges the runtime strip and core module readiness below the Agent View and Attention panels
 - Gateway trace chain on Home that expands one priority call as `agent -> Desktop Gateway -> MCP tool -> result`, compresses additional calls into a recent list, and sends overflow review to Agent Access
 - Agent Setup page with MCP connection command, token-protected localhost HTTP Agent Gateway URLs, copyable config, CLI fallback notes, runtime paths, and recent Gateway activity
-- Desktop-owned Gateway stdio entry for Gateway context, Memoria, Shared Line, and InnerLife MCP tools
+- Desktop-owned Gateway stdio entry for Gateway context, Memoria, Shared Line, and InnerLife MCP tools; the packaged Gateway launches with ELECTRON_RUN_AS_NODE as a single Node process per agent connection and exits if its client dies without closing stdio
 - Memoria CLI for store, recall, get, update, tag, delete, restore, archive, import/export, records, and maintenance audit/run
 - View-focused Memoria UI with four tabs: Memories (empty search lists all, with paging), Labels, Graph, and Archive & restricted (restricted, archived, and deleted review plus delete/restore)
 - Lazy-loaded Memoria list tabs and cached spherical canvas graph with primary/restricted layers, depth-based links, selected label callouts, and reduced-motion fallback
