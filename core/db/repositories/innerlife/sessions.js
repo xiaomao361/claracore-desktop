@@ -192,8 +192,9 @@ function createInnerLifeSessionRepository(helpers) {
       if (session.status === "ended") {
         // Ending the same session twice is documented as safe; do not write
         // duplicate events, thoughts, or shares.
+        const { briefing: _repeatedBriefing, ...endedSession } = (await this.getInnerLifeSession(id)) || {};
         return {
-          session: await this.getInnerLifeSession(id),
+          session: endedSession,
           repeated: true
         };
       }
@@ -256,14 +257,18 @@ function createInnerLifeSessionRepository(helpers) {
         automated: true,
         reason: "session_end"
       });
+      // Keep the acknowledgement small: agents only need the closed session,
+      // the created ids, and the afterthought share. Full InnerLife state
+      // belongs to innerlife_status / innerlife_briefing, not this response.
+      const { briefing: _briefing, ...endedSession } = (await this.getInnerLifeSession(id)) || {};
       return {
-        session: await this.getInnerLifeSession(id),
+        session: endedSession,
         inboxId,
         eventId,
         thoughtId,
         share: await this.getInnerLifeShare(shareId),
-        convergence,
-        snapshot: await this.getInnerLifeSnapshot()
+        converged: Boolean(convergence?.converged),
+        convergenceReason: convergence?.reason || ""
       };
     }
   };

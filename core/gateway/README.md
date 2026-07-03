@@ -37,6 +37,21 @@ fallback when MCP is unavailable.
 - Agent setup should tell agents to call `gateway_context` first. The old
   `claracore_connection_test` is only a lightweight status probe.
 
+## Claude Desktop Clients
+
+Claude Desktop updates can move the MCP setup UI between Developer and
+Extensions settings, but the ClaraCore contract remains the generated stdio
+`mcpServers` config from Agent Access.
+
+- Use the JSON shown in Agent Access for manual Claude Desktop setup.
+- Keep `type: "stdio"`; ClaraCore Desktop does not currently ship a `.mcpb`
+  Desktop Extension package.
+- Set `CLARACORE_AGENT_ID` to a stable Claude-owned id such as `claude` or
+  `clara`; do not reuse another connected agent's id.
+- Fully quit and restart Claude Desktop after config or identity changes so the
+  stdio Gateway process is relaunched.
+- Verify with `claracore_connection_test`, then read `gateway_context`.
+
 ## Shared Line Rules
 
 - `lineId` values are real `continuity_lines.id` values. Agents should get them

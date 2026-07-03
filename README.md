@@ -202,6 +202,13 @@ The Desktop-owned Gateway is the primary agent contract. It is a stdio MCP
 server launched by the agent client through the generated MCP config, not a
 separate always-on background daemon.
 
+Claude Desktop version or model changes do not change ClaraCore's Gateway
+contract by themselves. Current Claude Desktop builds may surface local MCP
+setup under Extensions or developer settings, but ClaraCore still provides the
+manual stdio `mcpServers` config from Agent Access. After changing that config,
+fully quit and restart Claude Desktop, then run `claracore_connection_test`
+followed by `gateway_context`.
+
 The old ClaraCore Gateway web console remains a reference for useful overview
 ideas, but its service Web UI launcher/supervisor model is not the Desktop
 product target. Product-visible summaries now belong on the Desktop Home page,

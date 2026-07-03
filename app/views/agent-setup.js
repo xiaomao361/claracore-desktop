@@ -53,6 +53,20 @@ If you are a new agent, choose one stable id before writing any data. Keep using
 ${snapshot.connections.mcpConfig}
 \`\`\`
 
+## Claude Desktop Setup
+
+Claude Desktop newer builds may show MCP entry points under Settings -> Extensions. For custom local servers, keep using the generated stdio MCP config above. If Claude Desktop offers a custom extension install flow, use it only after ClaraCore ships an explicit \`.mcpb\` package; this app currently publishes the stdio config as the supported path.
+
+Manual setup:
+
+1. Open Claude Desktop settings and find the MCP or Extensions developer config entry.
+2. Add or replace the \`claracore-desktop\` server with the JSON above.
+3. Set \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\` to this Claude agent's stable id, for example \`claude\` or \`clara\`.
+4. Fully quit and restart Claude Desktop so the stdio process is relaunched with the new environment.
+5. In Claude, call \`claracore_connection_test\` once, then call \`gateway_context\`.
+
+If tools do not appear after a Claude Desktop update, verify the JSON is valid, confirm the command path still exists, and fully restart the app rather than only closing its window.
+
 ## First Context Call
 
 After installing, call \`gateway_context\`.

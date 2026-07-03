@@ -287,6 +287,12 @@ The MCP config shown in Agent Setup launches this Gateway as a stdio server.
 Gateway is part of the product runtime, while the Logs view and Gateway trace
 tables are inspection surfaces for what agents are doing.
 
+Claude Desktop is a client of this stdio contract, not a special Gateway mode.
+If Claude Desktop moves local MCP setup between Developer and Extensions
+settings, the product architecture does not change: Agent Setup remains the
+source for the current `mcpServers` JSON, `CLARACORE_AGENT_ID`, active data
+root, and first-call order.
+
 Each MCP agent usually owns its own stdio Gateway process. In-process database
 serialization does not coordinate across sibling Gateway processes, so database
 writes must also be correct under SQLite's cross-process WAL and busy-timeout
