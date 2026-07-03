@@ -65,7 +65,7 @@ async function main() {
       });
     });
     await page.click("[data-view='innerlife']");
-    await page.click("#refreshButton");
+    await page.evaluate(() => window.ClaraCoreTestHooks.refresh());
     await page.waitForFunction(() => document.querySelector("#innerLifeDoctorStatus")?.textContent.includes("ok"), null, {
       timeout: 15000
     });
@@ -76,6 +76,10 @@ async function main() {
       null,
       { timeout: 15000 }
     );
+    await page.evaluate(() => {
+      const pipeline = document.querySelector(".innerlife-pipeline-details");
+      if (pipeline) pipeline.open = true;
+    });
     await page.click("#loadMoreInnerLifeSessions");
     await page.waitForFunction(
       () => document.querySelector("#innerLifeSessionList")?.textContent.includes("Agent InnerLife session ended"),

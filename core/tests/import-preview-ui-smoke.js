@@ -22,8 +22,9 @@ async function main() {
     page.on("dialog", async (dialog) => {
       await dialog.accept();
     });
-    await page.waitForSelector("[data-view='data']", { timeout: 15000 });
-    await page.click("[data-view='data']");
+    await page.waitForSelector("[data-view='settings']", { timeout: 15000 });
+    await page.click("[data-view='settings']");
+    await page.click("[data-settings-tab='data']");
     await page.waitForFunction(() => window.ClaraCoreDesktop && document.querySelector("#exportProductJson"));
 
     const dataText = await page.textContent("#dataView");

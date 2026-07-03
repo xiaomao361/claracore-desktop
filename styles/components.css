@@ -236,6 +236,11 @@
   font-size: 12px;
 }
 
+.source-map-card.compact-source {
+  margin: 10px 10px 0;
+  background: var(--surface);
+}
+
 .agent-console-group {
   display: grid;
   gap: 8px;
@@ -246,8 +251,7 @@
 }
 
 .agent-console-group + .agent-console-group,
-.agent-console-group + .source-map-card,
-.source-map-card + .agent-access-details {
+.agent-console-group + .agent-access-details {
   margin-top: 10px;
 }
 
@@ -417,6 +421,10 @@
 .snippet span {
   color: var(--faint);
   font-size: 12px;
+}
+
+.snippet > button {
+  justify-self: start;
 }
 
 .snippet.large {

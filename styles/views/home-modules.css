@@ -1,13 +1,13 @@
 .module-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 0;
 }
 
 .module-card {
   min-width: 0;
-  padding: 10px;
+  padding: 9px;
 }
 
 .module-card header {
@@ -212,16 +212,18 @@
 
 .module-details {
   display: grid;
-  margin-top: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 7px;
   border-top: 1px solid var(--border);
+  padding-top: 7px;
 }
 
 .module-detail {
   display: grid;
-  grid-template-columns: 0.8fr minmax(0, 1fr);
-  gap: 8px;
-  padding: 5px 0;
-  border-bottom: 1px solid var(--border);
+  gap: 2px;
+  padding: 0;
+  border-bottom: 0;
 }
 
 .module-detail span {
@@ -234,20 +236,24 @@
   color: var(--text);
   font-size: 12px;
   font-weight: 520;
-  text-align: right;
+  text-align: left;
   overflow-wrap: anywhere;
 }
 
-.home-module-board {
-  margin-bottom: 16px;
+.home-status-board {
+  margin-bottom: 0;
   padding: 12px;
 }
 
-.home-module-board .panel-heading {
+.home-status-board .panel-heading {
   margin-bottom: 10px;
 }
 
-.home-module-board .link-button {
+.home-status-board .link-button {
   margin-top: 6px;
   font-size: 12px;
+}
+
+.home-status-board .module-card p {
+  display: none;
 }

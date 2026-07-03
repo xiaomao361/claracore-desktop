@@ -16,8 +16,7 @@
 }
 
 .home-cognitive-panel .panel-heading,
-.home-agent-panel .panel-heading,
-.home-trace-panel .panel-heading {
+.home-agent-panel .panel-heading {
   align-items: start;
 }
 
@@ -132,8 +131,7 @@
   background: var(--surface);
 }
 
-.home-agent-stats span,
-.home-agent-meta span {
+.home-agent-stats span {
   display: block;
   color: var(--muted);
   font-size: 11px;
@@ -145,30 +143,6 @@
   margin-top: 3px;
   font-size: 15px;
   line-height: 1;
-}
-
-.home-agent-meta {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.home-agent-meta div {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 5px;
-  padding: 7px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.62);
-}
-
-.home-agent-meta strong {
-  min-width: 0;
-  font-size: 12px;
-  font-weight: 520;
-  text-align: left;
-  overflow-wrap: anywhere;
 }
 
 .home-trace-flow {

@@ -45,6 +45,9 @@ function applyCliEnvArgs(argv = process.argv) {
 applyCliEnvArgs();
 
 const isGatewayMode = process.argv.includes("--gateway");
+if (!isGatewayMode && process.env.CLARACORE_DESKTOP_TEST_INSTANCE === "1" && process.env.CLARACORE_DESKTOP_USER_DATA_DIR) {
+  app.setPath("userData", path.resolve(process.env.CLARACORE_DESKTOP_USER_DATA_DIR));
+}
 let mainWindow = null;
 let tray = null;
 let isQuitting = false;
@@ -57,6 +60,7 @@ const RESOURCE_SAMPLE_MAX_AGE_MS = 10 * 60 * 1000;
 let httpAgentGateway = null;
 let forceQuitTimer = null;
 const resourceMemorySamples = [];
+let uiPreferencesSaveQueue = Promise.resolve();
 
 function hideGatewayFromDock() {
   if (!isGatewayMode || process.platform !== "darwin") return;
@@ -117,6 +121,44 @@ async function saveDataRootPreference(dataRoot) {
     saved: true,
     restartRequired: path.resolve(activeDataRoot) !== path.resolve(preference.effectiveDataRoot)
   };
+}
+
+function defaultUiLanguage() {
+  return String(app.getLocale?.() || "").toLowerCase().startsWith("zh") ? "zh" : "en";
+}
+
+function normalizeUiPreferences(preferences = {}, defaults = {}) {
+  const language = preferences.language === "zh" || preferences.language === "en" ? preferences.language : undefined;
+  const theme = ["system", "light", "dark"].includes(preferences.theme) ? preferences.theme : undefined;
+  const motion = ["system", "on", "off"].includes(preferences.motion) ? preferences.motion : undefined;
+  const closeBehavior = preferences.closeBehavior === "quit" || preferences.closeBehavior === "hide" ? preferences.closeBehavior : undefined;
+  return {
+    language: language || defaults.language || defaultUiLanguage(),
+    theme: theme || defaults.theme || "system",
+    motion: motion || defaults.motion || "system",
+    closeBehavior: closeBehavior || defaults.closeBehavior || "hide"
+  };
+}
+
+function getUiPreferences() {
+  const settings = readDesktopSettings(app, { fresh: true });
+  return normalizeUiPreferences(settings.uiPreferences || {});
+}
+
+async function saveUiPreferences(updates = {}) {
+  const nextSave = uiPreferencesSaveQueue.catch(() => {}).then(async () => {
+    const settings = readDesktopSettings(app, { fresh: true });
+    const nextPreferences = normalizeUiPreferences({
+      ...(settings.uiPreferences || {}),
+      ...(updates && typeof updates === "object" && !Array.isArray(updates) ? updates : {})
+    }, getUiPreferences());
+    settings.uiPreferences = nextPreferences;
+    await fs.mkdir(path.dirname(desktopSettingsPath(app)), { recursive: true });
+    await fs.writeFile(desktopSettingsPath(app), `${JSON.stringify(settings, null, 2)}\n`, "utf8");
+    return nextPreferences;
+  });
+  uiPreferencesSaveQueue = nextSave.catch(() => {});
+  return nextSave;
 }
 
 if (isGatewayMode) {
@@ -683,6 +725,8 @@ if (!isGatewayMode && hasSingleInstanceLock) {
       if (schedulers) schedulers.rescheduleMemoryMaintenance();
     },
     saveDataRootPreference,
+    getUiPreferences,
+    saveUiPreferences,
     setWindowCloseBehavior: (preferences = {}) => {
       windowCloseBehavior = preferences.closeBehavior === "quit" ? "quit" : "hide";
       return { closeBehavior: windowCloseBehavior };

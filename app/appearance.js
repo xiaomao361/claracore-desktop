@@ -1,7 +1,7 @@
-function createClaraCoreAppearance({ desktop, onSystemPreferenceChange }) {
-  let currentTheme = localStorage.getItem("claracore.theme") || "system";
-  let currentMotion = localStorage.getItem("claracore.motion") || "system";
-  let currentCloseBehavior = localStorage.getItem("claracore.window.closeBehavior") || "hide";
+function createClaraCoreAppearance({ desktop, onSystemPreferenceChange, preferences = {} }) {
+  let currentTheme = ["system", "light", "dark"].includes(preferences.theme) ? preferences.theme : "system";
+  let currentMotion = ["system", "on", "off"].includes(preferences.motion) ? preferences.motion : "system";
+  let currentCloseBehavior = preferences.closeBehavior === "quit" ? "quit" : "hide";
 
   function resolvedTheme() {
     if (currentTheme === "light" || currentTheme === "dark") return currentTheme;
@@ -30,23 +30,42 @@ function createClaraCoreAppearance({ desktop, onSystemPreferenceChange }) {
     document.body.dataset.motionPreference = currentMotion;
   }
 
+  function persist(updates) {
+    const result = desktop?.saveUiPreferences?.(updates);
+    if (result?.catch) result.catch(console.error);
+  }
+
   function setTheme(theme) {
     currentTheme = ["system", "light", "dark"].includes(theme) ? theme : "system";
-    localStorage.setItem("claracore.theme", currentTheme);
     applyTheme();
+    persist({ theme: currentTheme });
   }
 
   function setMotion(motion) {
     currentMotion = ["system", "on", "off"].includes(motion) ? motion : "system";
-    localStorage.setItem("claracore.motion", currentMotion);
     applyTheme();
+    persist({ motion: currentMotion });
   }
 
-  function setWindowCloseBehavior(closeBehavior) {
+  function setWindowCloseBehavior(closeBehavior, options = {}) {
     currentCloseBehavior = closeBehavior === "quit" ? "quit" : "hide";
-    localStorage.setItem("claracore.window.closeBehavior", currentCloseBehavior);
     const result = desktop?.setWindowPreferences?.({ closeBehavior: currentCloseBehavior });
     if (result?.catch) result.catch(console.error);
+    if (options.persist !== false) persist({ closeBehavior: currentCloseBehavior });
+  }
+
+  function applyPreferences(nextPreferences = {}) {
+    if (["system", "light", "dark"].includes(nextPreferences.theme)) {
+      currentTheme = nextPreferences.theme;
+    }
+    if (["system", "on", "off"].includes(nextPreferences.motion)) {
+      currentMotion = nextPreferences.motion;
+    }
+    if (nextPreferences.closeBehavior === "quit" || nextPreferences.closeBehavior === "hide") {
+      currentCloseBehavior = nextPreferences.closeBehavior;
+    }
+    applyTheme();
+    setWindowCloseBehavior(currentCloseBehavior, { persist: false });
   }
 
   function bindSystemPreferenceListeners() {
@@ -65,12 +84,12 @@ function createClaraCoreAppearance({ desktop, onSystemPreferenceChange }) {
   }
 
   function initialize() {
-    applyTheme();
-    setWindowCloseBehavior(currentCloseBehavior);
+    applyPreferences({ theme: currentTheme, motion: currentMotion, closeBehavior: currentCloseBehavior });
     bindSystemPreferenceListeners();
   }
 
   return {
+    applyPreferences,
     applyTheme,
     getPreferences,
     initialize,

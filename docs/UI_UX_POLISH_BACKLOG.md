@@ -60,6 +60,101 @@ Remaining polish candidates:
   should be revisited after the broader v0.2.0 acceptance pass.
 - Backup artifact labels can be made more explicit in a later narrow pass.
 
+## v0.2.1 UX Reduction Direction
+
+Updated: 2026-07-02
+
+The next pass is not a visual redesign and does not need a full Figma workflow.
+The issue after v0.2.0 is hierarchy, not a missing component library: the
+topbar, focus strip, runtime board, module cards, Gateway trace, health checks,
+and events can all be individually clear while still making Home feel full.
+
+Principle:
+
+- Prefer replacing or demoting secondary status surfaces over adding another
+  explanatory layer.
+- Home should answer one question first: does a human need to act now?
+- The next Home signal should be agent continuity: which agent can resume from
+  which line, with what Memory / InnerLife / Gateway context.
+- Normal Gateway traces are diagnostic evidence and should stay compact on
+  Home. Expanded request/response detail belongs in Agent Access unless a trace
+  is an unresolved error.
+- Module readiness belongs below the main operating path as a compact rail, not
+  as the primary first-screen object.
+- Runtime visuals should support state recognition, not become the main content
+  unless the runtime itself needs attention.
+
+v0.2.1 Home reduction implemented:
+
+- Promoted Agent View and Attention into the first Home work area after "What
+  matters now".
+- Demoted Runtime Overview into a compact second-layer status block.
+- Moved Core Modules beside Runtime Overview as a compact readiness rail.
+- Moved Gateway Trace, Runtime checks, and Recent activity into a lower
+  diagnostics row.
+- Kept Gateway errors expanded on Home, but collapsed normal Gateway traces into
+  compact rows with Agent Access as the detail surface.
+- Removed Chromium `localStorage` reads from the renderer startup path. UI
+  preferences now hydrate through async IPC from `desktop-settings.json`, which
+  avoids the multi-second first localStorage open observed during this polish
+  pass.
+
+v0.2.1 reduction follow-up:
+
+- Removed Home's lower diagnostics row. Runtime checks remain in the top status
+  rail / runtime strip, Gateway traces live in Agent Access, and activity
+  history belongs in Logs.
+- Compressed Home Agent View cards by removing the secondary scene/focus row;
+  Home keeps only the current line text plus Memory, share, and Gateway counts.
+- Removed the Memory page status strip because the page focus block and Memory
+  overview already carry the same store/boundary signal.
+- Tightened Agent Access by keeping default actions to install-brief and MCP
+  config copy, moving the raw MCP command, HTTP endpoints, source map, and
+  install preview behind details.
+
+## v0.2.2 Agent-First Reduction
+
+Updated: 2026-07-03
+
+This pass applies subtraction, not demotion. The rule used for every cut:
+agents read and write their own data through MCP; the human surface only needs
+to answer (1) does a human need to act now, and (2) can raw evidence be reached
+in one step when verification is needed. Anything the agent pipeline manages
+for itself is hidden by default.
+
+Implemented:
+
+- Navigation reduced from 9 entries to 7. Models and Data are now tabs inside
+  Settings (General / Models / Data); their views, focus blocks, and health
+  actions were remapped to `settings` plus a `data-settings-target` tab hint.
+- Topbar actions removed. "Update status" duplicated automatic refresh via
+  runtime-changed events, and "Open data folder" was not a global primary
+  action (it remains available in Settings > Data paths). UI tests that
+  clicked `#refreshButton` now call the `window.ClaraCoreTestHooks.refresh()`
+  hook instead.
+- Status surfaces consolidated from three to one. The bottom resource monitor
+  is now a warning-only bar, hidden unless RAM crosses 85% or disk crosses
+  90%. The Home orb stage (canvas, rings, particles, `home-orb.js`, and its
+  smoke test) was deleted; Runtime Overview and Core Modules merged into one
+  compact `home-status-board` below Agent View and Attention.
+- Memoria tabs reduced from 6 to 4: Memories (empty search shows all, with
+  paging), Labels, Graph, and Archive & restricted (restricted, archived, and
+  deleted lists in one confirmed section). Embedding actions and the progress
+  bar moved behind a "Vector maintenance" disclosure that auto-opens only when
+  pending or failed vectors exist.
+- Shared Line stats strip (lines / compressed / snapshots / archived counters)
+  removed; tabs reduced from 4 to 2 (Threads, History) with snapshots and
+  archived lines stacked inside History.
+- InnerLife status strip reduced from 4 counters to 2 (daemon, pending
+  shares). The four pipeline side panels (Sessions, Digests, Inbox, Timing
+  checks) collapsed into one closed "Pipeline evidence" disclosure; Runtime
+  (daemon toggle plus doctor) stays visible.
+- Version bumped to 0.2.2.
+
+Verification: `npm run check` plus shell, ux-polish, phase1, phase2, phase3,
+phase4 trace, phase5 (ui + scheduler), backup, and import-preview UI smoke
+tests.
+
 ## Version Direction
 
 This backlog is the UI/UX direction for the next ClaraCore Desktop version.

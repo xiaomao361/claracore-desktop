@@ -218,3 +218,49 @@ summary {
   border-radius: 50%;
   background: var(--green);
 }
+
+.resource-monitor[hidden] {
+  display: none;
+}
+
+.resource-monitor {
+  border-top-color: var(--amber);
+}
+
+.monitor-warning {
+  color: var(--amber);
+  font-weight: 720;
+}
+
+.settings-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-tabs button {
+  min-height: 32px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.settings-tabs button.active {
+  border-color: var(--green);
+  background: var(--green-bg);
+  color: var(--green);
+  font-weight: 650;
+}
+
+.settings-tab-panel {
+  display: none;
+}
+
+.settings-tab-panel.active {
+  display: block;
+}

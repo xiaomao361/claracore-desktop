@@ -241,6 +241,12 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   setLanguage(language) {
     return ipcRenderer.invoke("claracore:setLanguage", language);
   },
+  getUiPreferences() {
+    return ipcRenderer.invoke("claracore:getUiPreferences");
+  },
+  saveUiPreferences(updates) {
+    return ipcRenderer.invoke("claracore:saveUiPreferences", updates);
+  },
   getShellState() {
     return ipcRenderer.invoke("claracore:getShellState");
   },

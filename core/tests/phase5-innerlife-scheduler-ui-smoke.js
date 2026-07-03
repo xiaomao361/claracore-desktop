@@ -44,7 +44,7 @@ async function main() {
         )
       );
     }, null, { timeout: 15000 });
-    await page.click("#refreshButton");
+    await page.evaluate(() => window.ClaraCoreTestHooks.refresh());
     await page.waitForFunction(
       () =>
         document.querySelector("#innerLifeLastResult")?.textContent.includes("processed") &&

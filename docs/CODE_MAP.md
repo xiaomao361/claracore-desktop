@@ -65,17 +65,18 @@ Start here:
 
 Current view owners:
 
-- `app/views/home.js`: Home runtime board, module cards, health, agent view,
-  attention queue, and Gateway trace summaries.
-- `app/views/memoria.js`: Memoria tabs, search, graph, labels, records,
-  archive/delete/restrict flows, and embedding actions.
+- `app/views/home.js`: Home agent view, attention queue, compact status board
+  (runtime strip plus module cards), health, and Gateway trace summaries.
+- `app/views/memoria.js`: Memoria tabs (Memories / Labels / Graph / Archive &
+  restricted), search, paging, and embedding maintenance actions.
 - `app/views/memoria-list.js`: Memoria list cards, inline labels, label
   overview, agent filter, and maintenance count helpers.
 - `app/views/shared-innerlife.js`: Shared Line and InnerLife rendering.
 - `app/views/data.js`: backups, restore preview/confirmation, import/export,
   and import preview.
 - `app/views/logs.js`: runtime log view and follow mode.
-- `app/views/settings.js`: Models and Settings forms.
+- `app/views/settings.js`: Settings forms; Models and Data are tabs inside the
+  Settings view (`data-settings-tab` / `data-settings-panel` in `app.js`).
 - `app/views/agent-setup.js`: Agent Access setup brief and copy behavior.
 - `app/appearance.js`: appearance-related renderer behavior.
 

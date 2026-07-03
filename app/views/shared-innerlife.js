@@ -15,14 +15,13 @@ function createClaraCoreSharedInnerLifeView(context) {
   } = context;
   const {
     memoryAgentFilter, memoryList, sharedLineSummary, sharedLineUpdated, sharedLineList, sharedLineAgentFilter,
-    sharedLineLineCount, sharedLineHistoryCount, sharedLineSnapshotCount, sharedLineArchivedCount,
     sharedLineDetailStatus, sharedLineContextBar, sharedLineAgentStatePanel, sharedLineMetadataPanel, sharedLineResume,
     sharedLineHistoryList, sharedLineSnapshotList, sharedLineArchiveList, innerLifeAgentFilter, innerLifeSessionList,
     loadMoreInnerLifeSessions, innerLifeDigestList, loadMoreInnerLifeDigestRuns, innerLifeInboxList, loadMoreInnerLifeInbox,
     innerLifeShareCheckList, innerLifeShareList, innerLifeDaemonStatus,
     innerLifeHistoryList, innerLifeExperienceList, innerLifeSummaryList, innerLifeContextBar,
     innerLifeDaemonToggle, innerLifeDaemonToggleLabel, innerLifeNextRun, innerLifeLastResult, innerLifeRecovery,
-    innerLifeDoctorStatus, innerLifeDoctorList, innerLifePendingCount, innerLifeEventCount, innerLifeThoughtCount,
+    innerLifeDoctorStatus, innerLifeDoctorList, innerLifePendingCount,
     innerLifeProfileDisplayName, innerLifeProfileRecentFocus, innerLifeProfileInterests,
     innerLifeProfileShareAfterHours, innerLifeProfileShareCooldownHours, innerLifeProfileShareMaxDaily,
     innerLifeProfileJson, innerLifeStateJson, saveInnerLifeProfile, innerLifeProfileNotice
@@ -427,10 +426,6 @@ function renderSharedLine() {
   sharedLineDetailStatus.textContent = current.interpretationStatus || activeLine.status || "active";
   sharedLineDetailStatus.className = `badge ${current.interpretationStatus === "confirmed" ? "ok" : "planned"}`;
   const activeLines = lines.filter((line) => line.status !== "archived");
-  sharedLineLineCount.textContent = activeLines.length;
-  sharedLineHistoryCount.textContent = history.length;
-  sharedLineSnapshotCount.textContent = snapshots.length;
-  sharedLineArchivedCount.textContent = archivedLines.length;
   const agentOptions = [
     ...new Set([
       ...activeLines.map((line) => line.agentId || line.metadata?.agentId || ""),
@@ -571,8 +566,6 @@ function renderInnerLife() {
     )
     .join("");
   innerLifePendingCount.textContent = counts.pending_shares_count ?? 0;
-  innerLifeEventCount.textContent = counts.events_count ?? 0;
-  innerLifeThoughtCount.textContent = counts.thoughts_count ?? 0;
   const sessions = filterByAgent(innerLife.sessions || [], state.activeInnerLifeAgentFilter);
   const sessionTotal =
     state.activeInnerLifeAgentFilter && state.innerLifeSessionTotals?.[state.activeInnerLifeAgentFilter] !== undefined

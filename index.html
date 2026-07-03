@@ -26,10 +26,8 @@
         <button class="nav-item" data-view="memory"><span class="nav-icon nav-icon-memory"></span><span data-i18n="nav.memory">Memoria</span></button>
         <button class="nav-item" data-view="shared-line"><span class="nav-icon nav-icon-shared-line"></span><span data-i18n="nav.sharedLine">Shared Line</span></button>
         <button class="nav-item" data-view="innerlife"><span class="nav-icon nav-icon-innerlife"></span><span data-i18n="nav.innerLife">InnerLife</span></button>
-        <button class="nav-item" data-view="data"><span class="nav-icon nav-icon-data"></span><span data-i18n="nav.data">Data</span></button>
         <button class="nav-item" data-view="logs"><span class="nav-icon nav-icon-logs"></span><span data-i18n="nav.logs">Logs</span></button>
         <button class="nav-item" data-view="agent-setup"><span class="nav-icon nav-icon-agent"></span><span data-i18n="nav.agentSetup">Agent Access</span></button>
-        <button class="nav-item" data-view="models"><span class="nav-icon nav-icon-models"></span><span data-i18n="nav.models">Models</span></button>
         <button class="nav-item" data-view="settings"><span class="nav-icon nav-icon-settings"></span><span data-i18n="nav.settings">Settings</span></button>
       </nav>
     </aside>
@@ -44,45 +42,18 @@
           <span><b id="topbarHealthIcon" class="dot ok-dot"></b><span id="topbarHealthLabel" data-i18n="status.healthChecking">Health checking</span></span>
           <span><b class="stack-dot"></b><span id="topbarDataLabel" data-i18n="status.dataChecking">Data checking</span></span>
         </div>
-        <div class="topbar-actions">
-          <button id="refreshButton" class="secondary" data-i18n="actions.refreshStatus">Update status</button>
-          <button id="primaryAction" class="primary" data-i18n="data.openDataDir">Open data folder</button>
-        </div>
       </header>
 
       <section id="homeView" class="view active-view">
-        <section class="home-hero-board" aria-label="Runtime dashboard">
-          <article id="homeRuntimePanel" class="panel home-runtime-panel">
-            <div class="home-runtime-field" aria-hidden="true"></div>
+        <section class="home-command-grid" aria-label="Home priority">
+          <article class="panel home-agent-panel">
             <div class="panel-heading">
               <div>
-                <h2 data-i18n="home.runtime.title">Runtime Overview</h2>
-                <p id="homeRuntimeDetail" class="quiet">Checking local core...</p>
+                <h2 data-i18n="home.agentView.title">Agent View</h2>
+                <p class="quiet" data-i18n="home.agentView.body">Current line, Memory, InnerLife, and recent Gateway activity.</p>
               </div>
-              <span id="homeRuntimeStatus" class="runtime-state">Checking</span>
             </div>
-            <div class="home-runtime-body">
-              <div class="home-orb-stage" aria-hidden="true">
-                <canvas id="homeOrbCanvas" class="home-orb-canvas"></canvas>
-                <div class="home-orb">
-                  <span class="orb-ring ring-one"></span>
-                  <span class="orb-ring ring-two"></span>
-                  <span class="orb-core"></span>
-                  <span class="orb-node node-one"></span>
-                  <span class="orb-node node-two"></span>
-                  <span class="orb-node node-three"></span>
-                  <span class="orb-node node-four"></span>
-                  <span class="orb-signal signal-one"></span>
-                  <span class="orb-signal signal-two"></span>
-                  <span class="orb-signal signal-three"></span>
-                  <span class="orb-particle particle-one"></span>
-                  <span class="orb-particle particle-two"></span>
-                  <span class="orb-particle particle-three"></span>
-                  <span class="orb-particle particle-four"></span>
-                </div>
-              </div>
-              <div id="homeRuntimeStrip" class="home-runtime-strip"></div>
-            </div>
+            <div id="homeAgentViewList" class="home-agent-list"></div>
           </article>
 
           <article class="panel home-attention-panel">
@@ -97,76 +68,21 @@
           </article>
         </section>
 
-        <section class="home-dashboard-grid" aria-label="Home overview">
-          <article class="panel home-agent-panel">
-            <div class="panel-heading">
-              <div>
-                <h2 data-i18n="home.agentView.title">Agent View</h2>
-                <p class="quiet" data-i18n="home.agentView.body">Current line, Memory, InnerLife, and recent Gateway activity.</p>
-              </div>
-            </div>
-            <div id="homeAgentViewList" class="home-agent-list"></div>
-          </article>
-
-          <article class="panel home-trace-panel">
-            <div class="panel-heading">
-              <div>
-                <h2 data-i18n="home.trace.title">Gateway Trace</h2>
-                <p class="quiet" data-i18n="home.trace.body">Recent MCP calls through the Desktop-owned Gateway.</p>
-              </div>
-              <button class="link-button" data-view-target="agent-setup" data-i18n="home.trace.openConnections">Open Agent Access</button>
-            </div>
-            <div id="homeTraceList" class="home-trace-list"></div>
-          </article>
-        </section>
-
-        <section class="panel home-module-board">
+        <section class="panel home-status-board" aria-label="Runtime status">
           <div class="panel-heading">
             <div>
-              <h2 data-i18n="home.modules.title">Core Modules</h2>
-              <p class="quiet" data-i18n="home.modules.body">Compact readiness for the agent runtime.</p>
+              <h2 data-i18n="home.runtime.title">Runtime Overview</h2>
+              <p id="homeRuntimeDetail" class="quiet">Checking local core...</p>
             </div>
-            <span id="homeCognitiveUpdated" class="quiet">Checking...</span>
+            <span id="homeRuntimeStatus" class="runtime-state">Checking</span>
           </div>
+          <div id="homeRuntimeStrip" class="home-runtime-strip"></div>
           <section id="moduleGrid" class="module-grid" aria-live="polite"></section>
         </section>
 
-        <section class="home-activity-grid">
-          <article class="panel">
-            <div class="panel-heading">
-              <h2 data-i18n="health.title">Runtime checks</h2>
-              <span id="healthSummary" class="quiet">Checking...</span>
-            </div>
-            <div id="healthList" class="health-list"></div>
-          </article>
-
-          <article class="panel">
-            <div class="panel-heading">
-              <h2 data-i18n="home.events.title">Recent activity</h2>
-              <span class="quiet" data-i18n="home.events.localOnly">Local signals</span>
-            </div>
-            <ol id="eventList" class="event-list"></ol>
-          </article>
-        </section>
       </section>
 
       <section id="memoryView" class="view">
-        <div class="memoria-workbench">
-          <section class="memoria-status-strip">
-            <div>
-              <span data-i18n="memory.agentSurface">Agent surface</span>
-              <strong>CLI + MCP</strong>
-            </div>
-            <div>
-              <span data-i18n="memory.store">Store</span>
-              <strong id="memoryStore">Checking...</strong>
-            </div>
-            <div>
-              <span data-i18n="memory.boundary">Boundary</span>
-              <strong data-i18n="memory.factsAndRecords">Facts and records</strong>
-            </div>
-          </section>
-        </div>
         <div class="screen-grid memoria-grid">
           <article class="panel main-panel">
             <h2 data-i18n="memory.title">Memory</h2>
@@ -179,14 +95,19 @@
               <div><span data-i18n="memory.stats.restricted">Restricted</span><strong id="memoryRestrictedCount">0</strong></div>
               <div><span data-i18n="memory.stats.archived">Archived</span><strong id="memoryArchivedCount">0</strong></div>
             </div>
-            <div class="memory-embedding-actions">
-              <button id="processMemoryEmbeddings" class="primary" data-i18n="memory.embedding.processPending">Generate all missing vectors</button>
-              <span id="memoryEmbeddingNotice"></span>
-            </div>
-            <p class="module-guidance" data-i18n="memory.vectorGuidance">Vector maintenance is only needed when pending or failed items appear.</p>
-            <div class="memory-embedding-progress" aria-hidden="true">
-              <div id="memoryEmbeddingProgressBar"></div>
-            </div>
+            <details id="memoryMaintenanceDetails" class="memory-maintenance-details">
+              <summary>
+                <span data-i18n="memory.maintenanceTitle">Vector maintenance</span>
+                <small data-i18n="memory.vectorGuidance">Vector maintenance is only needed when pending or failed items appear.</small>
+              </summary>
+              <div class="memory-embedding-actions">
+                <button id="processMemoryEmbeddings" class="primary" data-i18n="memory.embedding.processPending">Generate all missing vectors</button>
+                <span id="memoryEmbeddingNotice"></span>
+              </div>
+              <div class="memory-embedding-progress" aria-hidden="true">
+                <div id="memoryEmbeddingProgressBar"></div>
+              </div>
+            </details>
             <div class="memory-labels">
               <strong data-i18n="memory.labels.title">Labels</strong>
               <div id="memoryLabelList"></div>
@@ -201,17 +122,18 @@
               </div>
             </div>
             <div class="memoria-tabs" role="tablist" aria-label="Memoria views">
-              <button class="active" data-memory-tab="search" data-i18n="memory.tab.search">Search</button>
+              <button class="active" data-memory-tab="search" data-i18n="memory.tab.search">Memories</button>
               <button data-memory-tab="labels" data-i18n="memory.tab.labels">Labels</button>
               <button data-memory-tab="graph" data-i18n="memory.tab.graph">Graph</button>
-              <button data-memory-tab="all" data-i18n="memory.tab.all">All</button>
-              <button data-memory-tab="restricted" data-i18n="memory.tab.restricted">Restricted</button>
               <button data-memory-tab="archive" data-i18n="memory.tab.archive">Archive</button>
             </div>
             <section class="memoria-tab-panel active" data-memory-panel="search">
               <div class="memory-search">
                 <input id="memorySearchInput" data-i18n-placeholder="memory.search.placeholder" placeholder="Search memory" />
                 <button id="searchMemory" class="secondary" data-i18n="actions.search">Search</button>
+              </div>
+              <div class="section-heading-line">
+                <span id="memoryAllHint" class="quiet"></span>
               </div>
               <div id="memoryList" class="memory-list"></div>
             </section>
@@ -230,21 +152,14 @@
                 <div id="memoryGraph" class="memory-graph"></div>
               </div>
             </section>
-            <section class="memoria-tab-panel" data-memory-panel="all">
-              <div class="section-heading-line">
-                <strong data-i18n="memory.all.title">All visible memories</strong>
-                <span id="memoryAllHint"></span>
-              </div>
-              <div id="allMemoryList" class="memory-list"></div>
-            </section>
-            <section class="memoria-tab-panel" data-memory-panel="restricted">
-              <div class="section-heading-line">
-                <strong data-i18n="memory.restricted.title">Restricted memories</strong>
-                <span id="memoryRestrictedHint"></span>
-              </div>
-              <div id="restrictedMemoryList" class="memory-list"></div>
-            </section>
             <section class="memoria-tab-panel" data-memory-panel="archive">
+              <div class="deleted-memory-section">
+                <div class="section-heading-line">
+                  <strong data-i18n="memory.restricted.title">Restricted memories</strong>
+                  <span id="memoryRestrictedHint"></span>
+                </div>
+                <div id="restrictedMemoryList" class="memory-list compact-list"></div>
+              </div>
               <div class="deleted-memory-section">
                 <strong data-i18n="memory.archived.title">Archived memories</strong>
                 <div id="archivedMemoryList" class="memory-list compact-list"></div>
@@ -259,20 +174,11 @@
       </section>
 
       <section id="sharedLineView" class="view">
-        <div class="shared-line-stats-grid">
-          <div><span data-i18n="sharedLine.stats.lines">Lines</span><strong id="sharedLineLineCount">0</strong></div>
-          <div><span data-i18n="sharedLine.stats.history">Compressed</span><strong id="sharedLineHistoryCount">0</strong></div>
-          <div><span data-i18n="sharedLine.stats.snapshots">Snapshots</span><strong id="sharedLineSnapshotCount">0</strong></div>
-          <div><span data-i18n="sharedLine.stats.archived">Archived</span><strong id="sharedLineArchivedCount">0</strong></div>
-        </div>
-
         <div class="shared-line-layout">
           <article class="panel main-panel">
             <div class="shared-line-tabs" role="tablist" aria-label="Shared Line views">
               <button class="active" data-shared-line-tab="lines" data-i18n="sharedLine.tab.lines">Threads</button>
-              <button data-shared-line-tab="snapshots" data-i18n="sharedLine.tab.snapshots">Snapshots</button>
               <button data-shared-line-tab="history" data-i18n="sharedLine.tab.history">History</button>
-              <button data-shared-line-tab="archive" data-i18n="sharedLine.tab.archive">Archive</button>
             </div>
             <section class="shared-line-tab-panel active" data-shared-line-panel="lines">
               <div class="section-heading-line">
@@ -285,19 +191,15 @@
               <div id="sharedLineAgentStatePanel" class="shared-line-detail-list"></div>
               <div id="sharedLineList" class="shared-line-history-list"></div>
             </section>
-            <section class="shared-line-tab-panel" data-shared-line-panel="snapshots">
-              <div class="section-heading-line">
-                <strong data-i18n="sharedLine.snapshots">Recent snapshots</strong>
-              </div>
-              <div id="sharedLineSnapshotList" class="shared-line-history-list"></div>
-            </section>
             <section class="shared-line-tab-panel" data-shared-line-panel="history">
               <div class="section-heading-line">
                 <strong data-i18n="sharedLine.history">Recent history</strong>
               </div>
               <div id="sharedLineHistoryList" class="shared-line-history-list"></div>
-            </section>
-            <section class="shared-line-tab-panel" data-shared-line-panel="archive">
+              <div class="section-heading-line">
+                <strong data-i18n="sharedLine.snapshots">Recent snapshots</strong>
+              </div>
+              <div id="sharedLineSnapshotList" class="shared-line-history-list"></div>
               <div class="section-heading-line">
                 <strong data-i18n="sharedLine.archive">Archived lines</strong>
               </div>
@@ -339,14 +241,6 @@
             <div>
               <span data-i18n="innerLife.pendingShares">Pending shares</span>
               <strong id="innerLifePendingCount">0</strong>
-            </div>
-            <div>
-              <span data-i18n="innerLife.events">Events</span>
-              <strong id="innerLifeEventCount">0</strong>
-            </div>
-            <div>
-              <span data-i18n="innerLife.thoughts">Thoughts</span>
-              <strong id="innerLifeThoughtCount">0</strong>
             </div>
           </section>
           <div class="innerlife-layout">
@@ -470,64 +364,37 @@
                 </div>
                 <div id="innerLifeDoctorList" class="shared-line-history-list"></div>
               </article>
-              <article class="panel">
-                <h2 data-i18n="innerLife.sessions">Sessions</h2>
-                <p class="innerlife-side-note" data-i18n="innerLife.sessionsBody">Conversation windows and their start/end reflections.</p>
-                <div id="innerLifeSessionList" class="shared-line-history-list"></div>
-                <button id="loadMoreInnerLifeSessions" class="secondary full" data-i18n="innerLife.loadMoreSessions">Load more sessions</button>
-              </article>
-              <article class="panel">
-                <h2 data-i18n="innerLife.digests">Digests</h2>
-                <p class="innerlife-side-note" data-i18n="innerLife.digestsBody">Digest runs that turn inbox and context into thoughts.</p>
-                <div id="innerLifeDigestList" class="shared-line-history-list"></div>
-                <button id="loadMoreInnerLifeDigestRuns" class="secondary full" data-i18n="innerLife.loadMoreDigests">Load more digests</button>
-              </article>
-              <article class="panel">
-                <h2 data-i18n="innerLife.inboxRecent">Recent inbox</h2>
-                <p class="innerlife-side-note" data-i18n="innerLife.inboxBody">Material waiting for or already consumed by InnerLife.</p>
-                <div id="innerLifeInboxList" class="shared-line-history-list"></div>
-                <button id="loadMoreInnerLifeInbox" class="secondary full" data-i18n="innerLife.loadMoreInbox">Load more inbox</button>
-              </article>
-              <article class="panel">
-                <h2 data-i18n="innerLife.timingChecks">Timing checks</h2>
-                <p class="innerlife-side-note" data-i18n="innerLife.timingBody">Checks for whether a thought fits the current conversation.</p>
-                <div id="innerLifeShareCheckList" class="shared-line-history-list"></div>
-              </article>
+              <details class="innerlife-deep-section innerlife-pipeline-details">
+                <summary>
+                  <span data-i18n="innerLife.pipelineEvidence">Pipeline evidence</span>
+                  <small data-i18n="innerLife.pipelineEvidenceHint">Sessions, digests, inbox, and timing checks the agent manages itself.</small>
+                </summary>
+                <article class="panel">
+                  <h2 data-i18n="innerLife.sessions">Sessions</h2>
+                  <p class="innerlife-side-note" data-i18n="innerLife.sessionsBody">Conversation windows and their start/end reflections.</p>
+                  <div id="innerLifeSessionList" class="shared-line-history-list"></div>
+                  <button id="loadMoreInnerLifeSessions" class="secondary full" data-i18n="innerLife.loadMoreSessions">Load more sessions</button>
+                </article>
+                <article class="panel">
+                  <h2 data-i18n="innerLife.digests">Digests</h2>
+                  <p class="innerlife-side-note" data-i18n="innerLife.digestsBody">Digest runs that turn inbox and context into thoughts.</p>
+                  <div id="innerLifeDigestList" class="shared-line-history-list"></div>
+                  <button id="loadMoreInnerLifeDigestRuns" class="secondary full" data-i18n="innerLife.loadMoreDigests">Load more digests</button>
+                </article>
+                <article class="panel">
+                  <h2 data-i18n="innerLife.inboxRecent">Recent inbox</h2>
+                  <p class="innerlife-side-note" data-i18n="innerLife.inboxBody">Material waiting for or already consumed by InnerLife.</p>
+                  <div id="innerLifeInboxList" class="shared-line-history-list"></div>
+                  <button id="loadMoreInnerLifeInbox" class="secondary full" data-i18n="innerLife.loadMoreInbox">Load more inbox</button>
+                </article>
+                <article class="panel">
+                  <h2 data-i18n="innerLife.timingChecks">Timing checks</h2>
+                  <p class="innerlife-side-note" data-i18n="innerLife.timingBody">Checks for whether a thought fits the current conversation.</p>
+                  <div id="innerLifeShareCheckList" class="shared-line-history-list"></div>
+                </article>
+              </details>
             </aside>
           </div>
-        </div>
-      </section>
-
-      <section id="dataView" class="view">
-        <div class="screen-grid">
-          <article class="panel main-panel">
-            <h2 data-i18n="data.title">Data import and export</h2>
-            <p data-i18n="data.body">Import and restore are separated so destructive actions stay clear.</p>
-            <div class="action-row"><span data-i18n="data.exportBackup">Create backup (.db + manifest)</span><button id="exportBackup" class="secondary" data-i18n="actions.create">Create</button></div>
-            <div class="action-row"><span data-i18n="data.exportProductJson">Export JSON</span><button id="exportProductJson" class="secondary" data-i18n="actions.export">Export</button></div>
-            <p class="module-guidance" data-i18n="data.importRiskCopy">JSON import merges product records into the current data root; create a backup first if you need a rollback point.</p>
-            <div class="action-row danger"><span data-i18n="data.importProductJson">Import JSON</span><button id="importProductJson" class="secondary" data-i18n="actions.import">Import</button></div>
-            <span id="productJsonNotice" class="quiet" aria-live="polite"></span>
-            <span id="backupNotice" class="quiet" aria-live="polite"></span>
-            <div class="data-backup-section">
-              <h2 class="section-title" data-i18n="data.recentBackups">Recent backups</h2>
-              <div id="backupList" class="backup-list"></div>
-            </div>
-            <div id="restoreConfirmPanel" class="restore-confirm-panel hidden">
-              <p data-i18n="data.restorePrompt">Type RESTORE to confirm.</p>
-              <div id="restorePreview" class="restore-preview"></div>
-              <input id="restoreConfirmInput" autocomplete="off" />
-              <div class="settings-actions">
-                <button id="cancelRestoreBackup" class="secondary" data-i18n="actions.cancel">Cancel</button>
-                <button id="confirmRestoreBackup" class="primary" data-i18n="actions.restore">Restore</button>
-              </div>
-            </div>
-          </article>
-          <article class="panel">
-            <h2 data-i18n="data.location">Location</h2>
-            <div class="snippet"><span data-i18n="data.dataRoot">Data root</span><code id="dataRootPath">Checking...</code></div>
-            <button id="openBackupsFolder" class="secondary full" data-i18n="data.openBackupsFolder">Open backups folder</button>
-          </article>
         </div>
       </section>
 
@@ -607,7 +474,6 @@
               <h3 data-i18n="agentSetup.quickCopy">Quick copy</h3>
               <button id="copyAgentSetup" class="secondary full" data-i18n="agentSetup.copy">Copy agent install brief</button>
               <button class="secondary full" data-copy="mcp-config" data-i18n="connections.copyMcpConfig">Copy MCP config</button>
-              <button class="secondary full" data-copy="mcp-command" data-i18n="connections.copyMcpCommand">Copy MCP command</button>
             </section>
             <section class="agent-console-group">
               <h3 data-i18n="agentSetup.currentIdentity">Current identity</h3>
@@ -617,10 +483,11 @@
               <h3 data-i18n="agentSetup.connectionMode">Connection mode</h3>
               <button id="openGatewayFolder" class="secondary full" data-i18n="connections.openGatewayFolder">Open runtime folder</button>
               <details class="agent-access-details">
-                <summary data-i18n="connections.title">Connection details</summary>
+                <summary data-i18n="connections.details">Connection details</summary>
                 <div class="snippet">
                   <span data-i18n="connections.mcpCommand">MCP command</span>
                   <code id="mcpCommand">Checking...</code>
+                  <button class="secondary" data-copy="mcp-command" data-i18n="actions.copy">Copy</button>
                 </div>
                 <div class="snippet large">
                   <span data-i18n="connections.mcpConfig">MCP config</span>
@@ -632,13 +499,13 @@
                 <div id="httpEndpointList" class="endpoint-list"></div>
               </details>
             </section>
-            <section class="source-map-card">
-              <h3 data-i18n="agentSetup.sourceMapTitle">Debug / Source Map</h3>
-              <p data-i18n="agentSetup.sourceMapBody">Maintenance agents should start from docs/CODE_MAP.md for ownership boundaries.</p>
-              <code>docs/CODE_MAP.md</code>
-            </section>
             <details class="agent-access-details">
-              <summary data-i18n="agentSetup.installBrief">Install brief</summary>
+              <summary data-i18n="agentSetup.maintenanceDetails">Maintenance details</summary>
+              <section class="source-map-card compact-source">
+                <h3 data-i18n="agentSetup.sourceMapTitle">Debug / Source Map</h3>
+                <p data-i18n="agentSetup.sourceMapBody">Maintenance agents should start from docs/CODE_MAP.md for ownership boundaries.</p>
+                <code>docs/CODE_MAP.md</code>
+              </section>
               <div class="doc-preview compact">
                 <pre><code id="agentSetupMarkdown">Checking...</code></pre>
               </div>
@@ -647,132 +514,19 @@
         </div>
       </section>
 
-      <section id="modelView" class="view">
-        <div class="screen-grid">
-          <article class="panel main-panel">
-            <div class="panel-heading">
-              <div>
-                <h2 data-i18n="settings.modelsTitle">Model configuration</h2>
-                <p class="quiet" data-i18n="settings.modelsBody">Keep model wiring simple and visible before enabling InnerLife.</p>
-              </div>
-              <span id="settingsNotice" class="quiet" aria-live="polite"></span>
-            </div>
-            <div class="model-config-list">
-              <section class="model-config-card">
-                <div class="model-config-head">
-                  <div>
-                    <h3 data-i18n="settings.memoriaTitle">Memoria embedding</h3>
-                    <p data-i18n="settings.memoriaBody">Used for Memory semantic search and graph-ready recall.</p>
-                  </div>
-                  <span id="memoriaModelStatus" class="badge ok">ready</span>
-                </div>
-                <div class="settings-grid">
-                  <label class="field">
-                    <span data-i18n="home.model.provider">Provider</span>
-                    <select id="memoriaProvider">
-                      <option value="ollama">Ollama</option>
-                      <option value="claracore-built-in">ClaraCore built-in (future)</option>
-                      <option value="openai-compatible">OpenAI compatible</option>
-                      <option value="disabled">Disabled</option>
-                    </select>
-                  </label>
-                  <label class="field"><span data-i18n="settings.endpoint">Endpoint</span><input id="memoriaEndpoint" /></label>
-                  <label class="field">
-                    <span data-i18n="settings.embeddingModel">Embedding model</span>
-                    <span class="model-picker-field">
-                      <input id="memoriaModel" list="memoriaModelOptions" />
-                      <button id="refreshMemoriaModels" class="secondary" type="button" data-i18n="settings.fetchModels">Fetch</button>
-                    </span>
-                    <datalist id="memoriaModelOptions"></datalist>
-                    <small id="memoriaModelNotice" class="quiet" aria-live="polite"></small>
-                  </label>
-                  <label class="field">
-                    <span data-i18n="settings.apiKeyRef">API key reference</span>
-                    <span class="copy-field">
-                      <input id="memoriaApiKey" data-secret-input="true" data-i18n-placeholder="settings.apiKeyRefPlaceholder" placeholder="optional" />
-                      <button id="copyMemoriaApiKey" class="secondary" type="button" data-i18n="actions.copy">Copy</button>
-                    </span>
-                  </label>
-                </div>
-                <div class="connection-test-row">
-                  <button id="testMemoriaConnection" class="secondary" type="button" data-i18n="settings.testConnection">Test connection</button>
-                  <span id="memoriaConnectionNotice" class="connection-test-notice" aria-live="polite" data-i18n="settings.connectionNotTested">Not tested this session.</span>
-                </div>
-              </section>
-              <section class="model-config-card">
-                <div class="model-config-head">
-                  <div>
-                    <h3 data-i18n="settings.innerLifeTitle">InnerLife daemon model</h3>
-                    <p data-i18n="settings.innerLifeBody">Required before the InnerLife daemon can become useful.</p>
-                  </div>
-                  <span id="innerLifeModelStatus" class="badge warn">disabled</span>
-                </div>
-                <div class="settings-grid">
-                  <label class="field">
-                    <span data-i18n="home.model.provider">Provider</span>
-                    <select id="innerLifeBackend">
-                      <option value="disabled">Disabled</option>
-                      <option value="ollama">Ollama</option>
-                      <option value="claracore-built-in">ClaraCore built-in (future)</option>
-                      <option value="openai-compatible">OpenAI compatible</option>
-                      <option value="custom-command">Custom command</option>
-                    </select>
-                  </label>
-                  <label class="field"><span data-i18n="settings.endpoint">Endpoint</span><input id="innerLifeEndpoint" /></label>
-                  <label class="field">
-                    <span data-i18n="settings.lightModel">Light model</span>
-                    <input id="innerLifeLightModel" list="innerLifeModelOptions" />
-                  </label>
-                  <label class="field">
-                    <span data-i18n="settings.deepModel">Deep model</span>
-                    <span class="model-picker-field">
-                      <input id="innerLifeDeepModel" list="innerLifeModelOptions" />
-                      <button id="refreshInnerLifeModels" class="secondary" type="button" data-i18n="settings.fetchModels">Fetch</button>
-                    </span>
-                    <datalist id="innerLifeModelOptions"></datalist>
-                    <small id="innerLifeModelNotice" class="quiet" aria-live="polite"></small>
-                  </label>
-                  <label class="field"><span data-i18n="settings.pollMinutes">Loop minutes</span><input id="innerLifePollSeconds" type="number" min="1" step="1" /></label>
-                  <label class="field">
-                    <span data-i18n="settings.apiKeyRef">API key reference</span>
-                    <span class="copy-field">
-                      <input id="innerLifeApiKey" data-secret-input="true" data-i18n-placeholder="settings.apiKeyRefPlaceholder" placeholder="env:OPENAI_API_KEY" />
-                      <button id="copyInnerLifeApiKey" class="secondary" type="button" data-i18n="actions.copy">Copy</button>
-                    </span>
-                  </label>
-                </div>
-                <div class="connection-test-row">
-                  <button id="testInnerLifeConnection" class="secondary" type="button" data-i18n="settings.testConnection">Test connection</button>
-                  <span id="innerLifeConnectionNotice" class="connection-test-notice" aria-live="polite" data-i18n="settings.connectionNotTested">Not tested this session.</span>
-                </div>
-              </section>
-            </div>
-            <div class="settings-actions">
-              <button id="saveSettings" class="primary" data-i18n="settings.saveModels">Save model configuration</button>
-            </div>
-          </article>
-          <article class="panel">
-            <h2 data-i18n="settings.usageSummaryTitle">Usage summary</h2>
-            <p class="quiet" data-i18n="settings.usageSummaryBody">Where each model setting is used inside ClaraCore Desktop.</p>
-            <div class="metric-list">
-              <div><span data-i18n="settings.memoryRole">Memory</span><strong data-i18n="settings.memoryRoleBody">Embedding only</strong></div>
-              <div><span data-i18n="settings.innerLifeRole">InnerLife</span><strong data-i18n="settings.innerLifeRoleBody">Daemon model</strong></div>
-              <div><span data-i18n="settings.secretReferenceRole">Secret reference</span><strong id="innerLifeApiKeySummary">not configured</strong></div>
-              <div><span data-i18n="settings.fetchModelsRole">Fetch models</span><strong data-i18n="settings.fetchModelsRoleBody">Discovery only, not health</strong></div>
-              <div><span data-i18n="settings.connectionTestRole">Test connection</span><strong data-i18n="settings.connectionTestRoleBody">Endpoint plus model check</strong></div>
-            </div>
-            <p class="module-guidance" data-i18n="settings.connectionTestBody">Connection tests use the provider model-list endpoint to prove reachability and selected model availability without running a generation request.</p>
-          </article>
-        </div>
-      </section>
-
       <section id="settingsView" class="view">
+        <div class="settings-tabs" role="tablist" aria-label="Settings views">
+          <button class="active" data-settings-tab="general" data-i18n="settings.tab.general">General</button>
+          <button data-settings-tab="models" data-i18n="settings.tab.models">Models</button>
+          <button data-settings-tab="data" data-i18n="settings.tab.data">Data</button>
+        </div>
+        <section class="settings-tab-panel active" data-settings-panel="general">
         <div class="screen-grid">
           <article class="panel main-panel">
             <div class="panel-heading">
               <div>
                 <h2 data-i18n="settings.generalTitle">Settings</h2>
-                <p class="quiet" data-i18n="settings.generalBody">General product settings stay here. Model wiring and daemon controls live in Models.</p>
+                <p class="quiet" data-i18n="settings.generalBody">General product settings stay here. Model wiring and daemon controls live in the Models tab.</p>
               </div>
               <span id="appearanceSettingsNotice" class="quiet" aria-live="polite"></span>
             </div>
@@ -904,16 +658,167 @@
             </details>
           </article>
         </div>
+        </section>
+
+        <section id="modelView" class="settings-tab-panel" data-settings-panel="models">
+        <div class="screen-grid">
+          <article class="panel main-panel">
+            <div class="panel-heading">
+              <div>
+                <h2 data-i18n="settings.modelsTitle">Model configuration</h2>
+                <p class="quiet" data-i18n="settings.modelsBody">Keep model wiring simple and visible before enabling InnerLife.</p>
+              </div>
+              <span id="settingsNotice" class="quiet" aria-live="polite"></span>
+            </div>
+            <div class="model-config-list">
+              <section class="model-config-card">
+                <div class="model-config-head">
+                  <div>
+                    <h3 data-i18n="settings.memoriaTitle">Memoria embedding</h3>
+                    <p data-i18n="settings.memoriaBody">Used for Memory semantic search and graph-ready recall.</p>
+                  </div>
+                  <span id="memoriaModelStatus" class="badge ok">ready</span>
+                </div>
+                <div class="settings-grid">
+                  <label class="field">
+                    <span data-i18n="home.model.provider">Provider</span>
+                    <select id="memoriaProvider">
+                      <option value="ollama">Ollama</option>
+                      <option value="claracore-built-in">ClaraCore built-in (future)</option>
+                      <option value="openai-compatible">OpenAI compatible</option>
+                      <option value="disabled">Disabled</option>
+                    </select>
+                  </label>
+                  <label class="field"><span data-i18n="settings.endpoint">Endpoint</span><input id="memoriaEndpoint" /></label>
+                  <label class="field">
+                    <span data-i18n="settings.embeddingModel">Embedding model</span>
+                    <span class="model-picker-field">
+                      <input id="memoriaModel" list="memoriaModelOptions" />
+                      <button id="refreshMemoriaModels" class="secondary" type="button" data-i18n="settings.fetchModels">Fetch</button>
+                    </span>
+                    <datalist id="memoriaModelOptions"></datalist>
+                    <small id="memoriaModelNotice" class="quiet" aria-live="polite"></small>
+                  </label>
+                  <label class="field">
+                    <span data-i18n="settings.apiKeyRef">API key reference</span>
+                    <span class="copy-field">
+                      <input id="memoriaApiKey" data-secret-input="true" data-i18n-placeholder="settings.apiKeyRefPlaceholder" placeholder="optional" />
+                      <button id="copyMemoriaApiKey" class="secondary" type="button" data-i18n="actions.copy">Copy</button>
+                    </span>
+                  </label>
+                </div>
+                <div class="connection-test-row">
+                  <button id="testMemoriaConnection" class="secondary" type="button" data-i18n="settings.testConnection">Test connection</button>
+                  <span id="memoriaConnectionNotice" class="connection-test-notice" aria-live="polite" data-i18n="settings.connectionNotTested">Not tested this session.</span>
+                </div>
+              </section>
+              <section class="model-config-card">
+                <div class="model-config-head">
+                  <div>
+                    <h3 data-i18n="settings.innerLifeTitle">InnerLife daemon model</h3>
+                    <p data-i18n="settings.innerLifeBody">Required before the InnerLife daemon can become useful.</p>
+                  </div>
+                  <span id="innerLifeModelStatus" class="badge warn">disabled</span>
+                </div>
+                <div class="settings-grid">
+                  <label class="field">
+                    <span data-i18n="home.model.provider">Provider</span>
+                    <select id="innerLifeBackend">
+                      <option value="disabled">Disabled</option>
+                      <option value="ollama">Ollama</option>
+                      <option value="claracore-built-in">ClaraCore built-in (future)</option>
+                      <option value="openai-compatible">OpenAI compatible</option>
+                      <option value="custom-command">Custom command</option>
+                    </select>
+                  </label>
+                  <label class="field"><span data-i18n="settings.endpoint">Endpoint</span><input id="innerLifeEndpoint" /></label>
+                  <label class="field">
+                    <span data-i18n="settings.lightModel">Light model</span>
+                    <input id="innerLifeLightModel" list="innerLifeModelOptions" />
+                  </label>
+                  <label class="field">
+                    <span data-i18n="settings.deepModel">Deep model</span>
+                    <span class="model-picker-field">
+                      <input id="innerLifeDeepModel" list="innerLifeModelOptions" />
+                      <button id="refreshInnerLifeModels" class="secondary" type="button" data-i18n="settings.fetchModels">Fetch</button>
+                    </span>
+                    <datalist id="innerLifeModelOptions"></datalist>
+                    <small id="innerLifeModelNotice" class="quiet" aria-live="polite"></small>
+                  </label>
+                  <label class="field"><span data-i18n="settings.pollMinutes">Loop minutes</span><input id="innerLifePollSeconds" type="number" min="1" step="1" /></label>
+                  <label class="field">
+                    <span data-i18n="settings.apiKeyRef">API key reference</span>
+                    <span class="copy-field">
+                      <input id="innerLifeApiKey" data-secret-input="true" data-i18n-placeholder="settings.apiKeyRefPlaceholder" placeholder="env:OPENAI_API_KEY" />
+                      <button id="copyInnerLifeApiKey" class="secondary" type="button" data-i18n="actions.copy">Copy</button>
+                    </span>
+                  </label>
+                </div>
+                <div class="connection-test-row">
+                  <button id="testInnerLifeConnection" class="secondary" type="button" data-i18n="settings.testConnection">Test connection</button>
+                  <span id="innerLifeConnectionNotice" class="connection-test-notice" aria-live="polite" data-i18n="settings.connectionNotTested">Not tested this session.</span>
+                </div>
+              </section>
+            </div>
+            <div class="settings-actions">
+              <button id="saveSettings" class="primary" data-i18n="settings.saveModels">Save model configuration</button>
+            </div>
+          </article>
+          <article class="panel">
+            <h2 data-i18n="settings.usageSummaryTitle">Usage summary</h2>
+            <p class="quiet" data-i18n="settings.usageSummaryBody">Where each model setting is used inside ClaraCore Desktop.</p>
+            <div class="metric-list">
+              <div><span data-i18n="settings.memoryRole">Memory</span><strong data-i18n="settings.memoryRoleBody">Embedding only</strong></div>
+              <div><span data-i18n="settings.innerLifeRole">InnerLife</span><strong data-i18n="settings.innerLifeRoleBody">Daemon model</strong></div>
+              <div><span data-i18n="settings.secretReferenceRole">Secret reference</span><strong id="innerLifeApiKeySummary">not configured</strong></div>
+              <div><span data-i18n="settings.fetchModelsRole">Fetch models</span><strong data-i18n="settings.fetchModelsRoleBody">Discovery only, not health</strong></div>
+              <div><span data-i18n="settings.connectionTestRole">Test connection</span><strong data-i18n="settings.connectionTestRoleBody">Endpoint plus model check</strong></div>
+            </div>
+            <p class="module-guidance" data-i18n="settings.connectionTestBody">Connection tests use the provider model-list endpoint to prove reachability and selected model availability without running a generation request.</p>
+          </article>
+        </div>
+        </section>
+
+        <section id="dataView" class="settings-tab-panel" data-settings-panel="data">
+        <div class="screen-grid">
+          <article class="panel main-panel">
+            <h2 data-i18n="data.title">Data import and export</h2>
+            <p data-i18n="data.body">Import and restore are separated so destructive actions stay clear.</p>
+            <div class="action-row"><span data-i18n="data.exportBackup">Create backup (.db + manifest)</span><button id="exportBackup" class="secondary" data-i18n="actions.create">Create</button></div>
+            <div class="action-row"><span data-i18n="data.exportProductJson">Export JSON</span><button id="exportProductJson" class="secondary" data-i18n="actions.export">Export</button></div>
+            <p class="module-guidance" data-i18n="data.importRiskCopy">JSON import merges product records into the current data root; create a backup first if you need a rollback point.</p>
+            <div class="action-row danger"><span data-i18n="data.importProductJson">Import JSON</span><button id="importProductJson" class="secondary" data-i18n="actions.import">Import</button></div>
+            <span id="productJsonNotice" class="quiet" aria-live="polite"></span>
+            <span id="backupNotice" class="quiet" aria-live="polite"></span>
+            <div class="data-backup-section">
+              <h2 class="section-title" data-i18n="data.recentBackups">Recent backups</h2>
+              <div id="backupList" class="backup-list"></div>
+            </div>
+            <div id="restoreConfirmPanel" class="restore-confirm-panel hidden">
+              <p data-i18n="data.restorePrompt">Type RESTORE to confirm.</p>
+              <div id="restorePreview" class="restore-preview"></div>
+              <input id="restoreConfirmInput" autocomplete="off" />
+              <div class="settings-actions">
+                <button id="cancelRestoreBackup" class="secondary" data-i18n="actions.cancel">Cancel</button>
+                <button id="confirmRestoreBackup" class="primary" data-i18n="actions.restore">Restore</button>
+              </div>
+            </div>
+          </article>
+          <article class="panel">
+            <h2 data-i18n="data.location">Location</h2>
+            <div class="snippet"><span data-i18n="data.dataRoot">Data root</span><code id="dataRootPath">Checking...</code></div>
+            <button id="openBackupsFolder" class="secondary full" data-i18n="data.openBackupsFolder">Open backups folder</button>
+          </article>
+        </div>
+        </section>
       </section>
     </main>
 
-    <footer class="resource-monitor" aria-label="System resources">
-      <span class="monitor-primary"><span data-i18n="monitor.uptime">Uptime</span>: <strong id="monitorUptime">--:--:--</strong></span>
-      <span class="monitor-secondary"><span data-i18n="monitor.cpu">CPU</span>: <strong id="monitorCpu">--</strong><b class="monitor-dot"></b></span>
+    <footer id="resourceMonitor" class="resource-monitor" aria-label="System resources" hidden>
+      <span class="monitor-warning" data-i18n="monitor.warning">Resource warning</span>
       <span class="monitor-secondary"><span data-i18n="monitor.ram">RAM</span>: <strong id="monitorRam">--</strong></span>
       <span class="monitor-secondary"><span data-i18n="monitor.process">Process</span>: <strong id="monitorProcess">--</strong></span>
       <span class="monitor-secondary"><span data-i18n="monitor.disk">Disk</span>: <strong id="monitorDisk">--</strong><b class="monitor-dot"></b></span>
-      <span class="monitor-primary"><span data-i18n="monitor.localTime">Local time</span>: <strong id="monitorTime">--</strong></span>
     </footer>
 
     <script src="./app/dom.js"></script>
@@ -930,7 +835,6 @@
     <script src="./app/views/agent-setup.js"></script>
     <script src="./app/views/data.js"></script>
     <script src="./app/views/home-trace.js"></script>
-    <script src="./app/views/home-orb.js"></script>
     <script src="./app/views/home.js"></script>
     <script src="./app/views/logs.js"></script>
     <script src="./app/views/memoria-list.js"></script>

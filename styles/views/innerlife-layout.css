@@ -245,3 +245,12 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
+
+.innerlife-pipeline-details[open] {
+  display: grid;
+  gap: 10px;
+}
+
+.innerlife-pipeline-details > .panel {
+  margin: 0;
+}

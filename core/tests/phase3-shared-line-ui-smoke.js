@@ -82,8 +82,7 @@ async function main() {
       throw new Error(`Shared Line history tab missing expected entries: ${historyText}`);
     }
 
-    // Verify snapshots tab shows confirmed snapshot
-    await page.click("[data-shared-line-tab='snapshots']");
+    // Verify snapshot section (inside history tab) shows confirmed snapshot
     await page.waitForFunction(
       () => document.querySelector("#sharedLineSnapshotList")?.textContent.includes("confirmed"),
       null,
@@ -109,15 +108,8 @@ async function main() {
     // Test archive action on the parallel line (click archive with confirmation)
     page.once("dialog", (dialog) => dialog.accept());
     await page.click("[data-shared-line-action='archive']");
-    await page.waitForFunction(
-      () => document.querySelector("#sharedLineArchiveList")?.textContent.includes("UI Shared Line parallel line")
-        || document.querySelector("[data-shared-line-tab='archive']") != null,
-      null,
-      { timeout: 15000 }
-    );
-
-    // Switch to archive tab to verify
-    await page.click("[data-shared-line-tab='archive']");
+    // Archived lines now live in the history tab
+    await page.click("[data-shared-line-tab='history']");
     await page.waitForFunction(
       () => document.querySelector("#sharedLineArchiveList")?.textContent.includes("UI Shared Line parallel line"),
       null,
@@ -139,11 +131,7 @@ async function main() {
         historyCount: (snapshot.sharedLine?.history || []).length,
         snapshotCount: (snapshot.sharedLine?.snapshots || []).length,
         archivedCount: (snapshot.sharedLine?.archivedLines || []).length,
-        currentSummary: snapshot.sharedLine?.currentPosition?.summary || "",
-        lineCountText: document.querySelector("#sharedLineLineCount")?.textContent || "",
-        historyCountText: document.querySelector("#sharedLineHistoryCount")?.textContent || "",
-        snapshotCountText: document.querySelector("#sharedLineSnapshotCount")?.textContent || "",
-        archivedCountText: document.querySelector("#sharedLineArchivedCount")?.textContent || ""
+        currentSummary: snapshot.sharedLine?.currentPosition?.summary || ""
       };
     });
     if (!result.databasePath.startsWith(dataRoot)) {

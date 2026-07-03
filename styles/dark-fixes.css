@@ -239,46 +239,6 @@ body[data-theme="dark"] .screen-dot::after {
   background: var(--faint);
 }
 
-body[data-theme="dark"] .home-runtime-panel {
-  background:
-    linear-gradient(120deg, rgba(29, 36, 32, 0.98), rgba(22, 27, 24, 0.96) 46%, rgba(31, 38, 34, 0.98)),
-    var(--surface);
-}
-
-body[data-theme="dark"] .home-runtime-field {
-  background:
-    linear-gradient(90deg, transparent, rgba(var(--orb-rgb), 0.12), transparent),
-    repeating-linear-gradient(90deg, rgba(174, 196, 184, 0.045) 0 1px, transparent 1px 46px);
-  opacity: 0.54;
-}
-
-body[data-theme="dark"] .home-orb-stage {
-  border-color: var(--border);
-  background:
-    radial-gradient(circle at 50% 48%, rgba(var(--orb-rgb), 0.16), transparent 42%),
-    radial-gradient(circle at 50% 50%, rgba(121, 201, 164, 0.08), transparent 60%),
-    #1d231f;
-}
-
-body[data-theme="dark"] .home-orb-stage::after {
-  background: radial-gradient(circle, rgba(121, 201, 164, 0.22), transparent 64%);
-}
-
-body[data-theme="dark"] .home-orb {
-  background:
-    radial-gradient(circle at 38% 32%, rgba(235, 250, 240, 0.74), rgba(121, 201, 164, 0.42) 28%, rgba(var(--orb-rgb), 0.28) 58%, rgba(12, 29, 24, 0.32) 72%),
-    radial-gradient(circle at 60% 62%, rgba(var(--orb-rgb), 0.28), transparent 54%);
-  box-shadow:
-    inset 0 0 28px rgba(235, 250, 240, 0.18),
-    inset 0 -18px 34px rgba(var(--orb-rgb), 0.18),
-    0 16px 42px rgba(var(--orb-rgb), 0.16);
-  animation-name: homeOrbBreatheDark;
-}
-
-body[data-theme="dark"] .home-orb::after {
-  background: rgba(235, 250, 240, 0.26);
-}
-
 body[data-theme="dark"] .runtime-metric,
 body[data-theme="dark"] .home-agent-stats div,
 body[data-theme="dark"] .cognitive-system-card,
@@ -353,9 +313,7 @@ body[data-theme="dark"] .trace-node {
   background: #2a312c;
 }
 
-body[data-theme="dark"] .memoria-status-strip > div,
 body[data-theme="dark"] .memory-stats-grid div,
-body[data-theme="dark"] .shared-line-stats-grid div,
 body[data-theme="dark"] .memoria-tabs button,
 body[data-theme="dark"] .memory-item,
 body[data-theme="dark"] .memory-item.deleted,
@@ -467,20 +425,3 @@ body[data-theme="dark"] .graph-layer.restricted {
   color: var(--red);
 }
 
-@keyframes homeOrbBreatheDark {
-  0%,
-  100% {
-    transform: scale(0.985);
-    box-shadow:
-      inset 0 0 28px rgba(235, 250, 240, 0.16),
-      inset 0 -18px 34px rgba(var(--orb-rgb), 0.18),
-      0 14px 38px rgba(var(--orb-rgb), 0.14);
-  }
-  50% {
-    transform: scale(1.035);
-    box-shadow:
-      inset 0 0 32px rgba(235, 250, 240, 0.24),
-      inset 0 -20px 38px rgba(var(--orb-rgb), 0.24),
-      0 18px 54px rgba(var(--orb-rgb), 0.22);
-  }
-}
