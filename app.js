@@ -506,7 +506,7 @@ function renderPageFocus() {
   const stats = snapshot.memoryStats || {};
   const maintenance = snapshot.memoryMaintenance || {};
   const gatewayTraces = snapshot.gatewayTraces || [];
-  const gatewayErrors = gatewayTraces.filter((trace) => trace.status === "error").length;
+  const gatewayErrors = homeView.actionableGatewayErrorCount();
   const sharedLine = snapshot.sharedLine || {};
   const currentLine = sharedLine.currentPosition || {};
   const innerLife = snapshot.innerLife || {};
@@ -514,11 +514,12 @@ function renderPageFocus() {
   const daemon = innerLife.daemon || {};
   const modules = snapshot.modules || [];
   const missingRequired = modules.filter((module) => module.required && !module.present).length;
+  // Pending shares are agent-owned waiting state, not human work; they are
+  // shown as ambient counts but never counted as attention.
   const attentionCount =
     gatewayErrors +
     Number(stats.pendingEmbeddingCount || 0) +
     Number(stats.failedEmbeddingCount || 0) +
-    Number(innerCounts.pending_shares_count || 0) +
     missingRequired;
 
   renderFocusBlock("home", {
@@ -534,11 +535,9 @@ function renderPageFocus() {
     ],
     actionLabel: attentionCount ? t("focus.action.reviewAttention") : t("focus.action.openSharedLine"),
     actionTarget: attentionCount
-      ? Number(innerCounts.pending_shares_count || 0)
-        ? "innerlife"
-        : Number(stats.pendingEmbeddingCount || 0) || Number(stats.failedEmbeddingCount || 0)
-          ? "memory"
-          : "agent-setup"
+      ? Number(stats.pendingEmbeddingCount || 0) || Number(stats.failedEmbeddingCount || 0)
+        ? "memory"
+        : "agent-setup"
       : "shared-line"
   });
 
@@ -571,7 +570,7 @@ function renderPageFocus() {
   });
 
   renderFocusBlock("innerlife", {
-    tone: innerCounts.pending_shares_count ? "warn" : daemon.status === "error" ? "error" : "ok",
+    tone: daemon.status === "error" ? "error" : "ok",
     title: innerCounts.pending_shares_count
       ? t("focus.innerLife.pending", { count: String(innerCounts.pending_shares_count) })
       : daemon.enabled
@@ -583,7 +582,7 @@ function renderPageFocus() {
       focusMetric(t("innerLife.pendingShares"), innerCounts.pending_shares_count || 0),
       focusMetric(t("innerLife.thoughts"), innerCounts.thoughts_count || 0)
     ],
-    actionLabel: innerCounts.pending_shares_count ? t("focus.action.reviewShares") : t("focus.action.openInnerLife"),
+    actionLabel: t("focus.action.openInnerLife"),
     actionTarget: "innerlife"
   });
 

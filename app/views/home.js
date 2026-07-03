@@ -791,12 +791,17 @@ function createClaraCoreHomeView(context) {
       .join("");
   }
 
+  function actionableGatewayErrorCount() {
+    return actionableGatewayErrors(getSnapshot()?.gatewayTraces || []).length;
+  }
+
   return {
     renderModules,
     renderEvents,
     renderHomeDashboard,
     renderHealth,
-    renderConnections
+    renderConnections,
+    actionableGatewayErrorCount
   };
 }
 

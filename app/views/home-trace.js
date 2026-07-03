@@ -158,10 +158,16 @@ function createClaraCoreHomeTrace({ t, escapeHtml, safeJsonObject, getSnapshot }
     return resolved;
   }
 
+  const ACTIONABLE_ERROR_WINDOW_MS = 30 * 60 * 1000;
+
   function actionableGatewayErrors(traces) {
     const resolved = resolvedGatewayErrorKeys(traces || []);
+    const oldestActionable = Date.now() - ACTIONABLE_ERROR_WINDOW_MS;
     return (traces || []).filter((trace) => {
       if (trace.status !== "error") return false;
+      // Errors older than the window are history for Agent Access / Logs,
+      // not something the operator can still act on from Home.
+      if (traceTimeValue(trace) < oldestActionable) return false;
       const key = traceResolutionKey(trace);
       return !key || !resolved.has(key);
     });
