@@ -1,4 +1,5 @@
 const { createMemoriaLabelRepository } = require("./memoria/labels");
+const { createMemoriaLinkRepository } = require("./memoria/links");
 const { createMemoriaRecordRepository } = require("./memoria/records");
 const { createMemoriaEmbeddingRepository } = require("./memoria/embeddings");
 const { createMemoriaMaintenanceRepository } = require("./memoria/maintenance");
@@ -492,6 +493,30 @@ function installMemoriaRepository(ProductDatabase, helpers) {
         }
       }
     
+      const linkEdges = await this.listMemoryLinkEdges(memoryIds);
+      const memoryIdSetForLinks = new Set(memoryIds);
+      for (const link of linkEdges) {
+        for (const endpoint of [
+          { id: link.fromMemoryId, title: link.fromTitle },
+          { id: link.toMemoryId, title: link.toTitle }
+        ]) {
+          if (memoryIdSetForLinks.has(endpoint.id)) continue;
+          addNode({
+            id: `memory:${endpoint.id}`,
+            kind: "memory",
+            label: endpoint.title || endpoint.id,
+            refId: endpoint.id
+          });
+        }
+        addEdge({
+          from: `memory:${link.fromMemoryId}`,
+          to: `memory:${link.toMemoryId}`,
+          kind: `link:${link.kind}`,
+          strength: link.strength,
+          source: link.source
+        });
+      }
+
       const lineRows = await this.query(`
         SELECT
           l.id,
@@ -538,6 +563,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
           memoryCount: memories.length,
           labelCount,
           sharedLineCount: lineCount,
+          memoryLinkCount: edges.filter((edge) => String(edge.kind || "").startsWith("link:")).length,
           edgeCount: edges.length,
           limitedTo: safeLimit
         }
@@ -545,6 +571,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
     }
     ,
     
+    ...createMemoriaLinkRepository(helpers),
     ...createMemoriaMaintenanceRepository(helpers),
     ...createMemoriaRecordRepository(helpers),
     ...createMemoriaEmbeddingRepository(helpers)

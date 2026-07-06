@@ -81,6 +81,21 @@ CREATE TABLE IF NOT EXISTS memory_embeddings (
   FOREIGN KEY (memory_id) REFERENCES memories(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS memory_links (
+  id TEXT PRIMARY KEY,
+  from_memory_id TEXT NOT NULL,
+  to_memory_id TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'related',
+  strength REAL NOT NULL DEFAULT 0.5,
+  source TEXT NOT NULL DEFAULT 'manual',
+  note TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (from_memory_id, to_memory_id, kind),
+  FOREIGN KEY (from_memory_id) REFERENCES memories(id) ON DELETE CASCADE,
+  FOREIGN KEY (to_memory_id) REFERENCES memories(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS memory_records (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL DEFAULT 'local-user',
@@ -344,6 +359,8 @@ CREATE TABLE IF NOT EXISTS backups (
 CREATE INDEX IF NOT EXISTS idx_memories_status_updated ON memories(status, updated_at);
 CREATE INDEX IF NOT EXISTS idx_memory_labels_label ON memory_labels(label);
 CREATE INDEX IF NOT EXISTS idx_memory_label_aliases_canonical ON memory_label_aliases(canonical_label);
+CREATE INDEX IF NOT EXISTS idx_memory_links_from ON memory_links(from_memory_id);
+CREATE INDEX IF NOT EXISTS idx_memory_links_to ON memory_links(to_memory_id);
 CREATE INDEX IF NOT EXISTS idx_memory_records_type_time ON memory_records(record_type, occurred_at);
 CREATE INDEX IF NOT EXISTS idx_memory_records_status_time ON memory_records(status, occurred_at);
 CREATE INDEX IF NOT EXISTS idx_continuity_lines_status_updated ON continuity_lines(status, updated_at);

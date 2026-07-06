@@ -18,7 +18,7 @@ const memoriaCoreToolDefinitions = [
   {
     "name": "memoria_search",
     "title": "Search Memories",
-    "description": "Search ClaraCore Desktop memory records with keyword and vector search when available.",
+    "description": "Search ClaraCore Desktop memory records with keyword and vector search when available. Results include `related`: memories linked to the hits (1-hop neighborhood) with link kind and strength.",
     "inputSchema": {
       "type": "object",
       "required": [

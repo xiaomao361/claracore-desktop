@@ -61,6 +61,18 @@ async function graph(core, input = {}) {
   return core.database.getMemoryGraph(input || {});
 }
 
+async function createLink(core, input) {
+  return core.database.createMemoryLink(input);
+}
+
+async function links(core, input = {}) {
+  return core.database.listMemoryLinks(input || {});
+}
+
+async function deleteLink(core, id) {
+  return core.database.deleteMemoryLink(id);
+}
+
 async function createRecord(core, input) {
   return core.database.createMemoryRecord(input);
 }
@@ -164,13 +176,16 @@ module.exports = {
   archiveSuggestions,
   create,
   createLabelAlias,
+  createLink,
   createRecord,
   deleted,
   deleteLabelAlias,
+  deleteLink,
   embed,
   get,
   graph,
   labelAliases,
+  links,
   list,
   maintenance,
   maintenanceAudit,

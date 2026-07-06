@@ -146,6 +146,22 @@ async function handleMemoriaTool(name, args, context) {
     return textResult(await memoria.deleteLabelAlias(core, args.alias));
   }
 
+  if (name === "memoria_link_create") {
+    return textResult({
+      link: await memoria.createLink(core, args)
+    });
+  }
+
+  if (name === "memoria_link_list") {
+    return textResult({
+      links: await memoria.links(core, args)
+    });
+  }
+
+  if (name === "memoria_link_delete") {
+    return textResult(await memoria.deleteLink(core, args.id));
+  }
+
   if (name === "memoria_record_create") {
     const record = await memoria.createRecord(core, args);
     return textResult({

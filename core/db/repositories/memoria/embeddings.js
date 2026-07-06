@@ -105,13 +105,15 @@ function createMemoriaEmbeddingRepository(helpers) {
       const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 50));
       const includeRestricted = Boolean(options.includeRestricted);
       if (!text) {
+        const listResults = await this.listMemories(Math.min(20, safeLimit), "", {
+          includeRestricted,
+          agentId: options.agentId || options.agent_id || ""
+        });
         return {
           mode: "list",
           query: "",
-          results: await this.listMemories(Math.min(20, safeLimit), "", {
-            includeRestricted,
-            agentId: options.agentId || options.agent_id || ""
-          }),
+          results: listResults,
+          related: await this.getMemoryNeighbors(listResults.map((memory) => memory.id)),
           error: null
         };
       }
@@ -173,6 +175,7 @@ function createMemoriaEmbeddingRepository(helpers) {
           mode: vectorResults.length > 0 ? "hybrid" : "keyword",
           query: text,
           results,
+          related: await this.getMemoryNeighbors(results.map((memory) => memory.id)),
           error: null
         };
       } catch (error) {
@@ -184,6 +187,7 @@ function createMemoriaEmbeddingRepository(helpers) {
             search_source: "keyword",
             search_score: 0
           })),
+          related: await this.getMemoryNeighbors(keywordResults.map((memory) => memory.id)),
           error: error.message
         };
       }

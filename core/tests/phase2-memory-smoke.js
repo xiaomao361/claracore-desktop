@@ -160,9 +160,12 @@ async function main() {
     throw new Error(`Memory maintenance did not repair alias labels: ${JSON.stringify(aliasMemoryAfterMaintenance.labels)}`);
   }
 
+  // Neither body may contain the other: mergeMemories skips the "Merged from"
+  // header for contained bodies, and suggestion direction flips whenever the
+  // two creates land on different CURRENT_TIMESTAMP seconds.
   const mergeTarget = await runtime.createProductMemory(app, {
     title: "Duplicate merge candidate",
-    body: "The same product note should be merged when duplicate memory records appear in ClaraCore Desktop.",
+    body: "The same product note should be merged when duplicate memory records appear in ClaraCore Desktop. Extra detail from target.",
     labels: "phase2, duplicate"
   });
   const mergeSource = await runtime.createProductMemory(app, {
