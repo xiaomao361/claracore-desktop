@@ -141,6 +141,63 @@ function createMemoriaLinkRepository(helpers) {
       return { deleted: true, id: linkId };
     },
 
+    async getMemoryNeighbors(memoryIds = [], input = {}) {
+      const ids = [...new Set(memoryIds.map((value) => String(value || "").trim()).filter(Boolean))];
+      if (ids.length === 0) return [];
+      const safeLimit = Math.max(1, Math.min(50, Number.parseInt(String(input.limit || 10), 10) || 10));
+      const idList = ids.map(sqlString).join(", ");
+      const rows = await this.query(`
+        SELECT
+          k.id AS link_id,
+          k.kind,
+          k.strength,
+          k.note,
+          k.from_memory_id,
+          k.to_memory_id,
+          n.id AS neighbor_id,
+          n.title AS neighbor_title,
+          n.body AS neighbor_body,
+          COALESCE(group_concat(l.label, ','), '') AS neighbor_labels
+        FROM memory_links k
+        JOIN memories n
+          ON n.id = CASE
+            WHEN k.from_memory_id IN (${idList}) THEN k.to_memory_id
+            ELSE k.from_memory_id
+          END
+        LEFT JOIN memory_labels l ON l.memory_id = n.id
+        WHERE (k.from_memory_id IN (${idList}) OR k.to_memory_id IN (${idList}))
+          AND n.id NOT IN (${idList})
+          AND n.status = 'active'
+          AND n.sensitivity != 'restricted'
+        GROUP BY k.id
+        ORDER BY k.strength DESC, k.updated_at DESC
+        LIMIT ${safeLimit};
+      `);
+      const idSet = new Set(ids);
+      const seenNeighbors = new Set();
+      const neighbors = [];
+      for (const row of rows) {
+        if (seenNeighbors.has(row.neighbor_id)) continue;
+        seenNeighbors.add(row.neighbor_id);
+        neighbors.push({
+          memory: {
+            id: row.neighbor_id,
+            title: row.neighbor_title || "",
+            bodyPreview: String(row.neighbor_body || "").slice(0, 200),
+            labels: row.neighbor_labels ? row.neighbor_labels.split(",").filter(Boolean) : []
+          },
+          via: {
+            linkId: row.link_id,
+            kind: row.kind,
+            strength: row.strength,
+            note: row.note || "",
+            linkedMemoryId: idSet.has(row.from_memory_id) ? row.from_memory_id : row.to_memory_id
+          }
+        });
+      }
+      return neighbors;
+    },
+
     async listMemoryLinkEdges(memoryIds = []) {
       const ids = [...new Set(memoryIds.map((value) => String(value || "").trim()).filter(Boolean))];
       if (ids.length === 0) return [];

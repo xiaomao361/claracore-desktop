@@ -22,6 +22,11 @@ async function main() {
     isPackaged: false
   };
 
+  await runtime.saveProductSettings(app, {
+    "memory.embedding.base_url": "http://127.0.0.1:9",
+    "memory.embedding.model": "bge-m3-links-smoke"
+  });
+
   const first = await runtime.createProductMemory(app, {
     title: "Link smoke A",
     body: "First memory for link smoke.",
@@ -75,6 +80,29 @@ async function main() {
   if ((graph.summary.memoryLinkCount || 0) !== 1) {
     throw new Error(`Graph summary should count link edges: ${JSON.stringify(graph.summary)}`);
   }
+
+  const searchResult = await database.searchMemories("First memory for link smoke", 10);
+  if (!searchResult.results.some((memory) => memory.id === first.id)) {
+    throw new Error(`Search should hit the first memory: ${JSON.stringify(searchResult.results.map((memory) => memory.id))}`);
+  }
+  const relatedIds = (searchResult.related || []).map((entry) => entry.memory.id);
+  if (searchResult.results.some((memory) => memory.id === second.id)) {
+    throw new Error("Search precondition failed: second memory should not be a direct hit.");
+  }
+  if (!relatedIds.includes(second.id)) {
+    throw new Error(`Search should return the linked neighbor: ${JSON.stringify(searchResult.related)}`);
+  }
+  const neighborEntry = searchResult.related.find((entry) => entry.memory.id === second.id);
+  if (neighborEntry.via.kind !== "related" || neighborEntry.via.strength !== 0.9 || neighborEntry.via.linkedMemoryId !== first.id) {
+    throw new Error(`Neighbor link metadata is wrong: ${JSON.stringify(neighborEntry.via)}`);
+  }
+
+  await database.archiveMemory(second.id);
+  const searchAfterArchive = await database.searchMemories("First memory for link smoke", 10);
+  if ((searchAfterArchive.related || []).some((entry) => entry.memory.id === second.id)) {
+    throw new Error("Archived memories must not appear as neighbors.");
+  }
+  await database.restoreArchivedMemory(second.id);
 
   await expectRejection(
     database.createMemoryLink({ fromMemoryId: first.id, toMemoryId: first.id }),
