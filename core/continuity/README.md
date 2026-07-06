@@ -102,6 +102,13 @@ position, recent history/snapshots/handoffs, shared reality, and the text
 packet, with `lines`, `archivedLines`, and `agentStates` empty. Full packets
 come from `shared_line_get`; full line lists come from `shared_line_list`.
 
+For session startup, agents should not call `shared_line_list` /
+`shared_line_activate` / `shared_line_get` as separate steps:
+`innerlife_session_start` bundles the active line's lite resume packet
+(`shared_line`) and a compact `shared_lines` summary, and accepts an optional
+`lineId` that activates that line in the same call. The separate tools remain
+for mid-session reads and switches.
+
 `shared_line_update` and the CLI `shared-line update` follow this rule. Passing
 `lineId` updates that exact active line. Omitting `lineId` updates the current
 active line, not an agent-inferred recent line. Agents that maintain several

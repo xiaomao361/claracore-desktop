@@ -155,9 +155,9 @@ Verification: `npm run check` plus shell, ux-polish, phase1, phase2, phase3,
 phase4 trace, phase5 (ui + scheduler), backup, and import-preview UI smoke
 tests.
 
-## v0.2.4 – v0.2.6 Follow-up
+## v0.2.4 – v0.2.7 Follow-up
 
-Updated: 2026-07-03
+Updated: 2026-07-06
 
 - v0.2.3 (release engineering): the packaged Gateway now launches with
   `ELECTRON_RUN_AS_NODE=1` plus the `app.asar` path of `mcp-server.js`, so each
@@ -181,6 +181,15 @@ Updated: 2026-07-03
   tools (`shared_line_get`, `innerlife_status`/`briefing`) and the Desktop UI
   keep full payloads. Also fixed an unescaped template backtick in the Agent
   Access install brief before it shipped.
+- v0.2.7: agent session startup collapsed to one MCP round trip.
+  `innerlife_session_start` now bundles the active Shared Line lite resume
+  packet (`shared_line`) and a compact `shared_lines` summary, and accepts an
+  optional `lineId` that activates that line in the same call. Startup rituals
+  previously took 4–6 sequential tool calls, each costing a full LLM turn
+  (~1 minute on slower agent models); traces showed the gateway answering in
+  milliseconds while agents idled 10–15s between calls. The Gateway also
+  drains in-flight requests before exiting on stdin close, so one-shot piped
+  clients no longer lose their last response.
 
 ## Version Direction
 
