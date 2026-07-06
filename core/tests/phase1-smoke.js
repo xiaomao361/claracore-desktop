@@ -49,12 +49,12 @@ async function main() {
 
   const settings = await database.getSettings();
   const expectedSettings = {
-    "memory.embedding.provider": "ollama",
+    "memory.embedding.provider": "claracore-built-in",
     "memory.embedding.base_url": "http://127.0.0.1:11434",
-    "memory.embedding.model": "bge-m3",
-    "memory.embedding.dimension": 1024,
+    "memory.embedding.model": "Xenova/bge-small-zh-v1.5",
+    "memory.embedding.dimension": 512,
     "memory.embedding.max_chars": 2000,
-    "innerlife.enabled": false,
+    "innerlife.enabled": true,
     "innerlife.provider": "openai-compatible",
     "innerlife.base_url": "https://api.deepseek.com",
     "innerlife.light_model": "deepseek-v4-flash",

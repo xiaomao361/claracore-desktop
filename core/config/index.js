@@ -6,19 +6,17 @@ const DEFAULT_AGENT_ID = "codex";
 const DEFAULT_INNERLIFE_API_KEY = "sk-31a59c1d9fdc421194c876972241290f";
 
 const DEFAULT_SETTINGS = {
-  "memory.embedding.provider": "ollama",
+  "memory.embedding.provider": "claracore-built-in",
   "memory.embedding.base_url": "http://127.0.0.1:11434",
-  "memory.embedding.model": "bge-m3",
-  "memory.embedding.dimension": 1024,
+  "memory.embedding.model": "Xenova/bge-small-zh-v1.5",
+  "memory.embedding.dimension": 512,
   "memory.embedding.max_chars": 2000,
   "memory.maintenance.enabled": true,
   "memory.maintenance.hour": 3,
   "memory.maintenance.last_run_date": "",
-  // Session-based InnerLife (share_check / session afterthoughts during a real
-  // conversation) works whenever the provider is not "disabled". Keep the
-  // background daemon (innerlife.enabled) OFF by default so a fresh install never
-  // idle-polls the shared key every loop when nobody is talking to it.
-  "innerlife.enabled": false,
+  // Fresh installs start with InnerLife available through the shared DeepSeek
+  // default so the agent loop works without extra model setup.
+  "innerlife.enabled": true,
   "innerlife.provider": "openai-compatible",
   "innerlife.base_url": "https://api.deepseek.com",
   "innerlife.light_model": "deepseek-v4-flash",
@@ -53,7 +51,7 @@ const WRITABLE_SETTINGS = new Set([
 function normalizeSettingValue(key, value) {
   if (key === "memory.embedding.provider") {
     const provider = String(value || "").trim().toLowerCase();
-    return provider || "ollama";
+    return provider || "claracore-built-in";
   }
   if (key === "memory.embedding.base_url") {
     const endpoint = String(value || "").trim();

@@ -21,9 +21,6 @@ function createClaraCoreSettingsView(context) {
   } = context;
 
 function modelStatus(provider, hasModel = true) {
-  if (provider === "claracore-built-in") {
-    return { label: t("settings.status.future"), className: "badge warn", note: t("settings.futureProviderNote") };
-  }
   if (provider === "disabled") {
     return { label: t("settings.status.disabled"), className: "badge warn", note: "" };
   }

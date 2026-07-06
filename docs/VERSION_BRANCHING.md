@@ -4,7 +4,7 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- The current local version is `0.3.3`.
+- The current local version is `0.3.4`.
 - Historical `0.1.x` and `0.2.x` planning notes are archived under
   `docs/archive/`.
 
@@ -68,12 +68,20 @@ git diff --check
   vectors of different dimensions can't be compared. Semantic search stays
   degraded until the rebuild completes.
 - Fresh installs seed a working InnerLife provider (DeepSeek `openai-compatible`,
-  `deepseek-v4-flash`, shared out-of-box key) so session-based sharing works with
-  no setup. The background daemon (`innerlife.enabled`) stays OFF by default so a
-  fresh install never idle-polls the shared key when nobody is talking to it.
+  `deepseek-v4-flash`, shared out-of-box key) so InnerLife works with no setup.
   Existing databases keep their own config via `ON CONFLICT DO NOTHING`.
 
-Local embedding (bundled bge-small-zh so semantic search works without Ollama)
-is still pending: transformers.js in Node uses native onnxruntime, so the
-"pure-WASM, no native" path needs onnxruntime-web + a hand-rolled tokenizer, and
-model download + packaging must be validated on a build machine.
+## v0.3.4 Checkpoint
+
+`0.3.4` restores the built-in local embedding path as the default:
+
+- Fresh installs default Memory embedding to ClaraCore built-in
+  `Xenova/bge-small-zh-v1.5`, with 512-dimensional vectors.
+- The built-in model is loaded from bundled `resources/models` through
+  `@xenova/transformers`; runtime loading disables remote model downloads.
+- The Settings provider selector exposes `ClaraCore built-in` as a current
+  option, not a future placeholder.
+- Fresh installs default `innerlife.enabled` to ON with the shared DeepSeek
+  provider/key path.
+- The API key placeholder now makes the default/shared key path explicit while
+  still supporting `env:OPENAI_API_KEY` style references.

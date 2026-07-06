@@ -1,3 +1,48 @@
+const path = require("path");
+const fs = require("fs");
+
+const BUILT_IN_EMBEDDING_PROVIDER = "claracore-built-in";
+const BUILT_IN_EMBEDDING_MODEL = "Xenova/bge-small-zh-v1.5";
+
+let builtInExtractorPromise = null;
+
+function resolveBuiltInModelRoot() {
+  const candidates = [
+    process.env.CLARACORE_DESKTOP_MODEL_ROOT,
+    process.resourcesPath ? path.join(process.resourcesPath, "models") : "",
+    path.resolve(__dirname, "..", "..", "..", "..", "resources", "models")
+  ].filter(Boolean);
+  const marker = path.join("Xenova", "bge-small-zh-v1.5", "config.json");
+  return candidates.find((candidate) => fs.existsSync(path.join(candidate, marker))) || candidates[candidates.length - 1];
+}
+
+async function getBuiltInExtractor(model) {
+  if (!builtInExtractorPromise) {
+    builtInExtractorPromise = (async () => {
+      const { pipeline, env } = require("@xenova/transformers");
+      env.localModelPath = resolveBuiltInModelRoot();
+      env.allowLocalModels = true;
+      env.allowRemoteModels = false;
+      return pipeline("feature-extraction", model || BUILT_IN_EMBEDDING_MODEL, { quantized: true });
+    })();
+  }
+  return builtInExtractorPromise;
+}
+
+async function createBuiltInEmbedding(prompt, model) {
+  const extractor = await getBuiltInExtractor(model);
+  const output = await extractor(prompt, { pooling: "mean", normalize: true });
+  const vector = Array.from(output?.data || []);
+  if (vector.length !== 512) {
+    throw new Error(`Built-in embedding returned ${vector.length} dimensions instead of 512.`);
+  }
+  return {
+    provider: BUILT_IN_EMBEDDING_PROVIDER,
+    model: model || BUILT_IN_EMBEDDING_MODEL,
+    vector
+  };
+}
+
 function createMemoriaEmbeddingRepository(helpers) {
   const {
     cosineSimilarity,
@@ -26,12 +71,15 @@ function createMemoriaEmbeddingRepository(helpers) {
   return {
     async createEmbedding(text) {
       const settings = await this.getSettings();
-      const provider = settings["memory.embedding.provider"] || "ollama";
+      const provider = settings["memory.embedding.provider"] || BUILT_IN_EMBEDDING_PROVIDER;
       const baseUrl = settings["memory.embedding.base_url"] || "http://127.0.0.1:11434";
-      const model = settings["memory.embedding.model"] || "bge-m3";
+      const model = settings["memory.embedding.model"] || BUILT_IN_EMBEDDING_MODEL;
       const maxChars = Number.parseInt(String(settings["memory.embedding.max_chars"] || 2000), 10);
       const prompt = String(text || "").trim().slice(0, maxChars);
       if (!prompt) throw new Error("Embedding text is required.");
+      if (provider === BUILT_IN_EMBEDDING_PROVIDER) {
+        return createBuiltInEmbedding(prompt, model || BUILT_IN_EMBEDDING_MODEL);
+      }
       if (provider === "ollama") {
         const response = await postJson(`${baseUrl}/api/embeddings`, { model, prompt }, { errorPrefix: "Ollama" });
         const vector = parseVector(response.embedding);
@@ -199,9 +247,9 @@ function createMemoriaEmbeddingRepository(helpers) {
         INSERT INTO memory_embeddings (memory_id, provider, model, dimension, status, vector_json, vector_ref, error, embedded_at)
         VALUES (
           ${sqlString(memoryId)},
-          ${sqlString(settings["memory.embedding.provider"] || "ollama")},
-          ${sqlString(settings["memory.embedding.model"] || "bge-m3")},
-          ${Number.parseInt(String(settings["memory.embedding.dimension"] || 1024), 10)},
+          ${sqlString(settings["memory.embedding.provider"] || BUILT_IN_EMBEDDING_PROVIDER)},
+          ${sqlString(settings["memory.embedding.model"] || BUILT_IN_EMBEDDING_MODEL)},
+          ${Number.parseInt(String(settings["memory.embedding.dimension"] || 512), 10)},
           'pending',
           NULL,
           NULL,
@@ -226,8 +274,8 @@ function createMemoriaEmbeddingRepository(helpers) {
         throw new Error("Active memory not found.");
       }
       const settings = await this.getSettings();
-      const provider = settings["memory.embedding.provider"] || "ollama";
-      const model = settings["memory.embedding.model"] || "bge-m3";
+      const provider = settings["memory.embedding.provider"] || BUILT_IN_EMBEDDING_PROVIDER;
+      const model = settings["memory.embedding.model"] || BUILT_IN_EMBEDDING_MODEL;
       try {
         const text = `${memory.title || ""}\n${memory.body || ""}`.trim();
         const embedding = await this.createEmbedding(text);

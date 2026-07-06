@@ -135,9 +135,9 @@ function createMemoriaMaintenanceRepository(helpers) {
         };
       }
       const settings = await this.getSettings();
-      const provider = settings["memory.embedding.provider"] || "ollama";
-      const model = settings["memory.embedding.model"] || "bge-m3";
-      const dimension = Number.parseInt(String(settings["memory.embedding.dimension"] || 1024), 10);
+      const provider = settings["memory.embedding.provider"] || "claracore-built-in";
+      const model = settings["memory.embedding.model"] || "Xenova/bge-small-zh-v1.5";
+      const dimension = Number.parseInt(String(settings["memory.embedding.dimension"] || 512), 10);
       const embeddingRows = await this.query(`
         SELECT m.id
         FROM memories m
@@ -158,7 +158,7 @@ function createMemoriaMaintenanceRepository(helpers) {
             .map(
               (row) => `
                 INSERT INTO memory_embeddings (memory_id, provider, model, dimension, status, vector_json, vector_ref, error, embedded_at)
-                VALUES (${sqlString(row.id)}, ${sqlString(provider)}, ${sqlString(model)}, ${Number.isFinite(dimension) ? dimension : 1024}, 'pending', NULL, NULL, NULL, CURRENT_TIMESTAMP)
+                VALUES (${sqlString(row.id)}, ${sqlString(provider)}, ${sqlString(model)}, ${Number.isFinite(dimension) ? dimension : 512}, 'pending', NULL, NULL, NULL, CURRENT_TIMESTAMP)
                 ON CONFLICT(memory_id) DO UPDATE SET
                   provider = excluded.provider,
                   model = excluded.model,

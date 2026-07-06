@@ -304,10 +304,10 @@ function createSystemRepository(helpers) {
       const secrets = await this.getSecretRefs();
       return {
         memoria: {
-          provider: settings["memory.embedding.provider"] || "ollama",
+          provider: settings["memory.embedding.provider"] || "claracore-built-in",
           endpoint: settings["memory.embedding.base_url"] || "http://127.0.0.1:11434",
-          model: settings["memory.embedding.model"] || "bge-m3",
-          dimension: String(settings["memory.embedding.dimension"] || 1024),
+          model: settings["memory.embedding.model"] || "Xenova/bge-small-zh-v1.5",
+          dimension: String(settings["memory.embedding.dimension"] || 512),
           maxChars: String(settings["memory.embedding.max_chars"] || 2000),
           maintenanceEnabled: settings["memory.maintenance.enabled"] !== false,
           maintenanceHour: Number.parseInt(String(settings["memory.maintenance.hour"] ?? 3), 10) || 3,

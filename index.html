@@ -704,8 +704,8 @@
                   <label class="field">
                     <span data-i18n="home.model.provider">Provider</span>
                     <select id="memoriaProvider">
+                      <option value="claracore-built-in">ClaraCore built-in</option>
                       <option value="ollama">Ollama</option>
-                      <option value="claracore-built-in">ClaraCore built-in (future)</option>
                       <option value="openai-compatible">OpenAI compatible</option>
                       <option value="disabled">Disabled</option>
                     </select>
@@ -747,7 +747,7 @@
                     <select id="innerLifeBackend">
                       <option value="disabled">Disabled</option>
                       <option value="ollama">Ollama</option>
-                      <option value="claracore-built-in">ClaraCore built-in (future)</option>
+                      <option value="claracore-built-in">ClaraCore built-in</option>
                       <option value="openai-compatible">OpenAI compatible</option>
                       <option value="custom-command">Custom command</option>
                     </select>
@@ -770,7 +770,7 @@
                   <label class="field">
                     <span data-i18n="settings.apiKeyRef">API key reference</span>
                     <span class="copy-field">
-                      <input id="innerLifeApiKey" data-secret-input="true" data-i18n-placeholder="settings.apiKeyRefPlaceholder" placeholder="env:OPENAI_API_KEY" />
+                      <input id="innerLifeApiKey" data-secret-input="true" data-i18n-placeholder="settings.apiKeyRefPlaceholder" placeholder="default DeepSeek key or env:OPENAI_API_KEY" />
                       <button id="copyInnerLifeApiKey" class="secondary" type="button" data-i18n="actions.copy">Copy</button>
                     </span>
                   </label>
