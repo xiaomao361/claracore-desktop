@@ -21,6 +21,10 @@ async function main() {
     const page = await app.firstWindow();
     await page.waitForSelector("[data-view='innerlife']", { timeout: 15000 });
     await page.waitForFunction(() => window.ClaraCoreDesktop, null, { timeout: 15000 });
+    // Pin the InnerLife provider to disabled so afterthoughts/digests stay
+    // deterministic and offline; the shipping default now points at a hosted
+    // provider that this UI smoke must not call over the network.
+    await page.evaluate(() => window.ClaraCoreDesktop.saveSettings({ "innerlife.provider": "disabled" }));
     await page.evaluate(async () => {
       const started = await window.ClaraCoreDesktop.startInnerLifeSession({
         agentId: "codex",

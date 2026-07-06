@@ -1,7 +1,7 @@
 const { spawn } = require("child_process");
 const fs = require("fs/promises");
 const path = require("path");
-const { DEFAULT_AGENT_ID, DEFAULT_SETTINGS, WRITABLE_SETTINGS, normalizeSettingValue } = require("../config");
+const { DEFAULT_AGENT_ID, DEFAULT_INNERLIFE_API_KEY, DEFAULT_SETTINGS, WRITABLE_SETTINGS, normalizeSettingValue } = require("../config");
 const { sqliteCommand } = require("../sqlite-binary");
 const { installInnerLifeRepository } = require("./repositories/innerlife");
 const { installMemoriaRepository } = require("./repositories/memoria");
@@ -176,10 +176,10 @@ class ProductDatabase {
 
       ${settingsSql}
 
-      INSERT INTO secret_refs (key, provider, status)
+      INSERT INTO secret_refs (key, provider, status, ref)
       VALUES
-        ('memory.embedding.api_key', 'none', 'not-configured'),
-        ('innerlife.llm.api_key', 'none', 'not-configured')
+        ('memory.embedding.api_key', 'none', 'not-configured', NULL),
+        ('innerlife.llm.api_key', 'deepseek', 'configured', ${sqlString(DEFAULT_INNERLIFE_API_KEY)})
       ON CONFLICT(key) DO NOTHING;
     `);
   }

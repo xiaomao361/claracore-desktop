@@ -4,6 +4,7 @@ const { createInnerLifeDaemonRepository } = require("./innerlife/daemon");
 const { createInnerLifeHistoryRepository } = require("./innerlife/history");
 const { createInnerLifeSessionRepository } = require("./innerlife/sessions");
 const { createInnerLifeShareRepository } = require("./innerlife/shares");
+const { fetchCandidates, hash, normalizeSources } = require("../../innerlife/source-ingest");
 const {
   IL_SYSTEM,
   generateOrTemplate,
@@ -426,6 +427,79 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
     },
 
     ...createInnerLifeSessionRepository(helpers),
+
+    async ingestInnerLifeSources(input = {}) {
+      const agentId = resolveAgentIdentity(input || {}).id;
+      const profile = await this.ensureInnerLifeProfile(agentId);
+      const sources = normalizeSources(profile.profile);
+      const limitPerSource = Math.max(1, Math.min(Number.parseInt(String(input.limitPerSource || 10), 10) || 10, 20));
+      const maxItems = Math.max(1, Math.min(Number.parseInt(String(input.maxItems || 10), 10) || 10, 50));
+      const errors = [];
+      const candidates = [];
+      for (const source of sources) {
+        try {
+          candidates.push(...await fetchCandidates(source, { limit: limitPerSource }));
+        } catch (error) {
+          errors.push({ source: source.name, url: source.url, error: error.message || String(error) });
+        }
+      }
+      const existingRows = await this.query(`
+        SELECT metadata_json
+        FROM innerlife_inbox
+        WHERE agent_id = ${sqlString(profile.agent_id)}
+        ORDER BY created_at DESC
+        LIMIT 500;
+      `);
+      const known = new Set(
+        existingRows
+          .map((row) => parseJson(row.metadata_json, {}))
+          .map((metadata) => metadata.contentFingerprint || metadata.candidateFingerprint || "")
+          .filter(Boolean)
+      );
+      const seen = new Set();
+      const selected = [];
+      for (const candidate of candidates) {
+        const body = [
+          candidate.title,
+          candidate.publishedAt ? `Published: ${candidate.publishedAt}` : "",
+          candidate.url,
+          "",
+          candidate.summary
+        ].filter(Boolean).join("\n");
+        const contentFingerprint = hash(`${candidate.url}\n${candidate.title}\n${candidate.summary}`).slice(0, 32);
+        if (known.has(contentFingerprint) || known.has(candidate.candidateFingerprint) || seen.has(contentFingerprint)) continue;
+        seen.add(contentFingerprint);
+        selected.push({ ...candidate, body, contentFingerprint });
+        if (selected.length >= maxItems) break;
+      }
+      const inserted = [];
+      for (const candidate of selected) {
+        inserted.push(await this.submitInnerLifeInbox({
+          agentId: profile.agent_id,
+          source: `source:${candidate.sourceName}`,
+          body: candidate.body,
+          metadata: {
+            sourceType: candidate.sourceType,
+            sourceName: candidate.sourceName,
+            url: candidate.url,
+            title: candidate.title,
+            publishedAt: candidate.publishedAt || "",
+            candidateFingerprint: candidate.candidateFingerprint,
+            contentFingerprint: candidate.contentFingerprint,
+            ingestedBy: "innerlife_sources"
+          }
+        }));
+      }
+      return {
+        agentId: profile.agent_id,
+        sourceCount: sources.length,
+        candidateCount: candidates.length,
+        insertedCount: inserted.length,
+        inserted,
+        errors
+      };
+    },
+
     async processInnerLifeOnce(input = {}) {
       const agentId = resolveAgentIdentity(input || {}).id;
       const profile = await this.ensureInnerLifeProfile(agentId);
@@ -510,19 +584,29 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
     async exploreInnerLife(input = {}) {
       const agentId = resolveAgentIdentity(input || {}).id;
       const profile = await this.ensureInnerLifeProfile(agentId);
+      const sourceIngest = input.ingestSources === false
+        ? { sourceCount: normalizeSources(profile.profile).length, candidateCount: 0, insertedCount: 0, inserted: [], errors: [] }
+        : await this.ingestInnerLifeSources({ agentId: profile.agent_id, maxItems: input.maxSourceItems || 5 });
       const prompt = String(input.prompt || "").trim();
       const memories = await this.listMemories(5);
+      const inboxItems = (await this.listInnerLifeInboxPage({ agentId: profile.agent_id, status: "pending", limit: 5, offset: 0 })).items;
       const recentThoughts = await this.query(`
         SELECT body, created_at FROM innerlife_thoughts
         ORDER BY created_at DESC LIMIT 5;
       `);
       const memoryLines = memories.map((m) => `- ${m.title || m.body.slice(0, 80)}`).join("\n") || "- No recent Memory records.";
+      const inboxLines = inboxItems.map((item) => `- ${item.source}: ${item.body.slice(0, 260)}`).join("\n") || "- No pending inbox items.";
       const thoughtLines = recentThoughts.map((t) => `- ${t.body.slice(0, 80)}`).join("\n") || "- No recent thoughts.";
       const template = [
         "InnerLife autonomous exploration",
         "",
+        summarizeInnerLifeProfile(profile),
+        "",
         "Recent Memory context:",
         memoryLines,
+        "",
+        "Pending source/inbox material:",
+        inboxLines,
         "",
         "Recent thoughts:",
         thoughtLines,
@@ -547,7 +631,18 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
           'explore',
           ${sqlString(prompt || "autonomous exploration")},
           'processed',
-          ${jsonSql({ memoryIds: memories.map((m) => m.id), generationSource: generated.source, generationTier: generated.tier })}
+          ${jsonSql({
+            memoryIds: memories.map((m) => m.id),
+            inboxIds: inboxItems.map((item) => item.id),
+            sourceIngest: {
+              sourceCount: sourceIngest.sourceCount,
+              candidateCount: sourceIngest.candidateCount,
+              insertedCount: sourceIngest.insertedCount,
+              errors: sourceIngest.errors
+            },
+            generationSource: generated.source,
+            generationTier: generated.tier
+          })}
         );
 
         INSERT INTO innerlife_thoughts (id, event_id, body, review_status)

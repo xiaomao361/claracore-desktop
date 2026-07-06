@@ -835,10 +835,14 @@ copyAgentSetup.addEventListener("click", () => {
 });
 
 saveSettings.addEventListener("click", async () => {
+  const form = collectSettingsForm();
+  if (settingsView.embeddingConfigChanged(form) && !window.confirm(t("settings.embedding.rebuildConfirm"))) {
+    return;
+  }
   saveSettings.disabled = true;
   settingsNotice.textContent = t("common.checking");
   try {
-    await window.ClaraCoreDesktop.saveSettings(collectSettingsForm());
+    await window.ClaraCoreDesktop.saveSettings(form);
     await refresh();
     showCopyNotice(t("settings.saved"), settingsNotice);
   } catch (error) {

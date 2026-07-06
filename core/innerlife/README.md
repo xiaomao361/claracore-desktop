@@ -24,6 +24,7 @@ Desktop currently owns:
 - Backup-gated copy import from the old InnerLife v2 database.
 - Model provider, endpoint, model names, API key references, and loop cadence
   configured from the Desktop Models page.
+- Source ingest from profile `autonomous_sources` into pending inbox material.
 
 ## Model-Backed Generation
 
@@ -61,6 +62,14 @@ runtime guards same-agent ticks so concurrent scheduler and manual activity do
 not generate duplicate share candidates. Enabling the daemon while inbox items
 are pending may immediately process that inbox instead of waiting for the next
 interval.
+
+When an agent profile contains `autonomous_sources`, each due daemon tick first
+fetches those public RSS, Atom, or webpage sources, dedupes recent items, and
+writes new material to the InnerLife inbox before running the existing digest
+path. Manual `innerlife explore` uses the same ingest step before generating an
+exploration thought. Source fetches honor `HTTP_PROXY`, `HTTPS_PROXY`,
+`ALL_PROXY`, and `NO_PROXY` environment variables, so Desktop can use the host's
+normal outbound proxy setup for external feeds.
 
 Agent IDs come from the Gateway process `CLARACORE_AGENT_ID`. Use short, stable
 product identities such as `lara`, `clara`, or `codex`; do not rely on

@@ -866,6 +866,7 @@ window.ClaraCoreTranslationsEn = {
   "settings.saveModels": "Save model configuration",
   "settings.saved": "Model configuration saved",
   "settings.saveFailed": "Could not save model configuration",
+  "settings.embedding.rebuildConfirm": "Switching the embedding model or provider means existing memories must be re-embedded with the new model (vectors of different dimensions can't be compared). Semantic search stays degraded until the rebuild finishes. Switch anyway?",
   "settings.saveAppearance": "Save appearance",
   "settings.appearanceSaved": "Appearance saved",
   "settings.appearanceSaveFailed": "Could not save appearance",

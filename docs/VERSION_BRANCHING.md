@@ -4,7 +4,7 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- The current local version is `0.3.2`.
+- The current local version is `0.3.3`.
 - Historical `0.1.x` and `0.2.x` planning notes are archived under
   `docs/archive/`.
 
@@ -58,3 +58,22 @@ npm run test:phase4
 npm run test:phase5
 git diff --check
 ```
+
+## v0.3.3 Checkpoint
+
+`0.3.3` bundles a UX guard and an out-of-box InnerLife default:
+
+- Saving Settings now asks for confirmation when the embedding provider or model
+  changes, since existing memories must be re-embedded with the new model and
+  vectors of different dimensions can't be compared. Semantic search stays
+  degraded until the rebuild completes.
+- Fresh installs seed a working InnerLife provider (DeepSeek `openai-compatible`,
+  `deepseek-v4-flash`, shared out-of-box key) so session-based sharing works with
+  no setup. The background daemon (`innerlife.enabled`) stays OFF by default so a
+  fresh install never idle-polls the shared key when nobody is talking to it.
+  Existing databases keep their own config via `ON CONFLICT DO NOTHING`.
+
+Local embedding (bundled bge-small-zh so semantic search works without Ollama)
+is still pending: transformers.js in Node uses native onnxruntime, so the
+"pure-WASM, no native" path needs onnxruntime-web + a hand-rolled tokenizer, and
+model download + packaging must be validated on a build machine.

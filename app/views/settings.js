@@ -196,6 +196,14 @@ function renderAppearanceSettings() {
   renderAbout();
 }
 
+function embeddingConfigChanged(form) {
+  const memoria = getSnapshot()?.configuration?.memoria;
+  if (!memoria) return false;
+  const providerChanged = String(form["memory.embedding.provider"] || "") !== String(memoria.provider || "");
+  const modelChanged = String(form["memory.embedding.model"] || "") !== String(memoria.model || "");
+  return providerChanged || modelChanged;
+}
+
 function collectSettingsForm() {
   return {
     "memory.embedding.provider": memoriaProvider.value,
@@ -223,6 +231,7 @@ function collectAppearanceSettingsForm() {
   return {
     collectAppearanceSettingsForm,
     collectSettingsForm,
+    embeddingConfigChanged,
     getSecretInputValue,
     renderAppearanceSettings,
     renderSettings

@@ -19,6 +19,9 @@ async function main() {
       }
     });
     const page = await app.firstWindow();
+    // Changing the embedding provider/model now raises a rebuild-vectors confirm;
+    // accept it so the save proceeds under headless automation.
+    page.on("dialog", (dialog) => dialog.accept().catch(() => {}));
     await page.waitForSelector("[data-view='settings']", { timeout: 15000 });
     await page.click("[data-view='settings']");
     await page.click("[data-settings-tab='models']");
@@ -40,11 +43,11 @@ async function main() {
     if (defaults.provider !== "ollama") throw new Error(`Unexpected provider: ${defaults.provider}`);
     if (defaults.endpoint !== "http://127.0.0.1:11434") throw new Error(`Unexpected endpoint: ${defaults.endpoint}`);
     if (defaults.model !== "bge-m3") throw new Error(`Unexpected model: ${defaults.model}`);
-    if (defaults.innerlifeBackend !== "disabled") throw new Error(`Unexpected InnerLife backend: ${defaults.innerlifeBackend}`);
-    if (defaults.innerlifeEndpoint !== "http://127.0.0.1:11434") throw new Error(`Unexpected InnerLife endpoint: ${defaults.innerlifeEndpoint}`);
+    if (defaults.innerlifeBackend !== "openai-compatible") throw new Error(`Unexpected InnerLife backend: ${defaults.innerlifeBackend}`);
+    if (defaults.innerlifeEndpoint !== "https://api.deepseek.com") throw new Error(`Unexpected InnerLife endpoint: ${defaults.innerlifeEndpoint}`);
     if (defaults.innerlifeApiKeyReadonly) throw new Error("InnerLife API key reference should be editable.");
     if (defaults.innerlifeLoop !== "15") throw new Error(`Unexpected InnerLife loop minutes: ${defaults.innerlifeLoop}`);
-    if (!["disabled", "关闭"].some((label) => defaults.innerlifeStatus.toLowerCase().includes(label))) {
+    if (!["ready", "可用"].some((label) => defaults.innerlifeStatus.toLowerCase().includes(label))) {
       throw new Error(`Unexpected InnerLife status: ${defaults.innerlifeStatus}`);
     }
     if (defaults.hasDimensionField || defaults.hasMemoriaSourceField || defaults.hasInnerLifeSourceField) {

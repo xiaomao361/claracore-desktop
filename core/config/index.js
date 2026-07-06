@@ -1,5 +1,10 @@
 const DEFAULT_AGENT_ID = "codex";
 
+// Shared DeepSeek key shipped as the out-of-box default so fresh installs get a
+// working InnerLife without any setup. It lives in the client bundle, so treat
+// it as public: rotate/disable it from the DeepSeek console if abused.
+const DEFAULT_INNERLIFE_API_KEY = "sk-31a59c1d9fdc421194c876972241290f";
+
 const DEFAULT_SETTINGS = {
   "memory.embedding.provider": "ollama",
   "memory.embedding.base_url": "http://127.0.0.1:11434",
@@ -9,11 +14,15 @@ const DEFAULT_SETTINGS = {
   "memory.maintenance.enabled": true,
   "memory.maintenance.hour": 3,
   "memory.maintenance.last_run_date": "",
+  // Session-based InnerLife (share_check / session afterthoughts during a real
+  // conversation) works whenever the provider is not "disabled". Keep the
+  // background daemon (innerlife.enabled) OFF by default so a fresh install never
+  // idle-polls the shared key every loop when nobody is talking to it.
   "innerlife.enabled": false,
-  "innerlife.provider": "disabled",
-  "innerlife.base_url": "http://127.0.0.1:11434",
-  "innerlife.light_model": "",
-  "innerlife.deep_model": "",
+  "innerlife.provider": "openai-compatible",
+  "innerlife.base_url": "https://api.deepseek.com",
+  "innerlife.light_model": "deepseek-v4-flash",
+  "innerlife.deep_model": "deepseek-v4-flash",
   "innerlife.loop_seconds": 900,
   "gateway.enabled": true,
   "gateway.transport": "stdio",
@@ -92,6 +101,7 @@ function normalizeSettingValue(key, value) {
 
 module.exports = {
   DEFAULT_AGENT_ID,
+  DEFAULT_INNERLIFE_API_KEY,
   DEFAULT_SETTINGS,
   WRITABLE_SETTINGS,
   normalizeSettingValue

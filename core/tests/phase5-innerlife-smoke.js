@@ -13,6 +13,13 @@ async function main() {
     isPackaged: false
   };
 
+  // Pin the InnerLife model provider to disabled so afterthought generation
+  // stays deterministic and offline. The shipping default now enables a hosted
+  // provider, which this smoke test must not depend on or call over the network.
+  await runtime.saveProductSettings(app, {
+    "innerlife.provider": "disabled"
+  });
+
   const memory = await runtime.createProductMemory(app, {
     title: "InnerLife smoke Memory",
     body: "InnerLife process once should read recent Memory context without writing old service data.",

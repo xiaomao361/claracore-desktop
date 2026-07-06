@@ -866,6 +866,7 @@ window.ClaraCoreTranslationsZh = {
   "settings.saveModels": "保存模型配置",
   "settings.saved": "模型配置已保存",
   "settings.saveFailed": "模型配置保存失败",
+  "settings.embedding.rebuildConfirm": "切换向量模型或提供方后，已有记忆需要用新模型重新生成向量（不同维度的向量无法互相比对），旧向量在重建完成前语义搜索会失效。确定切换吗？",
   "settings.saveAppearance": "保存外观",
   "settings.appearanceSaved": "外观设置已保存",
   "settings.appearanceSaveFailed": "外观设置保存失败",

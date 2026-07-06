@@ -123,8 +123,8 @@ function createInnerLifeDaemonRepository(helpers) {
       const hasExplicitAgent = Boolean(input?.agentId || input?.agent_id || input?.agent || input?.agentTool || input?.agent_tool || input?.agentName || input?.agent_name);
       const firstPendingInbox = await this.listInnerLifeInbox("pending", 1);
       const agentId = !hasExplicitAgent && firstPendingInbox[0]?.agentId ? firstPendingInbox[0].agentId : requestedAgentId;
-      const pendingInboxPage = await this.listInnerLifeInboxPage({ agentId, status: "pending", limit: 5, offset: 0 });
-      const pendingInbox = pendingInboxPage.items;
+      let pendingInboxPage = await this.listInnerLifeInboxPage({ agentId, status: "pending", limit: 5, offset: 0 });
+      let pendingInbox = pendingInboxPage.items;
       const lockKey = `${this.dbPath}:${agentId}`;
       if (innerLifeTickLocks.get(lockKey)) {
         return {
@@ -166,6 +166,11 @@ function createInnerLifeDaemonRepository(helpers) {
         }
         const settings = await this.getSettings();
         const pollSeconds = Math.max(1, Number.parseInt(String(settings["innerlife.loop_seconds"] || 900), 10) || 900);
+        const sourceIngest = await this.ingestInnerLifeSources({ agentId, maxItems: 5 });
+        if (sourceIngest.insertedCount > 0) {
+          pendingInboxPage = await this.listInnerLifeInboxPage({ agentId, status: "pending", limit: 5, offset: 0 });
+          pendingInbox = pendingInboxPage.items;
+        }
         if (pendingInbox.length === 0) {
           const tickIncrement = force ? "tick_count + 1" : "tick_count";
           await this.exec(`
@@ -177,7 +182,18 @@ function createInnerLifeDaemonRepository(helpers) {
                 last_error = '',
                 tick_count = ${tickIncrement},
                 updated_at = CURRENT_TIMESTAMP,
-                metadata_json = ${jsonSql({ pollSeconds, pendingInbox: 0, failureCount: 0, retrySeconds: 0 })}
+                metadata_json = ${jsonSql({
+                  pollSeconds,
+                  pendingInbox: 0,
+                  sourceIngest: {
+                    sourceCount: sourceIngest.sourceCount,
+                    candidateCount: sourceIngest.candidateCount,
+                    insertedCount: sourceIngest.insertedCount,
+                    errors: sourceIngest.errors
+                  },
+                  failureCount: 0,
+                  retrySeconds: 0
+                })}
             WHERE agent_id = ${sqlString(agentId)};
           `);
           return {
@@ -210,6 +226,12 @@ function createInnerLifeDaemonRepository(helpers) {
                 metadata_json = ${jsonSql({
                   pollSeconds,
                   pendingInbox: pendingInbox.length,
+                  sourceIngest: {
+                    sourceCount: sourceIngest.sourceCount,
+                    candidateCount: sourceIngest.candidateCount,
+                    insertedCount: sourceIngest.insertedCount,
+                    errors: sourceIngest.errors
+                  },
                   shareId: result.share?.id || "",
                   convergence: result.convergence
                     ? {

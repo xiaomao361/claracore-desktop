@@ -55,8 +55,10 @@ async function main() {
     "memory.embedding.dimension": 1024,
     "memory.embedding.max_chars": 2000,
     "innerlife.enabled": false,
-    "innerlife.provider": "disabled",
-    "innerlife.base_url": "http://127.0.0.1:11434",
+    "innerlife.provider": "openai-compatible",
+    "innerlife.base_url": "https://api.deepseek.com",
+    "innerlife.light_model": "deepseek-v4-flash",
+    "innerlife.deep_model": "deepseek-v4-flash",
     "innerlife.loop_seconds": 900,
     "gateway.enabled": true,
     "gateway.transport": "stdio",
@@ -71,11 +73,12 @@ async function main() {
   }
 
   const secrets = await database.getSecretRefs();
-  if (secrets["innerlife.llm.api_key"]?.status !== "not-configured") {
-    throw new Error("InnerLife secret reference default is missing.");
-  }
-  if (secrets["innerlife.llm.api_key"]?.ref) {
-    throw new Error("InnerLife secret reference should not store a visible secret value.");
+  if (
+    secrets["innerlife.llm.api_key"]?.provider !== "deepseek" ||
+    secrets["innerlife.llm.api_key"]?.status !== "configured" ||
+    !secrets["innerlife.llm.api_key"]?.ref
+  ) {
+    throw new Error("InnerLife default DeepSeek secret reference is missing.");
   }
 
   await runtime.saveProductSettings(app, {

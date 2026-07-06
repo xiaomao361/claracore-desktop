@@ -23,7 +23,10 @@ async function main() {
     await page.waitForFunction(() => window.ClaraCoreDesktop, null, { timeout: 15000 });
     await page.evaluate(async () => {
       await window.ClaraCoreDesktop.saveSettings({
-        "innerlife.loop_seconds": 1
+        "innerlife.loop_seconds": 1,
+        // Keep daemon processing deterministic/offline; shipping default now
+        // points at a hosted provider this smoke must not call.
+        "innerlife.provider": "disabled"
       });
       await window.ClaraCoreDesktop.submitInnerLifeInbox({
         agentId: "codex",
