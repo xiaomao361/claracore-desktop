@@ -134,6 +134,9 @@ async function main() {
     const graphControls = await page.evaluate(() => ({
       zoomControls: document.querySelectorAll("#memoryGraph [data-graph-zoom]").length,
       layerControls: document.querySelectorAll("#memoryGraph [data-graph-layer]").length,
+      modeControls: document.querySelectorAll("#memoryGraph [data-graph-mode]").length,
+      sidePanel: Boolean(document.querySelector("#memoryGraphPanel")),
+      graphMode: document.querySelector("#memoryGraphCanvas")?.dataset.mode,
       initialZoom: document.querySelector("#memoryGraphCanvas")?.dataset.zoom,
       initialPanX: document.querySelector("#memoryGraphCanvas")?.dataset.panX,
       initialNodeCount: Number(document.querySelector("#memoryGraphCanvas")?.dataset.nodeCount || 0),
@@ -159,6 +162,9 @@ async function main() {
     if (
       graphControls.zoomControls !== 3 ||
       graphControls.layerControls !== 2 ||
+      graphControls.modeControls !== 2 ||
+      !graphControls.sidePanel ||
+      !["network", "all"].includes(graphControls.graphMode) ||
       graphControls.initialNodeCount < 1 ||
       graphControls.initialEdgeCount < 1 ||
       zoomedValue === graphControls.initialZoom ||

@@ -513,7 +513,8 @@ function installMemoriaRepository(ProductDatabase, helpers) {
           to: `memory:${link.toMemoryId}`,
           kind: `link:${link.kind}`,
           strength: link.strength,
-          source: link.source
+          source: link.source,
+          note: link.note || ""
         });
       }
 

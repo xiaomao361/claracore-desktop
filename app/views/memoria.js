@@ -23,6 +23,10 @@ function createClaraCoreMemoriaView(context) {
   let memoryGraphState = null;
   let memoryGraphAnimation = null;
   let memoryGraphDrag = null;
+  let memoryGraphDragMoved = false;
+  let memoryGraphMode = "network";
+  let memoryGraphSelection = null;
+  let memoryGraphHover = null;
   let activeMemoryGraphLayer = "primary";
   let memoryEmbeddingBatchRunning = false;
   let activeMemoryAgentFilter = "";
@@ -155,7 +159,7 @@ async function loadMemoryTabData(tabName, options = {}) {
     renderLoadMore("archive");
   }
   if (tabName === "graph" && (force || !loadedMemoryTabs.graph)) {
-    snapshot.memoryGraph = await window.ClaraCoreDesktop.getMemoryGraph({ limit: 100 });
+    snapshot.memoryGraph = await window.ClaraCoreDesktop.getMemoryGraph({ limit: 400 });
     loadedMemoryTabs.graph = true;
     renderMemoryGraph();
   }
@@ -220,70 +224,157 @@ function graphHash(value) {
   return hash >>> 0;
 }
 
-function computeGraphLayout(nodes, edges) {
-  const width = 900;
-  const height = 680;
-  const centerX = width / 2;
-  const centerY = height / 2;
+function isLinkEdge(edge) {
+  return String(edge?.kind || "").startsWith("link:");
+}
+
+function linkKindOf(edge) {
+  return String(edge?.kind || "").slice(5);
+}
+
+function buildGraphModel(graph, mode) {
+  const allNodes = graph.nodes || [];
+  const allEdges = graph.edges || [];
+  const linkEdges = allEdges.filter(isLinkEdge);
+  const effectiveMode = mode === "network" && linkEdges.length > 0 ? "network" : "all";
+
+  let nodes;
+  let edges;
+  if (effectiveMode === "network") {
+    const keep = new Set();
+    for (const edge of linkEdges) {
+      keep.add(edge.from);
+      keep.add(edge.to);
+    }
+    for (const edge of allEdges) {
+      if (edge.kind === "uses" && keep.has(edge.to)) keep.add(edge.from);
+    }
+    nodes = allNodes.filter((node) => keep.has(node.id) && node.kind !== "label");
+    edges = allEdges.filter((edge) => edge.kind !== "labeled" && keep.has(edge.from) && keep.has(edge.to));
+  } else {
+    const labelDegree = new Map();
+    for (const edge of allEdges) {
+      if (edge.kind !== "labeled") continue;
+      labelDegree.set(edge.to, (labelDegree.get(edge.to) || 0) + 1);
+    }
+    const sortedLabels = [...labelDegree.entries()].sort((left, right) => right[1] - left[1]);
+    const hubLabels = sortedLabels.filter(([, count]) => count >= 3);
+    const keptLabels = new Set(
+      (hubLabels.length > 0 ? hubLabels : sortedLabels).slice(0, 40).map(([labelId]) => labelId)
+    );
+    nodes = allNodes.filter((node) => node.kind !== "label" || keptLabels.has(node.id));
+    edges = allEdges.filter((edge) => edge.kind !== "labeled" || keptLabels.has(edge.to));
+  }
+
   const degree = new Map();
+  const linkDegree = new Map();
   for (const edge of edges) {
     degree.set(edge.from, (degree.get(edge.from) || 0) + 1);
     degree.set(edge.to, (degree.get(edge.to) || 0) + 1);
+    if (isLinkEdge(edge)) {
+      linkDegree.set(edge.from, (linkDegree.get(edge.from) || 0) + 1);
+      linkDegree.set(edge.to, (linkDegree.get(edge.to) || 0) + 1);
+    }
   }
-
-  const positions = new Map();
-  const labelNodes = nodes
-    .filter((node) => node.kind === "label")
-    .sort((left, right) => (degree.get(right.id) || 0) - (degree.get(left.id) || 0));
-  const memoryNodes = nodes.filter((node) => node.kind === "memory");
-  const otherNodes = nodes.filter((node) => node.kind !== "label" && node.kind !== "memory");
-
-  const spherePoint = (index, total, seed, radiusScale = 1) => {
-    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
-    const z = 1 - (2 * (index + 0.5)) / Math.max(1, total);
-    const ring = Math.sqrt(Math.max(0, 1 - z * z));
-    const theta = index * goldenAngle + (seed % 628) / 100;
-    const jitter = ((seed % 200) - 100) / 2500;
-    const nx = (Math.cos(theta) * ring + jitter) * radiusScale;
-    const ny = (z * 0.9 + jitter * 0.6) * radiusScale;
-    const nz = (Math.sin(theta) * ring - jitter) * radiusScale;
-    return { nx, ny, nz };
+  const neighborhood = new Map();
+  const addNeighbor = (a, b) => {
+    if (!neighborhood.has(a)) neighborhood.set(a, new Set());
+    neighborhood.get(a).add(b);
   };
-
-  const setSpherePosition = (node, index, total, radiusScale, size) => {
-    const seed = graphHash(node.id);
-    const point = spherePoint(index, total, seed, radiusScale);
-    positions.set(node.id, {
-      ...point,
-      x: centerX + point.nx * width * 0.34,
-      y: centerY + point.ny * height * 0.38,
-      z: point.nz,
-      size
-    });
-  };
-
-  memoryNodes.forEach((node, index) => {
-    setSpherePosition(node, index, memoryNodes.length, 0.82, 2.2 + Math.min(3.4, (degree.get(node.id) || 1) / 5));
-  });
-
-  labelNodes.forEach((node, index) => {
-    setSpherePosition(node, index, labelNodes.length, 1.02, 6 + Math.min(8, (degree.get(node.id) || 1) / 7));
-  });
-
-  otherNodes.forEach((node, index) => {
-    setSpherePosition(node, index, otherNodes.length, 0.5, 8 + Math.min(7, (degree.get(node.id) || 1) / 5));
-  });
-
-  return { width, height, positions, degree };
+  for (const edge of edges) {
+    addNeighbor(edge.from, edge.to);
+    addNeighbor(edge.to, edge.from);
+  }
+  return { nodes, edges, degree, linkDegree, neighborhood, effectiveMode, linkEdgeCount: linkEdges.length };
 }
 
-function graphViewBox(width, height) {
-  const safeZoom = Math.max(1, Math.min(3, memoryGraphZoom));
-  const viewWidth = width / safeZoom;
-  const viewHeight = height / safeZoom;
-  const x = (width - viewWidth) / 2;
-  const y = (height - viewHeight) / 2;
-  return `${x.toFixed(1)} ${y.toFixed(1)} ${viewWidth.toFixed(1)} ${viewHeight.toFixed(1)}`;
+function createForceLayout(model) {
+  const { nodes, edges, degree } = model;
+  const bodies = new Map();
+  nodes.forEach((node, index) => {
+    const seed = graphHash(node.id);
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+    const radius = 40 + 210 * Math.sqrt((index + 0.5) / Math.max(1, nodes.length));
+    const theta = index * goldenAngle + (seed % 628) / 100;
+    bodies.set(node.id, {
+      node,
+      x: Math.cos(theta) * radius,
+      y: Math.sin(theta) * radius * 0.82,
+      vx: 0,
+      vy: 0,
+      size: node.kind === "memory"
+        ? 3.2 + Math.min(5, (degree.get(node.id) || 1) * 0.9)
+        : node.kind === "label"
+          ? 5 + Math.min(7, (degree.get(node.id) || 1) / 7)
+          : 8
+    });
+  });
+
+  const springs = edges
+    .map((edge) => {
+      const a = bodies.get(edge.from);
+      const b = bodies.get(edge.to);
+      if (!a || !b) return null;
+      if (isLinkEdge(edge)) {
+        const strength = Math.max(0.05, Math.min(1, Number(edge.strength) || 0.5));
+        return { a, b, rest: 105 - strength * 45, k: 0.055 + strength * 0.055 };
+      }
+      if (edge.kind === "uses") return { a, b, rest: 130, k: 0.02 };
+      return { a, b, rest: 165, k: 0.008 };
+    })
+    .filter(Boolean);
+
+  let alpha = 1;
+  const bodyList = [...bodies.values()];
+  const step = () => {
+    if (alpha <= 0.02) return false;
+    for (let i = 0; i < bodyList.length; i += 1) {
+      const a = bodyList[i];
+      for (let j = i + 1; j < bodyList.length; j += 1) {
+        const b = bodyList[j];
+        let dx = a.x - b.x;
+        let dy = a.y - b.y;
+        let distSq = dx * dx + dy * dy;
+        if (distSq < 0.01) {
+          dx = ((graphHash(a.node.id) % 10) - 5) / 10 || 0.3;
+          dy = ((graphHash(b.node.id) % 10) - 5) / 10 || -0.3;
+          distSq = dx * dx + dy * dy;
+        }
+        const force = Math.min(6, 1300 / distSq) * alpha;
+        const dist = Math.sqrt(distSq);
+        const fx = (dx / dist) * force;
+        const fy = (dy / dist) * force;
+        a.vx += fx;
+        a.vy += fy;
+        b.vx -= fx;
+        b.vy -= fy;
+      }
+    }
+    for (const spring of springs) {
+      const dx = spring.b.x - spring.a.x;
+      const dy = spring.b.y - spring.a.y;
+      const dist = Math.max(0.1, Math.sqrt(dx * dx + dy * dy));
+      const stretch = (dist - spring.rest) * spring.k * alpha;
+      const fx = (dx / dist) * stretch;
+      const fy = (dy / dist) * stretch;
+      spring.a.vx += fx;
+      spring.a.vy += fy;
+      spring.b.vx -= fx;
+      spring.b.vy -= fy;
+    }
+    for (const body of bodyList) {
+      body.vx -= body.x * 0.012 * alpha;
+      body.vy -= body.y * 0.014 * alpha;
+      body.vx *= 0.8;
+      body.vy *= 0.8;
+      body.x += body.vx;
+      body.y += body.vy;
+    }
+    alpha *= 0.965;
+    return true;
+  };
+
+  return { bodies, step, isSettled: () => alpha <= 0.02 };
 }
 
 function setMemoryGraphZoom(action) {
@@ -295,7 +386,6 @@ function setMemoryGraphZoom(action) {
     memoryGraphZoom = 1;
     memoryGraphPan = { x: 0, y: 0 };
   }
-  stopMemoryGraphAnimation();
   drawMemoryGraphCanvas();
 }
 
@@ -309,7 +399,24 @@ async function setMemoryGraphLayer(layer) {
   activeMemoryGraphLayer = layer === "restricted" ? "restricted" : "primary";
   memoryGraphZoom = 1;
   memoryGraphPan = { x: 0, y: 0 };
+  memoryGraphSelection = null;
   renderMemoryGraph();
+}
+
+function setMemoryGraphMode(mode) {
+  const next = mode === "all" ? "all" : "network";
+  if (next === memoryGraphMode) return;
+  memoryGraphMode = next;
+  memoryGraphZoom = 1;
+  memoryGraphPan = { x: 0, y: 0 };
+  memoryGraphSelection = null;
+  renderMemoryGraph();
+}
+
+function selectMemoryGraphNode(nodeId) {
+  memoryGraphSelection = nodeId || null;
+  renderGraphSidePanel();
+  drawMemoryGraphCanvas();
 }
 
 function stopMemoryGraphAnimation() {
@@ -319,56 +426,8 @@ function stopMemoryGraphAnimation() {
   }
 }
 
-function drawMemoryGraphCanvas() {
-  if (!memoryGraphState) return;
-  const { canvas, nodes, edges, positions, degree } = memoryGraphState;
-  if (!canvas) return;
-  const rect = canvas.getBoundingClientRect();
-  const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-  const targetWidth = Math.max(1, Math.floor(rect.width * pixelRatio));
-  const targetHeight = Math.max(1, Math.floor(rect.height * pixelRatio));
-  if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
-    canvas.width = targetWidth;
-    canvas.height = targetHeight;
-  }
-  const ctx = canvas.getContext("2d");
-  ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-  ctx.clearRect(0, 0, rect.width, rect.height);
-
-  const now = performance.now();
-  const reducedMotion = document.body?.dataset?.motion === "off";
-  const rotation = reducedMotion ? 0.42 : now / 32000;
-  const tilt = -0.18;
-  const centerX = rect.width / 2 + memoryGraphPan.x;
-  const centerY = rect.height / 2 + memoryGraphPan.y;
-  const sphereRadius = Math.min(rect.width, rect.height) * 0.42 * memoryGraphZoom;
-  canvas.dataset.zoom = String(memoryGraphZoom);
-  canvas.dataset.panX = String(Math.round(memoryGraphPan.x));
-  canvas.dataset.panY = String(Math.round(memoryGraphPan.y));
-  const project = (position) => {
-    const nx = Number.isFinite(position.nx) ? position.nx : 0;
-    const ny = Number.isFinite(position.ny) ? position.ny : 0;
-    const nz = Number.isFinite(position.nz) ? position.nz : position.z || 0;
-    const cosY = Math.cos(rotation);
-    const sinY = Math.sin(rotation);
-    const rx = nx * cosY + nz * sinY;
-    const rz = nz * cosY - nx * sinY;
-    const cosX = Math.cos(tilt);
-    const sinX = Math.sin(tilt);
-    const ry = ny * cosX - rz * sinX;
-    const depth = rz * cosX + ny * sinX;
-    const perspective = 1 / (1.9 - depth * 0.44);
-    return {
-      x: centerX + rx * sphereRadius * perspective,
-      y: centerY + ry * sphereRadius * perspective,
-      r: Math.max(1.4, position.size * perspective * memoryGraphZoom),
-      depth,
-      perspective
-    };
-  };
-  const safeDegree = (nodeId) => Math.max(1, degree?.get(nodeId) || 1);
-  const isDarkTheme = document.body?.dataset?.theme === "dark";
-  const graphTheme = isDarkTheme
+function graphThemeColors(isDarkTheme) {
+  return isDarkTheme
     ? {
         backgroundStops: [
           [0, "rgba(32, 42, 36, 0.96)"],
@@ -379,14 +438,19 @@ function drawMemoryGraphCanvas() {
         memory: "99, 155, 215",
         restricted: "214, 118, 101",
         core: "121, 201, 164",
-        shell: "121, 201, 164",
-        labelHalo: "rgba(215, 159, 75, 0.16)",
-        sharedLineHalo: "rgba(121, 201, 164, 0.16)",
+        label: "215, 159, 75",
         nodeStroke: "rgba(232, 242, 235, 0.58)",
         pillFill: "rgba(34, 41, 37, 0.92)",
         pillText: "#edf4ee",
         labelPillStroke: "rgba(215, 159, 75, 0.36)",
-        sharedLinePillStroke: "rgba(121, 201, 164, 0.34)"
+        sharedLinePillStroke: "rgba(121, 201, 164, 0.34)",
+        linkKinds: {
+          related: "99, 155, 215",
+          causes: "176, 128, 224",
+          "evolved-from": "215, 159, 75",
+          contradicts: "214, 118, 101",
+          "part-of": "121, 201, 164"
+        }
       }
     : {
         backgroundStops: [
@@ -398,21 +462,200 @@ function drawMemoryGraphCanvas() {
         memory: "54, 95, 132",
         restricted: "166, 64, 54",
         core: "40, 116, 90",
-        shell: "54, 95, 132",
-        labelHalo: "rgba(189, 127, 40, 0.13)",
-        sharedLineHalo: "rgba(40, 116, 90, 0.13)",
+        label: "189, 127, 40",
         nodeStroke: "rgba(255, 255, 255, 0.9)",
         pillFill: "rgba(255, 255, 252, 0.88)",
         pillText: "#202421",
         labelPillStroke: "rgba(189, 127, 40, 0.28)",
-        sharedLinePillStroke: "rgba(40, 116, 90, 0.28)"
+        sharedLinePillStroke: "rgba(40, 116, 90, 0.28)",
+        linkKinds: {
+          related: "54, 95, 132",
+          causes: "122, 75, 176",
+          "evolved-from": "189, 127, 40",
+          contradicts: "166, 64, 54",
+          "part-of": "40, 116, 90"
+        }
       };
+}
+
+function drawMemoryGraphCanvas() {
+  stopMemoryGraphAnimation();
+  if (!memoryGraphState) return;
+  const { canvas, model, sim } = memoryGraphState;
+  if (!canvas || !canvas.isConnected) return;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width < 2 || rect.height < 2) return;
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+  const targetWidth = Math.max(1, Math.floor(rect.width * pixelRatio));
+  const targetHeight = Math.max(1, Math.floor(rect.height * pixelRatio));
+  if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+  }
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+  ctx.clearRect(0, 0, rect.width, rect.height);
+
+  const reducedMotion = document.body?.dataset?.motion === "off";
+  if (!sim.isSettled()) {
+    sim.step();
+    sim.step();
+  }
+
+  const bodies = [...sim.bodies.values()];
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const body of bodies) {
+    if (body.x < minX) minX = body.x;
+    if (body.x > maxX) maxX = body.x;
+    if (body.y < minY) minY = body.y;
+    if (body.y > maxY) maxY = body.y;
+  }
+  const boundsWidth = Math.max(60, maxX - minX);
+  const boundsHeight = Math.max(60, maxY - minY);
+  const boundsCenterX = (minX + maxX) / 2;
+  const boundsCenterY = (minY + maxY) / 2;
+  const fitScale = Math.min((rect.width * 0.84) / boundsWidth, (rect.height * 0.82) / boundsHeight, 2.6);
+  const scale = fitScale * memoryGraphZoom;
+  const centerX = rect.width / 2 + memoryGraphPan.x;
+  const centerY = rect.height / 2 + memoryGraphPan.y;
+  const project = (body) => ({
+    x: centerX + (body.x - boundsCenterX) * scale,
+    y: centerY + (body.y - boundsCenterY) * scale
+  });
+
+  canvas.dataset.zoom = String(memoryGraphZoom);
+  canvas.dataset.panX = String(Math.round(memoryGraphPan.x));
+  canvas.dataset.panY = String(Math.round(memoryGraphPan.y));
+
+  const now = performance.now();
+  const isDarkTheme = document.body?.dataset?.theme === "dark";
+  const theme = graphThemeColors(isDarkTheme);
+  const selection = memoryGraphSelection;
+  const selectionNeighbors = selection ? model.neighborhood.get(selection) || new Set() : null;
+  const nodeVisible = (nodeId) => !selection || nodeId === selection || selectionNeighbors.has(nodeId);
+
+  const background = ctx.createRadialGradient(rect.width * 0.55, rect.height * 0.44, 40, rect.width * 0.55, rect.height * 0.44, Math.max(rect.width, rect.height) * 0.72);
+  for (const [stop, color] of theme.backgroundStops) {
+    background.addColorStop(stop, color);
+  }
+  ctx.fillStyle = background;
+  ctx.fillRect(0, 0, rect.width, rect.height);
+
+  const hitEdges = [];
+  const hitNodes = [];
+  const hoveredEdge = memoryGraphHover?.type === "edge" ? memoryGraphHover.key : null;
+  const edgeKey = (edge) => `${edge.from}->${edge.to}:${edge.kind}`;
+
+  for (const edge of model.edges) {
+    const a = sim.bodies.get(edge.from);
+    const b = sim.bodies.get(edge.to);
+    if (!a || !b) continue;
+    const pa = project(a);
+    const pb = project(b);
+    const link = isLinkEdge(edge);
+    const kind = link ? linkKindOf(edge) : edge.kind;
+    const strength = Math.max(0.05, Math.min(1, Number(edge.strength) || 0.5));
+    let color = theme.edge;
+    let alpha = isDarkTheme ? 0.1 : 0.08;
+    let width = 0.7;
+    let dashed = false;
+    let arrow = false;
+    if (link) {
+      color = theme.linkKinds[kind] || theme.memory;
+      alpha = 0.38 + strength * 0.4;
+      width = 1 + strength * 2.1;
+      dashed = kind === "contradicts";
+      arrow = kind === "causes" || kind === "evolved-from" || kind === "part-of";
+    } else if (edge.kind === "uses") {
+      color = theme.core;
+      alpha = 0.2;
+      width = 0.9;
+    }
+    const incident = !selection || edge.from === selection || edge.to === selection;
+    if (!incident) alpha *= 0.08;
+    const isHovered = hoveredEdge === edgeKey(edge);
+    if (isHovered) {
+      alpha = Math.min(1, alpha + 0.3);
+      width += 0.9;
+    }
+    ctx.beginPath();
+    ctx.strokeStyle = `rgba(${color}, ${alpha})`;
+    ctx.lineWidth = width;
+    ctx.setLineDash(dashed ? [6, 4] : []);
+    ctx.moveTo(pa.x, pa.y);
+    ctx.lineTo(pb.x, pb.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    if (arrow && incident !== false) {
+      const t = 0.62;
+      const ax = pa.x + (pb.x - pa.x) * t;
+      const ay = pa.y + (pb.y - pa.y) * t;
+      const angle = Math.atan2(pb.y - pa.y, pb.x - pa.x);
+      const size = 4.5 + width;
+      ctx.beginPath();
+      ctx.fillStyle = `rgba(${color}, ${alpha})`;
+      ctx.moveTo(ax + Math.cos(angle) * size, ay + Math.sin(angle) * size);
+      ctx.lineTo(ax + Math.cos(angle + 2.5) * size, ay + Math.sin(angle + 2.5) * size);
+      ctx.lineTo(ax + Math.cos(angle - 2.5) * size, ay + Math.sin(angle - 2.5) * size);
+      ctx.closePath();
+      ctx.fill();
+    }
+    if (link) {
+      hitEdges.push({ key: edgeKey(edge), edge, ax: pa.x, ay: pa.y, bx: pb.x, by: pb.y });
+    }
+  }
+
   const nodeColor = (node) => {
-    if (node.kind === "label") return isDarkTheme ? "#d79f4b" : "#bd7f28";
-    if (node.kind === "shared_line") return isDarkTheme ? "#79c9a4" : "#28745a";
-    if (node.sensitivity === "restricted") return isDarkTheme ? "#d67665" : "#a64036";
-    return isDarkTheme ? "#639bd7" : "#365f84";
+    if (node.kind === "label") return `rgb(${theme.label})`;
+    if (node.kind === "shared_line") return `rgb(${theme.core})`;
+    if (node.sensitivity === "restricted") return `rgb(${theme.restricted})`;
+    return `rgb(${theme.memory})`;
   };
+
+  for (const body of bodies) {
+    const node = body.node;
+    const p = project(body);
+    const phase = ((now / 1000) + (graphHash(node.id) % 900) / 1000) * Math.PI * 2 / 2.8;
+    const pulse = reducedMotion ? 1 : 1 + Math.sin(phase) * 0.045;
+    const hasLinks = (model.linkDegree.get(node.id) || 0) > 0;
+    const radius = Math.max(2.2, body.size * pulse * (hasLinks ? 1.25 : 0.85)) * Math.min(1.5, Math.max(0.75, scale / fitScale));
+    const visible = nodeVisible(node.id);
+    const baseAlpha = node.kind === "memory" ? (hasLinks ? 0.92 : 0.5) : 0.85;
+    const alpha = visible ? baseAlpha : 0.1;
+    if ((hasLinks || node.kind !== "memory") && visible) {
+      ctx.beginPath();
+      ctx.fillStyle = node.kind === "label"
+        ? `rgba(${theme.label}, 0.12)`
+        : node.kind === "shared_line"
+          ? `rgba(${theme.core}, 0.14)`
+          : `rgba(${theme.memory}, 0.12)`;
+      ctx.arc(p.x, p.y, radius + 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.beginPath();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = nodeColor(node);
+    ctx.strokeStyle = theme.nodeStroke;
+    ctx.lineWidth = node.id === selection ? 2 : 0.9;
+    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    if (node.id === selection) {
+      ctx.beginPath();
+      ctx.strokeStyle = `rgba(${theme.core}, 0.8)`;
+      ctx.lineWidth = 1.4;
+      ctx.arc(p.x, p.y, radius + 5.5, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    hitNodes.push({ id: node.id, x: p.x, y: p.y, r: Math.max(radius + 3, 7) });
+  }
+
+  ctx.font = "620 10.5px Inter, ui-sans-serif, system-ui, sans-serif";
+  ctx.textBaseline = "middle";
   const labelForNode = (node) => String(node.label || node.id || "");
   const truncateCanvasText = (text, maxWidth) => {
     const source = String(text || "");
@@ -424,208 +667,67 @@ function drawMemoryGraphCanvas() {
     return `${next}...`;
   };
   const roundRect = (x, y, w, h, r) => {
-    const radius = Math.min(r, w / 2, h / 2);
+    const cornerRadius = Math.min(r, w / 2, h / 2);
     ctx.beginPath();
-    ctx.moveTo(x + radius, y);
-    ctx.arcTo(x + w, y, x + w, y + h, radius);
-    ctx.arcTo(x + w, y + h, x, y + h, radius);
-    ctx.arcTo(x, y + h, x, y, radius);
-    ctx.arcTo(x, y, x + w, y, radius);
+    ctx.moveTo(x + cornerRadius, y);
+    ctx.arcTo(x + w, y, x + w, y + h, cornerRadius);
+    ctx.arcTo(x + w, y + h, x, y + h, cornerRadius);
+    ctx.arcTo(x, y + h, x, y, cornerRadius);
+    ctx.arcTo(x, y, x + w, y, cornerRadius);
     ctx.closePath();
   };
 
-  const background = ctx.createRadialGradient(rect.width * 0.55, rect.height * 0.44, 40, rect.width * 0.55, rect.height * 0.44, Math.max(rect.width, rect.height) * 0.72);
-  for (const [stop, color] of graphTheme.backgroundStops) {
-    background.addColorStop(stop, color);
+  const pillCandidates = [];
+  const hoveredNode = memoryGraphHover?.type === "node" ? memoryGraphHover.key : null;
+  for (const body of bodies) {
+    const node = body.node;
+    if (!nodeVisible(node.id)) continue;
+    const linkCount = model.linkDegree.get(node.id) || 0;
+    const isFocus = node.id === selection || node.id === hoveredNode || (selection && selectionNeighbors.has(node.id));
+    const isHub = node.kind !== "memory" ? (model.degree.get(node.id) || 0) > 2 : linkCount > 0;
+    if (!isFocus && !isHub) continue;
+    pillCandidates.push({ body, node, rank: (isFocus ? 100 : 0) + linkCount + (model.degree.get(node.id) || 0) / 10 });
   }
-  ctx.fillStyle = background;
-  ctx.fillRect(0, 0, rect.width, rect.height);
-
-  const shellGradient = ctx.createRadialGradient(centerX - sphereRadius * 0.22, centerY - sphereRadius * 0.28, sphereRadius * 0.06, centerX, centerY, sphereRadius * 1.04);
-  shellGradient.addColorStop(0, `rgba(${graphTheme.core}, ${isDarkTheme ? 0.2 : 0.16})`);
-  shellGradient.addColorStop(0.58, `rgba(${graphTheme.shell}, ${isDarkTheme ? 0.08 : 0.06})`);
-  shellGradient.addColorStop(1, `rgba(${graphTheme.shell}, 0)`);
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, sphereRadius * 1.05, 0, Math.PI * 2);
-  ctx.fillStyle = shellGradient;
-  ctx.fill();
-
-  ctx.save();
-  ctx.translate(centerX, centerY);
-  ctx.strokeStyle = `rgba(${graphTheme.shell}, ${isDarkTheme ? 0.16 : 0.12})`;
-  ctx.lineWidth = 0.8;
-  for (const factor of [0.42, 0.66, 0.86, 1]) {
-    ctx.beginPath();
-    ctx.ellipse(0, 0, sphereRadius * factor, sphereRadius * factor * 0.46, rotation * 0.5, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-  for (const angle of [-0.75, -0.32, 0.28, 0.68]) {
-    ctx.beginPath();
-    ctx.ellipse(0, 0, sphereRadius * 0.96, sphereRadius * 0.26, angle + rotation * 0.22, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-  ctx.restore();
-
-  const projectedNodes = nodes
-    .map((node) => {
-      const position = positions.get(node.id);
-      return position ? { node, p: project(position) } : null;
-    })
-    .filter(Boolean);
-  const projectedById = new Map(projectedNodes.map((item) => [item.node.id, item.p]));
-
-  const edgeDrawList = edges
-    .map((edge) => {
-      const a = projectedById.get(edge.from);
-      const b = projectedById.get(edge.to);
-      if (!a || !b) return null;
-      return { edge, a, b, depth: (a.depth + b.depth) / 2 };
-    })
-    .filter(Boolean)
-    .sort((left, right) => left.depth - right.depth);
-
-  for (const item of edgeDrawList) {
-    const { edge, a, b, depth } = item;
-    const from = positions.get(edge.from);
-    const to = positions.get(edge.to);
-    if (!from || !to) continue;
-    const middleX = (a.x + b.x) / 2;
-    const middleY = (a.y + b.y) / 2;
-    const curve = Math.max(-42, Math.min(42, (a.depth - b.depth) * 38 + (a.x - b.x) * 0.02));
-    const depthAlpha = Math.max(0.12, Math.min(1, (depth + 1.1) / 2.1));
-    const alpha = Math.min(isDarkTheme ? 0.4 : 0.28, ((isDarkTheme ? 0.055 : 0.04) + (safeDegree(edge.from) + safeDegree(edge.to)) / 900) * depthAlpha);
-    ctx.beginPath();
-    ctx.lineWidth = (isDarkTheme ? 0.72 : 0.62) + Math.max(0, depth) * 0.42;
-    ctx.strokeStyle = `rgba(${graphTheme.edge}, ${alpha})`;
-    ctx.moveTo(a.x, a.y);
-    ctx.quadraticCurveTo(middleX + curve, middleY - curve, b.x, b.y);
-    ctx.stroke();
-  }
-
-  const nodeDrawList = projectedNodes.sort((left, right) => left.p.depth - right.p.depth);
-  for (const { node, p } of nodeDrawList) {
-    const phase = ((now / 1000) + (graphHash(node.id) % 900) / 1000) * Math.PI * 2 / 2.8;
-    const pulse = reducedMotion ? 1 : 1 + Math.sin(phase) * 0.045;
-    const front = Math.max(0.28, Math.min(1, (p.depth + 1.05) / 2.05));
-    const radius = p.r * pulse * (0.72 + front * 0.42);
-    const isRestricted = node.sensitivity === "restricted";
-    if (node.kind !== "memory") continue;
-    if (isRestricted || p.depth > 0.35) {
-      ctx.beginPath();
-      ctx.fillStyle = isRestricted
-        ? `rgba(${graphTheme.restricted}, ${isDarkTheme ? 0.16 : 0.12})`
-        : `rgba(${graphTheme.memory}, ${isDarkTheme ? 0.12 : 0.08})`;
-      ctx.arc(p.x, p.y, radius + 3.8, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.beginPath();
-    ctx.fillStyle = isRestricted
-      ? `rgba(${graphTheme.restricted}, ${0.42 + front * 0.44})`
-      : `rgba(${graphTheme.memory}, ${0.28 + front * 0.52})`;
-    ctx.strokeStyle = graphTheme.nodeStroke;
-    ctx.lineWidth = 0.7 + front * 0.5;
-    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-  }
-
-  const hubNodes = projectedNodes
-    .filter((item) => item.node.kind !== "memory")
-    .sort((left, right) => left.p.depth - right.p.depth);
-  for (const { node, p } of hubNodes) {
-    const color = nodeColor(node);
-    const front = Math.max(0.34, Math.min(1, (p.depth + 1.05) / 2.05));
-    const radius = Math.max(4, p.r * (0.58 + front * 0.48));
-    const phase = ((now / 1000) + (graphHash(node.id) % 1000) / 1000) * Math.PI * 2 / 3.6;
-    const halo = radius + 5 + (reducedMotion ? 0 : Math.sin(phase) * 1.5);
-    ctx.beginPath();
-    ctx.fillStyle = node.kind === "label"
-      ? graphTheme.labelHalo
-      : graphTheme.sharedLineHalo;
-    ctx.globalAlpha = 0.45 + front * 0.55;
-    ctx.arc(p.x, p.y, halo, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.beginPath();
-    ctx.fillStyle = color;
-    ctx.strokeStyle = graphTheme.nodeStroke;
-    ctx.lineWidth = 1.4;
-    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-  }
-
-  ctx.font = "620 10.5px Inter, ui-sans-serif, system-ui, sans-serif";
-  ctx.textBaseline = "middle";
-  const selectedLabelHubs = [];
-  const labelCandidates = [...hubNodes]
-    .filter(({ p }) => p.depth > -0.28)
-    .sort((left, right) => {
-      const leftRank = safeDegree(left.node.id) + Math.max(0, left.p.depth) * 10;
-      const rightRank = safeDegree(right.node.id) + Math.max(0, right.p.depth) * 10;
-      return rightRank - leftRank;
-    });
-  for (const item of labelCandidates) {
-    const tooClose = selectedLabelHubs.some((selected) => {
-      const dx = selected.p.x - item.p.x;
-      const dy = selected.p.y - item.p.y;
-      return Math.sqrt(dx * dx + dy * dy) < 58;
-    });
-    if (!tooClose) selectedLabelHubs.push(item);
-    if (selectedLabelHubs.length >= 18) break;
-  }
-  const placedLabels = [];
-  const labeledHubs = selectedLabelHubs.sort((left, right) => left.p.y - right.p.y);
-  for (const { node, p } of labeledHubs) {
-    const label = truncateCanvasText(labelForNode(node), node.kind === "label" ? 92 : 118);
-    const textWidth = ctx.measureText(label).width;
-    const pillWidth = Math.min(128, textWidth + 18);
-    const pillHeight = 21;
-    const fromCenterX = p.x - centerX;
-    const fromCenterY = p.y - centerY;
-    const side = fromCenterX < 0 ? -1 : 1;
-    const verticalBias = Math.max(-1, Math.min(1, fromCenterY / Math.max(1, sphereRadius)));
-    let x = side < 0 ? p.x - pillWidth - 24 : p.x + 24;
-    let y = p.y - pillHeight / 2 + verticalBias * 14;
-    x = Math.min(rect.width - pillWidth - 10, Math.max(10, x));
-    y = Math.min(rect.height - pillHeight - 10, Math.max(10, y));
-    for (let attempt = 0; attempt < 12; attempt += 1) {
-      const overlaps = placedLabels.some((box) =>
-        x < box.x + box.w + 7 &&
-        x + pillWidth + 7 > box.x &&
-        y < box.y + box.h + 6 &&
-        y + pillHeight + 6 > box.y
+  pillCandidates.sort((left, right) => right.rank - left.rank);
+  const placedPills = [];
+  let pillsDrawn = 0;
+  for (const { body, node } of pillCandidates) {
+    if (pillsDrawn >= 22) break;
+    const p = project(body);
+    if (p.x < -40 || p.y < -20 || p.x > rect.width + 40 || p.y > rect.height + 20) continue;
+    const text = truncateCanvasText(labelForNode(node), 118);
+    const textWidth = ctx.measureText(text).width;
+    const pillWidth = Math.min(140, textWidth + 18);
+    const pillHeight = 20;
+    let x = Math.min(rect.width - pillWidth - 8, Math.max(8, p.x + 12));
+    let y = Math.min(rect.height - pillHeight - 8, Math.max(8, p.y - pillHeight - 8));
+    let overlaps = false;
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      overlaps = placedPills.some((box) =>
+        x < box.x + box.w + 6 && x + pillWidth + 6 > box.x && y < box.y + box.h + 5 && y + pillHeight + 5 > box.y
       );
       if (!overlaps) break;
-      const direction = p.y < centerY ? -1 : 1;
-      y = Math.min(rect.height - pillHeight - 10, Math.max(10, y + direction * (pillHeight + 7)));
+      y = Math.min(rect.height - pillHeight - 8, Math.max(8, y + pillHeight + 6));
     }
-    placedLabels.push({ x, y, w: pillWidth, h: pillHeight });
-    const front = Math.max(0.35, Math.min(1, (p.depth + 1.05) / 2.05));
-    const anchorX = x + (side < 0 ? pillWidth : 0);
-    const anchorY = y + pillHeight / 2;
-    ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
-    ctx.quadraticCurveTo((p.x + anchorX) / 2, p.y + (anchorY - p.y) * 0.18, anchorX, anchorY);
-    ctx.strokeStyle = node.kind === "label"
-      ? `rgba(${isDarkTheme ? "215, 159, 75" : "189, 127, 40"}, ${0.16 + front * 0.12})`
-      : `rgba(${graphTheme.core}, ${0.14 + front * 0.12})`;
-    ctx.lineWidth = 0.8;
-    ctx.stroke();
-    roundRect(x, y, pillWidth, pillHeight, 10.5);
-    ctx.globalAlpha = 0.5 + front * 0.36;
-    ctx.fillStyle = graphTheme.pillFill;
+    if (overlaps) continue;
+    placedPills.push({ x, y, w: pillWidth, h: pillHeight });
+    pillsDrawn += 1;
+    roundRect(x, y, pillWidth, pillHeight, 10);
+    ctx.globalAlpha = 0.86;
+    ctx.fillStyle = theme.pillFill;
     ctx.fill();
-    ctx.strokeStyle = node.kind === "label" ? graphTheme.labelPillStroke : graphTheme.sharedLinePillStroke;
+    ctx.strokeStyle = node.kind === "label" ? theme.labelPillStroke : theme.sharedLinePillStroke;
     ctx.lineWidth = 0.85;
     ctx.stroke();
-    ctx.globalAlpha = 0.72 + front * 0.28;
-    ctx.fillStyle = graphTheme.pillText;
-    ctx.fillText(label, x + 9, y + pillHeight / 2);
     ctx.globalAlpha = 1;
+    ctx.fillStyle = theme.pillText;
+    ctx.fillText(text, x + 9, y + pillHeight / 2);
   }
 
-  if (!reducedMotion) {
+  memoryGraphState.hitEdges = hitEdges;
+  memoryGraphState.hitNodes = hitNodes;
+
+  if (!sim.isSettled() || !reducedMotion) {
     memoryGraphAnimation = requestAnimationFrame(drawMemoryGraphCanvas);
   }
 }
@@ -686,27 +788,179 @@ function renderMemoryOverview() {
   renderMemoryTabs();
 }
 
+function graphNodeById(nodeId) {
+  if (!memoryGraphState) return null;
+  return memoryGraphState.model.nodes.find((node) => node.id === nodeId) || null;
+}
+
+function linkKindLabel(kind) {
+  const key = `memory.graph.link.${kind}`;
+  const text = t(key);
+  return text === key ? kind : text;
+}
+
+function renderGraphSidePanel() {
+  const panel = document.querySelector("#memoryGraphPanel");
+  if (!panel || !memoryGraphState) return;
+  const { model } = memoryGraphState;
+  const selection = memoryGraphSelection ? graphNodeById(memoryGraphSelection) : null;
+  if (!selection) {
+    const kindCounts = new Map();
+    for (const edge of model.edges) {
+      if (!isLinkEdge(edge)) continue;
+      const kind = linkKindOf(edge);
+      kindCounts.set(kind, (kindCounts.get(kind) || 0) + 1);
+    }
+    const legendRows = [...kindCounts.entries()]
+      .sort((left, right) => right[1] - left[1])
+      .map(
+        ([kind, count]) => `
+          <div class="graph-legend-row">
+            <span class="graph-legend-swatch kind-${escapeHtml(kind)}"></span>
+            <span>${escapeHtml(linkKindLabel(kind))}</span>
+            <strong>${count}</strong>
+          </div>
+        `
+      )
+      .join("");
+    panel.innerHTML = `
+      <div class="graph-panel-hint">${escapeHtml(t("memory.graph.panel.empty"))}</div>
+      ${legendRows ? `<div class="graph-legend">${legendRows}</div>` : ""}
+      ${model.effectiveMode === "all" && memoryGraphMode === "network" ? `<div class="graph-panel-hint subtle">${escapeHtml(t("memory.graph.networkEmpty"))}</div>` : ""}
+    `;
+    return;
+  }
+  const incident = model.edges.filter(
+    (edge) => isLinkEdge(edge) && (edge.from === selection.id || edge.to === selection.id)
+  );
+  const rows = incident
+    .map((edge) => {
+      const otherId = edge.from === selection.id ? edge.to : edge.from;
+      const other = graphNodeById(otherId);
+      const strength = Math.max(0.05, Math.min(1, Number(edge.strength) || 0.5));
+      const kind = linkKindOf(edge);
+      return `
+        <button class="graph-panel-link" data-graph-select="${escapeHtml(otherId)}">
+          <span class="graph-panel-link-head">
+            <span class="graph-legend-swatch kind-${escapeHtml(kind)}"></span>
+            <span class="graph-panel-kind">${escapeHtml(linkKindLabel(kind))}</span>
+            <span class="graph-panel-strength" style="--link-strength: ${Math.round(strength * 100)}%"></span>
+          </span>
+          <strong>${escapeHtml(other?.label || otherId)}</strong>
+          ${edge.note ? `<em>${escapeHtml(edge.note)}</em>` : ""}
+        </button>
+      `;
+    })
+    .join("");
+  panel.innerHTML = `
+    <div class="graph-panel-title">${escapeHtml(selection.label || selection.id)}</div>
+    <div class="graph-panel-subtitle">${escapeHtml(t("memory.graph.panel.title"))} · ${incident.length}</div>
+    ${rows || `<div class="graph-panel-hint subtle">${escapeHtml(t("memory.graph.panel.noLinks"))}</div>`}
+  `;
+}
+
+function graphHitTest(clientX, clientY) {
+  if (!memoryGraphState?.canvas) return null;
+  const rect = memoryGraphState.canvas.getBoundingClientRect();
+  const x = clientX - rect.left;
+  const y = clientY - rect.top;
+  for (const hit of memoryGraphState.hitNodes || []) {
+    const dx = x - hit.x;
+    const dy = y - hit.y;
+    if (dx * dx + dy * dy <= hit.r * hit.r) return { type: "node", key: hit.id };
+  }
+  let best = null;
+  for (const hit of memoryGraphState.hitEdges || []) {
+    const abx = hit.bx - hit.ax;
+    const aby = hit.by - hit.ay;
+    const lengthSq = abx * abx + aby * aby;
+    if (lengthSq < 1) continue;
+    const tSeg = Math.max(0, Math.min(1, ((x - hit.ax) * abx + (y - hit.ay) * aby) / lengthSq));
+    const px = hit.ax + abx * tSeg;
+    const py = hit.ay + aby * tSeg;
+    const dx = x - px;
+    const dy = y - py;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist <= 6 && (!best || dist < best.dist)) {
+      best = { type: "edge", key: hit.key, edge: hit.edge, dist, x: px, y: py };
+    }
+  }
+  return best;
+}
+
+function updateGraphTooltip(hit, clientX, clientY) {
+  const tooltip = document.querySelector("#memoryGraphTooltip");
+  if (!tooltip || !memoryGraphState?.canvas) return;
+  if (!hit || hit.type !== "edge") {
+    tooltip.classList.remove("visible");
+    return;
+  }
+  const edge = hit.edge;
+  const kind = linkKindOf(edge);
+  const strength = Math.max(0.05, Math.min(1, Number(edge.strength) || 0.5));
+  tooltip.innerHTML = `
+    <strong>${escapeHtml(linkKindLabel(kind))} · ${Math.round(strength * 100)}%</strong>
+    ${edge.note ? `<span>${escapeHtml(edge.note)}</span>` : ""}
+  `;
+  const wrapper = memoryGraphState.canvas.parentElement.getBoundingClientRect();
+  tooltip.style.left = `${Math.min(wrapper.width - 230, Math.max(6, clientX - wrapper.left + 14))}px`;
+  tooltip.style.top = `${Math.max(6, clientY - wrapper.top - 12)}px`;
+  tooltip.classList.add("visible");
+}
+
+function bindGraphCanvasEvents(canvas) {
+  canvas.addEventListener("mousemove", (event) => {
+    if (memoryGraphDrag) return;
+    const hit = graphHitTest(event.clientX, event.clientY);
+    const key = hit ? `${hit.type}:${hit.key}` : null;
+    const previous = memoryGraphHover ? `${memoryGraphHover.type}:${memoryGraphHover.key}` : null;
+    memoryGraphHover = hit ? { type: hit.type, key: hit.key } : null;
+    canvas.style.cursor = hit ? "pointer" : "grab";
+    updateGraphTooltip(hit, event.clientX, event.clientY);
+    if (key !== previous && !memoryGraphAnimation) drawMemoryGraphCanvas();
+  });
+  canvas.addEventListener("mouseleave", () => {
+    memoryGraphHover = null;
+    updateGraphTooltip(null);
+  });
+  canvas.addEventListener("click", (event) => {
+    if (memoryGraphDragMoved) return;
+    const hit = graphHitTest(event.clientX, event.clientY);
+    if (hit?.type === "node") {
+      selectMemoryGraphNode(hit.key === memoryGraphSelection ? null : hit.key);
+    } else if (!hit) {
+      if (memoryGraphSelection) selectMemoryGraphNode(null);
+    }
+  });
+}
+
 function renderMemoryGraph() {
   syncSnapshot();
   const graph = activeMemoryGraphLayer === "restricted" ? snapshot?.restrictedMemoryGraph || {} : snapshot?.memoryGraph || {};
-  const nodes = graph.nodes || [];
-  const edges = graph.edges || [];
-  memoryGraphSummary.textContent = t("memory.graph.summary", {
-    nodes: nodes.length,
-    edges: edges.length
-  });
-  if (nodes.length === 0 || edges.length === 0) {
+  const allNodes = graph.nodes || [];
+  const allEdges = graph.edges || [];
+  if (allNodes.length === 0 || allEdges.length === 0) {
     stopMemoryGraphAnimation();
     memoryGraphState = null;
+    memoryGraphSummary.textContent = t("memory.graph.summary", { nodes: 0, edges: 0 });
     memoryGraph.innerHTML = `<div class="endpoint-empty">${t("memory.graph.empty")}</div>`;
     return;
   }
-  const { width, height, positions, degree } = computeGraphLayout(nodes, edges);
-  const positionedNodes = nodes.filter((node) => positions.has(node.id));
-  const positionedEdges = edges.filter((edge) => positions.has(edge.from) && positions.has(edge.to));
+  const model = buildGraphModel(graph, memoryGraphMode);
+  memoryGraphSummary.textContent = t("memory.graph.summary", {
+    nodes: model.nodes.length,
+    edges: model.edges.length
+  });
+  if (memoryGraphSelection && !model.nodes.some((node) => node.id === memoryGraphSelection)) {
+    memoryGraphSelection = null;
+  }
   stopMemoryGraphAnimation();
   memoryGraph.innerHTML = `
     <div class="graph-toolbar">
+      <div>
+        <button class="graph-layer ${memoryGraphMode === "network" ? "active" : ""}" data-graph-mode="network">${escapeHtml(t("memory.graph.mode.network"))}</button>
+        <button class="graph-layer ${memoryGraphMode === "all" ? "active" : ""}" data-graph-mode="all">${escapeHtml(t("memory.graph.mode.all"))}</button>
+      </div>
       <div>
         <button class="graph-layer ${activeMemoryGraphLayer === "primary" ? "active" : ""}" data-graph-layer="primary">${escapeHtml(t("memory.graph.primaryLayer"))}</button>
         <button class="graph-layer ${activeMemoryGraphLayer === "restricted" ? "active restricted" : ""}" data-graph-layer="restricted">${escapeHtml(t("memory.graph.restrictedLayer"))}</button>
@@ -716,21 +970,26 @@ function renderMemoryGraph() {
         <button class="secondary" data-graph-zoom="fit">${escapeHtml(t("memory.graph.fit"))}</button>
         <button class="secondary" data-graph-zoom="in" aria-label="${escapeHtml(t("memory.graph.zoomIn"))}">+</button>
       </div>
-      <strong>${escapeHtml(t("memory.graph.summary", { nodes: nodes.length, edges: edges.length }))}</strong>
+      <strong>${escapeHtml(t("memory.graph.summary", { nodes: model.nodes.length, edges: model.edges.length }))}</strong>
     </div>
-    <div class="graph-canvas">
-      <canvas id="memoryGraphCanvas" data-node-count="${positionedNodes.length}" data-edge-count="${positionedEdges.length}" data-restricted-count="${positionedNodes.filter((node) => node.sensitivity === "restricted").length}" aria-label="${escapeHtml(t("memory.graph.title"))}"></canvas>
+    <div class="graph-body">
+      <div class="graph-canvas">
+        <canvas id="memoryGraphCanvas" data-mode="${escapeHtml(model.effectiveMode)}" data-node-count="${model.nodes.length}" data-edge-count="${model.edges.length}" data-link-count="${model.linkEdgeCount}" data-restricted-count="${model.nodes.filter((node) => node.sensitivity === "restricted").length}" aria-label="${escapeHtml(t("memory.graph.title"))}"></canvas>
+        <div id="memoryGraphTooltip" class="graph-tooltip"></div>
+      </div>
+      <aside id="memoryGraphPanel" class="graph-side-panel"></aside>
     </div>
   `;
+  const canvas = document.querySelector("#memoryGraphCanvas");
   memoryGraphState = {
-    canvas: document.querySelector("#memoryGraphCanvas"),
-    nodes: positionedNodes,
-    edges: positionedEdges,
-    positions,
-    degree,
-    width,
-    height
+    canvas,
+    model,
+    sim: createForceLayout(model),
+    hitEdges: [],
+    hitNodes: []
   };
+  bindGraphCanvasEvents(canvas);
+  renderGraphSidePanel();
   drawMemoryGraphCanvas();
 }
 
@@ -762,12 +1021,16 @@ function renderMemoryGraph() {
   function beginGraphDrag(event) {
     if (!event.target.closest(".graph-canvas")) return;
     memoryGraphDrag = { x: event.clientX, y: event.clientY, startPan: { ...memoryGraphPan } };
+    memoryGraphDragMoved = false;
     memoryGraph.classList.add("dragging");
   }
 
   function moveGraphDrag(event) {
     if (!memoryGraphDrag) return;
-    memoryGraphPan = { x: memoryGraphDrag.startPan.x + event.clientX - memoryGraphDrag.x, y: memoryGraphDrag.startPan.y + event.clientY - memoryGraphDrag.y };
+    const deltaX = event.clientX - memoryGraphDrag.x;
+    const deltaY = event.clientY - memoryGraphDrag.y;
+    if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) memoryGraphDragMoved = true;
+    memoryGraphPan = { x: memoryGraphDrag.startPan.x + deltaX, y: memoryGraphDrag.startPan.y + deltaY };
     if (!memoryGraphAnimation) drawMemoryGraphCanvas();
   }
 
@@ -822,7 +1085,8 @@ function renderMemoryGraph() {
   return {
     beginGraphDrag, endGraphDrag, getActiveTab, loadMemoryTabData, memoryAgentId, moveGraphDrag, processEmbeddings,
     renderMemoryGraph, renderMemoryList, renderMemoryOverview, renderMemoryResults, renderMemoryTabs, resetLoadedTabs,
-    searchMemoryLabel, setActiveAgentFilter, setActiveTab, setMemoryGraphLayer, setMemoryGraphZoom
+    searchMemoryLabel, selectMemoryGraphNode, setActiveAgentFilter, setActiveTab, setMemoryGraphLayer, setMemoryGraphMode,
+    setMemoryGraphZoom
   };
 }
 

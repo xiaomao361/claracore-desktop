@@ -96,6 +96,16 @@ function createClaraCoreMemoriaActions({
           console.error(error);
           showCopyNotice(t("runtime.unavailable"));
         });
+        return;
+      }
+      const modeButton = event.target.closest("[data-graph-mode]");
+      if (modeButton) {
+        memoriaView.setMemoryGraphMode(modeButton.dataset.graphMode || "network");
+        return;
+      }
+      const selectButton = event.target.closest("[data-graph-select]");
+      if (selectButton) {
+        memoriaView.selectMemoryGraphNode(selectButton.dataset.graphSelect || null);
       }
     });
     dom.memoryGraph?.addEventListener("wheel", (event) => {
