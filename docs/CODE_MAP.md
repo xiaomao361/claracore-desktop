@@ -74,7 +74,8 @@ Current view owners:
 - `app/views/shared-innerlife.js`: Shared Line and InnerLife rendering.
 - `app/views/data.js`: backups, restore preview/confirmation, import/export,
   and import preview.
-- `app/views/logs.js`: runtime log view and follow mode.
+- `app/views/logs.js`: runtime log view, follow mode, read-only decay audit,
+  and time flow.
 - `app/views/settings.js`: Settings forms; Models and Data are tabs inside the
   Settings view (`data-settings-tab` / `data-settings-panel` in `app.js`).
 - `app/views/agent-setup.js`: Agent Access setup brief and copy behavior.
@@ -96,6 +97,10 @@ Use this path when Home says a module is missing, paused, ready, or unhealthy.
 `buildProductSnapshot()` is the bounded Home/status packet. Keep it to counts,
 summaries, and recent samples. Full lists should be fetched through focused
 IPC/runtime calls.
+
+Decay audit is part of the bounded snapshot, but it remains read-only. Start at
+`core/runtime/decay.js` when dormant Memory, stale Shared Line, old InnerLife
+waiting state, or daemon-error review indicators look wrong.
 
 ### Product Paths, Data Root, And Settings
 
@@ -156,6 +161,8 @@ Repository ownership:
   page, start packet, and session-end persistence.
 - `core/db/repositories/innerlife/shares.js`: InnerLife share list, timing
   checks, review/mark actions, and apply-to-Memory/Shared-Line persistence.
+  Timing checks may use the current Shared Line resume packet as implicit
+  context, and persist overlap metadata for later inspection.
 
 New schema-heavy behavior should use an explicit migration and repository API.
 Product policy should live in a domain module rather than directly in a
@@ -241,13 +248,19 @@ source preview.
 Start here:
 
 1. `core/db/database.js`
-2. `core/gateway/mcp-server.js`
-3. `app/views/logs.js`
-4. `app/views/home.js`
-5. `app/views/agent-setup.js`
+2. `core/runtime/snapshot.js`
+3. `core/runtime/decay.js`
+4. `core/gateway/mcp-server.js`
+5. `app/views/logs.js`
+6. `app/views/home.js`
+7. `app/views/agent-setup.js`
 
 Runtime events and Gateway traces are inspection surfaces. If a trace is wrong,
 check where the Gateway records it before changing renderer formatting.
+The Logs time flow is also an inspection surface: it orders bounded recent
+Memory, Shared Line, InnerLife, Gateway, and runtime events from the current
+snapshot. Decay audit cards must stay read-only; automatic archive, share
+review, or daemon recovery belongs in explicit agent or human actions.
 
 ## Change Placement Rules
 

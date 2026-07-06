@@ -19,7 +19,7 @@
 
 .log-status-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
   margin-top: 14px;
 }
@@ -90,4 +90,131 @@
   font-size: 12px;
   line-height: 1.35;
   text-align: right;
+}
+
+.decay-audit-panel,
+.time-flow-panel {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.decay-audit-list,
+.time-flow-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.decay-audit-item,
+.time-flow-item {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.decay-audit-item.warn {
+  border-color: rgba(185, 128, 28, 0.38);
+  background: color-mix(in srgb, #b9801c 8%, var(--surface-soft));
+}
+
+.decay-audit-item.error {
+  border-color: rgba(190, 57, 57, 0.38);
+  background: color-mix(in srgb, #be3939 8%, var(--surface-soft));
+}
+
+.decay-audit-item.ok .time-flow-dot {
+  background: #2f7d63;
+}
+
+.decay-audit-item.warn .time-flow-dot {
+  background: #b9801c;
+}
+
+.decay-audit-item.error .time-flow-dot {
+  background: #be3939;
+}
+
+.time-flow-dot {
+  width: 9px;
+  height: 9px;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.time-flow-item.memory .time-flow-dot {
+  background: #2f7d63;
+}
+
+.time-flow-item.shared-line .time-flow-dot {
+  background: #6d5bd0;
+}
+
+.time-flow-item.innerlife .time-flow-dot {
+  background: #b4644b;
+}
+
+.time-flow-item.gateway .time-flow-dot {
+  background: #3c73b8;
+}
+
+.time-flow-item.runtime .time-flow-dot {
+  background: #64748b;
+}
+
+.time-flow-item.error {
+  border-color: rgba(190, 57, 57, 0.38);
+  background: color-mix(in srgb, #be3939 8%, var(--surface-soft));
+}
+
+.decay-audit-item > div,
+.time-flow-body {
+  min-width: 0;
+}
+
+.decay-audit-item > div > div,
+.time-flow-body > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.decay-audit-item strong,
+.decay-audit-item span,
+.decay-audit-item p,
+.decay-audit-item small,
+.time-flow-body strong,
+.time-flow-body span,
+.time-flow-body p,
+.time-flow-body small {
+  min-width: 0;
+}
+
+.decay-audit-item strong,
+.time-flow-body strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.decay-audit-item span,
+.decay-audit-item small,
+.time-flow-body span,
+.time-flow-body small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.decay-audit-item p,
+.time-flow-body p {
+  margin: 4px 0;
+  color: var(--text);
+  line-height: 1.4;
 }

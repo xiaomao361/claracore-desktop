@@ -2,6 +2,7 @@ const path = require("path");
 const fs = require("fs/promises");
 const { previewImportSources } = require("../import-preview");
 const { PRODUCT_VERSION } = require("../version");
+const { buildDecayAudit } = require("./decay");
 const { readDesktopSettings } = require("./paths");
 
 function productModules(input = {}) {
@@ -163,7 +164,7 @@ function createSnapshotRuntime({ ensureProductCore }) {
     ]);
     const [
       recentMemories, memoryStats, memoryMaintenance,
-      sharedLine, innerLife, gatewayTraces, runtimeEvents, backups,
+      sharedLine, innerLife, decayAudit, gatewayTraces, runtimeEvents, backups,
       importPreview, canWriteProbe
     ] = await Promise.all([
       database.listMemories(20),
@@ -171,6 +172,7 @@ function createSnapshotRuntime({ ensureProductCore }) {
       database.getMemoryMaintenanceReport(),
       database.getResumePacket(),
       database.getInnerLifeSnapshot(),
+      buildDecayAudit(database),
       database.listGatewayTraces({ limit: 20 }),
       database.listRuntimeEvents({ limit: 50 }),
       database.listBackups(5),
@@ -203,6 +205,7 @@ function createSnapshotRuntime({ ensureProductCore }) {
       memoryMaintenance,
       sharedLine,
       innerLife,
+      decayAudit,
       gatewayTraces,
       runtimeEvents,
       importPreview,

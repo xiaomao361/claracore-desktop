@@ -415,8 +415,9 @@
             <div class="log-status-strip">
               <div><span data-i18n="logs.runtimeEvents">Runtime events</span><strong id="logRuntimeCount">0</strong></div>
               <div><span data-i18n="logs.gatewayTraces">Gateway traces</span><strong id="logGatewayCount">0</strong></div>
+              <div><span data-i18n="logs.decayAudit">Decay audit</span><strong id="logDecayStatus">-</strong></div>
+              <div><span data-i18n="logs.timeFlow">Time flow</span><strong id="logTimeFlowCount">0</strong></div>
               <div><span data-i18n="logs.visibleLines">Visible lines</span><strong id="logLineCount">0</strong></div>
-              <div><span data-i18n="logs.lastRefresh">Last refresh</span><strong id="logLastRefresh">-</strong></div>
             </div>
             <div class="log-filter-row">
               <label>
@@ -432,6 +433,26 @@
               <span data-i18n="logs.filterHint">Filtering only changes the visible view; raw logs remain available.</span>
             </div>
             <pre id="logTerminal" class="log-terminal" aria-live="polite"></pre>
+            <section class="decay-audit-panel" aria-label="Decay Audit">
+              <div class="section-heading-line">
+                <div>
+                  <strong data-i18n="logs.decayAudit">Decay audit</strong>
+                  <span data-i18n="logs.decayAuditBody">Read-only review of dormant, stale, or waiting state before any mutation.</span>
+                </div>
+                <span id="logDecayIssueCount" class="quiet">0</span>
+              </div>
+              <div id="logDecayList" class="decay-audit-list"></div>
+            </section>
+            <section class="time-flow-panel" aria-label="Time Flow">
+              <div class="section-heading-line">
+                <div>
+                  <strong data-i18n="logs.timeFlow">Time flow</strong>
+                  <span data-i18n="logs.timeFlowBody">Read-only sequence across Memory, Shared Line, InnerLife, Gateway, and runtime events.</span>
+                </div>
+                <span id="logLastRefresh" class="quiet">-</span>
+              </div>
+              <div id="logTimeFlowList" class="time-flow-list"></div>
+            </section>
           </article>
         </div>
       </section>

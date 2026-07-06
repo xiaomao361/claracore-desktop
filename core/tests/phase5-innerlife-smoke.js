@@ -108,6 +108,14 @@ async function main() {
   if (shareCheck.share.status !== "approved") {
     throw new Error("InnerLife share timing check should not change share status.");
   }
+  if (
+    shareCheck.check?.metadata?.contextSource !== "provided+shared_line" ||
+    shareCheck.check?.metadata?.lineId !== "line_default" ||
+    !Array.isArray(shareCheck.check?.metadata?.lineOverlap) ||
+    !shareCheck.check.metadata.lineOverlap.includes("phase")
+  ) {
+    throw new Error(`InnerLife share timing did not record Shared Line connection evidence: ${JSON.stringify(shareCheck.check)}`);
+  }
   const appliedMemory = await runtime.applyProductInnerLifeShareToMemory(app, approved.id);
   if (!appliedMemory.memory?.id) throw new Error("Approved InnerLife share did not apply to Memory.");
   const memorySearch = await runtime.searchProductMemories(app, "Manual InnerLife review");
@@ -233,6 +241,21 @@ async function main() {
 
   const secondRun = await runtime.processProductInnerLifeOnce(app, { agentId: "my-agent" });
   if (!secondRun.share?.id) throw new Error("Second InnerLife process once did not create a pending share.");
+  const implicitLineCheck = await runtime.checkProductInnerLifeShareTiming(app, {
+    agentId: "my-agent",
+    shareId: secondRun.share.id
+  });
+  if (implicitLineCheck.check?.decision !== "review_first") {
+    throw new Error(`InnerLife share timing should use Shared Line context when no explicit context is provided: ${JSON.stringify(implicitLineCheck.check)}`);
+  }
+  if (
+    implicitLineCheck.check?.metadata?.contextSource !== "shared_line" ||
+    implicitLineCheck.check?.metadata?.lineId !== "line_default" ||
+    !Array.isArray(implicitLineCheck.check?.metadata?.lineOverlap) ||
+    implicitLineCheck.check.metadata.lineOverlap.length === 0
+  ) {
+    throw new Error(`InnerLife implicit Shared Line timing metadata is wrong: ${JSON.stringify(implicitLineCheck.check)}`);
+  }
   const rejected = await runtime.reviewProductInnerLifeShare(app, secondRun.share.id, "reject", "phase5 smoke reject");
   if (rejected.status !== "rejected") throw new Error("InnerLife reject did not mark the share rejected.");
   const discarded = await runtime.markProductInnerLifeShare(app, sessionEnd.share.id, "discarded", "session afterthought is not useful");
@@ -278,7 +301,7 @@ async function main() {
     row.processed_inbox_count !== 5 ||
     row.share_actions_count !== 3 ||
     row.digest_runs_count !== 1 ||
-    row.share_checks_count !== 2 ||
+    row.share_checks_count !== 3 ||
     row.daemon_tick_count !== 3 ||
     row.daemon_status !== "paused"
   ) {

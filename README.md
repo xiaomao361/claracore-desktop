@@ -49,9 +49,10 @@ Read these before adding new features:
 
 ## Current Status
 
-The current version is a working desktop shell with a product-owned local data
-store, Desktop-native Memoria, Shared Line, InnerLife, a Desktop-owned Gateway,
-with model configuration merged into the Settings surface.
+The current version is `0.3.2`. It is a working desktop shell with a
+product-owned local data store, Desktop-native Memoria, Shared Line, InnerLife,
+a Desktop-owned Gateway, with model configuration merged into the Settings
+surface.
 
 Included:
 
@@ -74,13 +75,21 @@ Included:
 - Desktop-owned InnerLife storage, agent profiles, inbox, sessions, events, thoughts, shares, digest runs, exploration, convergence, and daemon state
 - Model-backed InnerLife generation for digest, process-once, exploration, convergence, and session afterthoughts, with deterministic template fallback when no model is configured or a model call fails
 - Agent-managed InnerLife access through Gateway MCP and CLI fallback; the Desktop UI is primarily for inspection and runtime control
+- InnerLife share timing checks connect against the current Shared Line context
+  by default and record explicit/context/line overlap metadata before an agent
+  chooses whether to use or defer a share
 - Settings > Models tab for Memoria embedding configuration, InnerLife model configuration, endpoint model discovery, secret references, and loop cadence
 - InnerLife runtime panel for daemon enable/pause/tick and doctor status; sessions, digests, inbox, and timing checks sit behind a collapsed Pipeline evidence section
 - Verified SQLite product backups with restore preview and safety-backup restore
 - Full product JSON export/import for portable ClaraCore Desktop data
 - Agent identity uses each MCP process `CLARACORE_AGENT_ID`; preferred stable ids are `lara`, `clara`, and `codex`, while legacy tool-prefixed ids can be consolidated with `agent_identity_merge`
 - Settings page with General (language, theme, motion, close-window behavior, data paths, runtime facts), Models, and Data tabs
-- Terminal-style runtime log view for maintenance and Gateway traces
+- Terminal-style runtime log view for maintenance and Gateway traces, plus a
+  read-only time flow across Memory, Shared Line, InnerLife, Gateway, and runtime
+  events
+- Read-only decay audit that flags dormant Memory, Shared Line review items,
+  old waiting InnerLife shares/inbox items, and InnerLife daemon errors without
+  mutating product state
 - Chinese and English UI switching
 - macOS menu bar / Windows tray entry
 - Unified ClaraCore app, tray, favicon, README, and packaging icon assets
@@ -187,7 +196,8 @@ The app has no renderer build step. `index.html` loads classic scripts.
 - `styles.css`: CSS import entry
 - `styles/`: shared and view-specific CSS
 - `electron/`: Electron main process, preload bridge, IPC, tray, and schedulers
-- `core/runtime/`: public runtime facade, paths, backup/restore, and import workflows
+- `core/runtime/`: public runtime facade, paths, backup/restore, import
+  workflows, bounded snapshots, and read-only decay audit
 - `core/version.js`: single product-version source shared by Desktop runtime, resource snapshots, and Gateway metadata
 - `core/db/`: schema, migrations, database adapter, settings, events, traces, and repositories
 - `core/memoria/`: Desktop Memoria domain facade

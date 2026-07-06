@@ -210,6 +210,7 @@ const modelOptions = window.createClaraCoreModelOptions({
 const logsView = window.createClaraCoreLogsView({
   dom: window.ClaraCoreDom,
   t,
+  escapeHtml,
   getSnapshot: () => snapshot,
   refreshSnapshot: refreshRuntimeSnapshotOnly
 });

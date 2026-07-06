@@ -25,6 +25,28 @@ function createInnerLifeShareRepository(helpers) {
     };
   }
 
+  function uniqueTokens(tokens) {
+    return [...new Set(tokens || [])];
+  }
+
+  function buildSharedLineTimingContext(resumePacket = {}) {
+    const current = resumePacket.currentPosition || {};
+    const sharedReality = resumePacket.sharedReality || {};
+    const agentState = resumePacket.agentState || {};
+    return [
+      current.summary ? `Current position: ${current.summary}` : "",
+      current.interpretationStatus ? `Interpretation status: ${current.interpretationStatus}` : "",
+      sharedReality.realityLine ? `Reality line: ${sharedReality.realityLine}` : "",
+      sharedReality.currentInterpretation ? `Current interpretation: ${sharedReality.currentInterpretation}` : "",
+      sharedReality.confirmedGround ? `Confirmed ground: ${sharedReality.confirmedGround}` : "",
+      sharedReality.provisionalRead ? `Provisional read: ${sharedReality.provisionalRead}` : "",
+      sharedReality.boundaryNotes ? `Boundary notes: ${sharedReality.boundaryNotes}` : "",
+      sharedReality.misreadRisks ? `Misread risks: ${sharedReality.misreadRisks}` : "",
+      resumePacket.nextStep ? `Next step: ${resumePacket.nextStep}` : "",
+      agentState.notes ? `Agent notes: ${agentState.notes}` : ""
+    ].filter(Boolean).join("\n");
+  }
+
   return {
     async listInnerLifeShares(status = "pending", limit = 20) {
       const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 20));
@@ -82,9 +104,12 @@ function createInnerLifeShareRepository(helpers) {
     async checkInnerLifeShareTiming(input = {}) {
       const agentId = resolveAgentIdentity(input || {}).id;
       const profile = await this.ensureInnerLifeProfile(agentId);
-      const context = String(input.context || "").trim();
+      const providedContext = String(input.context || "").trim();
       const sessionId = String(input.sessionId || "").trim() || null;
       const requestedShareId = String(input.shareId || "").trim();
+      const resumePacket = await this.getResumePacket({ agentId: profile.agent_id, lite: true });
+      const sharedLineContext = buildSharedLineTimingContext(resumePacket);
+      const context = providedContext || sharedLineContext;
       let share = requestedShareId ? await this.getInnerLifeShare(requestedShareId) : null;
       if (!share) {
         const available = await this.query(`
@@ -123,25 +148,30 @@ function createInnerLifeShareRepository(helpers) {
           snapshot: await this.getInnerLifeSnapshot()
         };
       }
-      const contextTokens = meaningfulTokens(context);
+      const explicitTokens = meaningfulTokens(providedContext);
+      const lineTokens = meaningfulTokens(sharedLineContext);
+      const contextTokens = meaningfulTokens([providedContext, sharedLineContext].filter(Boolean).join("\n"));
       const shareTokens = new Set(meaningfulTokens(share.body));
-      const overlap = contextTokens.filter((token) => shareTokens.has(token));
-      const hasAsk = /\b(ask|asked|question|share|need|use|recall|remember)\b/i.test(context) || /分享|需要|使用|记得|回忆|问题/u.test(context);
+      const explicitOverlap = uniqueTokens(explicitTokens.filter((token) => shareTokens.has(token)));
+      const lineOverlap = uniqueTokens(lineTokens.filter((token) => shareTokens.has(token)));
+      const overlap = uniqueTokens(contextTokens.filter((token) => shareTokens.has(token)));
+      const hasAsk = /\b(ask|asked|question|share|need|use|recall|remember)\b/i.test(providedContext) || /分享|需要|使用|记得|回忆|问题/u.test(providedContext);
+      const hasConnection = hasAsk || explicitOverlap.length > 0 || lineOverlap.length > 0;
       let decision = "defer";
       let reason = "Context is not specific enough yet.";
       if (!context) {
         decision = "defer";
-        reason = "No current context was provided.";
-      } else if (share.status === "pending" && (hasAsk || overlap.length > 0 || context.length >= 20)) {
+        reason = "No current context or Shared Line context was available.";
+      } else if (share.status === "pending" && hasConnection) {
         decision = "review_first";
         reason = overlap.length > 0
-          ? `Pending share matches: ${overlap.slice(0, 5).join(", ")}. Review before use.`
+          ? `Pending share connects to the current line: ${overlap.slice(0, 5).join(", ")}. Review before use.`
           : "Pending share may fit the current context, but it still requires review before use.";
-      } else if (share.status === "approved" && (hasAsk || overlap.length > 0 || context.length >= 20)) {
+      } else if (share.status === "approved" && hasConnection) {
         decision = "use";
-        reason = overlap.length > 0 ? `Approved share matches: ${overlap.slice(0, 5).join(", ")}.` : "Approved share fits the current context.";
+        reason = overlap.length > 0 ? `Approved share connects to the current line: ${overlap.slice(0, 5).join(", ")}.` : "Approved share fits the current context.";
       } else if (share.status === "deferred") {
-        decision = overlap.length > 0 || hasAsk ? "use" : "defer";
+        decision = hasConnection ? "use" : "defer";
         reason = decision === "use" ? "Deferred share now matches the current context." : "Deferred share still does not match the current context.";
       }
       const checkId = newId("inner_share_check");
@@ -155,7 +185,15 @@ function createInnerLifeShareRepository(helpers) {
           ${sqlString(context)},
           ${sqlString(decision)},
           ${sqlString(reason)},
-          ${jsonSql({ overlap })}
+          ${jsonSql({
+            overlap,
+            explicitOverlap,
+            lineOverlap,
+            hasAsk,
+            contextSource: providedContext ? "provided+shared_line" : "shared_line",
+            lineId: resumePacket.lineId || "",
+            positionId: resumePacket.currentPosition?.positionId || ""
+          })}
         );
       `);
       return {

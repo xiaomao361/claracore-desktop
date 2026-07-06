@@ -10,6 +10,7 @@ Keep this layer focused on orchestration:
 
 - resolve product paths and initialize the local product core
 - coordinate backup, restore, import, and export workflows
+- assemble bounded snapshots and read-only inspection summaries
 - expose stable functions used by Electron IPC, CLI, and Gateway
 - delegate domain behavior to `core/memoria`, `core/continuity`, and
   `core/innerlife`
@@ -20,6 +21,9 @@ Do not add new feature logic here when it belongs to a domain module.
 
 - `index.js`: public facade imported as `core/runtime`.
 - `paths.js`: ClaraCore root and product data path resolution.
+- `snapshot.js`: bounded Home/Logs/status snapshot assembly.
+- `decay.js`: read-only audit of dormant, stale, waiting, or error state across
+  Memory, Shared Line, and InnerLife.
 - `backup.js`: product backup, restore, restore preview, and backup listing.
 - `imports.js`: product JSON import/export, memory archive import/export, and
   hidden old Memoria, Continuity, and InnerLife copy import workflows.
@@ -44,3 +48,10 @@ Old Memoria imports have additional label constraints:
 
 This keeps copied data useful for Memoria search, filtering, and graph views
 without importing tokenizer-like noise from old service tables.
+
+## Decay Audit Rules
+
+Decay audit is diagnostic only. It may suggest that state needs review, but it
+must not archive Memory, approve or discard InnerLife shares, rewrite Shared
+Line positions, or recover daemon state by itself. Those mutations belong to
+explicit user or agent actions.

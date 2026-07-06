@@ -18,6 +18,7 @@ The Desktop runtime is Node/Electron.
   - `electron/schedulers.js`: InnerLife and Memoria maintenance timers
 - Product runtime facade: `core/runtime/index.js`
 - Memoria runtime workflows: `core/runtime/memoria.js`
+- Read-only decay audit: `core/runtime/decay.js`
 - Runtime snapshot assembly: `core/runtime/snapshot.js`
 - Runtime path helpers: `core/runtime/paths.js`
 - Backup and restore workflows: `core/runtime/backup.js`
@@ -89,7 +90,7 @@ Focused renderer modules live under `app/`:
 - `app/views/data.js`: Data, backup, import, export, and restore view
 - `app/views/home.js`: overview, modules, health, and trace summary view
 - `app/views/home-trace.js`: Home Gateway trace and agent activity helpers
-- `app/views/logs.js`: Logs view
+- `app/views/logs.js`: Logs view, read-only decay audit, and time flow
 - `app/views/memoria.js`: Memoria workbench, tabs, graph, labels, and embedding
 - `app/views/memoria-list.js`: Memoria list, label overview, agent filter, and
   memory item render helpers
@@ -145,6 +146,8 @@ Runtime should coordinate cross-module workflows:
 - delegate Home/status snapshot assembly to `core/runtime/snapshot.js`
 - delegate Memoria runtime workflows, graph cache refresh, maintenance, and
   embedding batch processing to `core/runtime/memoria.js`
+- delegate read-only stale/dormant/waiting-state inspection to
+  `core/runtime/decay.js`
 - delegate backup and restore to `core/runtime/backup.js`
 - delegate archive import/export and old-service imports through
   `core/runtime/imports.js`; focused implementation modules live under
@@ -171,14 +174,15 @@ compact response shaping, and model-generation fallback live in
 moving toward persistence and query orchestration only.
 
 Runtime modules may compose multiple domains for product workflows, such as
-snapshots, backup-gated imports, or archive export. They should not become the
-home for new domain rules.
+snapshots, backup-gated imports, archive export, or read-only decay audits. They
+should not become the home for new domain rules.
 
-Runtime snapshots must stay bounded. `buildProductSnapshot()` is the Home and
-status snapshot, so it should carry counts, summaries, and recent samples only.
-Full Memory lists, InnerLife history, Gateway trace browsing, and graph data
-must be fetched through focused paged or lazy-loaded IPC calls. The detailed
-resource rules live in [Runtime Memory Policy](RUNTIME_MEMORY_POLICY.md).
+Runtime snapshots must stay bounded. `buildProductSnapshot()` is the Home,
+Logs, and status snapshot, so it should carry counts, summaries, recent samples,
+and compact read-only inspection results only. Full Memory lists, InnerLife
+history, Gateway trace browsing, and graph data must be fetched through focused
+paged or lazy-loaded IPC calls. The detailed resource rules live in
+[Runtime Memory Policy](RUNTIME_MEMORY_POLICY.md).
 
 Database implementation belongs in `core/db`. Product persistence is split into
 repositories under `core/db/repositories/`.

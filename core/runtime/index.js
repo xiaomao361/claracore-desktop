@@ -5,6 +5,7 @@ const { createBackupRuntime } = require("./backup");
 const { createImportRuntime } = require("./imports");
 const { createSnapshotRuntime } = require("./snapshot");
 const { createMemoryRuntime } = require("./memoria");
+const { createDecayRuntime } = require("./decay");
 const { PRODUCT_VERSION } = require("../version");
 const continuity = require("../continuity");
 const innerlife = require("../innerlife");
@@ -64,8 +65,16 @@ const snapshotRuntime = createSnapshotRuntime({
   ensureProductCore
 });
 
+const decayRuntime = createDecayRuntime({
+  ensureProductCore
+});
+
 async function buildProductSnapshot(app) {
   return snapshotRuntime.buildProductSnapshot(app);
+}
+
+async function getProductDecayAudit(app, input = {}) {
+  return decayRuntime.getProductDecayAudit(app, input);
 }
 
 const {
@@ -317,6 +326,7 @@ module.exports = {
   getProductMemoryMergeSuggestions,
   getProductDeletedMemories,
   getProductArchivedMemories,
+  getProductDecayAudit,
   getProductRestrictedMemories,
   getProductSharedLine,
   getProductGatewayContext,
