@@ -6,6 +6,10 @@ This directory is the standalone Desktop repo. Confirm `git status --short`, rep
 
 ## Product Direction
 
+North star (see `docs/POSITIONING.md`): ClaraCore does not try to understand
+the whole world; it maintains the world that Clara and the user own together.
+Every feature must maintain that shared world, not just add capability.
+
 Default to simplicity and restraint. The current baseline is:
 
 - Memoria stores and recalls memory
