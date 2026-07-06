@@ -2,7 +2,7 @@ const innerlifeSessionToolDefinitions = [
   {
     "name": "innerlife_session_start",
     "title": "Start InnerLife Session",
-    "description": "Start a Desktop-owned InnerLife session and return a compact share_plan plus session id. Fetch innerlife_briefing lazily for full context.",
+    "description": "Start a Desktop-owned InnerLife session and return a compact share_plan, session id, the active Shared Line resume packet (shared_line), and a shared_lines summary list in one call. Pass lineId to activate/switch to that Shared Line in the same call. Replaces separate shared_line_list / shared_line_activate / shared_line_get startup calls. Fetch innerlife_briefing lazily for full context.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -26,6 +26,10 @@ const innerlifeSessionToolDefinitions = [
         },
         "includeBriefing": {
           "type": "boolean"
+        },
+        "lineId": {
+          "type": "string",
+          "description": "Optional Shared Line id to activate in the same call."
         }
       },
       "additionalProperties": false

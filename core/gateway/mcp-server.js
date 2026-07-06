@@ -52,9 +52,20 @@ process.once("SIGTERM", () => {
   process.exit(143);
 });
 
-function exitWhenTransportCloses() {
+let inFlightRequests = 0;
+let transportClosed = false;
+
+function maybeExitAfterDrain() {
+  if (!transportClosed || inFlightRequests > 0) return;
   closeCachedDatabase();
   process.exit(0);
+}
+
+function exitWhenTransportCloses() {
+  // Drain in-flight tools/call requests before exiting so one-shot piped
+  // clients still receive their responses after stdin closes.
+  transportClosed = true;
+  maybeExitAfterDrain();
 }
 
 function isPackagedGatewayProcess() {
@@ -258,6 +269,7 @@ function writeResponse(response) {
 async function handleMessage(message) {
   if (!message || message.jsonrpc !== "2.0" || typeof message.method !== "string") return;
   if (message.id === undefined || message.id === null) return;
+  inFlightRequests += 1;
   try {
     const result = await handleRequest(message);
     writeResponse({
@@ -274,6 +286,9 @@ async function handleMessage(message) {
         message: error.message
       }
     });
+  } finally {
+    inFlightRequests -= 1;
+    maybeExitAfterDrain();
   }
 }
 

@@ -76,7 +76,10 @@ Useful MCP tools include:
 - `innerlife_status`
 - `innerlife_briefing`
 - `innerlife_sessions`
-- `innerlife_session_start`
+- `innerlife_session_start` (returns share_plan plus the active Shared Line
+  resume packet and a `shared_lines` summary in one call; pass `lineId` to
+  activate a line in the same call — no separate `shared_line_list` /
+  `shared_line_activate` / `shared_line_get` startup round trips needed)
 - `innerlife_session_end` (returns a compact acknowledgement: closed session,
   created ids, afterthought share, converged/reason; full state comes from
   `innerlife_status` / `innerlife_briefing`)

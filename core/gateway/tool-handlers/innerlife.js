@@ -1,10 +1,47 @@
 const innerlife = require("../../innerlife");
+const continuity = require("../../continuity");
+
+function compactLineSummary(line) {
+  return {
+    id: line.id,
+    agentId: line.agentId,
+    title: line.title,
+    active: line.active,
+    interpretationStatus: line.interpretationStatus,
+    updatedAt: line.updatedAt
+  };
+}
 
 async function handleInnerLifeTool(name, args, context) {
   const { core, currentMcpAgentId, textResult } = context;
 
   if (name === "innerlife_session_start") {
-    return textResult(await innerlife.startSession(core, args));
+    const startPacket = await innerlife.startSession(core, args);
+    // Bundle the Shared Line startup context so agents do not need separate
+    // shared_line_list / shared_line_activate / shared_line_get round trips.
+    const lineId = String(args.lineId || args.line_id || "").trim();
+    let sharedLine = null;
+    let activatedLine = null;
+    let sharedLineError = "";
+    try {
+      if (lineId) {
+        const activation = await continuity.activate(core, lineId, { lite: true });
+        activatedLine = activation.line;
+        sharedLine = activation.sharedLine;
+      } else {
+        sharedLine = await continuity.get(core, { agentId: currentMcpAgentId(args), lite: true });
+      }
+    } catch (error) {
+      sharedLineError = error.message || String(error);
+    }
+    const lines = await continuity.list(core, { limit: 20 });
+    return textResult({
+      ...startPacket,
+      shared_line: sharedLine,
+      shared_lines: lines.map(compactLineSummary),
+      ...(activatedLine ? { activated_line: compactLineSummary(activatedLine) } : {}),
+      ...(sharedLineError ? { shared_line_error: sharedLineError } : {})
+    });
   }
 
   if (name === "innerlife_session_end") {
