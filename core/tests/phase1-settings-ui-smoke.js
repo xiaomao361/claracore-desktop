@@ -36,8 +36,13 @@ async function main() {
       innerlifeApiKeyReadonly: document.querySelector("#innerLifeApiKey").hasAttribute("readonly"),
       innerlifeLoop: document.querySelector("#innerLifePollSeconds").value,
       innerlifeStatus: document.querySelector("#innerLifeModelStatus").textContent,
-      hasBuiltInProvider: [...document.querySelectorAll("#memoriaProvider option, #innerLifeBackend option")]
-        .some((option) => option.value === "claracore-built-in"),
+      memoriaOptions: [...document.querySelectorAll("#memoriaProvider option")].map((option) => option.value),
+      innerlifeOptions: [...document.querySelectorAll("#innerLifeBackend option")].map((option) => option.value),
+      memoriaEndpointHidden: document.querySelector("#memoriaEndpointField").hidden,
+      memoriaModelHidden: document.querySelector("#memoriaModelField").hidden,
+      memoriaApiKeyHidden: document.querySelector("#memoriaApiKeyField").hidden,
+      memoriaConnectionHidden: document.querySelector("#memoriaConnectionRow").hidden,
+      innerlifeApiKeyHidden: document.querySelector("#innerLifeApiKeyField").hidden,
       hasDimensionField: Boolean(document.querySelector("#memoriaDimension")),
       hasMemoriaSourceField: Boolean(document.querySelector("#memoriaSource")),
       hasInnerLifeSourceField: Boolean(document.querySelector("#innerLifeSource"))
@@ -52,14 +57,24 @@ async function main() {
     if (!["ready", "可用"].some((label) => defaults.innerlifeStatus.toLowerCase().includes(label))) {
       throw new Error(`Unexpected InnerLife status: ${defaults.innerlifeStatus}`);
     }
-    if (!defaults.hasBuiltInProvider) {
-      throw new Error("Settings page should expose ClaraCore built-in model providers.");
+    if (defaults.memoriaOptions.join(",") !== "claracore-built-in,ollama,disabled") {
+      throw new Error(`Unexpected Memoria provider options: ${defaults.memoriaOptions.join(",")}`);
+    }
+    if (defaults.innerlifeOptions.join(",") !== "disabled,ollama,openai-compatible") {
+      throw new Error(`Unexpected InnerLife provider options: ${defaults.innerlifeOptions.join(",")}`);
+    }
+    if (!defaults.memoriaEndpointHidden || !defaults.memoriaModelHidden || !defaults.memoriaApiKeyHidden || !defaults.memoriaConnectionHidden) {
+      throw new Error(`Built-in Memoria fields should be hidden: ${JSON.stringify(defaults)}`);
+    }
+    if (defaults.innerlifeApiKeyHidden) {
+      throw new Error("OpenAI-compatible InnerLife API key field should be visible.");
     }
     if (defaults.hasDimensionField || defaults.hasMemoriaSourceField || defaults.hasInnerLifeSourceField) {
       throw new Error(`Settings page should not expose internal dimension/source fields: ${JSON.stringify(defaults)}`);
     }
 
-    await page.selectOption("#memoriaProvider", "openai-compatible");
+    await page.selectOption("#memoriaProvider", "ollama");
+    await page.waitForFunction(() => !document.querySelector("#memoriaEndpointField")?.hidden && !document.querySelector("#memoriaConnectionRow")?.hidden);
     await page.fill("#memoriaEndpoint", "http://127.0.0.1:11437");
     await page.fill("#memoriaModel", "bge-m3-ui-smoke");
     await page.selectOption("#innerLifeBackend", "ollama");
@@ -67,7 +82,6 @@ async function main() {
     await page.fill("#innerLifeLightModel", "ui-light");
     await page.fill("#innerLifeDeepModel", "ui-deep");
     await page.fill("#innerLifePollSeconds", "44");
-    await page.fill("#innerLifeApiKey", "env:UI_INNERLIFE_API_KEY");
     await page.click("#saveSettings");
     await page.waitForFunction(
       async () => {
@@ -82,8 +96,8 @@ async function main() {
     if (!snapshot.data.databasePath.startsWith(dataRoot)) {
       throw new Error(`Settings UI wrote outside product data root: ${snapshot.data.databasePath}`);
     }
-    if (snapshot.configuration.memoria.provider !== "openai-compatible") {
-      throw new Error("Settings UI did not persist OpenAI-compatible Memory provider.");
+    if (snapshot.configuration.memoria.provider !== "ollama") {
+      throw new Error("Settings UI did not persist Ollama Memory provider.");
     }
     if (snapshot.configuration.memoria.endpoint !== "http://127.0.0.1:11437") {
       throw new Error("Settings UI did not persist Memoria endpoint.");
@@ -106,8 +120,8 @@ async function main() {
     if (snapshot.configuration.innerlife.pollSeconds !== "2640") {
       throw new Error("Settings UI did not persist InnerLife loop minutes as seconds.");
     }
-    if (snapshot.configuration.innerlife.apiKeyStatus !== "configured" || snapshot.configuration.innerlife.apiKeyRef !== "env:UI_INNERLIFE_API_KEY") {
-      throw new Error("Settings UI did not persist InnerLife API key reference.");
+    if (snapshot.configuration.innerlife.apiKeyStatus !== "configured" || !snapshot.configuration.innerlife.apiKeyRef) {
+      throw new Error("Settings UI cleared the default InnerLife API key reference.");
     }
 
     await app.close();

@@ -706,12 +706,11 @@
                     <select id="memoriaProvider">
                       <option value="claracore-built-in">ClaraCore built-in</option>
                       <option value="ollama">Ollama</option>
-                      <option value="openai-compatible">OpenAI compatible</option>
                       <option value="disabled">Disabled</option>
                     </select>
                   </label>
-                  <label class="field"><span data-i18n="settings.endpoint">Endpoint</span><input id="memoriaEndpoint" /></label>
-                  <label class="field">
+                  <label id="memoriaEndpointField" class="field"><span data-i18n="settings.endpoint">Endpoint</span><input id="memoriaEndpoint" /></label>
+                  <label id="memoriaModelField" class="field">
                     <span data-i18n="settings.embeddingModel">Embedding model</span>
                     <span class="model-picker-field">
                       <input id="memoriaModel" list="memoriaModelOptions" />
@@ -720,7 +719,7 @@
                     <datalist id="memoriaModelOptions"></datalist>
                     <small id="memoriaModelNotice" class="quiet" aria-live="polite"></small>
                   </label>
-                  <label class="field">
+                  <label id="memoriaApiKeyField" class="field">
                     <span data-i18n="settings.apiKeyRef">API key reference</span>
                     <span class="copy-field">
                       <input id="memoriaApiKey" data-secret-input="true" data-i18n-placeholder="settings.apiKeyRefPlaceholder" placeholder="optional" />
@@ -728,7 +727,7 @@
                     </span>
                   </label>
                 </div>
-                <div class="connection-test-row">
+                <div id="memoriaConnectionRow" class="connection-test-row">
                   <button id="testMemoriaConnection" class="secondary" type="button" data-i18n="settings.testConnection">Test connection</button>
                   <span id="memoriaConnectionNotice" class="connection-test-notice" aria-live="polite" data-i18n="settings.connectionNotTested">Not tested this session.</span>
                 </div>
@@ -747,17 +746,15 @@
                     <select id="innerLifeBackend">
                       <option value="disabled">Disabled</option>
                       <option value="ollama">Ollama</option>
-                      <option value="claracore-built-in">ClaraCore built-in</option>
                       <option value="openai-compatible">OpenAI compatible</option>
-                      <option value="custom-command">Custom command</option>
                     </select>
                   </label>
-                  <label class="field"><span data-i18n="settings.endpoint">Endpoint</span><input id="innerLifeEndpoint" /></label>
-                  <label class="field">
+                  <label id="innerLifeEndpointField" class="field"><span data-i18n="settings.endpoint">Endpoint</span><input id="innerLifeEndpoint" /></label>
+                  <label id="innerLifeLightModelField" class="field">
                     <span data-i18n="settings.lightModel">Light model</span>
                     <input id="innerLifeLightModel" list="innerLifeModelOptions" />
                   </label>
-                  <label class="field">
+                  <label id="innerLifeDeepModelField" class="field">
                     <span data-i18n="settings.deepModel">Deep model</span>
                     <span class="model-picker-field">
                       <input id="innerLifeDeepModel" list="innerLifeModelOptions" />
@@ -766,8 +763,8 @@
                     <datalist id="innerLifeModelOptions"></datalist>
                     <small id="innerLifeModelNotice" class="quiet" aria-live="polite"></small>
                   </label>
-                  <label class="field"><span data-i18n="settings.pollMinutes">Loop minutes</span><input id="innerLifePollSeconds" type="number" min="1" step="1" /></label>
-                  <label class="field">
+                  <label id="innerLifePollField" class="field"><span data-i18n="settings.pollMinutes">Loop minutes</span><input id="innerLifePollSeconds" type="number" min="1" step="1" /></label>
+                  <label id="innerLifeApiKeyField" class="field">
                     <span data-i18n="settings.apiKeyRef">API key reference</span>
                     <span class="copy-field">
                       <input id="innerLifeApiKey" data-secret-input="true" data-i18n-placeholder="settings.apiKeyRefPlaceholder" placeholder="default DeepSeek key or env:OPENAI_API_KEY" />
@@ -775,7 +772,7 @@
                     </span>
                   </label>
                 </div>
-                <div class="connection-test-row">
+                <div id="innerLifeConnectionRow" class="connection-test-row">
                   <button id="testInnerLifeConnection" class="secondary" type="button" data-i18n="settings.testConnection">Test connection</button>
                   <span id="innerLifeConnectionNotice" class="connection-test-notice" aria-live="polite" data-i18n="settings.connectionNotTested">Not tested this session.</span>
                 </div>

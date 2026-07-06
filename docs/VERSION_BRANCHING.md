@@ -81,6 +81,13 @@ git diff --check
   `@xenova/transformers`; runtime loading disables remote model downloads.
 - The Settings provider selector exposes `ClaraCore built-in` as a current
   option, not a future placeholder.
+- The Memory embedding UI keeps the default path simple: built-in hides
+  endpoint/model/API-key controls, and the visible provider choices are only
+  ClaraCore built-in, Ollama, or Disabled. OpenAI-compatible embedding remains a
+  backend compatibility path, not the default Settings workflow.
+- InnerLife Settings expose only the currently runnable providers: Disabled,
+  Ollama, or OpenAI-compatible. There is no ClaraCore built-in InnerLife model
+  yet.
 - Fresh installs default `innerlife.enabled` to ON with the shared DeepSeek
   provider/key path.
 - The API key placeholder now makes the default/shared key path explicit while

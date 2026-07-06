@@ -892,6 +892,7 @@ memoriaEndpoint?.addEventListener("blur", () => {
 });
 
 memoriaProvider?.addEventListener("change", () => {
+  settingsView.updateModelFieldVisibility();
   loadModelOptions("memoria", { silent: true }).catch(console.error);
 });
 
@@ -900,6 +901,7 @@ innerLifeEndpoint?.addEventListener("blur", () => {
 });
 
 innerLifeBackend?.addEventListener("change", () => {
+  settingsView.updateModelFieldVisibility();
   loadModelOptions("innerlife", { silent: true }).catch(console.error);
 });
 

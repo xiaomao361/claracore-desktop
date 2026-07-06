@@ -1,4 +1,6 @@
 function createClaraCoreSettingsView(context) {
+  const BUILT_IN_EMBEDDING_MODEL = "Xenova/bge-small-zh-v1.5";
+  const BUILT_IN_EMBEDDING_ENDPOINT = "http://127.0.0.1:11434";
   const {
     dom,
     t,
@@ -6,8 +8,11 @@ function createClaraCoreSettingsView(context) {
     state = {}
   } = context;
   const {
-    memoriaProvider, memoriaEndpoint, memoriaModel, memoriaApiKey, memoriaModelStatus,
-    innerLifeBackend, innerLifeEndpoint, innerLifeLightModel, innerLifeDeepModel, innerLifePollSeconds, innerLifeApiKey,
+    memoriaProvider, memoriaEndpointField, memoriaEndpoint, memoriaModelField, memoriaModel, memoriaApiKeyField, memoriaApiKey,
+    memoriaConnectionRow, memoriaModelStatus,
+    innerLifeBackend, innerLifeEndpointField, innerLifeEndpoint, innerLifeLightModelField, innerLifeLightModel,
+    innerLifeDeepModelField, innerLifeDeepModel, innerLifePollField, innerLifePollSeconds, innerLifeApiKeyField, innerLifeApiKey,
+    innerLifeConnectionRow,
     innerLifeApiKeySummary, innerLifeModelStatus,
     settingsLanguage, settingsTheme, settingsMotion, settingsCloseBehavior, settingsCloseBehaviorSummary, settingsTrayStatus,
     settingsThemeSummary, settingsMotionSummary, settingsDataStatus, settingsDataRoot, settingsPathSummary, settingsPathDetails,
@@ -65,6 +70,29 @@ function displayMinutesToSeconds(value) {
 
 function setInputValue(input, value) {
   if (input) input.value = value == null ? "" : String(value);
+}
+
+function setHidden(element, hidden) {
+  if (element) element.hidden = Boolean(hidden);
+}
+
+function updateModelFieldVisibility() {
+  const memoryProvider = memoriaProvider?.value || "claracore-built-in";
+  const memoryExternal = memoryProvider === "ollama";
+  setHidden(memoriaEndpointField, !memoryExternal);
+  setHidden(memoriaModelField, !memoryExternal);
+  setHidden(memoriaApiKeyField, true);
+  setHidden(memoriaConnectionRow, !memoryExternal);
+
+  const innerLifeProvider = innerLifeBackend?.value || "disabled";
+  const innerLifeEnabled = innerLifeProvider !== "disabled";
+  const innerLifeUsesApiKey = innerLifeProvider === "openai-compatible";
+  setHidden(innerLifeEndpointField, !innerLifeEnabled);
+  setHidden(innerLifeLightModelField, !innerLifeEnabled);
+  setHidden(innerLifeDeepModelField, !innerLifeEnabled);
+  setHidden(innerLifePollField, !innerLifeEnabled);
+  setHidden(innerLifeApiKeyField, !innerLifeUsesApiKey);
+  setHidden(innerLifeConnectionRow, !innerLifeEnabled);
 }
 
 function escapeHtml(value) {
@@ -167,6 +195,7 @@ function renderSettings() {
   innerLifeModelStatus.textContent = innerLifeStatus.label;
   innerLifeModelStatus.className = innerLifeStatus.className;
   innerLifeModelStatus.title = innerLifeStatus.note;
+  updateModelFieldVisibility();
 }
 
 function renderAppearanceSettings() {
@@ -202,18 +231,22 @@ function embeddingConfigChanged(form) {
 }
 
 function collectSettingsForm() {
-  return {
-    "memory.embedding.provider": memoriaProvider.value,
-    "memory.embedding.base_url": memoriaEndpoint.value,
-    "memory.embedding.model": memoriaModel.value,
-    "memory.embedding.api_key_ref": getSecretInputValue(memoriaApiKey),
-    "innerlife.provider": innerLifeBackend.value,
+  const memoryProvider = memoriaProvider.value;
+  const innerLifeProvider = innerLifeBackend.value;
+  const form = {
+    "memory.embedding.provider": memoryProvider,
+    "memory.embedding.base_url": memoryProvider === "claracore-built-in" ? BUILT_IN_EMBEDDING_ENDPOINT : memoriaEndpoint.value,
+    "memory.embedding.model": memoryProvider === "claracore-built-in" ? BUILT_IN_EMBEDDING_MODEL : memoriaModel.value,
+    "innerlife.provider": innerLifeProvider,
     "innerlife.base_url": innerLifeEndpoint.value,
     "innerlife.light_model": innerLifeLightModel.value,
     "innerlife.deep_model": innerLifeDeepModel.value,
-    "innerlife.loop_seconds": displayMinutesToSeconds(innerLifePollSeconds.value),
-    "innerlife.llm.api_key_ref": getSecretInputValue(innerLifeApiKey)
+    "innerlife.loop_seconds": displayMinutesToSeconds(innerLifePollSeconds.value)
   };
+  if (innerLifeProvider === "openai-compatible") {
+    form["innerlife.llm.api_key_ref"] = getSecretInputValue(innerLifeApiKey);
+  }
+  return form;
 }
 
 function collectAppearanceSettingsForm() {
@@ -231,7 +264,8 @@ function collectAppearanceSettingsForm() {
     embeddingConfigChanged,
     getSecretInputValue,
     renderAppearanceSettings,
-    renderSettings
+    renderSettings,
+    updateModelFieldVisibility
   };
 }
 
