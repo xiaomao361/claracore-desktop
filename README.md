@@ -80,7 +80,9 @@ Included:
 - InnerLife share timing checks connect against the current Shared Line context
   by default and record explicit/context/line overlap metadata before an agent
   chooses whether to use or defer a share
-- Settings > Models tab for Memoria embedding configuration, InnerLife model configuration, endpoint model discovery, secret references, and loop cadence
+- Settings > Models tab keeps provider flows explicit: Memory embedding exposes
+  ClaraCore built-in, Ollama, or Disabled, while InnerLife exposes Disabled,
+  Ollama, or OpenAI-compatible provider settings
 - InnerLife runtime panel for daemon enable/pause/tick and doctor status; sessions, digests, inbox, and timing checks sit behind a collapsed Pipeline evidence section
 - Verified SQLite product backups with restore preview and safety-backup restore
 - Full product JSON export/import for portable ClaraCore Desktop data
