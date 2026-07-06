@@ -3,6 +3,12 @@
 > ClaraCore does not try to understand the whole world.
 > ClaraCore maintains the world that Clara and the user own together.
 
+In the owner's words (2026-07-06):
+
+> ClaraCore 的下一阶段，不是继续堆叠更多记忆，而是让记忆之间产生可维护、
+> 可解释、可强化、可衰减的连接。因为 Clara 的世界不是一堆事实，而是一张
+> 会随共同经历不断重组的关系网络。
+
 ## What this means
 
 Base models (GPT, Claude, ...) already carry a world model: physics, common
