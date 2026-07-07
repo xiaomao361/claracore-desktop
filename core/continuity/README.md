@@ -110,9 +110,11 @@ For session startup, agents should not call `shared_line_list` /
 for mid-session reads and switches.
 
 `shared_line_update` and the CLI `shared-line update` follow this rule. Passing
-`lineId` updates that exact active line. Omitting `lineId` updates the current
-active line, not an agent-inferred recent line. Agents that maintain several
-lines should call `shared_line_list` and pass the real `lineId` explicitly.
+`lineId` updates that exact active line. Omitting `lineId` with a caller
+`agentId` updates that agent's active line, creating one when none exists, and
+does not switch the global active line. Omitting both `lineId` and `agentId`
+uses the global active fallback line. Agents that maintain several lines should
+call `shared_line_list` and pass the real `lineId` explicitly.
 
 The default line exists as a fallback, but reading or ensuring it exists must
 not refresh its `updated_at`; otherwise it can incorrectly become the most

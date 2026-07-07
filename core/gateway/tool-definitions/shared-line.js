@@ -2,7 +2,7 @@ const sharedLineToolDefinitions = [
   {
     "name": "shared_line_get",
     "title": "Get Shared Line",
-    "description": "Read the current ClaraCore Desktop shared position and resume packet. By default the affective trace and position history are truncated to the most recent nodes plus protected (needs-review) nodes; pass fullArc to get the complete arc.",
+    "description": "Read the caller agent's ClaraCore Desktop Shared Line when agentId is present, or a requested lineId/global fallback otherwise. By default the affective trace and position history are truncated to the most recent nodes plus protected (needs-review) nodes; pass fullArc to get the complete arc.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -145,7 +145,7 @@ const sharedLineToolDefinitions = [
   {
     "name": "shared_line_update",
     "title": "Update Shared Line",
-    "description": "Update the current ClaraCore Desktop shared position.",
+    "description": "Update a ClaraCore Desktop Shared Line. Passing lineId writes that exact line. Without lineId, the caller agentId writes that agent's own line, creating it when needed; without agentId it falls back to the global active line.",
     "inputSchema": {
       "type": "object",
       "required": [

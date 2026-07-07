@@ -89,6 +89,34 @@ async function main() {
   if (second.snapshots[0].reason !== "confirmed_overwrite") {
     throw new Error(`Confirmed overwrite snapshot reason mismatch: ${second.snapshots[0].reason}`);
   }
+  const codexLine = await runtime.saveProductSharedLine(app, {
+    agentId: "codex",
+    summary: "Codex agent-owned line should not overwrite the global active Shared Line.",
+    interpretationStatus: "confirmed"
+  });
+  const laraLine = await runtime.saveProductSharedLine(app, {
+    agentId: "lara",
+    summary: "Lara agent-owned line should stay separate from Codex.",
+    interpretationStatus: "confirmed"
+  });
+  if (!codexLine.currentPosition.lineId || codexLine.currentPosition.lineId === second.currentPosition.lineId) {
+    throw new Error("Agent-owned Codex line should not reuse the global active Shared Line.");
+  }
+  if (!laraLine.currentPosition.lineId || laraLine.currentPosition.lineId === codexLine.currentPosition.lineId) {
+    throw new Error("Agent-owned Lara line should be separate from Codex.");
+  }
+  const codexResume = await runtime.getProductSharedLine(app, { agentId: "codex" });
+  const laraResume = await runtime.getProductSharedLine(app, { agentId: "lara" });
+  const globalResume = await runtime.getProductSharedLine(app);
+  if (codexResume.currentPosition.summary !== "Codex agent-owned line should not overwrite the global active Shared Line.") {
+    throw new Error(`Codex resume returned the wrong line: ${codexResume.currentPosition.summary}`);
+  }
+  if (laraResume.currentPosition.summary !== "Lara agent-owned line should stay separate from Codex.") {
+    throw new Error(`Lara resume returned the wrong line: ${laraResume.currentPosition.summary}`);
+  }
+  if (globalResume.currentPosition.summary !== second.currentPosition.summary) {
+    throw new Error("Agent-owned writes should not move or overwrite the global active Shared Line.");
+  }
   const { database } = await runtime.ensureProductCore(app);
   const handoff = await database.createContinuityHandoff({
     objective: "Phase 3 handoff objective",
@@ -137,6 +165,7 @@ async function main() {
   const historyRows = await database.query(`
     SELECT summary, interpretation_status, facts_used_json
     FROM continuity_position_history
+    WHERE line_id = 'line_default'
     ORDER BY created_at ASC, id ASC;
   `);
   if (historyRows.length !== 2) {
@@ -148,6 +177,7 @@ async function main() {
   const snapshotRows = await database.query(`
     SELECT summary, reason
     FROM continuity_snapshots
+    WHERE line_id = 'line_default'
     ORDER BY created_at ASC, id ASC;
   `);
   if (snapshotRows.length !== 2) {

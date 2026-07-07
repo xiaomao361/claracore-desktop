@@ -102,15 +102,17 @@ function createInnerLifeShareRepository(helpers) {
     },
 
     async checkInnerLifeShareTiming(input = {}) {
-      const agentId = resolveAgentIdentity(input || {}).id;
-      const profile = await this.ensureInnerLifeProfile(agentId);
       const providedContext = String(input.context || "").trim();
       const sessionId = String(input.sessionId || "").trim() || null;
       const requestedShareId = String(input.shareId || "").trim();
+      const requestedShare = requestedShareId ? await this.getInnerLifeShare(requestedShareId) : null;
+      const hasExplicitAgent = Boolean(input?.agentId || input?.agent_id || input?.agent);
+      const agentId = hasExplicitAgent ? resolveAgentIdentity(input || {}).id : requestedShare?.agent_id || resolveAgentIdentity(input || {}).id;
+      const profile = await this.ensureInnerLifeProfile(agentId);
       const resumePacket = await this.getResumePacket({ agentId: profile.agent_id, lite: true });
       const sharedLineContext = buildSharedLineTimingContext(resumePacket);
       const context = providedContext || sharedLineContext;
-      let share = requestedShareId ? await this.getInnerLifeShare(requestedShareId) : null;
+      let share = requestedShare;
       if (!share) {
         const available = await this.query(`
           SELECT id
@@ -324,13 +326,14 @@ function createInnerLifeShareRepository(helpers) {
         throw new Error("Only approved InnerLife shares can be applied to Shared Line.");
       }
       await this.saveCurrentPosition({
+        agentId: share.agent_id,
         summary: share.body,
         interpretationStatus: "draft",
         factsUsed: [share.id],
         source: "innerlife",
         confirmOverwrite: true
       });
-      const sharedLine = await this.getResumePacket();
+      const sharedLine = await this.getResumePacket({ agentId: share.agent_id, lite: true });
       await this.exec(`
         UPDATE innerlife_shares
         SET decision_reason = ${sqlString(`${share.decision_reason || ""}\nApplied to Shared Line: ${sharedLine.currentPosition.positionId}`.trim())},

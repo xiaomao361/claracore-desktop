@@ -255,11 +255,27 @@ function installContinuityRepository(ProductDatabase, helpers) {
       const rows = await this.query(`
         SELECT id
         FROM continuity_lines
-        WHERE agent_id = ${sqlString(agentId)} AND status = 'active'
+        WHERE agent_id = ${sqlString(agentId)} AND status = 'active' AND id != 'line_default'
         ORDER BY updated_at DESC, created_at DESC
         LIMIT 1;
       `);
       return rows[0]?.id || null;
+    },
+
+    async ensureContinuityLineForAgent(agentIdInput = "") {
+      if (!String(agentIdInput || "").trim()) return null;
+      const identity = resolveAgentIdentity({ agentId: agentIdInput });
+      const agentId = String(identity.id || "").trim();
+      if (!agentId) return null;
+      const existing = await this.findContinuityLineIdForAgent(agentId);
+      if (existing) return existing;
+      const id = newId("line");
+      const title = `${agentId} Shared Line`;
+      await this.exec(`
+        INSERT INTO continuity_lines (id, agent_id, title, status)
+        VALUES (${sqlString(id)}, ${sqlString(agentId)}, ${sqlString(title)}, 'active');
+      `);
+      return id;
     },
 
     async listContinuityLines(input = 20) {
@@ -421,7 +437,9 @@ function installContinuityRepository(ProductDatabase, helpers) {
     },
 
     async saveCurrentPosition(input) {
-      const lineId = await this.resolveContinuityLineId(input?.lineId || null);
+      const explicitLineId = input?.lineId || input?.line_id || null;
+      const agentLineId = explicitLineId ? null : await this.ensureContinuityLineForAgent(input?.agentId || input?.agent_id || "");
+      const lineId = await this.resolveContinuityLineId(explicitLineId || agentLineId || null);
       const summary = String(input?.summary || "").trim();
       if (!summary) throw new Error("Current position summary is required.");
       const status = normalizeInterpretationStatus(input?.interpretationStatus || input?.interpretation_status || "draft");
@@ -596,7 +614,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
       // lite skips the full line lists and other agents' states; write
       // acknowledgements only need the saved position plus recent context.
       const lite = input.lite === true;
-      const agentLineId = input?.lineId ? null : await this.findContinuityLineIdForAgent(input?.agentId || input?.agent_id || "");
+      const agentLineId = input?.lineId ? null : await this.ensureContinuityLineForAgent(input?.agentId || input?.agent_id || "");
       const currentPosition = await this.getCurrentPosition(input.lineId || agentLineId || null);
       const metadata = currentPosition.metadata || {};
       const [lines, archivedLines, history, snapshots, handoffs, agentState, agentStates, modelAdjustment] = await Promise.all([

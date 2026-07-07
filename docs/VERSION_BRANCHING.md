@@ -4,7 +4,7 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- The current local version is `0.4.3`.
+- The current local version is `0.4.4`.
 - Historical `0.1.x` and `0.2.x` planning notes are archived under
   `docs/archive/`.
 
@@ -38,6 +38,27 @@ npm run dist:mac
 
 Only install or replace the daily-use app after the target build passes the
 focused smoke gates for its changed surface.
+
+## v0.4.4 Checkpoint
+
+`0.4.4` fixes multi-agent Shared Line ownership after Streamable HTTP:
+
+- `shared_line_get` and `shared_line_update` now use the caller agent identity
+  when no explicit `lineId` is supplied.
+- Each agent gets its own active Shared Line on demand; the global default line
+  remains a fallback only when no agent identity is present.
+- InnerLife briefing, digest, process-once, share timing, and share-to-line
+  application read/write Shared Line context through the same agent scope.
+
+Validation for this checkpoint:
+
+```bash
+npm run check
+node core/tests/phase3-shared-line-smoke.js
+node core/tests/phase5-innerlife-smoke.js
+node core/tests/streamable-http-gateway-smoke.js
+git diff --check
+```
 
 ## v0.4.3 Checkpoint
 

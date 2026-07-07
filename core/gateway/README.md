@@ -91,7 +91,10 @@ fallback config from Agent Access.
 - `lineId` values are real `continuity_lines.id` values. Agents should get them
   from `shared_line_list`; names such as `lara_love` are not implicit aliases.
 - `shared_line_update` writes the requested `lineId` when provided. Without
-  `lineId`, it writes the current active line.
+  `lineId`, it writes the caller agent's own active line using the transport
+  identity (`X-ClaraCore-Agent-ID` for Streamable HTTP, `CLARACORE_AGENT_ID` for
+  stdio), creating that line when needed. Without either `lineId` or agent
+  identity, it falls back to the global active line.
 - The tool response is loaded from the line that was actually written, so
   agents can trust the returned resume packet.
 - Existing `current_positions` rows are updated by `line_id`. There is one

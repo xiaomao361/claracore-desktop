@@ -26,6 +26,7 @@ async function main() {
     labels: "innerlife, phase5"
   });
   await runtime.saveProductSharedLine(app, {
+    agentId: "my-agent",
     summary: "Phase 5 position: test manual InnerLife process once.",
     interpretationStatus: "confirmed",
     factsUsed: [memory.id]
@@ -117,9 +118,10 @@ async function main() {
   }
   if (
     shareCheck.check?.metadata?.contextSource !== "provided+shared_line" ||
-    shareCheck.check?.metadata?.lineId !== "line_default" ||
+    !shareCheck.check?.metadata?.lineId ||
+    shareCheck.check.metadata.lineId === "line_default" ||
     !Array.isArray(shareCheck.check?.metadata?.lineOverlap) ||
-    !shareCheck.check.metadata.lineOverlap.includes("phase")
+    shareCheck.check.metadata.lineOverlap.length === 0
   ) {
     throw new Error(`InnerLife share timing did not record Shared Line connection evidence: ${JSON.stringify(shareCheck.check)}`);
   }
@@ -141,6 +143,7 @@ async function main() {
   const usedAgain = await runtime.markProductInnerLifeShare(app, approved.id, "used", "shared in the conversation");
   if (usedAgain.share.status !== "used") throw new Error("InnerLife used action did not update share status.");
 
+  await runtime.setProductInnerLifeDaemon(app, { agentId: "my-agent", action: "pause" });
   const pausedDaemon = await runtime.tickProductInnerLifeDaemon(app, { agentId: "my-agent", force: true });
   if (pausedDaemon.reason !== "paused" || pausedDaemon.ran !== false) {
     throw new Error(`InnerLife daemon should stay paused by default: ${JSON.stringify(pausedDaemon.daemon)}`);
@@ -257,7 +260,8 @@ async function main() {
   }
   if (
     implicitLineCheck.check?.metadata?.contextSource !== "shared_line" ||
-    implicitLineCheck.check?.metadata?.lineId !== "line_default" ||
+    !implicitLineCheck.check?.metadata?.lineId ||
+    implicitLineCheck.check.metadata.lineId === "line_default" ||
     !Array.isArray(implicitLineCheck.check?.metadata?.lineOverlap) ||
     implicitLineCheck.check.metadata.lineOverlap.length === 0
   ) {

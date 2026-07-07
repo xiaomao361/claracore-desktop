@@ -297,7 +297,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
 
     async getInnerLifeBriefing(agentId = DEFAULT_AGENT_ID) {
       const profile = await this.ensureInnerLifeProfile(agentId);
-      const resumePacket = await this.getResumePacket();
+      const resumePacket = await this.getResumePacket({ agentId: profile.agent_id, lite: true });
       const memories = await this.listMemories(5);
       const pendingShares = (await this.listInnerLifeShares("pending", 20)).filter((share) => share.agent_id === profile.agent_id).slice(0, 5);
       const pendingInbox = (await this.listInnerLifeInboxPage({ agentId: profile.agent_id, status: "pending", limit: 5, offset: 0 })).items;
@@ -343,7 +343,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       const profile = await this.ensureInnerLifeProfile(agentId);
       const mode = String(input.mode || "manual").trim() || "manual";
       const prompt = String(input.prompt || "").trim();
-      const resumePacket = await this.getResumePacket();
+      const resumePacket = await this.getResumePacket({ agentId: profile.agent_id, lite: true });
       const memories = await this.listMemories(5);
       const inboxItems = (await this.listInnerLifeInboxPage({ agentId: profile.agent_id, status: "pending", limit: 10, offset: 0 })).items;
       const digestId = newId("inner_digest");
@@ -503,7 +503,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
     async processInnerLifeOnce(input = {}) {
       const agentId = resolveAgentIdentity(input || {}).id;
       const profile = await this.ensureInnerLifeProfile(agentId);
-      const resumePacket = await this.getResumePacket();
+      const resumePacket = await this.getResumePacket({ agentId: profile.agent_id, lite: true });
       const memories = await this.listMemories(5);
       const inboxItems = (await this.listInnerLifeInboxPage({ agentId: profile.agent_id, status: "pending", limit: 5, offset: 0 })).items;
       const prompt = String(input?.prompt || "").trim();
