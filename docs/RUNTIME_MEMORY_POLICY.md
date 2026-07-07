@@ -64,6 +64,17 @@ quit path should release HTTP resources and best-effort stop sibling packaged
 The stdio Gateway itself must also close its cached database connection when
 stdin closes, because stdio transport lifetime is the agent connection lifetime.
 
+## Manual Repair Scratch Backups
+
+Product backups created by the Desktop backup/export flows are durable restore
+points. They must keep their `.db` file, sidecar manifest, and database record.
+
+Agent-created scratch copies for one-off manual database repair are temporary
+safety nets, not product backups. Files named `manual-before-*` under the
+Desktop backups directory should be deleted during closeout after the repair is
+verified, unless the user explicitly asks to keep that file. Do not document
+these scratch copies as supported restore points.
+
 ## Runtime Memory Telemetry
 
 `getResourceSnapshot()` reports:
