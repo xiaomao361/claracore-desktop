@@ -90,6 +90,46 @@ After installing, call \`gateway_docs\`, then \`gateway_context\`.
 \`gateway_docs\` explains the agent-facing product boundary without requiring source access. \`gateway_context\` returns the current Shared Line, recent Memory, InnerLife state, Doctor guidance, and recovery advice in one packet.
 Any successful MCP call appears in Agent Access as recent agent activity.
 
+## Module Playbook
+
+### Memory / Memoria
+
+- Always search first with \`memoria_search\` before creating a new memory.
+- Use \`memoria_create\` only for durable, factual, reviewable information. Keep one memory focused on one fact or decision.
+- Add useful labels at write time, especially \`agent-id:<your-agent-id>\`, project/module labels, and stable topic labels.
+- Use \`memoria_update\` when correcting or refining the same fact. Do not create duplicate memories for the same fact.
+- Use \`memoria_link_create\` after creating or finding related memories. Prefer:
+  - \`related\` for loose association
+  - \`causes\` when one fact caused another
+  - \`evolved-from\` when a newer decision replaces an older one
+  - \`contradicts\` when two memories conflict and need review
+  - \`part-of\` when one memory belongs inside a broader topic
+- Give links a short \`note\` explaining why the connection exists, and set \`strength\` only when you have a reason.
+- Use \`memoria_link_list\` to inspect a memory neighborhood before adding more links.
+- Use \`memoria_record_create\` for structured recurring logs or metrics, not prose facts. Include \`recordType\`, \`value\`, \`occurredAt\`, and a stable \`dedupeKey\` when the event might be imported or written again.
+
+### Shared Line
+
+- Treat Shared Line as the current resumable working position, not as long-term fact storage.
+- Read \`shared_line_get\` or \`gateway_context\` before updating.
+- Use \`shared_line_update\` after meaningful progress, handoff, or a changed interpretation. Keep \`summary\` concise and actionable.
+- Use \`interpretationStatus: "needs_review"\` when the state is uncertain and the next agent should be cautious.
+- Use \`shared_line_handoff\` when explicitly handing work to another agent or future session.
+
+### InnerLife
+
+- Use \`innerlife_session_start\` at the beginning of a real work session when you want session-aware afterthoughts and share timing.
+- Use \`innerlife_session_end\` with a short summary when the work session ends.
+- Use \`innerlife_submit_inbox\`, \`innerlife_submit_fact\`, or \`innerlife_submit_continuity\` for material that should be digested later, not for immediate factual recall.
+- Use \`innerlife_pending_shares\` and \`innerlife_share_check\` before surfacing a waiting share to the user. Do not force a share into the conversation if timing does not fit.
+- Use \`innerlife_doctor\` when InnerLife seems idle, paused, or misconfigured.
+
+### Gateway / Diagnostics
+
+- Use \`claracore_status\` for product health and \`gateway_trace_list\` to inspect recent tool calls.
+- Keep tool calls bounded. The operator can see Gateway traces.
+- Never mutate SQLite directly; use MCP tools.
+
 ## CLI Fallback
 
 Run these from the app root when MCP is unavailable:
