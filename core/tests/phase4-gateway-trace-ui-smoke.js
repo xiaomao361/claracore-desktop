@@ -7,6 +7,7 @@ async function main() {
   const { _electron: electron } = require("playwright");
   const electronPath = require(path.resolve(__dirname, "..", "..", "node_modules", "electron"));
   const dataRoot = await fs.mkdtemp(path.join(os.tmpdir(), "claracore-phase4-gateway-trace-ui-"));
+  const userDataRoot = path.join(dataRoot, "user-data");
   const appShim = {
     getPath(name) {
       return path.join(dataRoot, name);
@@ -78,6 +79,7 @@ async function main() {
       env: {
         ...process.env,
         CLARACORE_DESKTOP_DATA_DIR: dataRoot,
+        CLARACORE_DESKTOP_USER_DATA_DIR: userDataRoot,
         CLARACORE_DESKTOP_TEST_INSTANCE: "1"
       }
     });

@@ -6,6 +6,7 @@ async function main() {
   const { _electron: electron } = require("playwright");
   const electronPath = require(path.resolve(__dirname, "..", "..", "node_modules", "electron"));
   const productRoot = await fs.mkdtemp(path.join(os.tmpdir(), "claracore-product-json-ui-"));
+  const userDataRoot = path.join(productRoot, "user-data");
   let app;
   try {
     app = await electron.launch({
@@ -15,6 +16,7 @@ async function main() {
       env: {
         ...process.env,
         CLARACORE_DESKTOP_DATA_DIR: productRoot,
+        CLARACORE_DESKTOP_USER_DATA_DIR: userDataRoot,
         CLARACORE_DESKTOP_TEST_INSTANCE: "1"
       }
     });
