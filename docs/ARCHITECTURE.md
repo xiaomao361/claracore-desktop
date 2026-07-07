@@ -33,10 +33,10 @@ Agents should use Gateway MCP first, then CLI fallback when MCP is unavailable.
 When the Desktop app is running, Agent Access may also expose a
 token-protected localhost HTTP Agent Gateway for setup JSON and the first
 Gateway context packet. This HTTP surface binds to `127.0.0.1` by default and
-uses a stable default port so long-lived MCP clients can reconnect after app
+uses stable default port `50668` so long-lived MCP clients can reconnect after app
 restart without manual reconfiguration. The bearer token is persisted in a
 local token file with `0600` permissions and changes only when explicitly
-rotated from Agent Access. If the configured port is occupied, Desktop should
+rotated from Agent Access or Settings. If the configured port is occupied, Desktop should
 surface that conflict instead of silently moving MCP clients to a different
 port.
 

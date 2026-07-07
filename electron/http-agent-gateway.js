@@ -6,7 +6,7 @@ const { PRODUCT_VERSION } = require("../core/version");
 const { createGatewayTools } = require("../core/gateway/tools");
 
 const PROTOCOL_VERSION = "2025-06-18";
-const DEFAULT_HTTP_PORT = 55293;
+const DEFAULT_HTTP_PORT = 50668;
 const GATEWAY_CONFIG_FILE = "agent-gateway.json";
 const SERVER_INFO = {
   name: "claracore-desktop",

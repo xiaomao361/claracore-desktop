@@ -43,6 +43,7 @@ focused smoke gates for its changed surface.
 
 `0.4.3` makes the stable Streamable HTTP MCP connection user-configurable:
 
+- The default localhost MCP endpoint is `http://127.0.0.1:50668/mcp`.
 - Settings > General > Agent Gateway exposes the current localhost port, bearer
   token, endpoint, and token file.
 - The user can generate a random token, save a new token, or move the Gateway

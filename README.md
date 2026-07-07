@@ -12,7 +12,7 @@ secondary settings page.
 Agent Access exposes the current Streamable HTTP MCP endpoint, a stdio MCP
 fallback config, and token-protected localhost helper URLs while the desktop
 app is running. The setup note should not show a LAN URL by default. The
-localhost HTTP surface uses a stable default port and a persisted bearer token
+localhost HTTP surface uses stable default port `50668` and a persisted bearer token
 stored in a local `0600` token file, so long-lived MCP clients do not need
 manual reconfiguration after every app restart. LAN binding is intentionally
 off and should only become available through an explicit product mode with
@@ -65,7 +65,7 @@ Included:
 - Compact Home status board that merges the runtime strip and core module readiness below the Agent View and Attention panels
 - Gateway trace chain on Home that expands one priority call as `agent -> Desktop Gateway -> MCP tool -> result`, compresses additional calls into a recent list, and sends overflow review to Agent Access
 - Agent Setup page with Streamable HTTP MCP endpoint, stdio fallback config, token-protected localhost helper URLs, CLI fallback notes, runtime paths, and recent Gateway activity
-- Streamable HTTP MCP uses a stable localhost port and persisted local token file; port/token edits, random token generation, and copyable agent config live in Settings > General > Agent Gateway
+- Streamable HTTP MCP uses stable localhost port `50668` by default and persisted local token file; port/token edits, random token generation, and copyable agent config live in Settings > General > Agent Gateway
 - Desktop-owned Gateway Streamable HTTP endpoint for Gateway context, Memoria, Shared Line, and InnerLife MCP tools; stdio remains available for clients that do not support HTTP MCP yet
 - Home Agent View includes period-based agent change summaries for yesterday, today, recent 7 days, and recent 30 days
 - The built-in Memory embedding model stays lazy-loaded; Ollama and OpenAI-compatible providers do not load it.
@@ -221,6 +221,8 @@ the Desktop localhost `/mcp` endpoint is the preferred connection mode for
 clients that support it, because one Desktop Gateway can serve multiple agents
 and sessions through request-level identity. Stdio MCP remains as a compatibility
 path for clients that still require a local process.
+The default localhost endpoint is `http://127.0.0.1:50668/mcp`; Settings >
+General > Agent Gateway is the source of truth if the user changes it.
 
 Claude Desktop version or model changes do not change ClaraCore's Gateway
 contract by themselves. If a client supports Streamable HTTP MCP, use the
