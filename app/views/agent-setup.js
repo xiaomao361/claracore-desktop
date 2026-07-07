@@ -15,7 +15,23 @@ function createClaraCoreAgentSetupView({ dom, t, getSnapshot, copyValue }) {
           return lines.join("\n");
         })
         .join("\n") || "- No HTTP endpoints are exposed yet.";
-    return `# ClaraCore Agent Setup
+    return `# ClaraCore Agent Instructions
+
+You are an external agent being connected to ClaraCore Desktop. Read this note, install or verify the MCP server config below, then use the listed MCP tools instead of trying to inspect local source files.
+
+If you cannot edit your own MCP settings, tell the user exactly where to paste the JSON config and ask them to fully restart the agent client. After restart, call \`claracore_connection_test\`, then \`gateway_docs\`, then \`gateway_context\`.
+
+## Your Immediate Tasks
+
+1. Make sure the MCP server named \`claracore-desktop\` is installed with the JSON in "Gateway MCP" below.
+2. Use your own stable \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\` value. Do not reuse another agent's id.
+3. After MCP tools are available, call \`claracore_connection_test\`.
+4. Call \`gateway_docs\` to learn ClaraCore's product boundary and tool contract.
+5. Call \`gateway_context\` before doing useful work.
+
+---
+
+# ClaraCore Agent Setup
 
 ClaraCore Desktop is agent-first: this software is built for agents to operate and for humans to inspect. Treat Agent Access as the primary integration surface.
 
@@ -25,7 +41,7 @@ Desktop owns the product Gateway, Memoria, Shared Line, and InnerLife state for 
 
 1. Install ClaraCore Desktop as an MCP server in your own agent client.
 2. Set \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\` to your own stable agent id.
-3. Call \`gateway_context\` first for the current working packet. Desktop uses your configured \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\` as the MCP process identity.
+3. Call \`gateway_docs\` for the product/tool boundary, then \`gateway_context\` for the current working packet. Desktop uses your configured \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\` as the MCP process identity.
 4. Use exposed product Gateway tools for Memory, Shared Line, InnerLife, traces, diagnostics, import/export, and maintenance.
 5. Use CLI fallback only when MCP is unavailable or when a local recovery script needs it.
 
@@ -63,15 +79,15 @@ Manual setup:
 2. Add or replace the \`claracore-desktop\` server with the JSON above.
 3. Set \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\` to this Claude agent's stable id, for example \`claude\` or \`clara\`.
 4. Fully quit and restart Claude Desktop so the stdio process is relaunched with the new environment.
-5. In Claude, call \`claracore_connection_test\` once, then call \`gateway_context\`.
+5. In Claude, call \`claracore_connection_test\` once, then call \`gateway_docs\`, then call \`gateway_context\`.
 
 If tools do not appear after a Claude Desktop update, verify the JSON is valid, confirm the command path still exists, and fully restart the app rather than only closing its window.
 
 ## First Context Call
 
-After installing, call \`gateway_context\`.
+After installing, call \`gateway_docs\`, then \`gateway_context\`.
 
-\`gateway_context\` returns the current Shared Line, recent Memory, InnerLife state, Doctor guidance, and recovery advice in one packet.
+\`gateway_docs\` explains the agent-facing product boundary without requiring source access. \`gateway_context\` returns the current Shared Line, recent Memory, InnerLife state, Doctor guidance, and recovery advice in one packet.
 Any successful MCP call appears in Agent Access as recent agent activity.
 
 ## CLI Fallback

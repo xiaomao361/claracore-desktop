@@ -27,7 +27,7 @@ const systemToolDefinitions = [
   {
     "name": "gateway_docs",
     "title": "Gateway Docs",
-    "description": "Read agent-facing ClaraCore Desktop Gateway setup and fallback notes.",
+    "description": "Read the agent-facing ClaraCore Desktop usage guide, product boundaries, startup sequence, and fallback notes.",
     "inputSchema": {
       "type": "object",
       "properties": {},

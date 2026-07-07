@@ -492,8 +492,8 @@
               <span id="copyNotice" class="quiet" aria-live="polite"></span>
             </div>
             <section class="agent-console-group">
-              <h3 data-i18n="agentSetup.quickCopy">Quick copy</h3>
-              <button id="copyAgentSetup" class="secondary full" data-i18n="agentSetup.copy">Copy agent install brief</button>
+              <h3 data-i18n="agentSetup.quickCopy">Copy for agent</h3>
+              <button id="copyAgentSetup" class="secondary full" data-i18n="agentSetup.copy">Copy instructions for agent</button>
               <button class="secondary full" data-copy="mcp-config" data-i18n="connections.copyMcpConfig">Copy MCP config</button>
             </section>
             <section class="agent-console-group">
@@ -523,9 +523,10 @@
             <details class="agent-access-details">
               <summary data-i18n="agentSetup.maintenanceDetails">Maintenance details</summary>
               <section class="source-map-card compact-source">
-                <h3 data-i18n="agentSetup.sourceMapTitle">Debug / Source Map</h3>
-                <p data-i18n="agentSetup.sourceMapBody">Maintenance agents should start from docs/CODE_MAP.md for ownership boundaries.</p>
-                <code>docs/CODE_MAP.md</code>
+                <h3 data-i18n="agentSetup.sourceMapTitle">Agent guide</h3>
+                <p data-i18n="agentSetup.sourceMapBody">Maintenance agents should call gateway_docs for product boundaries and gateway_context for current state.</p>
+                <code>gateway_docs</code>
+                <code>gateway_context</code>
               </section>
               <div class="doc-preview compact">
                 <pre><code id="agentSetupMarkdown">Checking...</code></pre>
@@ -659,10 +660,10 @@
               <div><span data-i18n="settings.nodeVersion">Node</span><strong id="settingsNodeVersion">-</strong></div>
             </div>
             <section class="source-map-card settings-source-card">
-              <h3 data-i18n="settings.docsSourceTitle">Docs and source</h3>
-              <p data-i18n="settings.docsSourceBody">Read-only entry points for operators and maintenance agents.</p>
-              <code>docs/ARCHITECTURE.md</code>
-              <code>docs/CODE_MAP.md</code>
+              <h3 data-i18n="settings.docsSourceTitle">Agent guide</h3>
+              <p data-i18n="settings.docsSourceBody">Agents read product guidance through MCP tools, not packaged source files.</p>
+              <code>gateway_docs</code>
+              <code>gateway_context</code>
             </section>
             <details class="settings-path-details">
               <summary data-i18n="settings.showRuntimeDetails">Show runtime details</summary>
