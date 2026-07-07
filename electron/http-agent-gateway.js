@@ -27,6 +27,14 @@ function normalizePort(value, fallback = DEFAULT_HTTP_PORT) {
   return fallback;
 }
 
+// For the non-explicit (production) path, a persisted or user-entered port of 0
+// is a stale placeholder rather than a request for a random port; fall back to
+// the stable default. Random binding is reserved for the explicit env/test path.
+function stablePort(value, fallback = DEFAULT_HTTP_PORT) {
+  const normalized = normalizePort(value, fallback);
+  return normalized === 0 ? fallback : normalized;
+}
+
 async function readGatewayConfig(configPath) {
   try {
     const raw = await fs.readFile(configPath, "utf8");
@@ -263,7 +271,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
     const existing = await readGatewayConfig(state.tokenFile);
     const now = new Date().toISOString();
     if (!state.explicitPort) {
-      state.configuredPort = normalizePort(existing.port, DEFAULT_HTTP_PORT);
+      state.configuredPort = stablePort(existing.port, DEFAULT_HTTP_PORT);
     }
     const nextToken =
       rotateToken || !tokenLooksValid(existing.token)
@@ -323,7 +331,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
     const hasControlledRandomPort = state.explicitPort && previousPort === 0;
     const nextPort = hasControlledRandomPort
       ? previousPort
-      : normalizePort(input.port, previousPort || DEFAULT_HTTP_PORT);
+      : stablePort(input.port, previousPort || DEFAULT_HTTP_PORT);
     if (state.explicitPort && !hasControlledRandomPort && nextPort !== previousPort) {
       throw new Error("CLARACORE_DESKTOP_HTTP_PORT is controlling the Gateway port for this launch.");
     }
@@ -520,7 +528,8 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
     const currentBaseUrl = baseUrl() || `http://${state.host}:0`;
     const requestUrl = new URL(request.url || "/", currentBaseUrl);
     if (request.method === "OPTIONS") {
-      sendJson(response, 204, {});
+      response.writeHead(204, { "cache-control": "no-store" });
+      response.end();
       return;
     }
     if (requestUrl.pathname === "/mcp") {

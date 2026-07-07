@@ -4,7 +4,7 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- The current local version is `0.4.4`.
+- The current local version is `0.4.5`.
 - Historical `0.1.x` and `0.2.x` planning notes are archived under
   `docs/archive/`.
 
@@ -38,6 +38,35 @@ npm run dist:mac
 
 Only install or replace the daily-use app after the target build passes the
 focused smoke gates for its changed surface.
+
+## v0.4.5 Checkpoint
+
+`0.4.5` hardens the Streamable HTTP Gateway and Shared Line scoping introduced
+in `0.4.2`–`0.4.4`:
+
+- A persisted or user-entered Gateway port of `0` is now treated as a stale
+  placeholder and falls back to the stable default (`50668`) on the non-explicit
+  path, instead of silently binding a fresh random port. Random binding remains
+  reserved for the explicit `CLARACORE_DESKTOP_HTTP_PORT` / test-instance path.
+- The `OPTIONS` preflight reply is now a bodyless `204` (was a `204` carrying a
+  JSON body).
+- `getResumePacket` no longer materializes a Shared Line as a read-side effect:
+  it resolves the caller's line read-only, so anonymous HTTP reads
+  (session_start, tool calls) can no longer accumulate empty lines. A dedicated
+  line is still created on the first write through `saveCurrentPosition`.
+- Unidentified HTTP callers (the `http-agent` sentinel) no longer mint a
+  dedicated `http-agent Shared Line`; they fall back to the default line.
+
+Validation for this checkpoint:
+
+```bash
+npm run check
+node core/tests/streamable-http-gateway-smoke.js
+node core/tests/phase3-shared-line-smoke.js
+node core/tests/phase5-innerlife-smoke.js
+node core/tests/sql-interpolation-lint.js
+git diff --check
+```
 
 ## v0.4.4 Checkpoint
 

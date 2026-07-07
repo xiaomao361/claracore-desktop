@@ -267,6 +267,9 @@ function installContinuityRepository(ProductDatabase, helpers) {
       const identity = resolveAgentIdentity({ agentId: agentIdInput });
       const agentId = String(identity.id || "").trim();
       if (!agentId) return null;
+      // Unidentified HTTP callers fall back to the "http-agent" sentinel; do not
+      // mint a dedicated Shared Line for them — they use the default line.
+      if (agentId === "http-agent") return null;
       const existing = await this.findContinuityLineIdForAgent(agentId);
       if (existing) return existing;
       const id = newId("line");
@@ -614,7 +617,10 @@ function installContinuityRepository(ProductDatabase, helpers) {
       // lite skips the full line lists and other agents' states; write
       // acknowledgements only need the saved position plus recent context.
       const lite = input.lite === true;
-      const agentLineId = input?.lineId ? null : await this.ensureContinuityLineForAgent(input?.agentId || input?.agent_id || "");
+      // Read path: never materialize a line as a side effect. A dedicated line
+      // is created on the first write (saveCurrentPosition); until then a fresh
+      // agent resumes from the active line.
+      const agentLineId = input?.lineId ? null : await this.findContinuityLineIdForAgent(input?.agentId || input?.agent_id || "");
       const currentPosition = await this.getCurrentPosition(input.lineId || agentLineId || null);
       const metadata = currentPosition.metadata || {};
       const [lines, archivedLines, history, snapshots, handoffs, agentState, agentStates, modelAdjustment] = await Promise.all([
