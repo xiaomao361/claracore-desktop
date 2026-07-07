@@ -17,6 +17,7 @@ function createClaraCoreSettingsView(context) {
     settingsLanguage, settingsTheme, settingsMotion, settingsCloseBehavior, settingsCloseBehaviorSummary, settingsTrayStatus,
     settingsThemeSummary, settingsMotionSummary, settingsDataStatus, settingsDataRoot, settingsPathSummary, settingsPathDetails,
     settingsDataRootOverride, relaunchForDataRoot,
+    settingsAgentGatewayStatus, settingsAgentGatewayPort, settingsAgentGatewayToken, settingsAgentGatewayEndpoint, settingsAgentGatewayTokenFile,
     settingsAppVersion, settingsRuntimeMode, settingsDatabaseState, settingsElectronVersion, settingsNodeVersion,
     settingsAppRoot, settingsChromeVersion
   } = dom;
@@ -171,6 +172,20 @@ function renderAbout() {
   if (settingsChromeVersion) settingsChromeVersion.textContent = snapshot?.runtime?.chrome || "-";
 }
 
+function renderAgentGatewaySettings() {
+  const gateway = getSnapshot()?.connections?.httpGateway || {};
+  const port = gateway.configuredPort || gateway.port || "";
+  setInputValue(settingsAgentGatewayPort, port);
+  setInputValue(settingsAgentGatewayToken, gateway.token || "");
+  if (settingsAgentGatewayEndpoint) settingsAgentGatewayEndpoint.textContent = gateway.endpoint || "-";
+  if (settingsAgentGatewayTokenFile) settingsAgentGatewayTokenFile.textContent = gateway.tokenFile || "-";
+  if (settingsAgentGatewayStatus) {
+    settingsAgentGatewayStatus.textContent = gateway.error ? t("common.error") : gateway.ok ? t("settings.status.ready") : t("common.checking");
+    settingsAgentGatewayStatus.className = gateway.error ? "badge warn" : gateway.ok ? "badge ok" : "badge warn";
+    settingsAgentGatewayStatus.title = gateway.error?.message || "";
+  }
+}
+
 function renderSettings() {
   const snapshot = getSnapshot();
   if (!snapshot?.configuration) return;
@@ -219,6 +234,7 @@ function renderAppearanceSettings() {
     settingsMotionSummary.textContent = t(`settings.motion.${preferences.resolvedMotion}`);
   }
   renderDataPaths();
+  renderAgentGatewaySettings();
   renderAbout();
 }
 
@@ -258,8 +274,37 @@ function collectAppearanceSettingsForm() {
   };
 }
 
+function collectAgentGatewayConfigForm() {
   return {
+    port: settingsAgentGatewayPort?.value || "",
+    token: settingsAgentGatewayToken?.value || ""
+  };
+}
+
+function agentGatewayCopyBlock() {
+  const gateway = getSnapshot()?.connections?.httpGateway || {};
+  const port = settingsAgentGatewayPort?.value || gateway.configuredPort || gateway.port || "";
+  const endpoint = port ? `http://127.0.0.1:${port}/mcp` : gateway.endpoint || "";
+  const token = settingsAgentGatewayToken?.value || gateway.token || "";
+  const shellToken = String(token).replace(/'/g, "'\\''");
+  return [
+    "ClaraCore Desktop Streamable HTTP MCP",
+    `Endpoint: ${endpoint}`,
+    `Authorization: Bearer ${token}`,
+    "X-ClaraCore-Agent-ID: <agent-stable-id>",
+    "X-ClaraCore-Session-ID: <conversation-or-session-id>",
+    `Token file: ${gateway.tokenFile || ""}`,
+    "",
+    "Codex CLI example:",
+    `launchctl setenv CLARACORE_DESKTOP_MCP_TOKEN '${shellToken}'`,
+    `codex mcp add claracore-desktop --url ${endpoint} --bearer-token-env-var CLARACORE_DESKTOP_MCP_TOKEN`
+  ].join("\n");
+}
+
+  return {
+    agentGatewayCopyBlock,
     collectAppearanceSettingsForm,
+    collectAgentGatewayConfigForm,
     collectSettingsForm,
     embeddingConfigChanged,
     getSecretInputValue,

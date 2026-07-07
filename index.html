@@ -618,6 +618,39 @@
               <section class="settings-section-card">
                 <div class="settings-section-head">
                   <div>
+                    <h3 data-i18n="settings.agentGatewayTitle">Agent Gateway</h3>
+                    <p data-i18n="settings.agentGatewayBody">Stable Streamable HTTP MCP endpoint and local bearer token.</p>
+                  </div>
+                  <span id="settingsAgentGatewayStatus" class="badge ok">ready</span>
+                </div>
+                <div class="settings-grid">
+                  <label class="field">
+                    <span data-i18n="settings.agentGatewayPort">Port</span>
+                    <input id="settingsAgentGatewayPort" type="number" min="1" max="65535" step="1" />
+                  </label>
+                  <label class="field wide-field">
+                    <span data-i18n="settings.agentGatewayToken">Bearer token</span>
+                    <span class="copy-field">
+                      <input id="settingsAgentGatewayToken" autocomplete="off" spellcheck="false" />
+                      <button id="copyAgentGatewayToken" class="secondary" type="button" data-i18n="actions.copy">Copy</button>
+                    </span>
+                  </label>
+                </div>
+                <div class="path-chip-list">
+                  <span><strong data-i18n="settings.agentGatewayEndpoint">Endpoint</strong><code id="settingsAgentGatewayEndpoint">-</code></span>
+                  <span><strong data-i18n="settings.agentGatewayTokenFile">Token file</strong><code id="settingsAgentGatewayTokenFile">-</code></span>
+                </div>
+                <div class="settings-actions compact-actions">
+                  <button id="generateAgentGatewayToken" class="secondary" type="button" data-i18n="settings.generateToken">Generate token</button>
+                  <button id="copyAgentGatewayConfig" class="secondary" type="button" data-i18n="settings.copyAgentGatewayConfig">Copy agent config</button>
+                  <button id="saveAgentGatewayConfig" class="primary" type="button" data-i18n="settings.saveAgentGateway">Save Gateway</button>
+                </div>
+                <p class="quiet" data-i18n="settings.agentGatewayHint">Changing the port updates the local MCP server and every Agent Access copy block. Rotating the token requires connected agents to update their bearer token.</p>
+              </section>
+
+              <section class="settings-section-card">
+                <div class="settings-section-head">
+                  <div>
                     <h3 data-i18n="settings.pathsTitle">Data paths</h3>
                     <p data-i18n="settings.pathsBody">ClaraCore keeps product data under one local root.</p>
                   </div>

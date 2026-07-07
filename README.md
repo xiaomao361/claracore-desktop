@@ -50,7 +50,7 @@ Read these before adding new features:
 
 ## Current Status
 
-The current version is `0.4.2`. It is a working desktop shell with a
+The current version is `0.4.3`. It is a working desktop shell with a
 product-owned local data store, Desktop-native Memoria, Shared Line, InnerLife,
 a Desktop-owned Gateway, with model configuration merged into the Settings
 surface.
@@ -65,7 +65,7 @@ Included:
 - Compact Home status board that merges the runtime strip and core module readiness below the Agent View and Attention panels
 - Gateway trace chain on Home that expands one priority call as `agent -> Desktop Gateway -> MCP tool -> result`, compresses additional calls into a recent list, and sends overflow review to Agent Access
 - Agent Setup page with Streamable HTTP MCP endpoint, stdio fallback config, token-protected localhost helper URLs, CLI fallback notes, runtime paths, and recent Gateway activity
-- Streamable HTTP MCP uses a stable localhost port and persisted local token file; token rotation is explicit from Agent Access
+- Streamable HTTP MCP uses a stable localhost port and persisted local token file; port/token edits, random token generation, and copyable agent config live in Settings > General > Agent Gateway
 - Desktop-owned Gateway Streamable HTTP endpoint for Gateway context, Memoria, Shared Line, and InnerLife MCP tools; stdio remains available for clients that do not support HTTP MCP yet
 - Home Agent View includes period-based agent change summaries for yesterday, today, recent 7 days, and recent 30 days
 - The built-in Memory embedding model stays lazy-loaded; Ollama and OpenAI-compatible providers do not load it.
@@ -224,9 +224,10 @@ path for clients that still require a local process.
 
 Claude Desktop version or model changes do not change ClaraCore's Gateway
 contract by themselves. If a client supports Streamable HTTP MCP, use the
-current endpoint and bearer header from Agent Access. If it only supports local
-stdio MCP, use the generated fallback config, fully quit and restart the client,
-then run `claracore_connection_test` followed by `gateway_context`.
+current endpoint and bearer header from Agent Access or Settings > General >
+Agent Gateway. If it only supports local stdio MCP, use the generated fallback
+config, fully quit and restart the client, then run
+`claracore_connection_test` followed by `gateway_context`.
 
 The old ClaraCore Gateway web console remains a reference for useful overview
 ideas, but its service Web UI launcher/supervisor model is not the Desktop

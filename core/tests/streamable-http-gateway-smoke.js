@@ -139,7 +139,37 @@ async function main() {
     assert.strictEqual(restartedEndpoint.authHeader, firstToken, "Bearer token should survive app restarts");
     const rotated = await restarted.rotateToken();
     assert.notStrictEqual(rotated.authHeader, firstToken, "Token rotation should change the bearer token");
+    const savedToken = "a".repeat(64);
+    const savedConfig = await restarted.updateConfig({ port, token: savedToken });
+    assert.strictEqual(savedConfig.gateway.token, savedToken, "Settings update should persist the supplied bearer token");
+    assert.strictEqual(savedConfig.authHeader, `Authorization: Bearer ${savedToken}`);
+    const updatedConfig = JSON.parse(await fs.readFile(tokenFile, "utf8"));
+    assert.strictEqual(updatedConfig.token, savedToken, "Token file should reflect Settings token updates");
+    const generatedConfig = await restarted.updateConfig({ port, generateToken: true });
+    assert.notStrictEqual(generatedConfig.gateway.token, savedToken, "Generate token should create a new bearer token");
+    assert.strictEqual(generatedConfig.gateway.port, port, "Generate token should not move the Gateway port");
     restarted.stop();
+
+    const configurable = createHttpAgentGateway({
+      app,
+      ensureProductCore,
+      getRuntimeSnapshot: async () => ({
+        connections: {
+          mcpServerName: "claracore-desktop",
+          mcpCommand: "node core/gateway/mcp-server.js",
+          mcpConfig: JSON.stringify({ mcpServers: {} })
+        }
+      }),
+      getProductGatewayContext: async () => ({ ok: true })
+    });
+    await configurable.start();
+    const nextPort = await reservePort();
+    const movedConfig = await configurable.updateConfig({ port: nextPort, token: "b".repeat(64) });
+    assert.strictEqual(movedConfig.gateway.port, nextPort, "Settings update should move the running Gateway to the selected port");
+    assert.strictEqual(movedConfig.gateway.endpoint, `http://127.0.0.1:${nextPort}/mcp`);
+    const movedEndpoint = configurable.buildEndpoints().find((item) => item.id === "streamable-http-mcp");
+    assert.strictEqual(movedEndpoint.url, `http://127.0.0.1:${nextPort}/mcp`);
+    configurable.stop();
 
     await withOccupiedPort(port, async () => {
       const blocked = createHttpAgentGateway({

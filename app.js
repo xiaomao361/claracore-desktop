@@ -115,6 +115,11 @@ const {
   settingsNotice,
   saveAppearanceSettings,
   appearanceSettingsNotice,
+  settingsAgentGatewayToken,
+  generateAgentGatewayToken,
+  copyAgentGatewayToken,
+  copyAgentGatewayConfig,
+  saveAgentGatewayConfig,
   memorySearchInput,
   searchMemory,
   memoryList,
@@ -850,6 +855,33 @@ rotateAgentGatewayToken?.addEventListener("click", async () => {
   }
 });
 
+generateAgentGatewayToken?.addEventListener("click", () => {
+  if (settingsAgentGatewayToken) settingsAgentGatewayToken.value = randomAgentGatewayToken();
+  if (appearanceSettingsNotice) appearanceSettingsNotice.textContent = t("settings.generatedToken");
+});
+
+copyAgentGatewayToken?.addEventListener("click", () => {
+  copyValue(settingsAgentGatewayToken?.value || "", t("settings.apiKey.copied"), appearanceSettingsNotice).catch(console.error);
+});
+
+copyAgentGatewayConfig?.addEventListener("click", () => {
+  copyValue(settingsView.agentGatewayCopyBlock(), t("settings.agentGatewayConfigCopied"), appearanceSettingsNotice).catch(console.error);
+});
+
+saveAgentGatewayConfig?.addEventListener("click", async () => {
+  saveAgentGatewayConfig.disabled = true;
+  appearanceSettingsNotice.textContent = t("common.checking");
+  try {
+    await window.ClaraCoreDesktop.updateAgentGatewayConfig(settingsView.collectAgentGatewayConfigForm());
+    await refreshRuntimeSnapshotOnly();
+    appearanceSettingsNotice.textContent = t("settings.agentGatewaySaved");
+  } catch (error) {
+    appearanceSettingsNotice.textContent = t("settings.agentGatewaySaveFailed", { error: error?.message || String(error) });
+  } finally {
+    saveAgentGatewayConfig.disabled = false;
+  }
+});
+
 saveSettings.addEventListener("click", async () => {
   const form = collectSettingsForm();
   if (settingsView.embeddingConfigChanged(form) && !window.confirm(t("settings.embedding.rebuildConfirm"))) {
@@ -1023,6 +1055,14 @@ function showCopyNotice(label, target = copyNotice) {
   }, 1800);
 }
 
+function randomAgentGatewayToken() {
+  const bytes = new Uint8Array(32);
+  window.crypto.getRandomValues(bytes);
+  return Array.from(bytes)
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 async function copyValue(value, label, target = copyNotice) {
   if (!value) return;
   const ok = await window.ClaraCoreDesktop.copyText(value);
@@ -1047,8 +1087,20 @@ httpEndpointList.addEventListener("click", (event) => {
   if (button.dataset.openUrl) {
     window.ClaraCoreDesktop.openExternal(button.dataset.openUrl).catch(console.error);
   }
-  if (button.dataset.copyUrl) {
-    copyValue(button.dataset.copyUrl, t("connections.copied.endpoint")).catch(console.error);
+  if (button.dataset.copyEndpointId) {
+    const endpoint = (snapshot?.connections?.httpEndpoints || []).find((item) => item.id === button.dataset.copyEndpointId);
+    if (!endpoint) return;
+    const gateway = snapshot?.connections?.httpGateway || {};
+    const copyBlock = [
+      `ClaraCore Desktop ${t(`connections.endpoint.${endpoint.id}`) || endpoint.id}`,
+      `Endpoint: ${endpoint.url}`,
+      endpoint.authHeader || "",
+      "X-ClaraCore-Agent-ID: <agent-stable-id>",
+      "X-ClaraCore-Session-ID: <conversation-or-session-id>",
+      endpoint.tokenFile ? `${t("connections.tokenFile")}: ${endpoint.tokenFile}` : "",
+      gateway.port ? `Port: ${gateway.port}` : ""
+    ].filter(Boolean).join("\n");
+    copyValue(copyBlock, t("connections.copied.endpoint")).catch(console.error);
   }
 });
 

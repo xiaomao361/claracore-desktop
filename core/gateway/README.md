@@ -53,6 +53,8 @@ to `127.0.0.1`, uses a stable default port, requires bearer-token authorization,
 and rejects non-local `Origin` headers. The token is persisted in the local
 `agent-gateway.json` file with `0600` permissions and changes only when rotated.
 Do not expose this endpoint beyond localhost without a separate security review.
+Users can change the port, save a custom token, generate a random token, and
+copy a complete agent config from Settings > General > Agent Gateway.
 
 If the configured port is occupied, fix the conflict or change the configured
 port intentionally. Do not silently fall back to a random port for normal

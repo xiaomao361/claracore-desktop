@@ -57,13 +57,19 @@ function publicGatewayConfig(configPath, config, baseUrl) {
   };
 }
 
+function tokenLooksValid(value) {
+  return typeof value === "string" && value.trim().length >= 32;
+}
+
 function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, getProductGatewayContext, port }) {
+  const explicitPort = Boolean(process.env.CLARACORE_DESKTOP_HTTP_PORT || port !== undefined);
   const state = {
     host: "127.0.0.1",
     server: null,
     sockets: new Set(),
     port: null,
     configuredPort: normalizePort(process.env.CLARACORE_DESKTOP_HTTP_PORT || port, DEFAULT_HTTP_PORT),
+    explicitPort,
     token: null,
     tokenFile: gatewayConfigPath(app),
     tokenCreatedAt: "",
@@ -137,6 +143,8 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
       endpoint: currentBaseUrl ? `${currentBaseUrl}/mcp` : `http://${state.host}:${state.configuredPort}/mcp`,
       tokenFile: state.tokenFile,
       tokenFileMode: "0600",
+      token: state.token || "",
+      authHeader: state.token ? `Authorization: Bearer ${state.token}` : "",
       tokenCreatedAt: state.tokenCreatedAt,
       tokenRotatedAt: state.tokenRotatedAt,
       error: state.lastError
@@ -254,10 +262,13 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
   async function ensureGatewayConfig({ rotateToken = false } = {}) {
     const existing = await readGatewayConfig(state.tokenFile);
     const now = new Date().toISOString();
+    if (!state.explicitPort) {
+      state.configuredPort = normalizePort(existing.port, DEFAULT_HTTP_PORT);
+    }
     const nextToken =
-      rotateToken || typeof existing.token !== "string" || existing.token.length < 32
+      rotateToken || !tokenLooksValid(existing.token)
         ? generateToken()
-        : existing.token;
+        : existing.token.trim();
     const nextConfig = {
       version: 1,
       product: "ClaraCore Desktop",
@@ -290,6 +301,73 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
       rotated: true,
       gateway: status(),
       config: publicGatewayConfig(state.tokenFile, config, baseUrl()),
+      authHeader: `Authorization: Bearer ${state.token}`
+    };
+  }
+
+  async function assertPortAvailable(portValue) {
+    if (state.server && Number(state.port) === Number(portValue)) return;
+    await new Promise((resolve, reject) => {
+      const probe = http.createServer();
+      probe.once("error", reject);
+      probe.listen(portValue, state.host, () => {
+        probe.close(resolve);
+      });
+    });
+  }
+
+  async function updateConfig(input = {}) {
+    const existing = await readGatewayConfig(state.tokenFile);
+    const previousPort = state.configuredPort;
+    const previousToken = state.token || existing.token || "";
+    const hasControlledRandomPort = state.explicitPort && previousPort === 0;
+    const nextPort = hasControlledRandomPort
+      ? previousPort
+      : normalizePort(input.port, previousPort || DEFAULT_HTTP_PORT);
+    if (state.explicitPort && !hasControlledRandomPort && nextPort !== previousPort) {
+      throw new Error("CLARACORE_DESKTOP_HTTP_PORT is controlling the Gateway port for this launch.");
+    }
+    const nextToken = input.generateToken
+      ? generateToken()
+      : tokenLooksValid(input.token)
+        ? String(input.token).trim()
+        : previousToken;
+    if (!tokenLooksValid(nextToken)) {
+      throw new Error("Gateway token must be at least 32 characters.");
+    }
+    await assertPortAvailable(nextPort);
+    const now = new Date().toISOString();
+    const nextConfig = {
+      version: 1,
+      product: "ClaraCore Desktop",
+      transport: "streamable-http",
+      host: state.host,
+      port: nextPort,
+      endpoint: `http://${state.host}:${nextPort}/mcp`,
+      auth: "bearer-token",
+      header: `Authorization: Bearer ${nextToken}`,
+      token: nextToken,
+      tokenCreatedAt: existing.tokenCreatedAt || state.tokenCreatedAt || now,
+      tokenRotatedAt: nextToken !== previousToken ? now : existing.tokenRotatedAt || state.tokenRotatedAt || "",
+      updatedAt: now,
+      notes: [
+        "This file is local-only and should be readable only by the current OS user.",
+        "MCP clients can reuse this endpoint and bearer token across ClaraCore Desktop restarts.",
+        "Rotate the token from Settings or Agent Access if it may have been exposed."
+      ]
+    };
+    await writeGatewayConfig(state.tokenFile, nextConfig);
+    const restartNeeded = state.server && nextPort !== state.configuredPort;
+    if (restartNeeded) stop();
+    state.configuredPort = nextPort;
+    state.token = nextToken;
+    state.tokenCreatedAt = nextConfig.tokenCreatedAt;
+    state.tokenRotatedAt = nextConfig.tokenRotatedAt;
+    if (restartNeeded) await start();
+    return {
+      saved: true,
+      gateway: status(),
+      config: publicGatewayConfig(state.tokenFile, nextConfig, baseUrl()),
       authHeader: `Authorization: Bearer ${state.token}`
     };
   }
@@ -584,6 +662,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
     rotateToken,
     start,
     status,
+    updateConfig,
     stop
   };
 }

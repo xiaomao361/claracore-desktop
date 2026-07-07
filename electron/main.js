@@ -746,6 +746,12 @@ if (!isGatewayMode && hasSingleInstanceLock) {
       notifyRuntimeChanged("agent-gateway-token-rotated");
       return result;
     },
+    updateAgentGatewayConfig: async (input = {}) => {
+      if (!httpAgentGateway) return false;
+      const result = await httpAgentGateway.updateConfig(input);
+      notifyRuntimeChanged("agent-gateway-config-updated");
+      return result;
+    },
     saveDataRootPreference,
     getUiPreferences,
     saveUiPreferences,

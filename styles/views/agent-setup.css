@@ -200,6 +200,15 @@
   margin: 10px;
 }
 
+.agent-access-side .endpoint-card {
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+.agent-access-side .endpoint-actions {
+  justify-content: flex-start;
+}
+
 .doc-preview.compact pre {
   max-height: 260px;
   margin: 0;

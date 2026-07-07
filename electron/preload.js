@@ -25,6 +25,9 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   rotateAgentGatewayToken() {
     return ipcRenderer.invoke("claracore:rotateAgentGatewayToken");
   },
+  updateAgentGatewayConfig(input) {
+    return ipcRenderer.invoke("claracore:updateAgentGatewayConfig", input);
+  },
   setWindowPreferences(preferences) {
     return ipcRenderer.invoke("claracore:setWindowPreferences", preferences);
   },

@@ -4,7 +4,7 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- The current local version is `0.4.2`.
+- The current local version is `0.4.3`.
 - Historical `0.1.x` and `0.2.x` planning notes are archived under
   `docs/archive/`.
 
@@ -38,6 +38,29 @@ npm run dist:mac
 
 Only install or replace the daily-use app after the target build passes the
 focused smoke gates for its changed surface.
+
+## v0.4.3 Checkpoint
+
+`0.4.3` makes the stable Streamable HTTP MCP connection user-configurable:
+
+- Settings > General > Agent Gateway exposes the current localhost port, bearer
+  token, endpoint, and token file.
+- The user can generate a random token, save a new token, or move the Gateway
+  to a different available port.
+- Agent Access and Settings copy blocks now include the endpoint, bearer header,
+  agent/session headers, token file, and Codex CLI example instead of only a
+  bare URL.
+- Saving the Gateway config refreshes the running MCP server and renderer
+  snapshot.
+
+Validation for this checkpoint:
+
+```bash
+npm run check
+node core/tests/streamable-http-gateway-smoke.js
+node core/tests/run-ui-smoke.js core/tests/phase4-gateway-trace-ui-smoke.js
+git diff --check
+```
 
 ## v0.4.2 Checkpoint
 

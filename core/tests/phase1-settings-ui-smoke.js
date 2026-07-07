@@ -2,6 +2,17 @@ const fs = require("fs/promises");
 const os = require("os");
 const path = require("path");
 
+async function waitForRuntimeSnapshot(page, predicate, timeoutMs = 15000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastSnapshot = null;
+  while (Date.now() < deadline) {
+    lastSnapshot = await page.evaluate(() => window.ClaraCoreDesktop.getRuntimeSnapshot());
+    if (predicate(lastSnapshot)) return lastSnapshot;
+    await page.waitForTimeout(150);
+  }
+  throw new Error(`Timed out waiting for runtime snapshot. Last snapshot: ${JSON.stringify(lastSnapshot)}`);
+}
+
 async function main() {
   const { _electron: electron } = require("playwright");
   const electronPath = require(path.resolve(__dirname, "..", "..", "node_modules", "electron"));
@@ -82,14 +93,35 @@ async function main() {
     await page.fill("#innerLifeLightModel", "ui-light");
     await page.fill("#innerLifeDeepModel", "ui-deep");
     await page.fill("#innerLifePollSeconds", "44");
+    const modelFormBeforeSave = await page.evaluate(() => ({
+      memoriaProvider: document.querySelector("#memoriaProvider").value,
+      memoriaEndpoint: document.querySelector("#memoriaEndpoint").value,
+      memoriaModel: document.querySelector("#memoriaModel").value,
+      innerLifeBackend: document.querySelector("#innerLifeBackend").value,
+      activePanel: document.querySelector(".settings-tab-panel.active")?.dataset.settingsPanel
+    }));
+    if (
+      modelFormBeforeSave.memoriaProvider !== "ollama"
+      || modelFormBeforeSave.memoriaEndpoint !== "http://127.0.0.1:11437"
+      || modelFormBeforeSave.activePanel !== "models"
+    ) {
+      throw new Error(`Settings model form was not ready before save: ${JSON.stringify(modelFormBeforeSave)}`);
+    }
     await page.click("#saveSettings");
-    await page.waitForFunction(
-      async () => {
-        const snapshot = await window.ClaraCoreDesktop.getRuntimeSnapshot();
-        return snapshot.configuration.memoria.endpoint === "http://127.0.0.1:11437";
-      },
-      null,
-      { timeout: 15000 }
+    await page.waitForTimeout(500);
+    const modelSaveState = await page.evaluate(() => ({
+      notice: document.querySelector("#settingsNotice").textContent,
+      disabled: document.querySelector("#saveSettings").disabled
+    }));
+    if (/failed|失败/i.test(modelSaveState.notice)) {
+      throw new Error(`Settings model save failed in UI: ${JSON.stringify(modelSaveState)}`);
+    }
+    await waitForRuntimeSnapshot(
+      page,
+      (snapshot) => (
+        snapshot.configuration.memoria.provider === "ollama"
+        && snapshot.configuration.memoria.endpoint === "http://127.0.0.1:11437"
+      )
     );
 
     const snapshot = await page.evaluate(() => window.ClaraCoreDesktop.getRuntimeSnapshot());
@@ -97,7 +129,7 @@ async function main() {
       throw new Error(`Settings UI wrote outside product data root: ${snapshot.data.databasePath}`);
     }
     if (snapshot.configuration.memoria.provider !== "ollama") {
-      throw new Error("Settings UI did not persist Ollama Memory provider.");
+      throw new Error(`Settings UI did not persist Ollama Memory provider: ${JSON.stringify(snapshot.configuration.memoria)}`);
     }
     if (snapshot.configuration.memoria.endpoint !== "http://127.0.0.1:11437") {
       throw new Error("Settings UI did not persist Memoria endpoint.");
@@ -122,6 +154,47 @@ async function main() {
     }
     if (snapshot.configuration.innerlife.apiKeyStatus !== "configured" || !snapshot.configuration.innerlife.apiKeyRef) {
       throw new Error("Settings UI cleared the default InnerLife API key reference.");
+    }
+
+    await page.click("[data-settings-tab='general']");
+    await page.waitForFunction(() => document.querySelector("#settingsAgentGatewayPort")?.value, null, { timeout: 15000 });
+    const gatewayDefaults = await page.evaluate(() => ({
+      port: document.querySelector("#settingsAgentGatewayPort").value,
+      token: document.querySelector("#settingsAgentGatewayToken").value,
+      endpoint: document.querySelector("#settingsAgentGatewayEndpoint").textContent,
+      tokenFile: document.querySelector("#settingsAgentGatewayTokenFile").textContent,
+      status: document.querySelector("#settingsAgentGatewayStatus").textContent
+    }));
+    if (!Number(gatewayDefaults.port)) throw new Error(`Agent Gateway port was not rendered: ${JSON.stringify(gatewayDefaults)}`);
+    if (gatewayDefaults.token.length < 32) throw new Error("Agent Gateway token was not rendered.");
+    if (!gatewayDefaults.endpoint.includes(`:${gatewayDefaults.port}/mcp`)) {
+      throw new Error(`Agent Gateway endpoint did not match rendered port: ${JSON.stringify(gatewayDefaults)}`);
+    }
+    if (!gatewayDefaults.tokenFile.includes("agent-gateway.json")) {
+      throw new Error(`Agent Gateway token file was not rendered: ${gatewayDefaults.tokenFile}`);
+    }
+
+    await page.click("#generateAgentGatewayToken");
+    const generatedToken = await page.locator("#settingsAgentGatewayToken").inputValue();
+    if (generatedToken === gatewayDefaults.token || generatedToken.length !== 64) {
+      throw new Error("Agent Gateway random token generation did not update the token field.");
+    }
+    await page.click("#saveAgentGatewayConfig");
+    await waitForRuntimeSnapshot(
+      page,
+      (updatedSnapshot) => updatedSnapshot.connections.httpGateway.token === generatedToken
+    );
+    const gatewaySnapshot = await page.evaluate(() => window.ClaraCoreDesktop.getRuntimeSnapshot().then((currentSnapshot) => currentSnapshot.connections.httpGateway));
+    if (gatewaySnapshot.endpoint !== `http://127.0.0.1:${gatewaySnapshot.port}/mcp`) {
+      throw new Error(`Agent Gateway endpoint did not refresh after save: got ${gatewaySnapshot.endpoint}, snapshot ${JSON.stringify(gatewaySnapshot)}`);
+    }
+    const renderedGateway = await page.evaluate(() => ({
+      port: document.querySelector("#settingsAgentGatewayPort").value,
+      token: document.querySelector("#settingsAgentGatewayToken").value,
+      endpoint: document.querySelector("#settingsAgentGatewayEndpoint").textContent
+    }));
+    if (renderedGateway.token !== generatedToken || renderedGateway.endpoint !== gatewaySnapshot.endpoint) {
+      throw new Error(`Agent Gateway settings fields did not refresh after save: ${JSON.stringify(renderedGateway)}`);
     }
 
     await app.close();

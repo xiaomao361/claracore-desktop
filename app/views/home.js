@@ -820,7 +820,6 @@ function createClaraCoreHomeView(context) {
         (endpoint) => {
           const label = t(`connections.endpoint.${endpoint.id}`) || endpoint.id;
           const openUrl = endpoint.openUrl || endpoint.url;
-          const copyUrl = endpoint.copyUrl || endpoint.url;
           const detail = [
             endpoint.method,
             endpoint.auth === "bearer-token" ? t("connections.auth.bearer") : "",
@@ -839,7 +838,7 @@ function createClaraCoreHomeView(context) {
             </div>
             <div class="endpoint-actions">
               <button class="secondary" data-open-url="${escapeHtml(openUrl)}">${t("actions.open")}</button>
-              <button class="secondary" data-copy-url="${escapeHtml(copyUrl)}">${t("actions.copy")}</button>
+              <button class="secondary" data-copy-endpoint-id="${escapeHtml(endpoint.id)}">${t("actions.copy")}</button>
             </div>
           </div>
         `;
