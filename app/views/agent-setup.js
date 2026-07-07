@@ -5,7 +5,10 @@ function createClaraCoreAgentSetupView({ dom, t, getSnapshot, copyValue }) {
     const agentIdentity = snapshot.connections.agentIdentity || {};
     const agentExamples = agentIdentity.examples || ["lara", "clara", "codex"];
     const httpEndpoints = snapshot.connections.httpEndpoints || [];
+    const httpGateway = snapshot.connections.httpGateway || {};
     const streamableEndpoint = httpEndpoints.find((endpoint) => endpoint.id === "streamable-http-mcp");
+    const tokenFile = httpGateway.tokenFile || streamableEndpoint?.tokenFile || "not yet available";
+    const portPolicy = httpGateway.portPolicy === "stable-localhost" ? "stable localhost port" : "runtime-assigned test port";
     const endpoints =
       httpEndpoints
         .map((endpoint) => {
@@ -46,8 +49,8 @@ Desktop owns the product Gateway, Memoria, Shared Line, and InnerLife state for 
 2. Send \`X-ClaraCore-Agent-ID\` with your stable agent id and \`X-ClaraCore-Session-ID\` with the current conversation/session id.
 3. If HTTP MCP is unavailable, use the stdio MCP JSON fallback and set \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\` to your stable agent id.
 4. Call \`gateway_docs\` for the product/tool boundary, then \`gateway_context\` for the current working packet.
-4. Use exposed product Gateway tools for Memory, Shared Line, InnerLife, traces, diagnostics, import/export, and maintenance.
-5. Use CLI fallback only when MCP is unavailable or when a local recovery script needs it.
+5. Use exposed product Gateway tools for Memory, Shared Line, InnerLife, traces, diagnostics, import/export, and maintenance.
+6. Use CLI fallback only when MCP is unavailable or when a local recovery script needs it.
 
 ## Agent Identity Contract
 
@@ -64,7 +67,9 @@ If you are a new agent, choose one stable id before writing any data. Keep using
 - ClaraCore Desktop should stay open as the local agent service.
 - Preferred MCP path: Streamable HTTP MCP at the current localhost \`/mcp\` endpoint.
 - Compatibility path: stdio MCP, configured in the agent client with the JSON below.
-- Local helper URL: Desktop exposes localhost HTTP endpoints while the app is running. The port is assigned at startup; use the current URL from Agent Access or \`/agent/setup\`, and do not hard-code the port.
+- Local helper URL: Desktop exposes localhost HTTP endpoints while the app is running. The default port is stable across restarts so long-lived MCP clients do not need manual reconfiguration.
+- Token file: \`${tokenFile}\` (${httpGateway.tokenFileMode || "0600"}). The bearer token persists across app restarts and changes only when rotated.
+- Port policy: ${portPolicy}. If the configured port is occupied, fix the conflict rather than silently switching clients to a different port.
 - Human copy step: this brief is for an agent to read and install itself. The MCP config is a fallback for manual setup.
 - LAN path: intentionally disabled by default. Do not bind this beyond localhost unless the user explicitly enables a token-protected LAN mode.
 
@@ -76,6 +81,7 @@ If you are a new agent, choose one stable id before writing any data. Keep using
 - Header: \`${streamableEndpoint?.authHeader || "Authorization: Bearer <token>"}\`
 - Agent header: \`X-ClaraCore-Agent-ID: <agent-stable-id>\`
 - Session header: \`X-ClaraCore-Session-ID: <conversation-or-session-id>\`
+- Token file: \`${tokenFile}\`
 
 Use this mode when your MCP client supports Streamable HTTP. It lets Desktop remain the single local Gateway while multiple agents and sessions connect through request-level identity.
 

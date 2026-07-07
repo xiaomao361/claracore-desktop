@@ -91,6 +91,7 @@ function registerIpcHandlers({
   testConfiguredModel,
   notifyRuntimeChanged,
   rescheduleMemoryMaintenance,
+  rotateAgentGatewayToken,
   saveDataRootPreference,
   saveUiPreferences,
   setWindowCloseBehavior,
@@ -115,6 +116,9 @@ function registerIpcHandlers({
   });
   ipcMain.handle("claracore:listModels", async (_event, input) => listConfiguredModels(input));
   ipcMain.handle("claracore:testModelConnection", async (_event, input) => testConfiguredModel(input));
+  ipcMain.handle("claracore:rotateAgentGatewayToken", async () => {
+    return rotateAgentGatewayToken();
+  });
   ipcMain.handle("claracore:createMemory", async (_event, input) => {
     if (!isPlainObject(input)) return false;
     return createProductMemory(app, input);

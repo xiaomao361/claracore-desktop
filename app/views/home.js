@@ -811,7 +811,8 @@ function createClaraCoreHomeView(context) {
     }
     const endpoints = snapshot.connections.httpEndpoints || [];
     if (endpoints.length === 0) {
-      httpEndpointList.innerHTML = `<div class="endpoint-empty">${t("connections.noEndpoints")}</div>`;
+      const gatewayError = snapshot.connections.httpGateway?.error;
+      httpEndpointList.innerHTML = `<div class="endpoint-empty">${escapeHtml(gatewayError?.message || t("connections.noEndpoints"))}</div>`;
       return;
     }
     httpEndpointList.innerHTML = endpoints
@@ -820,7 +821,12 @@ function createClaraCoreHomeView(context) {
           const label = t(`connections.endpoint.${endpoint.id}`) || endpoint.id;
           const openUrl = endpoint.openUrl || endpoint.url;
           const copyUrl = endpoint.copyUrl || endpoint.url;
-          const detail = [endpoint.method, endpoint.auth === "bearer-token" ? t("connections.auth.bearer") : "", endpoint.bind]
+          const detail = [
+            endpoint.method,
+            endpoint.auth === "bearer-token" ? t("connections.auth.bearer") : "",
+            endpoint.bind,
+            endpoint.portPolicy === "stable-localhost" ? t("connections.portStable") : ""
+          ]
             .filter(Boolean)
             .join(" · ");
           return `
@@ -829,6 +835,7 @@ function createClaraCoreHomeView(context) {
               <strong>${escapeHtml(label)}</strong>
               <code>${escapeHtml(endpoint.url)}</code>
               <span>${escapeHtml(detail || endpoint.healthUrl || "")}</span>
+              ${endpoint.tokenFile ? `<span>${escapeHtml(t("connections.tokenFile"))}: ${escapeHtml(endpoint.tokenFile)}</span>` : ""}
             </div>
             <div class="endpoint-actions">
               <button class="secondary" data-open-url="${escapeHtml(openUrl)}">${t("actions.open")}</button>

@@ -49,9 +49,15 @@ fallback when MCP is unavailable.
 ## Streamable HTTP
 
 The Desktop app exposes a local `/mcp` endpoint while it is running. It is bound
-to `127.0.0.1`, uses a runtime-assigned port, requires bearer-token
-authorization, and rejects non-local `Origin` headers. Do not hard-code the port
-or expose this endpoint beyond localhost without a separate security review.
+to `127.0.0.1`, uses a stable default port, requires bearer-token authorization,
+and rejects non-local `Origin` headers. The token is persisted in the local
+`agent-gateway.json` file with `0600` permissions and changes only when rotated.
+Do not expose this endpoint beyond localhost without a separate security review.
+
+If the configured port is occupied, fix the conflict or change the configured
+port intentionally. Do not silently fall back to a random port for normal
+Desktop use, because existing MCP client configs would then point at the wrong
+endpoint.
 
 The v0.4.x endpoint supports the MCP JSON-RPC methods needed for local tools:
 

@@ -12,11 +12,11 @@ secondary settings page.
 Agent Access exposes the current Streamable HTTP MCP endpoint, a stdio MCP
 fallback config, and token-protected localhost helper URLs while the desktop
 app is running. The setup note should not show a LAN URL by default. The
-localhost HTTP surface uses a runtime-assigned port; agents should read the
-current URL from Agent Access or `/agent/setup` for the current app session,
-not hard-code a port. LAN binding is intentionally off and should only become
-available through an explicit product mode with clear bind address, bearer
-token, token regeneration, and disable controls.
+localhost HTTP surface uses a stable default port and a persisted bearer token
+stored in a local `0600` token file, so long-lived MCP clients do not need
+manual reconfiguration after every app restart. LAN binding is intentionally
+off and should only become available through an explicit product mode with
+clear bind address, bearer token, token regeneration, and disable controls.
 
 ClaraCore Desktop is the local desktop manager for the first ClaraCore core package:
 
@@ -50,7 +50,7 @@ Read these before adding new features:
 
 ## Current Status
 
-The current version is `0.4.1`. It is a working desktop shell with a
+The current version is `0.4.2`. It is a working desktop shell with a
 product-owned local data store, Desktop-native Memoria, Shared Line, InnerLife,
 a Desktop-owned Gateway, with model configuration merged into the Settings
 surface.
@@ -65,6 +65,7 @@ Included:
 - Compact Home status board that merges the runtime strip and core module readiness below the Agent View and Attention panels
 - Gateway trace chain on Home that expands one priority call as `agent -> Desktop Gateway -> MCP tool -> result`, compresses additional calls into a recent list, and sends overflow review to Agent Access
 - Agent Setup page with Streamable HTTP MCP endpoint, stdio fallback config, token-protected localhost helper URLs, CLI fallback notes, runtime paths, and recent Gateway activity
+- Streamable HTTP MCP uses a stable localhost port and persisted local token file; token rotation is explicit from Agent Access
 - Desktop-owned Gateway Streamable HTTP endpoint for Gateway context, Memoria, Shared Line, and InnerLife MCP tools; stdio remains available for clients that do not support HTTP MCP yet
 - Home Agent View includes period-based agent change summaries for yesterday, today, recent 7 days, and recent 30 days
 - The built-in Memory embedding model stays lazy-loaded; Ollama and OpenAI-compatible providers do not load it.

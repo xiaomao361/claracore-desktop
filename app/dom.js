@@ -69,6 +69,7 @@ window.ClaraCoreDom = {
   agentSetupMarkdown: document.querySelector("#agentSetupMarkdown"),
   agentSetupNotice: document.querySelector("#agentSetupNotice"),
   copyAgentSetup: document.querySelector("#copyAgentSetup"),
+  rotateAgentGatewayToken: document.querySelector("#rotateAgentGatewayToken"),
   memoriaProvider: document.querySelector("#memoriaProvider"),
   memoriaEndpointField: document.querySelector("#memoriaEndpointField"),
   memoriaEndpoint: document.querySelector("#memoriaEndpoint"),

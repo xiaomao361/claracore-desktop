@@ -56,6 +56,7 @@ const {
   agentSetupMarkdown,
   agentSetupNotice,
   copyAgentSetup,
+  rotateAgentGatewayToken,
   memoriaProvider,
   memoriaEndpoint,
   memoriaModel,
@@ -832,6 +833,21 @@ document.addEventListener("click", (event) => {
 
 copyAgentSetup.addEventListener("click", () => {
   agentSetupView.copy().catch(console.error);
+});
+
+rotateAgentGatewayToken?.addEventListener("click", async () => {
+  if (!window.confirm(t("agentSetup.rotateTokenConfirm"))) return;
+  rotateAgentGatewayToken.disabled = true;
+  agentSetupNotice.textContent = t("common.checking");
+  try {
+    await window.ClaraCoreDesktop.rotateAgentGatewayToken();
+    await refreshRuntimeSnapshotOnly();
+    agentSetupNotice.textContent = t("agentSetup.rotateTokenDone");
+  } catch (error) {
+    agentSetupNotice.textContent = t("agentSetup.rotateTokenFailed", { error: error?.message || String(error) });
+  } finally {
+    rotateAgentGatewayToken.disabled = false;
+  }
 });
 
 saveSettings.addEventListener("click", async () => {

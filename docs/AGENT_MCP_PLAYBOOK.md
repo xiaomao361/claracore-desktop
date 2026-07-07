@@ -8,6 +8,8 @@ Prefer the Streamable HTTP MCP endpoint shown in Agent Access when the client
 supports it. Use the generated stdio MCP config only as a compatibility fallback.
 Streamable HTTP callers should send `Authorization: Bearer <token>`,
 `X-ClaraCore-Agent-ID`, and optionally `X-ClaraCore-Session-ID`.
+The localhost endpoint uses a stable default port and the bearer token persists
+in the local `agent-gateway.json` token file until the user rotates it.
 
 ## Startup Contract
 

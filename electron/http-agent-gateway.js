@@ -1,21 +1,74 @@
 const crypto = require("crypto");
+const fs = require("fs/promises");
 const http = require("http");
+const path = require("path");
 const { PRODUCT_VERSION } = require("../core/version");
 const { createGatewayTools } = require("../core/gateway/tools");
 
 const PROTOCOL_VERSION = "2025-06-18";
+const DEFAULT_HTTP_PORT = 55293;
+const GATEWAY_CONFIG_FILE = "agent-gateway.json";
 const SERVER_INFO = {
   name: "claracore-desktop",
   version: PRODUCT_VERSION
 };
 
-function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, getProductGatewayContext }) {
+function gatewayConfigPath(app) {
+  return path.join(app.getPath("userData"), GATEWAY_CONFIG_FILE);
+}
+
+function generateToken() {
+  return crypto.randomBytes(32).toString("base64url");
+}
+
+function normalizePort(value, fallback = DEFAULT_HTTP_PORT) {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  if (Number.isInteger(parsed) && parsed >= 0 && parsed <= 65535) return parsed;
+  return fallback;
+}
+
+async function readGatewayConfig(configPath) {
+  try {
+    const raw = await fs.readFile(configPath, "utf8");
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch (_error) {
+    return {};
+  }
+}
+
+async function writeGatewayConfig(configPath, config) {
+  await fs.mkdir(path.dirname(configPath), { recursive: true });
+  await fs.writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
+  await fs.chmod(configPath, 0o600);
+}
+
+function publicGatewayConfig(configPath, config, baseUrl) {
+  return {
+    path: configPath,
+    host: config.host,
+    port: config.port,
+    endpoint: baseUrl ? `${baseUrl}/mcp` : `http://${config.host}:${config.port}/mcp`,
+    auth: "bearer-token",
+    tokenFile: configPath,
+    tokenCreatedAt: config.tokenCreatedAt || "",
+    tokenRotatedAt: config.tokenRotatedAt || "",
+    tokenFileMode: "0600"
+  };
+}
+
+function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, getProductGatewayContext, port }) {
   const state = {
     host: "127.0.0.1",
     server: null,
     sockets: new Set(),
     port: null,
-    token: crypto.randomBytes(32).toString("base64url")
+    configuredPort: normalizePort(process.env.CLARACORE_DESKTOP_HTTP_PORT || port, DEFAULT_HTTP_PORT),
+    token: null,
+    tokenFile: gatewayConfigPath(app),
+    tokenCreatedAt: "",
+    tokenRotatedAt: "",
+    lastError: null
   };
 
   function baseUrl() {
@@ -36,7 +89,10 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
         healthUrl: `${currentBaseUrl}/health`,
         auth: "bearer-token",
         authHeader: `Authorization: Bearer ${state.token}`,
-        bind: state.host
+        bind: state.host,
+        tokenFile: state.tokenFile,
+        tokenFileMode: "0600",
+        portPolicy: state.configuredPort === 0 ? "test-random" : "stable-localhost"
       },
       {
         id: "streamable-http-mcp",
@@ -47,7 +103,10 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
         auth: "bearer-token",
         authHeader: `Authorization: Bearer ${state.token}`,
         bind: state.host,
-        transport: "streamable-http"
+        transport: "streamable-http",
+        tokenFile: state.tokenFile,
+        tokenFileMode: "0600",
+        portPolicy: state.configuredPort === 0 ? "test-random" : "stable-localhost"
       },
       {
         id: "gateway-context-json",
@@ -58,9 +117,30 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
         healthUrl: `${currentBaseUrl}/health`,
         auth: "bearer-token",
         authHeader: `Authorization: Bearer ${state.token}`,
-        bind: state.host
+        bind: state.host,
+        tokenFile: state.tokenFile,
+        tokenFileMode: "0600",
+        portPolicy: state.configuredPort === 0 ? "test-random" : "stable-localhost"
       }
     ];
+  }
+
+  function status() {
+    const currentBaseUrl = baseUrl();
+    return {
+      ok: Boolean(state.server && state.port),
+      host: state.host,
+      port: state.port,
+      configuredPort: state.configuredPort,
+      portPolicy: state.configuredPort === 0 ? "test-random" : "stable-localhost",
+      baseUrl: currentBaseUrl,
+      endpoint: currentBaseUrl ? `${currentBaseUrl}/mcp` : `http://${state.host}:${state.configuredPort}/mcp`,
+      tokenFile: state.tokenFile,
+      tokenFileMode: "0600",
+      tokenCreatedAt: state.tokenCreatedAt,
+      tokenRotatedAt: state.tokenRotatedAt,
+      error: state.lastError
+    };
   }
 
   function sendJson(response, statusCode, payload) {
@@ -83,6 +163,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
   function tokenMatches(candidate) {
     const value = String(candidate || "");
     const expected = state.token;
+    if (!expected) return false;
     const valueBuffer = Buffer.from(value);
     const expectedBuffer = Buffer.from(expected);
     return valueBuffer.length === expectedBuffer.length && crypto.timingSafeEqual(valueBuffer, expectedBuffer);
@@ -170,6 +251,49 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
     };
   }
 
+  async function ensureGatewayConfig({ rotateToken = false } = {}) {
+    const existing = await readGatewayConfig(state.tokenFile);
+    const now = new Date().toISOString();
+    const nextToken =
+      rotateToken || typeof existing.token !== "string" || existing.token.length < 32
+        ? generateToken()
+        : existing.token;
+    const nextConfig = {
+      version: 1,
+      product: "ClaraCore Desktop",
+      transport: "streamable-http",
+      host: state.host,
+      port: state.configuredPort,
+      endpoint: `http://${state.host}:${state.configuredPort}/mcp`,
+      auth: "bearer-token",
+      header: `Authorization: Bearer ${nextToken}`,
+      token: nextToken,
+      tokenCreatedAt: existing.tokenCreatedAt || now,
+      tokenRotatedAt: rotateToken ? now : existing.tokenRotatedAt || "",
+      updatedAt: now,
+      notes: [
+        "This file is local-only and should be readable only by the current OS user.",
+        "MCP clients can reuse this endpoint and bearer token across ClaraCore Desktop restarts.",
+        "Rotate the token from Agent Access if it may have been exposed."
+      ]
+    };
+    await writeGatewayConfig(state.tokenFile, nextConfig);
+    state.token = nextToken;
+    state.tokenCreatedAt = nextConfig.tokenCreatedAt;
+    state.tokenRotatedAt = nextConfig.tokenRotatedAt;
+    return nextConfig;
+  }
+
+  async function rotateToken() {
+    const config = await ensureGatewayConfig({ rotateToken: true });
+    return {
+      rotated: true,
+      gateway: status(),
+      config: publicGatewayConfig(state.tokenFile, config, baseUrl()),
+      authHeader: `Authorization: Bearer ${state.token}`
+    };
+  }
+
   function textResult(value) {
     return {
       content: [
@@ -242,7 +366,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
         transport: "streamable-http",
         protocolVersion: PROTOCOL_VERSION,
         endpoint: `${baseUrl()}/mcp`,
-        note: "Send MCP JSON-RPC requests with POST. Server-initiated event streams are not used in this local v0.4.0 endpoint."
+        note: "Send MCP JSON-RPC requests with POST. Server-initiated event streams are not used in this local v0.4.x endpoint."
       });
       return;
     }
@@ -333,7 +457,10 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
       sendJson(response, 200, {
         ok: true,
         product: "ClaraCore Desktop",
-        bind: state.host
+        bind: state.host,
+        port: state.port,
+        configuredPort: state.configuredPort,
+        tokenFile: state.tokenFile
       });
       return;
     }
@@ -353,12 +480,16 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
           current: "streamable-http-and-stdio",
           bind: state.host,
           port: state.port,
-          portPolicy: "runtime-assigned; do not hard-code across app sessions",
+          portPolicy: state.configuredPort === 0 ? "test-random" : "stable-localhost",
           lan: "disabled-by-default"
         },
         auth: {
           type: "bearer",
-          header: `Authorization: Bearer ${state.token}`
+          header: `Authorization: Bearer ${state.token}`,
+          tokenFile: state.tokenFile,
+          tokenFileMode: "0600",
+          tokenCreatedAt: state.tokenCreatedAt,
+          tokenRotatedAt: state.tokenRotatedAt
         },
         endpoints: buildEndpoints().map((endpoint) => ({
           id: endpoint.id,
@@ -396,6 +527,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
 
   async function start() {
     if (state.server) return;
+    await ensureGatewayConfig();
     state.server = http.createServer((request, response) => {
       handleRequest(request, response).catch((error) => {
         sendJson(response, 500, {
@@ -411,10 +543,26 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
       });
     });
     await new Promise((resolve, reject) => {
-      state.server.once("error", reject);
-      state.server.listen(0, state.host, () => {
+      const onError = (error) => {
+        state.lastError = {
+          code: error?.code || "listen_failed",
+          message: error?.message || String(error),
+          port: state.configuredPort
+        };
+        state.server.off("error", onError);
+        try {
+          state.server.close();
+        } catch (_closeError) {
+          // The server may fail before it starts listening.
+        }
+        state.server = null;
+        resolve();
+      };
+      state.server.once("error", onError);
+      state.server.listen(state.configuredPort, state.host, () => {
         state.port = state.server.address().port;
-        state.server.off("error", reject);
+        state.lastError = null;
+        state.server.off("error", onError);
         resolve();
       });
     });
@@ -433,11 +581,14 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
 
   return {
     buildEndpoints,
+    rotateToken,
     start,
+    status,
     stop
   };
 }
 
 module.exports = {
+  DEFAULT_HTTP_PORT,
   createHttpAgentGateway
 };

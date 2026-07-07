@@ -4,7 +4,7 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- The current local version is `0.4.1`.
+- The current local version is `0.4.2`.
 - Historical `0.1.x` and `0.2.x` planning notes are archived under
   `docs/archive/`.
 
@@ -38,6 +38,27 @@ npm run dist:mac
 
 Only install or replace the daily-use app after the target build passes the
 focused smoke gates for its changed surface.
+
+## v0.4.2 Checkpoint
+
+`0.4.2` stabilizes Streamable HTTP MCP for daily use:
+
+- The localhost MCP endpoint uses a stable default port instead of a new random
+  port on every app restart.
+- The bearer token is persisted in the local `agent-gateway.json` file with
+  `0600` permissions, so MCP clients do not need manual token updates after
+  every restart.
+- Token rotation is explicit from Agent Access.
+- If the configured port is occupied, Desktop surfaces the conflict instead of
+  silently switching clients to another port.
+
+Validation for this checkpoint:
+
+```bash
+npm run check
+node core/tests/streamable-http-gateway-smoke.js
+git diff --check
+```
 
 ## v0.4.1 Checkpoint
 

@@ -439,7 +439,8 @@ async function getRuntimeSnapshot() {
   const snapshot = await buildProductSnapshot(app);
   const connections = {
     ...snapshot.connections,
-    httpEndpoints: httpAgentGateway ? httpAgentGateway.buildEndpoints() : []
+    httpEndpoints: httpAgentGateway ? httpAgentGateway.buildEndpoints() : [],
+    httpGateway: httpAgentGateway ? httpAgentGateway.status() : null
   };
   return {
     ...snapshot,
@@ -739,6 +740,12 @@ if (!isGatewayMode && hasSingleInstanceLock) {
     rescheduleMemoryMaintenance: () => {
       if (schedulers) schedulers.rescheduleMemoryMaintenance();
     },
+    rotateAgentGatewayToken: async () => {
+      if (!httpAgentGateway) return false;
+      const result = await httpAgentGateway.rotateToken();
+      notifyRuntimeChanged("agent-gateway-token-rotated");
+      return result;
+    },
     saveDataRootPreference,
     getUiPreferences,
     saveUiPreferences,
@@ -753,7 +760,13 @@ if (!isGatewayMode && hasSingleInstanceLock) {
   app.whenReady()
     .then(async () => {
       const { database } = await ensureProductCore(app);
-      httpAgentGateway = createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, getProductGatewayContext });
+      httpAgentGateway = createHttpAgentGateway({
+        app,
+        ensureProductCore,
+        getRuntimeSnapshot,
+        getProductGatewayContext,
+        port: isTestInstance ? 0 : undefined
+      });
       await httpAgentGateway.start();
       await database.recordRuntimeEvent({
         level: "info",
