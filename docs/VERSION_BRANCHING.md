@@ -4,7 +4,7 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- The current local version is `0.3.5`.
+- The current local version is `0.3.6`.
 - Historical `0.1.x` and `0.2.x` planning notes are archived under
   `docs/archive/`.
 
@@ -103,3 +103,20 @@ git diff --check
   connection rows.
 - The patch keeps the existing dark theme tokens and applies them consistently
   to newer UI surfaces instead of changing the product layout or model flow.
+
+## v0.3.6 Checkpoint
+
+`0.3.6` improves agent onboarding for packaged installs:
+
+- Agent Access now frames the copied setup text as instructions for the agent,
+  not as source-code reading directions.
+- The copied instructions and `gateway_docs` both include the expected startup
+  sequence: `claracore_connection_test`, `gateway_docs`, then
+  `gateway_context`.
+- The agent-facing guide includes module playbooks for Memory, Memory links,
+  structured records, Shared Line, InnerLife, and Gateway diagnostics so agents
+  know how to use ClaraCore through MCP without inspecting local source files.
+- `docs/AGENT_MCP_PLAYBOOK.md`, the Agent Access copied instructions, and
+  `gateway_docs` now share the same MCP-first recipes: connection test, context
+  read, search-before-write Memory, Memory links, Shared Line updates, InnerLife
+  checks, and Gateway diagnostics.

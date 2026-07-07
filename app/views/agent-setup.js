@@ -90,6 +90,41 @@ After installing, call \`gateway_docs\`, then \`gateway_context\`.
 \`gateway_docs\` explains the agent-facing product boundary without requiring source access. \`gateway_context\` returns the current Shared Line, recent Memory, InnerLife state, Doctor guidance, and recovery advice in one packet.
 Any successful MCP call appears in Agent Access as recent agent activity.
 
+Do not invent tool names. If you are uncertain, call \`gateway_docs\` and use the names in its Available Tools list.
+
+## Common MCP Recipes
+
+### Resume work
+
+1. Call \`gateway_context\`.
+2. Read the current Shared Line and recent Memory.
+3. Continue from the current state instead of starting a new thread of work.
+
+### Record a durable fact or decision
+
+1. Call \`memoria_search\` with the topic first.
+2. If an existing memory is the same fact, call \`memoria_update\`.
+3. If it is new, call \`memoria_create\`.
+4. Add labels such as \`agent-id:<your-agent-id>\`, project labels, and stable topic labels.
+
+### Connect related memories
+
+1. Call \`memoria_link_list\` before adding more links.
+2. Call \`memoria_link_create\` with \`kind\` set to \`related\`, \`causes\`, \`evolved-from\`, \`contradicts\`, or \`part-of\`.
+3. Add a short \`note\` explaining why the link exists.
+
+### Update the current Shared Line
+
+1. Call \`shared_line_get\` or \`gateway_context\`.
+2. Call \`shared_line_update\` after meaningful progress, handoff, or a changed interpretation.
+3. Use \`interpretationStatus: "needs_review"\` when the state is uncertain.
+
+### Diagnose Gateway state
+
+1. Call \`claracore_status\` for product health and configuration.
+2. Call \`gateway_trace_list\` to inspect recent tool calls.
+3. Do not mutate SQLite directly.
+
 ## Module Playbook
 
 ### Memory / Memoria

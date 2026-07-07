@@ -1,0 +1,76 @@
+# ClaraCore Agent MCP Playbook
+
+This guide is for external agents connected to ClaraCore Desktop through the
+Gateway MCP server. Agents should use MCP tools as the product contract instead
+of reading packaged app source files.
+
+## Startup Contract
+
+After the MCP server is installed or restarted, run this sequence:
+
+1. `claracore_connection_test`
+2. `gateway_docs`
+3. `gateway_context`
+
+`gateway_docs` explains the product boundary and available tools.
+`gateway_context` returns the current working packet: Shared Line, recent
+Memory, InnerLife state, Doctor guidance, and recovery advice.
+
+Do not invent tool names. If a tool name is uncertain, call `gateway_docs` and
+use the names listed there.
+
+## Common Recipes
+
+### Resume Work
+
+1. Call `gateway_context`.
+2. Read the current Shared Line and recent Memory.
+3. Continue from the current state instead of starting a new thread of work.
+
+### Record A Durable Fact Or Decision
+
+1. Call `memoria_search` with the topic first.
+2. If an existing memory is the same fact, call `memoria_update`.
+3. If it is new, call `memoria_create`.
+4. Add labels such as `agent-id:<your-agent-id>`, project labels, and stable
+   topic labels.
+
+### Connect Related Memories
+
+1. Call `memoria_link_list` before adding more links.
+2. Call `memoria_link_create` with one of these kinds:
+   - `related`
+   - `causes`
+   - `evolved-from`
+   - `contradicts`
+   - `part-of`
+3. Add a short `note` explaining why the link exists.
+
+### Update The Current Shared Line
+
+1. Call `shared_line_get` or `gateway_context`.
+2. Call `shared_line_update` after meaningful progress, a handoff, or a changed
+   interpretation.
+3. Use `interpretationStatus: "needs_review"` when the state is uncertain.
+
+### Use InnerLife
+
+1. Call `innerlife_session_start` at the beginning of a meaningful session.
+2. Use `innerlife_submit_inbox`, `innerlife_submit_fact`, or
+   `innerlife_submit_continuity` for material that should be digested later.
+3. Call `innerlife_pending_shares` and `innerlife_share_check` before surfacing
+   a waiting share to the user.
+4. Call `innerlife_doctor` when InnerLife seems idle, paused, or misconfigured.
+
+### Diagnose Gateway State
+
+1. Call `claracore_status` for product health and configuration.
+2. Call `gateway_trace_list` to inspect recent tool calls.
+3. Do not mutate SQLite directly.
+
+## CLI Fallback
+
+Use CLI commands only when MCP is unavailable and the operator has granted local
+shell access. CLI writes should follow the same rules as MCP writes: search
+first, keep facts focused, label agent-scoped records, and update the Shared
+Line only after meaningful progress.
