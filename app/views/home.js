@@ -17,6 +17,8 @@ function createClaraCoreHomeView(context) {
     homeRuntimeStrip,
     homeAttentionSummary,
     homeAttentionList,
+    homeAgentActivityList,
+    homeAgentActivityTabs,
     homeAgentViewList,
     homeTraceList,
     healthSummary,
@@ -44,6 +46,7 @@ function createClaraCoreHomeView(context) {
     safeJsonObject,
     getSnapshot
   });
+  let activeAgentActivityPeriod = "7d";
 
   function serviceBadge(module) {
     if (module.state === "planned") {
@@ -472,11 +475,58 @@ function createClaraCoreHomeView(context) {
     };
   }
 
+  function agentActivityItems() {
+    const snapshot = getSnapshot();
+    const summary = snapshot?.agentActivitySummary || {};
+    const period = summary.periods?.[activeAgentActivityPeriod] || summary.periods?.["7d"] || {};
+    return period.agents || [];
+  }
+
+  function renderAgentActivity() {
+    if (!homeAgentActivityList) return;
+    if (homeAgentActivityTabs?.length) {
+      homeAgentActivityTabs.forEach((button) => {
+        const isActive = button.dataset.agentActivityPeriod === activeAgentActivityPeriod;
+        button.classList.toggle("active", isActive);
+        button.setAttribute("aria-selected", isActive ? "true" : "false");
+      });
+    }
+    const agents = agentActivityItems().slice(0, 3);
+    if (!agents.length) {
+      homeAgentActivityList.innerHTML = `
+        <div class="home-agent-activity-empty">
+          <span>${escapeHtml(t("home.agentActivity.empty"))}</span>
+        </div>
+      `;
+      return;
+    }
+    homeAgentActivityList.innerHTML = agents
+      .map((agent) => {
+        const total = Number(agent.newMemories || 0) + Number(agent.formedConnections || 0) + Number(agent.proactiveShares || 0) + Number(agent.sharedLineUpdates || 0);
+        return `
+          <article class="home-agent-activity-card">
+            <div class="home-agent-activity-head">
+              <strong>${escapeHtml(agent.agentId)}</strong>
+              <span>${escapeHtml(t("home.agentActivity.total", { count: String(total) }))}</span>
+            </div>
+            <div class="home-agent-activity-stats">
+              <div><span>${escapeHtml(t("home.agentActivity.newMemories"))}</span><strong>${escapeHtml(agent.newMemories || 0)}</strong></div>
+              <div><span>${escapeHtml(t("home.agentActivity.formedConnections"))}</span><strong>${escapeHtml(agent.formedConnections || 0)}</strong></div>
+              <div><span>${escapeHtml(t("home.agentActivity.proactiveShares"))}</span><strong>${escapeHtml(agent.proactiveShares || 0)}</strong></div>
+              <div><span>${escapeHtml(t("home.agentActivity.sharedLineUpdates"))}</span><strong>${escapeHtml(agent.sharedLineUpdates || 0)}</strong></div>
+            </div>
+          </article>
+        `;
+      })
+      .join("");
+  }
+
   function renderHomeDashboard() {
     const snapshot = getSnapshot();
     if (!snapshot) return;
     renderRuntimeOverview();
     renderAttentionQueue();
+    renderAgentActivity();
 
     const agentIds = homeAgentIds();
     const useGlobalPendingFallback = Boolean((snapshot?.innerLife?.pendingShares || []).length) && !hasAgentShareMatch(snapshot?.innerLife?.pendingShares || [], agentIds);
@@ -794,6 +844,13 @@ function createClaraCoreHomeView(context) {
   function actionableGatewayErrorCount() {
     return actionableGatewayErrors(getSnapshot()?.gatewayTraces || []).length;
   }
+
+  homeAgentActivityTabs?.forEach((button) => {
+    button.addEventListener("click", () => {
+      activeAgentActivityPeriod = button.dataset.agentActivityPeriod || "7d";
+      renderAgentActivity();
+    });
+  });
 
   return {
     renderModules,

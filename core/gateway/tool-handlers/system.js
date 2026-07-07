@@ -40,7 +40,7 @@ async function handleSystemTool(name, args, context) {
             "",
             "## Identity",
             "",
-            "Set a stable CLARACORE_AGENT_ID for each agent process. Do not reuse another agent's id.",
+            "Use a stable agent id for each calling agent. Streamable HTTP callers send X-ClaraCore-Agent-ID. Stdio fallback callers set CLARACORE_AGENT_ID for the process. Do not reuse another agent's id.",
             "Preferred ids: lara, clara, codex. If an old tool-prefixed id needs consolidation, use agent_identity_merge instead of editing SQLite.",
             "",
             "## What You Can Rely On",
@@ -135,6 +135,8 @@ async function handleSystemTool(name, args, context) {
             "",
             "## MCP Config",
             "",
+            "Prefer the Streamable HTTP MCP endpoint shown in Agent Access when your client supports it. Use this generated stdio config only as a compatibility fallback.",
+            "",
             "```json",
             JSON.stringify(
               {
@@ -186,7 +188,7 @@ async function handleSystemTool(name, args, context) {
     return textResult({
       ok: true,
       agentId,
-      transport: "stdio",
+      transport: "mcp",
       server: serverInfo,
       dataRoot: paths.dataRoot,
       database: {

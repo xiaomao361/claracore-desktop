@@ -62,6 +62,19 @@ let forceQuitTimer = null;
 const resourceMemorySamples = [];
 let uiPreferencesSaveQueue = Promise.resolve();
 
+function reportMainProcessError(label, error) {
+  const message = error?.stack || error?.message || String(error);
+  console.error(`${label}:`, message);
+}
+
+process.on("unhandledRejection", (reason) => {
+  reportMainProcessError("Unhandled promise rejection", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  reportMainProcessError("Uncaught exception", error);
+});
+
 function hideGatewayFromDock() {
   if (!isGatewayMode || process.platform !== "darwin") return;
   if (typeof app.setActivationPolicy === "function") {
@@ -737,38 +750,44 @@ if (!isGatewayMode && hasSingleInstanceLock) {
     updateTrayMenu
   });
 
-  app.whenReady().then(async () => {
-    const { database } = await ensureProductCore(app);
-    httpAgentGateway = createHttpAgentGateway({ app, getRuntimeSnapshot, getProductGatewayContext });
-    await httpAgentGateway.start();
-    await database.recordRuntimeEvent({
-      level: "info",
-      source: "desktop",
-      message: "ClaraCore Desktop started",
-      metadata: {
-        version: PRODUCT_VERSION,
-        packaged: app.isPackaged,
-        platform: process.platform
-      }
-    });
-    createWindow();
-    createTray();
-    schedulers = createSchedulers({
-      app,
-      ensureProductCore,
-      isQuitting: () => isQuitting,
-      notifyRuntimeChanged,
-      runProductMemoryMaintenance,
-      saveProductSettings,
-      tickProductInnerLifeDaemon
-    });
-    schedulers.start();
+  app.whenReady()
+    .then(async () => {
+      const { database } = await ensureProductCore(app);
+      httpAgentGateway = createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, getProductGatewayContext });
+      await httpAgentGateway.start();
+      await database.recordRuntimeEvent({
+        level: "info",
+        source: "desktop",
+        message: "ClaraCore Desktop started",
+        metadata: {
+          version: PRODUCT_VERSION,
+          packaged: app.isPackaged,
+          platform: process.platform
+        }
+      });
+      createWindow();
+      createTray();
+      schedulers = createSchedulers({
+        app,
+        ensureProductCore,
+        isQuitting: () => isQuitting,
+        notifyRuntimeChanged,
+        runProductMemoryMaintenance,
+        saveProductSettings,
+        tickProductInnerLifeDaemon
+      });
+      schedulers.start();
 
-    app.on("activate", () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow();
-      showMainWindow();
+      app.on("activate", () => {
+        if (BrowserWindow.getAllWindows().length === 0) createWindow();
+        showMainWindow();
+      });
+    })
+    .catch((error) => {
+      reportMainProcessError("ClaraCore Desktop startup failed", error);
+      dialog.showErrorBox("ClaraCore Desktop startup failed", error?.message || String(error));
+      app.quit();
     });
-  });
 
   app.on("window-all-closed", () => {
     if (!tray && process.platform !== "darwin") app.quit();

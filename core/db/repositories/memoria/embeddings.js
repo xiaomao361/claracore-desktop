@@ -5,6 +5,7 @@ const BUILT_IN_EMBEDDING_PROVIDER = "claracore-built-in";
 const BUILT_IN_EMBEDDING_MODEL = "Xenova/bge-small-zh-v1.5";
 
 let builtInExtractorPromise = null;
+let builtInExtractorLoadStarted = false;
 
 function resolveBuiltInModelRoot() {
   const candidates = [
@@ -18,6 +19,7 @@ function resolveBuiltInModelRoot() {
 
 async function getBuiltInExtractor(model) {
   if (!builtInExtractorPromise) {
+    builtInExtractorLoadStarted = true;
     builtInExtractorPromise = (async () => {
       const { pipeline, env } = require("@xenova/transformers");
       env.localModelPath = resolveBuiltInModelRoot();
@@ -27,6 +29,13 @@ async function getBuiltInExtractor(model) {
     })();
   }
   return builtInExtractorPromise;
+}
+
+function builtInEmbeddingLoadState() {
+  return {
+    started: builtInExtractorLoadStarted,
+    loaded: Boolean(builtInExtractorPromise)
+  };
 }
 
 async function createBuiltInEmbedding(prompt, model) {
@@ -364,5 +373,6 @@ function createMemoriaEmbeddingRepository(helpers) {
 }
 
 module.exports = {
+  builtInEmbeddingLoadState,
   createMemoriaEmbeddingRepository
 };

@@ -1,12 +1,17 @@
 # ClaraCore Agent MCP Playbook
 
 This guide is for external agents connected to ClaraCore Desktop through the
-Gateway MCP server. Agents should use MCP tools as the product contract instead
-of reading packaged app source files.
+Gateway MCP endpoint. Agents should use MCP tools as the product contract
+instead of reading packaged app source files.
+
+Prefer the Streamable HTTP MCP endpoint shown in Agent Access when the client
+supports it. Use the generated stdio MCP config only as a compatibility fallback.
+Streamable HTTP callers should send `Authorization: Bearer <token>`,
+`X-ClaraCore-Agent-ID`, and optionally `X-ClaraCore-Session-ID`.
 
 ## Startup Contract
 
-After the MCP server is installed or restarted, run this sequence:
+After MCP is installed, connected, or restarted, run this sequence:
 
 1. `claracore_connection_test`
 2. `gateway_docs`

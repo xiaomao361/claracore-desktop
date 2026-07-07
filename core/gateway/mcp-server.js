@@ -207,12 +207,16 @@ async function callTool(name, args = {}) {
   const startedAt = Date.now();
   const { paths, database } = await openDatabase();
   const agentId = currentMcpAgentId(args);
+  const sessionId = String(args.sessionId || args.session_id || "").trim();
   const callArgs = { ...args, agentId };
   delete callArgs.agent_id;
+  delete callArgs.session_id;
   try {
     const result = await callToolBody(name, callArgs, paths, database);
     await database.recordGatewayTrace({
       agentId,
+      sessionId,
+      transport: "stdio",
       toolName: name,
       status: "ok",
       durationMs: Date.now() - startedAt,
@@ -223,6 +227,8 @@ async function callTool(name, args = {}) {
   } catch (error) {
     await database.recordGatewayTrace({
       agentId,
+      sessionId,
+      transport: "stdio",
       toolName: name,
       status: "error",
       durationMs: Date.now() - startedAt,

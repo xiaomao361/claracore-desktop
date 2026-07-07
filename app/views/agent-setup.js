@@ -4,8 +4,10 @@ function createClaraCoreAgentSetupView({ dom, t, getSnapshot, copyValue }) {
     if (!snapshot?.connections) return t("common.checking");
     const agentIdentity = snapshot.connections.agentIdentity || {};
     const agentExamples = agentIdentity.examples || ["lara", "clara", "codex"];
+    const httpEndpoints = snapshot.connections.httpEndpoints || [];
+    const streamableEndpoint = httpEndpoints.find((endpoint) => endpoint.id === "streamable-http-mcp");
     const endpoints =
-      (snapshot.connections.httpEndpoints || [])
+      httpEndpoints
         .map((endpoint) => {
           const lines = [
             `- ${t(`connections.endpoint.${endpoint.id}`) || endpoint.id}: ${endpoint.method || "GET"} ${endpoint.url}`
@@ -23,11 +25,12 @@ If you cannot edit your own MCP settings, tell the user exactly where to paste t
 
 ## Your Immediate Tasks
 
-1. Make sure the MCP server named \`claracore-desktop\` is installed with the JSON in "Gateway MCP" below.
-2. Use your own stable \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\` value. Do not reuse another agent's id.
-3. After MCP tools are available, call \`claracore_connection_test\`.
-4. Call \`gateway_docs\` to learn ClaraCore's product boundary and tool contract.
-5. Call \`gateway_context\` before doing useful work.
+1. Prefer the Streamable HTTP MCP endpoint in "Gateway MCP" when your client supports remote/local HTTP MCP.
+2. If your client only supports local stdio MCP, install the JSON fallback below.
+3. Use your own stable agent id. Do not reuse another agent's id.
+4. After MCP tools are available, call \`claracore_connection_test\`.
+5. Call \`gateway_docs\` to learn ClaraCore's product boundary and tool contract.
+6. Call \`gateway_context\` before doing useful work.
 
 ---
 
@@ -39,15 +42,16 @@ Desktop owns the product Gateway, Memoria, Shared Line, and InnerLife state for 
 
 ## Agent Use Order
 
-1. Install ClaraCore Desktop as an MCP server in your own agent client.
-2. Set \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\` to your own stable agent id.
-3. Call \`gateway_docs\` for the product/tool boundary, then \`gateway_context\` for the current working packet. Desktop uses your configured \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\` as the MCP process identity.
+1. Connect to ClaraCore Desktop through Streamable HTTP MCP when your agent client supports it.
+2. Send \`X-ClaraCore-Agent-ID\` with your stable agent id and \`X-ClaraCore-Session-ID\` with the current conversation/session id.
+3. If HTTP MCP is unavailable, use the stdio MCP JSON fallback and set \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\` to your stable agent id.
+4. Call \`gateway_docs\` for the product/tool boundary, then \`gateway_context\` for the current working packet.
 4. Use exposed product Gateway tools for Memory, Shared Line, InnerLife, traces, diagnostics, import/export, and maintenance.
 5. Use CLI fallback only when MCP is unavailable or when a local recovery script needs it.
 
 ## Agent Identity Contract
 
-\`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\` belongs to the calling agent. Do not share one id across agents.
+The agent id belongs to the calling agent. For Streamable HTTP, send it as \`X-ClaraCore-Agent-ID\`. For stdio fallback, set \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\`. Do not share one id across agents.
 
 Recommended stable ids:
 
@@ -58,12 +62,24 @@ If you are a new agent, choose one stable id before writing any data. Keep using
 ## Connection Mode
 
 - ClaraCore Desktop should stay open as the local agent service.
-- Current MCP path: stdio MCP, configured in the agent client with the JSON below.
-- Local helper URL: Desktop exposes a localhost HTTP Agent Gateway while the app is running. Its port is assigned at startup; use the current URL from Agent Access or \`/agent/setup\`, and do not hard-code the port.
+- Preferred MCP path: Streamable HTTP MCP at the current localhost \`/mcp\` endpoint.
+- Compatibility path: stdio MCP, configured in the agent client with the JSON below.
+- Local helper URL: Desktop exposes localhost HTTP endpoints while the app is running. The port is assigned at startup; use the current URL from Agent Access or \`/agent/setup\`, and do not hard-code the port.
 - Human copy step: this brief is for an agent to read and install itself. The MCP config is a fallback for manual setup.
 - LAN path: intentionally disabled by default. Do not bind this beyond localhost unless the user explicitly enables a token-protected LAN mode.
 
 ## Gateway MCP
+
+### Streamable HTTP
+
+- Endpoint: \`${streamableEndpoint?.url || "not yet available"}\`
+- Header: \`${streamableEndpoint?.authHeader || "Authorization: Bearer <token>"}\`
+- Agent header: \`X-ClaraCore-Agent-ID: <agent-stable-id>\`
+- Session header: \`X-ClaraCore-Session-ID: <conversation-or-session-id>\`
+
+Use this mode when your MCP client supports Streamable HTTP. It lets Desktop remain the single local Gateway while multiple agents and sessions connect through request-level identity.
+
+### stdio fallback
 
 \`\`\`json
 ${snapshot.connections.mcpConfig}
@@ -71,9 +87,9 @@ ${snapshot.connections.mcpConfig}
 
 ## Claude Desktop Setup
 
-Claude Desktop newer builds may show MCP entry points under Settings -> Extensions. For custom local servers, keep using the generated stdio MCP config above. If Claude Desktop offers a custom extension install flow, use it only after ClaraCore ships an explicit \`.mcpb\` package; this app currently publishes the stdio config as the supported path.
+Claude Desktop newer builds may show MCP entry points under Settings -> Extensions. If your build supports Streamable HTTP MCP, use the endpoint and bearer header above. If it only supports custom local servers, use the generated stdio fallback config. If Claude Desktop offers a custom extension install flow, use it only after ClaraCore ships an explicit \`.mcpb\` package.
 
-Manual setup:
+Manual stdio fallback setup:
 
 1. Open Claude Desktop settings and find the MCP or Extensions developer config entry.
 2. Add or replace the \`claracore-desktop\` server with the JSON above.
@@ -199,7 +215,7 @@ node core/cli.js innerlife inbox --agent <agent-id> --body "material to digest l
 ## Runtime Boundary
 
 - Current Desktop product core: Node/Electron + Desktop-owned SQLite.
-- Current Desktop Gateway: Node/Electron stdio MCP.
+- Current Desktop Gateway: Node/Electron Streamable HTTP MCP with stdio MCP fallback.
 - Legacy/reference Memoria service: Python CLI, FastAPI, MCP stdio, usually conda env \`zhouwei\`.
 - Legacy/reference Continuity service: Python CLI, FastAPI, MCP stdio, usually conda env \`zhouwei\`.
 - Legacy/reference InnerLife service: Python package/CLI, FastAPI, MCP stdio, daemon scripts; Python 3.10+ or project venv.
@@ -209,7 +225,7 @@ node core/cli.js innerlife inbox --agent <agent-id> --body "material to digest l
 
 ${endpoints}
 
-Use \`Authorization: Bearer <token>\` for HTTP requests. \`/agent/setup\` returns this setup as JSON; \`/gateway/context\` returns the first context packet an agent should read. HTTP is a helper surface; MCP remains the product tool contract.
+Use \`Authorization: Bearer <token>\` for HTTP requests. \`/mcp\` is the Streamable HTTP MCP endpoint; \`/agent/setup\` returns this setup as JSON; \`/gateway/context\` returns the first context packet an agent should read for non-MCP clients.
 
 ## Product Surface
 

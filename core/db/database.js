@@ -106,6 +106,7 @@ class ProductDatabase {
 
   async initialize() {
     await fs.mkdir(path.dirname(this.dbPath), { recursive: true });
+    await this.migratePreSchemaCompatibility();
     const schema = await fs.readFile(this.schemaPath, "utf8");
     await this.exec(schema);
     await this.migrateAdditiveSchema();
@@ -184,6 +185,18 @@ class ProductDatabase {
     `);
   }
 
+  async migratePreSchemaCompatibility() {
+    const gatewayTraceColumns = new Set((await this.query("PRAGMA table_info(gateway_traces);")).map((row) => row.name));
+    if (!gatewayTraceColumns.has("id")) return;
+    const additions = [
+      ["session_id", "ALTER TABLE gateway_traces ADD COLUMN session_id TEXT NOT NULL DEFAULT '';"],
+      ["transport", "ALTER TABLE gateway_traces ADD COLUMN transport TEXT NOT NULL DEFAULT 'stdio';"]
+    ];
+    for (const [column, sql] of additions) {
+      if (!gatewayTraceColumns.has(column)) await this.exec(sql);
+    }
+  }
+
   async migrateAdditiveSchema() {
     const memoryRecordColumns = new Set((await this.query("PRAGMA table_info(memory_records);")).map((row) => row.name));
     const memoryRecordAdditions = [
@@ -213,6 +226,14 @@ class ProductDatabase {
     for (const [column, sql] of continuityLineAdditions) {
       if (!continuityLineColumns.has(column)) await this.exec(sql);
     }
+    const gatewayTraceColumns = new Set((await this.query("PRAGMA table_info(gateway_traces);")).map((row) => row.name));
+    const gatewayTraceAdditions = [
+      ["session_id", "ALTER TABLE gateway_traces ADD COLUMN session_id TEXT NOT NULL DEFAULT '';"],
+      ["transport", "ALTER TABLE gateway_traces ADD COLUMN transport TEXT NOT NULL DEFAULT 'stdio';"]
+    ];
+    for (const [column, sql] of gatewayTraceAdditions) {
+      if (!gatewayTraceColumns.has(column)) await this.exec(sql);
+    }
     await this.exec(`
       UPDATE memory_records
       SET local_date = substr(occurred_at, 1, 10)
@@ -234,6 +255,12 @@ class ProductDatabase {
 
       CREATE INDEX IF NOT EXISTS idx_continuity_lines_agent_status_updated
       ON continuity_lines(agent_id, status, updated_at DESC);
+
+      CREATE INDEX IF NOT EXISTS idx_gateway_traces_agent_created
+      ON gateway_traces(agent_id, created_at DESC);
+
+      CREATE INDEX IF NOT EXISTS idx_gateway_traces_transport_created
+      ON gateway_traces(transport, created_at DESC);
 
       WITH ranked_current_positions AS (
         SELECT

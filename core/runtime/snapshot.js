@@ -164,7 +164,7 @@ function createSnapshotRuntime({ ensureProductCore }) {
     ]);
     const [
       recentMemories, memoryStats, memoryMaintenance,
-      sharedLine, innerLife, decayAudit, gatewayTraces, runtimeEvents, backups,
+      sharedLine, innerLife, decayAudit, gatewayTraces, agentActivitySummary, runtimeEvents, backups,
       importPreview, canWriteProbe
     ] = await Promise.all([
       database.listMemories(20),
@@ -174,6 +174,7 @@ function createSnapshotRuntime({ ensureProductCore }) {
       database.getInnerLifeSnapshot(),
       buildDecayAudit(database),
       database.listGatewayTraces({ limit: 20 }),
+      database.getAgentActivitySummary(),
       database.listRuntimeEvents({ limit: 50 }),
       database.listBackups(5),
       previewImportSources(),
@@ -207,6 +208,7 @@ function createSnapshotRuntime({ ensureProductCore }) {
       innerLife,
       decayAudit,
       gatewayTraces,
+      agentActivitySummary,
       runtimeEvents,
       importPreview,
       backups,

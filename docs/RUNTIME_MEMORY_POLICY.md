@@ -56,12 +56,13 @@ Every long-lived resource needs one owner and an explicit release path.
 
 Adding a new long-lived resource without a dispose path is a bug.
 
-Packaged stdio Gateway processes can outlive the Desktop UI if an agent client
-keeps them open. The UI quit path should release HTTP resources and
-best-effort stop sibling packaged `--gateway` processes so the app bundle can
-be replaced during development. Gateway itself must also close its cached
-database connection when stdin closes, because stdio transport lifetime is the
-agent connection lifetime.
+Streamable HTTP Gateway resources live inside the Desktop main process and must
+be released with the HTTP server during quit. Packaged stdio Gateway processes
+can still outlive the Desktop UI if an agent client keeps them open. The UI
+quit path should release HTTP resources and best-effort stop sibling packaged
+`--gateway` processes so the app bundle can be replaced during development.
+The stdio Gateway itself must also close its cached database connection when
+stdin closes, because stdio transport lifetime is the agent connection lifetime.
 
 ## Runtime Memory Telemetry
 
@@ -101,4 +102,5 @@ CLARACORE_DESKTOP_DATA_DIR=/tmp/claracore-long-run npm run test:memory-long-run
 
 The script repeatedly builds the runtime snapshot and calls Gateway MCP tools.
 It fails if the global runtime snapshot starts carrying more than 25 Memory
-rows or if RSS growth exceeds the configured threshold.
+rows or if RSS growth exceeds the configured threshold. When changing MCP
+transport behavior, also run the focused Streamable HTTP Gateway smoke.

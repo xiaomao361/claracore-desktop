@@ -330,6 +330,8 @@ CREATE TABLE IF NOT EXISTS gateway_sessions (
 CREATE TABLE IF NOT EXISTS gateway_traces (
   id TEXT PRIMARY KEY,
   agent_id TEXT NOT NULL DEFAULT 'my-agent',
+  session_id TEXT NOT NULL DEFAULT '',
+  transport TEXT NOT NULL DEFAULT 'stdio',
   tool_name TEXT NOT NULL,
   status TEXT NOT NULL,
   duration_ms INTEGER NOT NULL DEFAULT 0,
@@ -374,5 +376,7 @@ CREATE INDEX IF NOT EXISTS idx_innerlife_share_checks_share_created ON innerlife
 CREATE INDEX IF NOT EXISTS idx_innerlife_sessions_agent_status ON innerlife_sessions(agent_id, status, started_at);
 CREATE INDEX IF NOT EXISTS idx_innerlife_daemon_state_status_next ON innerlife_daemon_state(status, next_run_at);
 CREATE INDEX IF NOT EXISTS idx_gateway_traces_created ON gateway_traces(created_at);
+CREATE INDEX IF NOT EXISTS idx_gateway_traces_agent_created ON gateway_traces(agent_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_gateway_traces_tool_created ON gateway_traces(tool_name, created_at);
+CREATE INDEX IF NOT EXISTS idx_gateway_traces_transport_created ON gateway_traces(transport, created_at);
 CREATE INDEX IF NOT EXISTS idx_runtime_events_created ON runtime_events(created_at);

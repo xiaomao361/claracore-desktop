@@ -34,7 +34,8 @@ SQLite database.
   orchestration.
 - `core/runtime/index.js`: public runtime facade used by Electron, CLI,
   Gateway-facing workflows, and tests.
-- `core/gateway/mcp-server.js`: stdio MCP server process used by agents.
+- `electron/http-agent-gateway.js`: localhost HTTP helper and Streamable HTTP MCP endpoint.
+- `core/gateway/mcp-server.js`: stdio MCP fallback process used by agents.
 - `core/cli.js`: local CLI fallback for product operations.
 
 ## Read Paths By Task
@@ -218,12 +219,13 @@ fallbacks, and Doctor guidance.
 
 Start here:
 
-1. `core/gateway/mcp-server.js`
-2. `core/gateway/tool-definitions.js`
-3. `core/gateway/tool-definitions/*`
-4. `core/gateway/tools.js`
-5. `core/gateway/tool-handlers/*`
-6. matching domain module under `core/memoria`, `core/continuity`, or
+1. `electron/http-agent-gateway.js`
+2. `core/gateway/mcp-server.js`
+3. `core/gateway/tool-definitions.js`
+4. `core/gateway/tool-definitions/*`
+5. `core/gateway/tools.js`
+6. `core/gateway/tool-handlers/*`
+7. matching domain module under `core/memoria`, `core/continuity`, or
    `core/innerlife`
 
 Gateway tools should call runtime or domain facades. Avoid adding Gateway

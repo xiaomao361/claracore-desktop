@@ -263,9 +263,11 @@ unescaped external input.
 
 ## Gateway Boundary
 
-`core/gateway/mcp-server.js` is the agent-facing MCP transport surface. It owns
-stdio protocol handling, process lifecycle, database connection caching, and
-Gateway trace recording.
+The Desktop-owned Gateway is the agent-facing MCP surface. Streamable HTTP MCP
+is served by `electron/http-agent-gateway.js` at the current localhost `/mcp`
+endpoint. `core/gateway/mcp-server.js` remains the stdio fallback process for
+clients that do not support HTTP MCP yet. Both paths use the same tool
+definitions and handlers.
 
 Gateway behavior is split by responsibility:
 
@@ -287,30 +289,29 @@ Gateway behavior is split by responsibility:
 Gateway should expose stable product tools and call domain/runtime facades. New
 Gateway behavior should not bypass a domain facade into database internals.
 
-The MCP config shown in Agent Setup launches this Gateway as a stdio server.
-Gateway is part of the product runtime, while the Logs view and Gateway trace
-tables are inspection surfaces for what agents are doing.
+Agent Setup shows both the current Streamable HTTP endpoint and the generated
+stdio fallback config. Gateway is part of the product runtime, while the Logs
+view and Gateway trace tables are inspection surfaces for what agents are doing.
 
-Claude Desktop is a client of this stdio contract, not a special Gateway mode.
-If Claude Desktop moves local MCP setup between Developer and Extensions
-settings, the product architecture does not change: Agent Setup remains the
-source for the current `mcpServers` JSON, `CLARACORE_AGENT_ID`, active data
-root, and first-call order.
+Claude Desktop is a client of this MCP contract, not a special Gateway mode. If
+Claude Desktop moves local MCP setup between Developer and Extensions settings,
+the product architecture does not change: Agent Setup remains the source for
+the current endpoint/config, agent identity rules, active data root, and
+first-call order.
 
-Each MCP agent usually owns its own stdio Gateway process. In-process database
-serialization does not coordinate across sibling Gateway processes, so database
-writes must also be correct under SQLite's cross-process WAL and busy-timeout
-rules. The Desktop UI's quit path best-effort stops packaged sibling Gateway
-processes so replacing `/Applications/ClaraCore Desktop.app` is not blocked by
-a stale `--gateway` process.
+Streamable HTTP keeps one Desktop Gateway service alive and records per-request
+agent/session identity. Stdio clients may still own sibling Gateway processes;
+database writes must therefore remain correct under SQLite's cross-process WAL
+and busy-timeout rules. The Desktop UI's quit path best-effort stops packaged
+sibling Gateway processes so replacing `/Applications/ClaraCore Desktop.app` is
+not blocked by a stale `--gateway` process.
 
-Agent identity is a process boundary, not a tool-call override. Gateway treats
-`CLARACORE_AGENT_ID` as authoritative, uses it before any request-level
-`agentId` or `agent_id`, and normalizes trace request metadata to that value.
-When an agent changes identity, restart its MCP client or stop stale packaged
-Gateway processes so the launched stdio environment changes too. After an
-identity rename, `agent_identity_merge` is the supported repair path; it updates
-agent-owned tables and stored Gateway trace request JSON.
+Agent identity belongs to the caller. Streamable HTTP treats
+`X-ClaraCore-Agent-ID` as authoritative for the request. Stdio fallback treats
+`CLARACORE_AGENT_ID` as authoritative for the process and uses it before any
+request-level `agentId` or `agent_id`. After an identity rename,
+`agent_identity_merge` is the supported repair path; it updates agent-owned
+tables and stored Gateway trace request JSON.
 
 Gateway tool responses must describe the actual record a write changed. For
 example `shared_line_update` saves one current position and then reads the

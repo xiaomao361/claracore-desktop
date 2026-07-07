@@ -1,7 +1,15 @@
 const crypto = require("crypto");
 const http = require("http");
+const { PRODUCT_VERSION } = require("../core/version");
+const { createGatewayTools } = require("../core/gateway/tools");
 
-function createHttpAgentGateway({ app, getRuntimeSnapshot, getProductGatewayContext }) {
+const PROTOCOL_VERSION = "2025-06-18";
+const SERVER_INFO = {
+  name: "claracore-desktop",
+  version: PRODUCT_VERSION
+};
+
+function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, getProductGatewayContext }) {
   const state = {
     host: "127.0.0.1",
     server: null,
@@ -31,6 +39,17 @@ function createHttpAgentGateway({ app, getRuntimeSnapshot, getProductGatewayCont
         bind: state.host
       },
       {
+        id: "streamable-http-mcp",
+        method: "POST",
+        url: `${currentBaseUrl}/mcp`,
+        copyUrl: `${currentBaseUrl}/mcp`,
+        healthUrl: `${currentBaseUrl}/health`,
+        auth: "bearer-token",
+        authHeader: `Authorization: Bearer ${state.token}`,
+        bind: state.host,
+        transport: "streamable-http"
+      },
+      {
         id: "gateway-context-json",
         method: "GET",
         url: `${currentBaseUrl}/gateway/context`,
@@ -53,6 +72,14 @@ function createHttpAgentGateway({ app, getRuntimeSnapshot, getProductGatewayCont
     response.end(body);
   }
 
+  function sendText(response, statusCode, text) {
+    response.writeHead(statusCode, {
+      "content-type": "text/plain; charset=utf-8",
+      "cache-control": "no-store"
+    });
+    response.end(text);
+  }
+
   function tokenMatches(candidate) {
     const value = String(candidate || "");
     const expected = state.token;
@@ -68,11 +95,234 @@ function createHttpAgentGateway({ app, getRuntimeSnapshot, getProductGatewayCont
     return tokenMatches(bearer) || tokenMatches(token);
   }
 
+  function originAllowed(request) {
+    const origin = String(request.headers.origin || "").trim();
+    if (!origin) return true;
+    try {
+      const parsed = new URL(origin);
+      return ["127.0.0.1", "localhost", "[::1]"].includes(parsed.hostname);
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function readRequestBody(request, maxBytes = 1024 * 1024) {
+    return new Promise((resolve, reject) => {
+      let body = "";
+      request.setEncoding("utf8");
+      request.on("data", (chunk) => {
+        body += chunk;
+        if (Buffer.byteLength(body, "utf8") > maxBytes) {
+          reject(new Error("request_too_large"));
+          request.destroy();
+        }
+      });
+      request.on("end", () => resolve(body));
+      request.on("error", reject);
+    });
+  }
+
+  function jsonRpcResult(id, result) {
+    return { jsonrpc: "2.0", id, result };
+  }
+
+  function jsonRpcError(id, code, message) {
+    return {
+      jsonrpc: "2.0",
+      id: id === undefined ? null : id,
+      error: { code, message }
+    };
+  }
+
+  function responseText(result) {
+    const text = result?.content?.[0]?.text || "";
+    return text.length > 500 ? `${text.slice(0, 497)}...` : text;
+  }
+
+  function currentHttpAgentId(request, requestUrl, args = {}) {
+    return String(
+      request.headers["x-claracore-agent-id"] ||
+        requestUrl.searchParams.get("agentId") ||
+        args.agentId ||
+        args.agent_id ||
+        "http-agent"
+    ).trim() || "http-agent";
+  }
+
+  function currentHttpSessionId(request, requestUrl, args = {}) {
+    return String(
+      request.headers["x-claracore-session-id"] ||
+        requestUrl.searchParams.get("sessionId") ||
+        args.sessionId ||
+        args.session_id ||
+        ""
+    ).trim();
+  }
+
+  function gatewayLaunchConfig() {
+    const currentBaseUrl = baseUrl() || `http://${state.host}:0`;
+    return {
+      command: "streamable-http",
+      args: [`${currentBaseUrl}/mcp`],
+      env: {},
+      displayCommand: `${currentBaseUrl}/mcp`,
+      source: "Desktop Streamable HTTP"
+    };
+  }
+
+  function textResult(value) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(value, null, 2)
+        }
+      ]
+    };
+  }
+
+  async function callMcpTool({ request, requestUrl, name, args }) {
+    const startedAt = Date.now();
+    const { paths, database } = await ensureProductCore(app);
+    const agentId = currentHttpAgentId(request, requestUrl, args);
+    const sessionId = currentHttpSessionId(request, requestUrl, args);
+    const callArgs = { ...(args || {}), agentId, sessionId };
+    delete callArgs.agent_id;
+    delete callArgs.session_id;
+    const { callToolBody } = createGatewayTools({
+      serverInfo: SERVER_INFO,
+      currentMcpAgentId: (toolArgs = {}) => currentHttpAgentId(request, requestUrl, toolArgs),
+      gatewayLaunchConfig,
+      runtimeAppForGateway: () => app,
+      textResult
+    });
+    try {
+      const result = await callToolBody(name, callArgs, paths, database);
+      await database.recordGatewayTrace({
+        agentId,
+        sessionId,
+        transport: "streamable-http",
+        toolName: name,
+        status: "ok",
+        durationMs: Date.now() - startedAt,
+        request: callArgs,
+        responseSummary: responseText(result)
+      });
+      return result;
+    } catch (error) {
+      await database.recordGatewayTrace({
+        agentId,
+        sessionId,
+        transport: "streamable-http",
+        toolName: name,
+        status: "error",
+        durationMs: Date.now() - startedAt,
+        request: callArgs,
+        error: error.message || String(error)
+      });
+      throw error;
+    }
+  }
+
+  async function handleMcpRequest(request, response, requestUrl) {
+    if (!originAllowed(request)) {
+      sendJson(response, 403, { error: "origin_not_allowed" });
+      return;
+    }
+    if (!isAuthorized(request, requestUrl)) {
+      sendJson(response, 401, {
+        error: "unauthorized",
+        message: "Use Authorization: Bearer <token> from Agent Access."
+      });
+      return;
+    }
+    if (request.method === "GET") {
+      sendJson(response, 200, {
+        product: "ClaraCore Desktop",
+        transport: "streamable-http",
+        protocolVersion: PROTOCOL_VERSION,
+        endpoint: `${baseUrl()}/mcp`,
+        note: "Send MCP JSON-RPC requests with POST. Server-initiated event streams are not used in this local v0.4.0 endpoint."
+      });
+      return;
+    }
+    if (request.method !== "POST") {
+      sendJson(response, 405, { error: "method_not_allowed" });
+      return;
+    }
+    const accept = String(request.headers.accept || "");
+    if (accept && !accept.includes("application/json") && !accept.includes("text/event-stream") && accept !== "*/*") {
+      sendJson(response, 406, { error: "not_acceptable" });
+      return;
+    }
+    let message;
+    try {
+      const raw = await readRequestBody(request);
+      message = JSON.parse(raw || "{}");
+    } catch (error) {
+      sendJson(response, 400, jsonRpcError(null, -32700, error.message || "Parse error"));
+      return;
+    }
+    if (!message || message.jsonrpc !== "2.0" || typeof message.method !== "string") {
+      sendJson(response, 400, jsonRpcError(message?.id, -32600, "Invalid JSON-RPC request."));
+      return;
+    }
+    if (message.id === undefined || message.id === null) {
+      response.writeHead(202, { "cache-control": "no-store" });
+      response.end();
+      return;
+    }
+    try {
+      if (message.method === "initialize") {
+        sendJson(response, 200, jsonRpcResult(message.id, {
+          protocolVersion: message.params?.protocolVersion || PROTOCOL_VERSION,
+          capabilities: { tools: {} },
+          serverInfo: SERVER_INFO
+        }));
+        return;
+      }
+      if (message.method === "tools/list") {
+        const { toolDefinitions } = createGatewayTools({
+          serverInfo: SERVER_INFO,
+          currentMcpAgentId: (toolArgs = {}) => currentHttpAgentId(request, requestUrl, toolArgs),
+          gatewayLaunchConfig,
+          runtimeAppForGateway: () => app,
+          textResult
+        });
+        sendJson(response, 200, jsonRpcResult(message.id, { tools: toolDefinitions() }));
+        return;
+      }
+      if (message.method === "tools/call") {
+        const name = message.params?.name;
+        if (!name || typeof name !== "string") throw new Error("Tool name is required.");
+        const result = await callMcpTool({
+          request,
+          requestUrl,
+          name,
+          args: message.params?.arguments || {}
+        });
+        sendJson(response, 200, jsonRpcResult(message.id, result));
+        return;
+      }
+      if (message.method === "ping") {
+        sendJson(response, 200, jsonRpcResult(message.id, {}));
+        return;
+      }
+      sendJson(response, 200, jsonRpcError(message.id, -32601, `Unsupported method: ${message.method}`));
+    } catch (error) {
+      sendJson(response, 200, jsonRpcError(message.id, -32000, error.message || String(error)));
+    }
+  }
+
   async function handleRequest(request, response) {
     const currentBaseUrl = baseUrl() || `http://${state.host}:0`;
     const requestUrl = new URL(request.url || "/", currentBaseUrl);
     if (request.method === "OPTIONS") {
       sendJson(response, 204, {});
+      return;
+    }
+    if (requestUrl.pathname === "/mcp") {
+      await handleMcpRequest(request, response, requestUrl);
       return;
     }
     if (request.method !== "GET") {
@@ -100,7 +350,7 @@ function createHttpAgentGateway({ app, getRuntimeSnapshot, getProductGatewayCont
         product: "ClaraCore Desktop",
         principle: "Agent-first: software is built for agents to operate and for humans to inspect.",
         connectionMode: {
-          current: "localhost-http-url",
+          current: "streamable-http-and-stdio",
           bind: state.host,
           port: state.port,
           portPolicy: "runtime-assigned; do not hard-code across app sessions",
@@ -118,6 +368,16 @@ function createHttpAgentGateway({ app, getRuntimeSnapshot, getProductGatewayCont
           auth: endpoint.auth
         })),
         mcp: {
+          streamableHttp: {
+            endpoint: `${currentBaseUrl}/mcp`,
+            transport: "streamable-http",
+            auth: "bearer",
+            headers: {
+              Authorization: `Bearer ${state.token}`,
+              "X-ClaraCore-Agent-ID": "<agent-stable-id>",
+              "X-ClaraCore-Session-ID": "<conversation-or-session-id>"
+            }
+          },
           serverName: snapshot.connections.mcpServerName,
           command: snapshot.connections.mcpCommand,
           config: JSON.parse(snapshot.connections.mcpConfig)

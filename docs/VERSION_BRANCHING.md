@@ -4,7 +4,7 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- The current local version is `0.3.6`.
+- The current local version is `0.4.1`.
 - Historical `0.1.x` and `0.2.x` planning notes are archived under
   `docs/archive/`.
 
@@ -38,6 +38,45 @@ npm run dist:mac
 
 Only install or replace the daily-use app after the target build passes the
 focused smoke gates for its changed surface.
+
+## v0.4.1 Checkpoint
+
+`0.4.1` keeps the built-in Memory embedding model lazy:
+
+- The Xenova built-in extractor is only loaded when the configured provider is
+  `claracore-built-in` and an embedding is actually generated.
+- Ollama-backed search, maintenance checks, and failed Ollama embedding attempts
+  do not load or fall back to the built-in model.
+
+Validation for this checkpoint:
+
+```bash
+npm run check
+npm run test:embedding:lazy
+git diff --check
+```
+
+## v0.4.0 Checkpoint
+
+`0.4.0` starts the multi-agent Gateway migration:
+
+- Desktop exposes a token-protected localhost Streamable HTTP MCP endpoint at
+  `/mcp`.
+- Stdio MCP remains available as a compatibility path while clients migrate.
+- Gateway traces now record transport and optional session id, so multi-agent
+  and multi-session activity can be inspected without relying only on helper
+  processes.
+- Home shows Agent change summaries for yesterday, today, recent 7 days, and
+  recent 30 days.
+
+Validation for this checkpoint:
+
+```bash
+npm run check
+node core/tests/phase3-gateway-smoke.js
+node core/tests/streamable-http-gateway-smoke.js
+git diff --check
+```
 
 ## v0.3.2 Checkpoint
 

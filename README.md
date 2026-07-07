@@ -9,13 +9,14 @@ controllable; the primary operational path should be friendly to connected
 agents. Agent Access is therefore a first-class product surface, not a
 secondary settings page.
 
-Agent Access exposes both stdio MCP setup and a token-protected localhost HTTP
-Agent Gateway while the desktop app is running. The setup note should not show
-a LAN URL by default. The localhost HTTP helper uses a runtime-assigned port;
-agents should read the current URL from Agent Access or `/agent/setup` for the
-current app session, not hard-code a port. LAN binding is intentionally off and
-should only become available through an explicit product mode with clear bind
-address, bearer token, token regeneration, and disable controls.
+Agent Access exposes the current Streamable HTTP MCP endpoint, a stdio MCP
+fallback config, and token-protected localhost helper URLs while the desktop
+app is running. The setup note should not show a LAN URL by default. The
+localhost HTTP surface uses a runtime-assigned port; agents should read the
+current URL from Agent Access or `/agent/setup` for the current app session,
+not hard-code a port. LAN binding is intentionally off and should only become
+available through an explicit product mode with clear bind address, bearer
+token, token regeneration, and disable controls.
 
 ClaraCore Desktop is the local desktop manager for the first ClaraCore core package:
 
@@ -49,7 +50,7 @@ Read these before adding new features:
 
 ## Current Status
 
-The current version is `0.3.6`. It is a working desktop shell with a
+The current version is `0.4.1`. It is a working desktop shell with a
 product-owned local data store, Desktop-native Memoria, Shared Line, InnerLife,
 a Desktop-owned Gateway, with model configuration merged into the Settings
 surface.
@@ -63,8 +64,10 @@ Included:
 - Home dashboard with Gateway, Memoria, Shared Line, InnerLife, agent-view, attention queue, and Gateway trace summaries; attention counts only human-actionable signals (agent-owned waiting state like pending shares stays ambient, and Gateway errors age out of attention after 30 minutes)
 - Compact Home status board that merges the runtime strip and core module readiness below the Agent View and Attention panels
 - Gateway trace chain on Home that expands one priority call as `agent -> Desktop Gateway -> MCP tool -> result`, compresses additional calls into a recent list, and sends overflow review to Agent Access
-- Agent Setup page with MCP connection command, token-protected localhost HTTP Agent Gateway URLs, copyable config, CLI fallback notes, runtime paths, and recent Gateway activity
-- Desktop-owned Gateway stdio entry for Gateway context, Memoria, Shared Line, and InnerLife MCP tools; the packaged Gateway launches with ELECTRON_RUN_AS_NODE as a single Node process per agent connection and exits if its client dies without closing stdio
+- Agent Setup page with Streamable HTTP MCP endpoint, stdio fallback config, token-protected localhost helper URLs, CLI fallback notes, runtime paths, and recent Gateway activity
+- Desktop-owned Gateway Streamable HTTP endpoint for Gateway context, Memoria, Shared Line, and InnerLife MCP tools; stdio remains available for clients that do not support HTTP MCP yet
+- Home Agent View includes period-based agent change summaries for yesterday, today, recent 7 days, and recent 30 days
+- The built-in Memory embedding model stays lazy-loaded; Ollama and OpenAI-compatible providers do not load it.
 - Memoria CLI for store, recall, get, update, tag, delete, restore, archive, import/export, records, and maintenance audit/run
 - View-focused Memoria UI with four tabs: Memories (empty search lists all, with paging), Labels, Graph, and Archive & restricted (restricted, archived, and deleted review plus delete/restore)
 - Lazy-loaded Memoria list tabs and cached spherical canvas graph with primary/restricted layers, depth-based links, selected label callouts, and reduced-motion fallback
@@ -86,7 +89,7 @@ Included:
 - InnerLife runtime panel for daemon enable/pause/tick and doctor status; sessions, digests, inbox, and timing checks sit behind a collapsed Pipeline evidence section
 - Verified SQLite product backups with restore preview and safety-backup restore
 - Full product JSON export/import for portable ClaraCore Desktop data
-- Agent identity uses each MCP process `CLARACORE_AGENT_ID`; preferred stable ids are `lara`, `clara`, and `codex`, while legacy tool-prefixed ids can be consolidated with `agent_identity_merge`
+- Agent identity is stable per calling agent: Streamable HTTP uses `X-ClaraCore-Agent-ID`, stdio fallback uses `CLARACORE_AGENT_ID`; preferred stable ids are `lara`, `clara`, and `codex`, while legacy tool-prefixed ids can be consolidated with `agent_identity_merge`
 - Settings page with General (language, theme, motion, close-window behavior, data paths, runtime facts), Models, and Data tabs
 - Terminal-style runtime log view for maintenance and Gateway traces, plus a
   read-only time flow across Memory, Shared Line, InnerLife, Gateway, and runtime
@@ -207,21 +210,22 @@ The app has no renderer build step. `index.html` loads classic scripts.
 - `core/memoria/`: Desktop Memoria domain facade
 - `core/continuity/`: Shared Line domain facade
 - `core/innerlife/`: InnerLife domain facade
-- `core/gateway/`: stdio MCP server for agents
+- `core/gateway/`: MCP tool definitions, handlers, and stdio fallback server
 - `core/tests/`: smoke and UI smoke coverage
 
 ## Current Gateway Direction
 
-The Desktop-owned Gateway is the primary agent contract. It is a stdio MCP
-server launched by the agent client through the generated MCP config, not a
-separate always-on background daemon.
+The Desktop-owned Gateway is the primary agent contract. Streamable HTTP MCP at
+the Desktop localhost `/mcp` endpoint is the preferred connection mode for
+clients that support it, because one Desktop Gateway can serve multiple agents
+and sessions through request-level identity. Stdio MCP remains as a compatibility
+path for clients that still require a local process.
 
 Claude Desktop version or model changes do not change ClaraCore's Gateway
-contract by themselves. Current Claude Desktop builds may surface local MCP
-setup under Extensions or developer settings, but ClaraCore still provides the
-manual stdio `mcpServers` config from Agent Access. After changing that config,
-fully quit and restart Claude Desktop, then run `claracore_connection_test`
-followed by `gateway_context`.
+contract by themselves. If a client supports Streamable HTTP MCP, use the
+current endpoint and bearer header from Agent Access. If it only supports local
+stdio MCP, use the generated fallback config, fully quit and restart the client,
+then run `claracore_connection_test` followed by `gateway_context`.
 
 The old ClaraCore Gateway web console remains a reference for useful overview
 ideas, but its service Web UI launcher/supervisor model is not the Desktop

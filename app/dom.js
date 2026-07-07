@@ -56,6 +56,8 @@ window.ClaraCoreDom = {
   homeRuntimeStrip: document.querySelector("#homeRuntimeStrip"),
   homeAttentionSummary: document.querySelector("#homeAttentionSummary"),
   homeAttentionList: document.querySelector("#homeAttentionList"),
+  homeAgentActivityList: document.querySelector("#homeAgentActivityList"),
+  homeAgentActivityTabs: Array.from(document.querySelectorAll("[data-agent-activity-period]")),
   homeAgentViewList: document.querySelector("#homeAgentViewList"),
   homeTraceList: document.querySelector("#homeTraceList"),
   viewTitle: document.querySelector("#viewTitle"),

@@ -20,6 +20,29 @@
   align-items: start;
 }
 
+.home-agent-periods {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.home-agent-periods button {
+  min-height: 28px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.home-agent-periods button.active {
+  border-color: rgba(42, 112, 87, 0.4);
+  background: rgba(42, 112, 87, 0.1);
+  color: var(--text);
+}
+
 .cognitive-system-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -75,9 +98,77 @@
 }
 
 .home-agent-list,
-.home-trace-list {
+.home-trace-list,
+.home-agent-activity-list {
   display: grid;
   gap: 10px;
+}
+
+.home-agent-activity-list {
+  margin-bottom: 12px;
+}
+
+.home-agent-activity-card {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(42, 112, 87, 0.22);
+  border-radius: 8px;
+  background: rgba(242, 249, 246, 0.78);
+}
+
+.home-agent-activity-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.home-agent-activity-head strong {
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.home-agent-activity-head span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.home-agent-activity-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.home-agent-activity-stats div {
+  min-width: 0;
+  padding: 7px 6px;
+  border: 1px solid rgba(42, 112, 87, 0.16);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.home-agent-activity-stats span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.home-agent-activity-stats strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.home-agent-activity-empty {
+  padding: 12px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  background: var(--surface);
 }
 
 .home-agent-card {

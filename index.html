@@ -52,7 +52,14 @@
                 <h2 data-i18n="home.agentView.title">Agent View</h2>
                 <p class="quiet" data-i18n="home.agentView.body">Current line, Memory, InnerLife, and recent Gateway activity.</p>
               </div>
+              <div class="home-agent-periods" role="tablist" aria-label="Agent activity period">
+                <button data-agent-activity-period="yesterday" data-i18n="home.agentActivity.yesterday">Yesterday</button>
+                <button data-agent-activity-period="today" data-i18n="home.agentActivity.today">Today</button>
+                <button class="active" data-agent-activity-period="7d" data-i18n="home.agentActivity.last7d">7d</button>
+                <button data-agent-activity-period="30d" data-i18n="home.agentActivity.last30d">30d</button>
+              </div>
             </div>
+            <div id="homeAgentActivityList" class="home-agent-activity-list"></div>
             <div id="homeAgentViewList" class="home-agent-list"></div>
           </article>
 
