@@ -4,7 +4,7 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- The current local version is `0.3.4`.
+- The current local version is `0.3.5`.
 - Historical `0.1.x` and `0.2.x` planning notes are archived under
   `docs/archive/`.
 
@@ -92,3 +92,14 @@ git diff --check
   provider/key path.
 - The API key placeholder now makes the default/shared key path explicit while
   still supporting `env:OPENAI_API_KEY` style references.
+
+## v0.3.5 Checkpoint
+
+`0.3.5` is a focused visual maintenance package:
+
+- Dark mode now covers the newer v0.3 card and panel surfaces, including page
+  focus summaries, source-map cards, Settings sections, daemon controls,
+  attention items, InnerLife records/shares, metric/path lists, and model
+  connection rows.
+- The patch keeps the existing dark theme tokens and applies them consistently
+  to newer UI surfaces instead of changing the product layout or model flow.

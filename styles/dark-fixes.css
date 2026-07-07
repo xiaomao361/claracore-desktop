@@ -425,3 +425,169 @@ body[data-theme="dark"] .graph-layer.restricted {
   color: var(--red);
 }
 
+/* v0.3 page-focus and newer card surfaces */
+body[data-theme="dark"] .page-focus,
+body[data-theme="dark"] .page-focus.warn,
+body[data-theme="dark"] .page-focus.error,
+body[data-theme="dark"] .source-map-card,
+body[data-theme="dark"] .source-map-card.compact-source,
+body[data-theme="dark"] .settings-section-card,
+body[data-theme="dark"] .settings-roadmap-card,
+body[data-theme="dark"] .state-card,
+body[data-theme="dark"] .daemon-control-panel,
+body[data-theme="dark"] .daemon-control-panel.is-enabled,
+body[data-theme="dark"] .daemon-control-panel.is-paused,
+body[data-theme="dark"] .daemon-control-panel.is-error,
+body[data-theme="dark"] .attention-item,
+body[data-theme="dark"] .memory-maintenance-details,
+body[data-theme="dark"] .agent-console-group,
+body[data-theme="dark"] .innerlife-deep-section,
+body[data-theme="dark"] .innerlife-advanced-profile,
+body[data-theme="dark"] .innerlife-advanced-profile[open],
+body[data-theme="dark"] .innerlife-record-item,
+body[data-theme="dark"] .innerlife-share,
+body[data-theme="dark"] .metric-list > div,
+body[data-theme="dark"] .path-detail-list div,
+body[data-theme="dark"] .path-chip-list span,
+body[data-theme="dark"] .settings-tabs button,
+body[data-theme="dark"] .shared-line-context-bar > div,
+body[data-theme="dark"] .shared-line-context-bar > p,
+body[data-theme="dark"] .innerlife-context-bar > div,
+body[data-theme="dark"] .innerlife-context-bar > p {
+  border-color: var(--border);
+  background: var(--control-bg-soft);
+  color: var(--text);
+  box-shadow: none;
+}
+
+body[data-theme="dark"] .page-focus {
+  background:
+    linear-gradient(90deg, rgba(38, 47, 42, 0.98), rgba(29, 35, 31, 0.98)),
+    var(--control-bg-soft);
+}
+
+body[data-theme="dark"] .page-focus.warn,
+body[data-theme="dark"] .state-card,
+body[data-theme="dark"] .daemon-control-panel.is-paused {
+  border-color: rgba(215, 159, 75, 0.34);
+  background: rgba(62, 48, 25, 0.72);
+}
+
+body[data-theme="dark"] .page-focus.error,
+body[data-theme="dark"] .attention-item.error,
+body[data-theme="dark"] .daemon-control-panel.is-error {
+  border-color: rgba(214, 118, 101, 0.36);
+  background: rgba(62, 34, 31, 0.72);
+}
+
+body[data-theme="dark"] .attention-item.warn,
+body[data-theme="dark"] .memory-maintenance-details {
+  border-color: rgba(215, 159, 75, 0.34);
+}
+
+body[data-theme="dark"] .page-focus-kicker,
+body[data-theme="dark"] .page-focus p,
+body[data-theme="dark"] .source-map-card p,
+body[data-theme="dark"] .settings-section-head p,
+body[data-theme="dark"] .settings-roadmap-card p,
+body[data-theme="dark"] .daemon-control-panel span,
+body[data-theme="dark"] .metric-list span,
+body[data-theme="dark"] .path-root-row span,
+body[data-theme="dark"] .path-detail-list span,
+body[data-theme="dark"] .path-chip-list span,
+body[data-theme="dark"] .innerlife-deep-section > summary small,
+body[data-theme="dark"] .innerlife-record-grid section > p,
+body[data-theme="dark"] .innerlife-record-meta span,
+body[data-theme="dark"] .innerlife-record-item time,
+body[data-theme="dark"] .innerlife-share > div:first-child,
+body[data-theme="dark"] .innerlife-share time,
+body[data-theme="dark"] .memory-maintenance-details summary small {
+  color: var(--muted);
+}
+
+body[data-theme="dark"] .page-focus h2,
+body[data-theme="dark"] .page-focus-metrics strong,
+body[data-theme="dark"] .source-map-card h3,
+body[data-theme="dark"] .settings-section-head h3,
+body[data-theme="dark"] .settings-roadmap-card h3,
+body[data-theme="dark"] .state-card strong,
+body[data-theme="dark"] .daemon-control-panel strong,
+body[data-theme="dark"] .metric-list strong,
+body[data-theme="dark"] .path-root-row code,
+body[data-theme="dark"] .path-detail-list code,
+body[data-theme="dark"] .path-chip-list strong,
+body[data-theme="dark"] .innerlife-deep-section > summary span,
+body[data-theme="dark"] .innerlife-record-meta strong,
+body[data-theme="dark"] .innerlife-share > div:first-child strong,
+body[data-theme="dark"] .agent-console-group h3,
+body[data-theme="dark"] .memory-maintenance-details summary span {
+  color: var(--text);
+}
+
+body[data-theme="dark"] .page-focus-metrics span,
+body[data-theme="dark"] .settings-roadmap-card span {
+  border-color: var(--border);
+  background: var(--control-bg);
+  color: var(--muted);
+}
+
+body[data-theme="dark"] .source-map-card code,
+body[data-theme="dark"] .backup-file-row code,
+body[data-theme="dark"] .endpoint-card code,
+body[data-theme="dark"] .import-preview-item code,
+body[data-theme="dark"] .import-preview-item small {
+  color: var(--code-text);
+}
+
+body[data-theme="dark"] .settings-tabs button.active {
+  border-color: var(--green);
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+body[data-theme="dark"] .innerlife-deep-section[open] > summary,
+body[data-theme="dark"] .connection-test-row,
+body[data-theme="dark"] .metric-list > div {
+  border-bottom-color: var(--border);
+  border-top-color: var(--border);
+}
+
+body[data-theme="dark"] .innerlife-status-strip > div,
+body[data-theme="dark"] .innerlife-share {
+  background:
+    linear-gradient(180deg, rgba(38, 47, 42, 0.98), rgba(29, 35, 31, 0.98)),
+    var(--control-bg-soft);
+}
+
+body[data-theme="dark"] .innerlife-share.approved,
+body[data-theme="dark"] .daemon-control-panel.is-enabled {
+  border-color: rgba(121, 201, 164, 0.34);
+  background: var(--green-bg);
+}
+
+body[data-theme="dark"] .daemon-switch {
+  border-color: rgba(215, 159, 75, 0.34);
+  background: rgba(62, 48, 25, 0.72);
+  color: var(--amber);
+}
+
+body[data-theme="dark"] .daemon-switch-track {
+  background: rgba(215, 159, 75, 0.34);
+}
+
+body[data-theme="dark"] .daemon-switch-track::after {
+  background: var(--text);
+  box-shadow: none;
+}
+
+body[data-theme="dark"] .daemon-switch.is-on {
+  border-color: rgba(121, 201, 164, 0.38);
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+body[data-theme="dark"] .daemon-switch.is-error {
+  border-color: rgba(214, 118, 101, 0.38);
+  background: var(--red-bg);
+  color: var(--red);
+}
