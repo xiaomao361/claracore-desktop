@@ -267,9 +267,10 @@ function installContinuityRepository(ProductDatabase, helpers) {
       const identity = resolveAgentIdentity({ agentId: agentIdInput });
       const agentId = String(identity.id || "").trim();
       if (!agentId) return null;
-      // Unidentified HTTP callers fall back to the "http-agent" sentinel; do not
-      // mint a dedicated Shared Line for them — they use the default line.
-      if (agentId === "http-agent") return null;
+      // Unidentified callers fall back to sentinel ids ("http-agent" for HTTP,
+      // "unknown-agent" for stdio without CLARACORE_AGENT_ID); do not mint a
+      // dedicated Shared Line for them — they use the default line.
+      if (agentId === "http-agent" || agentId === "unknown-agent") return null;
       const existing = await this.findContinuityLineIdForAgent(agentId);
       if (existing) return existing;
       const id = newId("line");
@@ -749,7 +750,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
       const query = String(input.query || "").trim();
       const limit = Math.max(1, Math.min(Number.parseInt(String(input.limit || 5), 10) || 5, 20));
       const [sharedLine, memories, innerLife, doctor] = await Promise.all([
-        this.getResumePacket(input.lineId ? { lineId: input.lineId } : {}),
+        this.getResumePacket(input.lineId ? { lineId: input.lineId } : { agentId }),
         query ? this.searchMemories(query, limit).then((result) => result.results.slice(0, limit)) : this.listMemories(limit),
         this.getInnerLifeSnapshot(),
         this.getInnerLifeDoctor(agentId)

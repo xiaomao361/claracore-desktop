@@ -82,13 +82,16 @@ Preferred path: Desktop-owned Gateway MCP.
 
 Useful MCP tools include:
 
-- `innerlife_status`
+- `innerlife_status` (lite by default: counts, pending share previews, daemon,
+  doctor; pass `detail: true` only when full sessions, digest runs, and history
+  are needed)
 - `innerlife_briefing`
 - `innerlife_sessions`
 - `innerlife_session_start` (returns share_plan plus the active Shared Line
-  resume packet and a `shared_lines` summary in one call; pass `lineId` to
-  activate a line in the same call — no separate `shared_line_list` /
-  `shared_line_activate` / `shared_line_get` startup round trips needed)
+  resume packet and an active-only `shared_lines` summary in one call; pass
+  `lineId` to activate a line in the same call — no separate
+  `shared_line_list` / `shared_line_activate` / `shared_line_get` startup
+  round trips needed)
 - `innerlife_session_end` (returns a compact acknowledgement: closed session,
   created ids, afterthought share, converged/reason; full state comes from
   `innerlife_status` / `innerlife_briefing`)
@@ -108,6 +111,11 @@ Useful MCP tools include:
 - `innerlife_daemon_status`
 - `innerlife_daemon_set`
 - `innerlife_daemon_tick`
+
+Digest run storage is bounded: each digest prunes `innerlife_digest_runs` to
+the newest 200 rows for that agent. Use the paginated digest tools or
+`innerlife_status` with `detail: true` for inspection, not the default status
+call.
 
 CLI fallback:
 

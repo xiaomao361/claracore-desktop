@@ -72,6 +72,10 @@ async function main() {
     },
     isPackaged: false
   };
+  await runtime.saveProductSettings(app, {
+    "innerlife.provider": "disabled",
+    "innerlife.enabled": false
+  });
 
   const snapshot = await runtime.buildProductSnapshot(app);
   const config = JSON.parse(snapshot.connections.mcpConfig);
@@ -191,13 +195,40 @@ async function main() {
     if (!started.session?.id || !started.share_plan || started.briefing) {
       throw new Error("Gateway innerlife_session_start did not return a compact session start packet.");
     }
+    const activeLine = parseTextResult(
+      await client.callTool("shared_line_create", {
+        agentId: "my-agent",
+        title: "Phase4 active Shared Line"
+      })
+    ).line;
+    const archivedLine = parseTextResult(
+      await client.callTool("shared_line_create", {
+        agentId: "my-agent",
+        title: "Phase4 archived Shared Line"
+      })
+    ).line;
+    parseTextResult(await client.callTool("shared_line_archive", { lineId: archivedLine.id }));
+    const startedWithLines = parseTextResult(
+      await client.callTool("innerlife_session_start", {
+        agentId: "my-agent",
+        userId: "phase4-user",
+        host: "phase4-gateway",
+        externalSessionId: "phase4-session-lines"
+      })
+    );
+    if (!startedWithLines.shared_lines?.some((line) => line.id === activeLine.id)) {
+      throw new Error(`Gateway innerlife_session_start did not include active Shared Lines: ${JSON.stringify(startedWithLines.shared_lines)}`);
+    }
+    if (startedWithLines.shared_lines?.some((line) => line.id === archivedLine.id)) {
+      throw new Error(`Gateway innerlife_session_start included an archived Shared Line: ${JSON.stringify(startedWithLines.shared_lines)}`);
+    }
     const ended = parseTextResult(
       await client.callTool("innerlife_session_end", {
         sessionId: started.session.id,
         summary: "Phase4 Gateway session ended."
       })
     );
-    if (ended.session.status !== "ended" || !ended.share?.body?.includes("Session afterthought")) {
+    if (ended.session.status !== "ended" || ended.share?.status !== "pending" || !ended.share?.body) {
       throw new Error("Gateway innerlife_session_end did not create a reviewable afterthought.");
     }
     const briefing = parseTextResult(await client.callTool("innerlife_briefing", { agentId: "my-agent" }));
@@ -218,6 +249,9 @@ async function main() {
     if (!inboxResult.inbox?.id || inboxResult.innerLife.counts.pending_inbox_count !== 1) {
       throw new Error("Gateway innerlife_submit_inbox did not create a pending inbox item.");
     }
+    if (inboxResult.innerLife.sessions || inboxResult.innerLife.digestRuns) {
+      throw new Error(`Gateway innerlife_submit_inbox returned a full InnerLife snapshot: ${JSON.stringify(Object.keys(inboxResult.innerLife))}`);
+    }
     const digest = parseTextResult(
       await client.callTool("innerlife_digest", {
         agentId: "my-agent",
@@ -225,8 +259,43 @@ async function main() {
         prompt: "Gateway should create an explicit digest record."
       })
     );
-    if (!digest.digest?.summary?.includes("Gateway inbox item should be visible") || digest.snapshot.counts.digest_runs_count !== 1) {
+    if (!digest.digest?.id || !digest.digest?.summary || digest.snapshot.counts.digest_runs_count !== 1 || digest.snapshot.counts.pending_inbox_count !== 0) {
       throw new Error("Gateway innerlife_digest did not create a digest record from pending inbox.");
+    }
+    const liteStatus = parseTextResult(await client.callTool("innerlife_status"));
+    if (liteStatus.mode !== "lite" || liteStatus.sessions || liteStatus.digestRuns) {
+      throw new Error(`Gateway innerlife_status should default to a lite snapshot: ${JSON.stringify(Object.keys(liteStatus))}`);
+    }
+    const fullStatus = parseTextResult(await client.callTool("innerlife_status", { detail: true }));
+    if (!Array.isArray(fullStatus.sessions) || !Array.isArray(fullStatus.digestRuns)) {
+      throw new Error(`Gateway innerlife_status detail=true did not return full snapshot fields: ${JSON.stringify(Object.keys(fullStatus))}`);
+    }
+    const { database } = await runtime.ensureProductCore(app);
+    await database.ensureInnerLifeProfile("retention-agent");
+    for (let index = 0; index < 205; index += 1) {
+      await database.exec(`
+        INSERT INTO innerlife_digest_runs (id, agent_id, mode, status, summary, completed_at, created_at, metadata_json)
+        VALUES (
+          'phase4_retention_${String(index).padStart(3, "0")}',
+          'retention-agent',
+          'light',
+          'completed',
+          'retention smoke ${index}',
+          CURRENT_TIMESTAMP,
+          datetime('now', '+${index} seconds'),
+          '{}'
+        );
+      `);
+    }
+    await database.pruneInnerLifeDigestRuns("retention-agent");
+    const retentionRows = await database.query(`
+      SELECT COUNT(*) AS count, MIN(id) AS min_id, MAX(id) AS max_id
+      FROM innerlife_digest_runs
+      WHERE agent_id = 'retention-agent';
+    `);
+    const retention = retentionRows[0] || {};
+    if (retention.count !== 200 || retention.min_id !== "phase4_retention_005" || retention.max_id !== "phase4_retention_204") {
+      throw new Error(`Gateway digest retention did not keep the newest 200 rows: ${JSON.stringify(retention)}`);
     }
     const daemonStatus = parseTextResult(await client.callTool("innerlife_daemon_status", { agentId: "my-agent" }));
     if (daemonStatus.status !== "paused" || daemonStatus.enabled) {

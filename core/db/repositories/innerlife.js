@@ -11,6 +11,8 @@ const {
   summarizeInnerLifeProfile
 } = require("../../innerlife/policy");
 
+const DIGEST_RUN_RETENTION_PER_AGENT = 200;
+
 function installInnerLifeRepository(ProductDatabase, helpers) {
   const {
     DEFAULT_AGENT_ID,
@@ -92,6 +94,64 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       };
     },
 
+    async getInnerLifeCounts() {
+      const rows = await this.query(`
+        SELECT
+          (SELECT COUNT(*) FROM innerlife_inbox WHERE status = 'pending') AS pending_inbox_count,
+          (SELECT COUNT(*) FROM innerlife_inbox WHERE status = 'processed') AS processed_inbox_count,
+          (SELECT COUNT(*) FROM innerlife_events) AS events_count,
+          (SELECT COUNT(*) FROM innerlife_thoughts) AS thoughts_count,
+          (SELECT COUNT(*) FROM innerlife_shares WHERE status = 'pending') AS pending_shares_count,
+          (SELECT COUNT(*) FROM innerlife_shares WHERE status = 'approved') AS approved_shares_count,
+          (SELECT COUNT(*) FROM innerlife_shares WHERE status = 'rejected') AS rejected_shares_count,
+          (SELECT COUNT(*) FROM innerlife_shares WHERE status = 'used') AS used_shares_count,
+          (SELECT COUNT(*) FROM innerlife_shares WHERE status = 'deferred') AS deferred_shares_count,
+          (SELECT COUNT(*) FROM innerlife_shares WHERE status = 'discarded') AS discarded_shares_count,
+          (SELECT COUNT(*) FROM innerlife_digest_runs) AS digest_runs_count,
+          (SELECT COUNT(*) FROM innerlife_share_checks) AS share_checks_count,
+          (SELECT COUNT(*) FROM innerlife_sessions WHERE status = 'active') AS active_sessions_count,
+          (SELECT COUNT(*) FROM innerlife_sessions WHERE status = 'ended') AS ended_sessions_count;
+      `);
+      return rows[0] || {};
+    },
+
+    async getInnerLifeSnapshotLite() {
+      const profileRows = await this.query(`
+        SELECT agent_id, display_name, enabled
+        FROM innerlife_profiles
+        ORDER BY updated_at DESC, agent_id ASC;
+      `);
+      const profiles = profileRows.map((row) => ({
+        agentId: row.agent_id,
+        displayName: row.display_name,
+        enabled: Boolean(row.enabled)
+      }));
+      const selectedProfile = profiles.find((item) => item.agentId === DEFAULT_AGENT_ID) || profiles[0] || null;
+      const pendingShares = (await this.listInnerLifeShares("pending", 20)).map((share) => ({
+        id: share.id,
+        agent_id: share.agent_id,
+        status: share.status,
+        created_at: share.created_at,
+        updated_at: share.updated_at,
+        preview: String(share.body || "").slice(0, 200)
+      }));
+      const daemon = selectedProfile
+        ? await this.ensureInnerLifeDaemonState(selectedProfile.agentId)
+        : { agentId: "", status: "paused", enabled: false, lastTickAt: null, nextRunAt: null, lastResult: "", lastError: "", tickCount: 0, updatedAt: null, metadata: {} };
+      const doctor = selectedProfile
+        ? await this.getInnerLifeDoctor(selectedProfile.agentId)
+        : { status: "ok", summary: "No InnerLife profiles configured.", issues: [], nextActions: [] };
+      return {
+        mode: "lite",
+        profiles,
+        counts: await this.getInnerLifeCounts(),
+        pendingShares,
+        daemon,
+        doctor,
+        detail_ref: "Pass detail=true to innerlife_status for the full snapshot, or use innerlife_sessions / innerlife_digest / innerlife_pending_shares for specific records."
+      };
+    },
+
     async getInnerLifeSnapshot() {
       const profileRows = await this.query(`
         SELECT agent_id, display_name, enabled, profile_json, state_json, created_at, updated_at
@@ -136,27 +196,10 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       const daemon = profile
         ? await this.ensureInnerLifeDaemonState(profile.agent_id)
         : { agentId: "", status: "paused", enabled: false, lastTickAt: null, nextRunAt: null, lastResult: "", lastError: "", tickCount: 0, updatedAt: null, metadata: {} };
-      const rows = await this.query(`
-        SELECT
-          (SELECT COUNT(*) FROM innerlife_inbox WHERE status = 'pending') AS pending_inbox_count,
-          (SELECT COUNT(*) FROM innerlife_inbox WHERE status = 'processed') AS processed_inbox_count,
-          (SELECT COUNT(*) FROM innerlife_events) AS events_count,
-          (SELECT COUNT(*) FROM innerlife_thoughts) AS thoughts_count,
-          (SELECT COUNT(*) FROM innerlife_shares WHERE status = 'pending') AS pending_shares_count,
-          (SELECT COUNT(*) FROM innerlife_shares WHERE status = 'approved') AS approved_shares_count,
-          (SELECT COUNT(*) FROM innerlife_shares WHERE status = 'rejected') AS rejected_shares_count,
-          (SELECT COUNT(*) FROM innerlife_shares WHERE status = 'used') AS used_shares_count,
-          (SELECT COUNT(*) FROM innerlife_shares WHERE status = 'deferred') AS deferred_shares_count,
-          (SELECT COUNT(*) FROM innerlife_shares WHERE status = 'discarded') AS discarded_shares_count,
-          (SELECT COUNT(*) FROM innerlife_digest_runs) AS digest_runs_count,
-          (SELECT COUNT(*) FROM innerlife_share_checks) AS share_checks_count,
-          (SELECT COUNT(*) FROM innerlife_sessions WHERE status = 'active') AS active_sessions_count,
-          (SELECT COUNT(*) FROM innerlife_sessions WHERE status = 'ended') AS ended_sessions_count;
-      `);
       return {
         profile,
         profiles,
-        counts: rows[0] || {},
+        counts: await this.getInnerLifeCounts(),
         pendingShares,
         recentShares,
         sessions,
@@ -416,14 +459,31 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
           WHERE id IN (${inboxItems.map((item) => sqlString(item.id)).join(", ")});
         `);
       }
+      await this.pruneInnerLifeDigestRuns(profile.agent_id);
       return {
         digest: await this.getInnerLifeDigestRun(digestId),
         eventId,
         thoughtId,
         convergence: null,
         processedInboxIds: inboxItems.map((item) => item.id),
-        snapshot: await this.getInnerLifeSnapshot()
+        snapshot: await this.getInnerLifeSnapshotLite()
       };
+    },
+
+    async pruneInnerLifeDigestRuns(agentId, keep = DIGEST_RUN_RETENTION_PER_AGENT) {
+      const id = String(agentId || "").trim();
+      if (!id) return;
+      const safeLimit = Math.max(1, Number.parseInt(String(keep), 10) || DIGEST_RUN_RETENTION_PER_AGENT);
+      await this.exec(`
+        DELETE FROM innerlife_digest_runs
+        WHERE agent_id = ${sqlString(id)}
+          AND id NOT IN (
+            SELECT id FROM innerlife_digest_runs
+            WHERE agent_id = ${sqlString(id)}
+            ORDER BY created_at DESC, id DESC
+            LIMIT ${safeLimit}
+          );
+      `);
     },
 
     ...createInnerLifeSessionRepository(helpers),
@@ -576,7 +636,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         thoughtId,
         share: await this.getInnerLifeShare(shareId),
         convergence,
-        snapshot: await this.getInnerLifeSnapshot()
+        snapshot: await this.getInnerLifeSnapshotLite()
       };
     },
 
@@ -662,7 +722,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         thoughtId,
         share: await this.getInnerLifeShare(shareId),
         convergence,
-        snapshot: await this.getInnerLifeSnapshot()
+        snapshot: await this.getInnerLifeSnapshotLite()
       };
     },
 
@@ -683,7 +743,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
             converged: false,
             reason: "Thought is already shareable.",
             share: await this.getInnerLifeShare(existingShare[0].id),
-            snapshot: await this.getInnerLifeSnapshot()
+            snapshot: await this.getInnerLifeSnapshotLite()
           };
         }
       }
@@ -703,7 +763,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         return {
           converged: false,
           reason: "Source thought was not found for this agent.",
-          snapshot: await this.getInnerLifeSnapshot()
+          snapshot: await this.getInnerLifeSnapshotLite()
         };
       }
       const recentThoughts = await this.query(`
@@ -721,7 +781,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         return {
           converged: false,
           reason: "Nothing to converge — no pending shares or recent thoughts.",
-          snapshot: await this.getInnerLifeSnapshot()
+          snapshot: await this.getInnerLifeSnapshotLite()
         };
       }
       const shareLines = agentPendingShares.map((s) => `- ${s.body.slice(0, 100)}`).join("\n") || "- No pending shares.";
@@ -779,7 +839,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         thoughtId,
         share: await this.getInnerLifeShare(shareId),
         pendingShareCount: agentPendingShares.length,
-        snapshot: await this.getInnerLifeSnapshot()
+        snapshot: await this.getInnerLifeSnapshotLite()
       };
     },
 

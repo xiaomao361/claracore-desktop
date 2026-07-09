@@ -147,7 +147,7 @@ function createInnerLifeShareRepository(helpers) {
         return {
           check: await this.getInnerLifeShareCheck(checkId),
           share: null,
-          snapshot: await this.getInnerLifeSnapshot()
+          snapshot: await this.getInnerLifeSnapshotLite()
         };
       }
       const explicitTokens = meaningfulTokens(providedContext);
@@ -201,7 +201,7 @@ function createInnerLifeShareRepository(helpers) {
       return {
         check: await this.getInnerLifeShareCheck(checkId),
         share,
-        snapshot: await this.getInnerLifeSnapshot()
+        snapshot: await this.getInnerLifeSnapshotLite()
       };
     },
 

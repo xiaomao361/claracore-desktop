@@ -2,6 +2,10 @@ async function snapshot(core) {
   return core.database.getInnerLifeSnapshot();
 }
 
+async function snapshotLite(core) {
+  return core.database.getInnerLifeSnapshotLite();
+}
+
 async function sessions(core, input = {}) {
   return core.database.listInnerLifeSessionsPage(input);
 }
@@ -144,6 +148,7 @@ module.exports = {
   setDaemon,
   shareActions,
   snapshot,
+  snapshotLite,
   startSession,
   submitInbox,
   summaries,

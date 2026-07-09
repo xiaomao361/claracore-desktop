@@ -39,6 +39,39 @@ npm run dist:mac
 Only install or replace the daily-use app after the target build passes the
 focused smoke gates for its changed surface.
 
+## v0.4.6 Checkpoint
+
+`0.4.6` trims MCP payload weight and adds InnerLife data hygiene, following the
+`0.2.6` lite-contract precedent:
+
+- `innerlife_status` now returns a lite snapshot by default (counts, pending
+  share previews, daemon, doctor). The previous full snapshot (~400KB on a
+  lived-in database: sessions with briefings, digest runs, history) is still
+  available via the new `detail=true` parameter.
+- Every MCP path that used to echo the full InnerLife snapshot as a side
+  payload (`innerlife_submit_inbox` / `_fact` / `_continuity`,
+  `innerlife_share_check`, `innerlife_digest`, `innerlife_explore`,
+  `innerlife_converge`, process-once) now returns the lite snapshot instead.
+  The Desktop UI keeps using the full snapshot.
+- `innerlife_digest_runs` rows are pruned after each digest to the most recent
+  200 per agent (`pruneInnerLifeDigestRuns`), so daemon ticks no longer grow
+  the table without bound.
+- `innerlife_session_start` no longer mixes archived Shared Lines into its
+  bundled `shared_lines` listing; it now requests active lines only.
+  `shared_line_list` gained an explicit `status` filter
+  (`active` / `archived` / `all`) that was already supported by the repository
+  layer but not exposed in the tool schema.
+
+Validation for this checkpoint:
+
+```bash
+npm run check
+node core/tests/phase4-gateway-contract-smoke.js
+node core/tests/phase5-innerlife-smoke.js
+node core/tests/sql-interpolation-lint.js
+git diff --check
+```
+
 ## v0.4.5 Checkpoint
 
 `0.4.5` hardens the Streamable HTTP Gateway and Shared Line scoping introduced

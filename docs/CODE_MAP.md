@@ -148,8 +148,8 @@ Repository ownership:
 - `core/db/repositories/continuity/agents.js`: Shared Line agent state and
   model adjustment persistence.
 - `core/db/repositories/innerlife.js`: InnerLife repository aggregation plus
-  events, thoughts, shares, digest/exploration/convergence data, and review
-  flows.
+  events, thoughts, shares, digest/exploration/convergence data, compact status
+  snapshots, per-agent digest-run retention, and review flows.
 - `core/db/repositories/innerlife/profile.js`: InnerLife profile create,
   update, list, and delete persistence.
 - `core/db/repositories/innerlife/inbox.js`: InnerLife inbox list, count,

@@ -591,3 +591,46 @@ body[data-theme="dark"] .daemon-switch.is-error {
   background: var(--red-bg);
   color: var(--red);
 }
+
+body[data-theme="dark"] .home-agent-activity-card,
+body[data-theme="dark"] .home-agent-activity-stats div,
+body[data-theme="dark"] .home-agent-activity-empty,
+body[data-theme="dark"] .memory-raw-details {
+  border-color: var(--border);
+  background: var(--control-bg-soft);
+  color: var(--text);
+  box-shadow: none;
+}
+
+body[data-theme="dark"] .home-agent-activity-card {
+  background:
+    linear-gradient(180deg, rgba(38, 47, 42, 0.98), rgba(29, 35, 31, 0.98)),
+    var(--control-bg-soft);
+}
+
+body[data-theme="dark"] .home-agent-activity-stats div,
+body[data-theme="dark"] .home-agent-activity-empty {
+  background: var(--control-bg);
+}
+
+body[data-theme="dark"] .home-agent-activity-head span,
+body[data-theme="dark"] .home-agent-activity-stats span {
+  color: var(--muted);
+}
+
+body[data-theme="dark"] .home-agent-activity-head strong,
+body[data-theme="dark"] .home-agent-activity-stats strong {
+  color: var(--text);
+}
+
+body[data-theme="dark"] .memory-raw-details summary {
+  color: var(--green);
+}
+
+body[data-theme="dark"] .memory-raw-details[open] summary {
+  border-bottom-color: var(--border);
+}
+
+body[data-theme="dark"] .memory-raw-body {
+  color: var(--text);
+}

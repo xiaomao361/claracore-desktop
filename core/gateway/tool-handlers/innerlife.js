@@ -34,7 +34,7 @@ async function handleInnerLifeTool(name, args, context) {
     } catch (error) {
       sharedLineError = error.message || String(error);
     }
-    const lines = await continuity.list(core, { limit: 20 });
+    const lines = await continuity.list(core, { limit: 20, status: "active" });
     return textResult({
       ...startPacket,
       shared_line: sharedLine,
@@ -46,7 +46,10 @@ async function handleInnerLifeTool(name, args, context) {
 
   if (name === "innerlife_session_end") {
     return textResult(
-      await innerlife.endSession(core, args.sessionId, { ...args, agentId: currentMcpAgentId(args) })
+      await innerlife.endSession(core, args.sessionId, {
+        ...args,
+        ...(args.agentId || args.agent_id ? { agentId: currentMcpAgentId(args) } : {})
+      })
     );
   }
 
@@ -57,7 +60,9 @@ async function handleInnerLifeTool(name, args, context) {
   }
 
   if (name === "innerlife_status") {
-    return textResult(await innerlife.snapshot(core));
+    return textResult(
+      args.detail === true ? await innerlife.snapshot(core) : await innerlife.snapshotLite(core)
+    );
   }
 
   if (name === "innerlife_briefing") {
@@ -93,21 +98,21 @@ async function handleInnerLifeTool(name, args, context) {
   if (name === "innerlife_submit_inbox") {
     return textResult({
       inbox: await innerlife.submitInbox(core, args),
-      innerLife: await innerlife.snapshot(core)
+      innerLife: await innerlife.snapshotLite(core)
     });
   }
 
   if (name === "innerlife_submit_fact") {
     return textResult({
       inbox: await innerlife.submitInbox(core, { ...args, agentId: currentMcpAgentId(args), source: "fact", body: args.body }),
-      innerLife: await innerlife.snapshot(core)
+      innerLife: await innerlife.snapshotLite(core)
     });
   }
 
   if (name === "innerlife_submit_continuity") {
     return textResult({
       inbox: await innerlife.submitInbox(core, { ...args, agentId: currentMcpAgentId(args), source: "continuity", body: args.body }),
-      innerLife: await innerlife.snapshot(core)
+      innerLife: await innerlife.snapshotLite(core)
     });
   }
 

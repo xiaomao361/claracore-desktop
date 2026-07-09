@@ -65,11 +65,16 @@ use the names listed there.
 ### Use InnerLife
 
 1. Call `innerlife_session_start` at the beginning of a meaningful session.
+   Its bundled `shared_lines` list is active-only; archived lines require an
+   explicit `shared_line_list` call with `status: "archived"` or `"all"`.
 2. Use `innerlife_submit_inbox`, `innerlife_submit_fact`, or
    `innerlife_submit_continuity` for material that should be digested later.
 3. Call `innerlife_pending_shares` and `innerlife_share_check` before surfacing
    a waiting share to the user.
-4. Call `innerlife_doctor` when InnerLife seems idle, paused, or misconfigured.
+4. Call `innerlife_status` without arguments for the compact status packet.
+   Pass `detail: true` only when you need full sessions, digest runs, or
+   history.
+5. Call `innerlife_doctor` when InnerLife seems idle, paused, or misconfigured.
 
 ### Diagnose Gateway State
 

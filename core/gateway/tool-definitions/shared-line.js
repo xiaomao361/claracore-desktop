@@ -25,7 +25,7 @@ const sharedLineToolDefinitions = [
   {
     "name": "shared_line_list",
     "title": "List Shared Lines",
-    "description": "List ClaraCore Desktop Shared Lines and identify the active line.",
+    "description": "List ClaraCore Desktop Shared Lines and identify the active line. Defaults to every non-deleted line; pass status to narrow to active or archived lines.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -34,6 +34,10 @@ const sharedLineToolDefinitions = [
         },
         "allAgents": {
           "type": "boolean"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "archived", "all"]
         },
         "limit": {
           "type": "integer",

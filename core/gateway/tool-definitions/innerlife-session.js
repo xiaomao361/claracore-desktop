@@ -86,10 +86,15 @@ const innerlifeSessionToolDefinitions = [
   {
     "name": "innerlife_status",
     "title": "InnerLife Status",
-    "description": "Read the Desktop-owned InnerLife snapshot, including inbox, shares, sessions, daemon, and doctor.",
+    "description": "Read the Desktop-owned InnerLife status. Returns a lite snapshot by default (counts, pending share previews, daemon, doctor). Pass detail=true for the full snapshot including inbox, sessions, digest runs, and history.",
     "inputSchema": {
       "type": "object",
-      "properties": {},
+      "properties": {
+        "detail": {
+          "type": "boolean",
+          "description": "Return the full snapshot instead of the lite summary."
+        }
+      },
       "additionalProperties": false
     }
   },
