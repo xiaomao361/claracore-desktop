@@ -622,8 +622,13 @@ function createTrayIcon() {
 
 async function showMainWindow() {
   if (!mainWindow) return;
-  if (process.platform === "darwin" && app.dock && typeof app.dock.show === "function") {
-    await app.dock.show();
+  if (process.platform === "darwin") {
+    if (typeof app.setActivationPolicy === "function") {
+      app.setActivationPolicy("regular");
+    }
+    if (app.dock && typeof app.dock.show === "function") {
+      await app.dock.show();
+    }
   }
   if (mainWindow.isMinimized()) mainWindow.restore();
   mainWindow.show();
@@ -633,8 +638,13 @@ async function showMainWindow() {
 function hideMainWindowToTray() {
   if (!mainWindow) return;
   mainWindow.hide();
-  if (process.platform === "darwin" && app.dock && typeof app.dock.hide === "function") {
-    app.dock.hide();
+  if (process.platform === "darwin") {
+    if (typeof app.setActivationPolicy === "function") {
+      app.setActivationPolicy("accessory");
+    }
+    if (app.dock && typeof app.dock.hide === "function") {
+      app.dock.hide();
+    }
   }
 }
 
