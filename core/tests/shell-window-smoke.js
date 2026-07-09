@@ -52,11 +52,32 @@ async function main() {
     if (process.platform === "darwin" && Number(result.shellState.trayBounds?.width || 0) > 36) {
       throw new Error(`macOS tray is wider than an icon-only status item: ${JSON.stringify(result.shellState)}`);
     }
+    if (process.platform === "darwin" && result.shellState.dockVisible !== true) {
+      throw new Error(`macOS dock should be visible while the main window is visible: ${JSON.stringify(result.shellState)}`);
+    }
     if (result.bodyRegion !== "drag" || result.topbarRegion !== "drag" || result.sidebarRegion !== "drag") {
       throw new Error(`Shell drag regions are not enabled: ${JSON.stringify(result)}`);
     }
     if (result.navRegion !== "no-drag") {
       throw new Error(`Interactive controls are not excluded from drag regions: ${JSON.stringify(result)}`);
+    }
+
+    const hiddenState = await app.evaluate(async ({ BrowserWindow, app: electronApp }) => {
+      const window = BrowserWindow.getAllWindows()[0];
+      window.close();
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      return {
+        dockVisible: process.platform === "darwin" && electronApp.dock && typeof electronApp.dock.isVisible === "function"
+          ? electronApp.dock.isVisible()
+          : null,
+        windowVisible: window.isVisible()
+      };
+    });
+    if (hiddenState.windowVisible) {
+      throw new Error(`Close should hide the main window: ${JSON.stringify(hiddenState)}`);
+    }
+    if (process.platform === "darwin" && hiddenState.dockVisible !== false) {
+      throw new Error(`Close-to-tray should hide the macOS dock icon: ${JSON.stringify(hiddenState)}`);
     }
 
     await app.close();

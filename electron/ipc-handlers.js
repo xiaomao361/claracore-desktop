@@ -515,6 +515,7 @@ function registerIpcHandlers({
     hasTray: Boolean(getTray()),
     trayBounds: getTray() ? getTray().getBounds() : null,
     trayTitle: getTray() && typeof getTray().getTitle === "function" ? getTray().getTitle() : "",
+    dockVisible: process.platform === "darwin" && app.dock && typeof app.dock.isVisible === "function" ? app.dock.isVisible() : null,
     windowVisible: getMainWindow() ? getMainWindow().isVisible() : false
   }));
   

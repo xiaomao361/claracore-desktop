@@ -620,17 +620,28 @@ function createTrayIcon() {
   return image;
 }
 
-function showMainWindow() {
+async function showMainWindow() {
   if (!mainWindow) return;
+  if (process.platform === "darwin" && app.dock && typeof app.dock.show === "function") {
+    await app.dock.show();
+  }
   if (mainWindow.isMinimized()) mainWindow.restore();
   mainWindow.show();
   mainWindow.focus();
 }
 
+function hideMainWindowToTray() {
+  if (!mainWindow) return;
+  mainWindow.hide();
+  if (process.platform === "darwin" && app.dock && typeof app.dock.hide === "function") {
+    app.dock.hide();
+  }
+}
+
 function toggleMainWindow() {
   if (!mainWindow) return;
   if (mainWindow.isVisible()) {
-    mainWindow.hide();
+    hideMainWindowToTray();
   } else {
     showMainWindow();
   }
@@ -652,7 +663,7 @@ function updateTrayMenu(language = trayLanguage) {
       {
         label: labels.hide,
         click() {
-          if (mainWindow) mainWindow.hide();
+          hideMainWindowToTray();
         }
       },
       {
@@ -708,7 +719,7 @@ function createWindow() {
       return;
     }
     event.preventDefault();
-    mainWindow.hide();
+    hideMainWindowToTray();
   });
 
   mainWindow.loadFile(path.join(APP_ROOT, "index.html"));
