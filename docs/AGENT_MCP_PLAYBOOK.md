@@ -19,7 +19,9 @@ After MCP is installed, connected, or restarted, run this sequence:
 
 1. `claracore_connection_test`
 2. `gateway_docs`
-3. `gateway_context`
+3. `shared_line_list` with `status: "active"`
+4. `gateway_context` with an explicit `lineId` when your agent owns multiple
+   active lines
 
 `gateway_docs` explains the product boundary and available tools.
 `gateway_context` returns the current working packet: Shared Line, recent
@@ -32,9 +34,11 @@ use the names listed there.
 
 ### Resume Work
 
-1. Call `gateway_context`.
-2. Read the current Shared Line and recent Memory.
-3. Continue from the current state instead of starting a new thread of work.
+1. Call `shared_line_list` with `status: "active"`.
+2. If your agent owns multiple active lines, choose the intended line and pass
+   its `lineId` to `gateway_context`.
+3. Read the selected Shared Line and recent Memory.
+4. Continue from the selected state instead of starting a new thread of work.
 
 ### Record A Durable Fact Or Decision
 
@@ -57,10 +61,14 @@ use the names listed there.
 
 ### Update The Current Shared Line
 
-1. Call `shared_line_get` or `gateway_context`.
-2. Call `shared_line_update` after meaningful progress, a handoff, or a changed
-   interpretation.
-3. Use `interpretationStatus: "needs_review"` when the state is uncertain.
+1. Call `shared_line_list` with `status: "active"`.
+2. When your agent owns multiple active lines, choose one and pass its explicit
+   `lineId` to `shared_line_get` or `gateway_context`.
+3. Pass the same `lineId` to `shared_line_update` after meaningful progress, a
+   handoff, or a changed interpretation.
+4. If a call returns `SHARED_LINE_ID_REQUIRED`, no line was changed. Select one
+   of the returned candidates and retry with `lineId`.
+5. Use `interpretationStatus: "needs_review"` when the state is uncertain.
 
 ### Use InnerLife
 

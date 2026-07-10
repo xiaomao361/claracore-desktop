@@ -54,6 +54,17 @@ focused smoke gates for its changed surface.
 - Electron IPC names are checked against one 86-channel registry without
   weakening the sandboxed preload boundary.
 - `gateway_context` routes through the Continuity domain facade.
+- Identified agents no longer select the most recently updated Shared Line when
+  more than one active line exists. Read, context, and update calls fail closed
+  with `SHARED_LINE_ID_REQUIRED` and candidate ids until the caller supplies an
+  explicit `lineId`; rejected updates perform no write.
+
+Validation for this checkpoint includes:
+
+```bash
+npm run test:smoke
+npm run pack:mac
+```
 
 ## v0.4.6 Checkpoint
 

@@ -332,6 +332,13 @@ example `shared_line_update` saves one current position and then reads the
 resume packet for that exact `lineId`; it must not re-infer a line from agent
 identity after the write.
 
+Shared Line selection is fail-closed for identified agents. A missing `lineId`
+may default only when that agent owns zero or one active non-default line. If it
+owns more than one, read/context/update calls return
+`SHARED_LINE_ID_REQUIRED` with candidate ids and perform no write. The caller
+must use `shared_line_list` and retry with an explicit `lineId`; the Gateway
+does not guess from recency or summary text.
+
 ## Import And Backup Boundary
 
 Old Memoria, Continuity, and InnerLife imports are copy-based and backup-gated.

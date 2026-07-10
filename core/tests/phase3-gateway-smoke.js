@@ -5,7 +5,11 @@ const { createGatewayClient, parseTextResult } = require("./gateway-client");
 
 async function main() {
   const dataRoot = await fs.mkdtemp(path.join(os.tmpdir(), "claracore-phase3-gateway-"));
-  const client = createGatewayClient(dataRoot);
+  const client = createGatewayClient(dataRoot, {
+    env: {
+      CLARACORE_AGENT_ID: ""
+    }
+  });
   try {
     const initialized = await client.request("initialize", {
       protocolVersion: "2025-06-18",
@@ -39,7 +43,9 @@ async function main() {
       !docsText.includes("shared_line_update") ||
       !docsText.includes("shared_line_handoff_create") ||
       !docsText.includes("shared_line_create") ||
-      !docsText.includes("shared_line_archive")
+      !docsText.includes("shared_line_archive") ||
+      !docsText.includes("SHARED_LINE_ID_REQUIRED") ||
+      !docsText.includes("shared_line_list with status=active")
     ) {
       throw new Error("Gateway docs do not include Shared Line tools.");
     }
@@ -179,6 +185,56 @@ async function main() {
     );
     if (restored.line.status !== "active" || restored.sharedLine.lineId !== createdLine.line.id) {
       throw new Error("Gateway shared_line_restore did not restore and activate the line.");
+    }
+
+    const ambiguousLineA = parseTextResult(
+      await client.callTool("shared_line_create", {
+        agentId: "gateway-ambiguity-agent",
+        title: "Gateway ambiguity line A",
+        makeActive: false
+      })
+    ).line;
+    const ambiguousLineB = parseTextResult(
+      await client.callTool("shared_line_create", {
+        agentId: "gateway-ambiguity-agent",
+        title: "Gateway ambiguity line B",
+        makeActive: false
+      })
+    ).line;
+    let ambiguityMessage = "";
+    try {
+      await client.callTool("shared_line_update", {
+        agentId: "gateway-ambiguity-agent",
+        summary: "Gateway ambiguous write must be rejected."
+      });
+    } catch (error) {
+      ambiguityMessage = String(error.message || "");
+    }
+    if (
+      !ambiguityMessage.includes("SHARED_LINE_ID_REQUIRED") ||
+      !ambiguityMessage.includes(ambiguousLineA.id) ||
+      !ambiguityMessage.includes(ambiguousLineB.id)
+    ) {
+      throw new Error(`Gateway ambiguity error did not include actionable candidates: ${ambiguityMessage}`);
+    }
+    const ambiguousLinesAfterBlockedWrite = parseTextResult(
+      await client.callTool("shared_line_list", {
+        agentId: "gateway-ambiguity-agent",
+        status: "active"
+      })
+    ).lines;
+    if (ambiguousLinesAfterBlockedWrite.some((line) => line.summary === "Gateway ambiguous write must be rejected.")) {
+      throw new Error("Gateway ambiguous write changed a candidate line.");
+    }
+    const explicitGatewayWrite = parseTextResult(
+      await client.callTool("shared_line_update", {
+        agentId: "gateway-ambiguity-agent",
+        lineId: ambiguousLineB.id,
+        summary: "Gateway explicit selection reached line B."
+      })
+    );
+    if (explicitGatewayWrite.currentPosition.lineId !== ambiguousLineB.id) {
+      throw new Error("Gateway explicit Shared Line write did not use the requested lineId.");
     }
 
     const statusResponse = await client.callTool("claracore_status");

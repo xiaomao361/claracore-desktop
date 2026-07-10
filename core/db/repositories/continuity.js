@@ -200,6 +200,29 @@ function installContinuityRepository(ProductDatabase, helpers) {
     };
   }
 
+  function buildAmbiguousSharedLineError(agentId, lines) {
+    const candidates = lines.map((line) => ({
+      lineId: line.id,
+      title: line.title,
+      summary: line.summary,
+      updatedAt: line.positionUpdatedAt || line.updatedAt || null
+    }));
+    const candidateText = candidates
+      .map((candidate) => {
+        const summary = String(candidate.summary || "").replace(/\s+/g, " ").trim().slice(0, 120);
+        return `${candidate.lineId} (${candidate.title}${summary ? `: ${summary}` : ""})`;
+      })
+      .join("; ");
+    const error = new Error(
+      `SHARED_LINE_ID_REQUIRED: Agent "${agentId}" has multiple active Shared Lines. ` +
+        `Call shared_line_list and retry with an explicit lineId. Candidates: ${candidateText}`
+    );
+    error.code = "SHARED_LINE_ID_REQUIRED";
+    error.agentId = agentId;
+    error.candidates = candidates;
+    return error;
+  }
+
   Object.assign(ProductDatabase.prototype, {
     async ensureDefaultContinuityLine() {
       const lineId = "line_default";
@@ -251,15 +274,18 @@ function installContinuityRepository(ProductDatabase, helpers) {
     async findContinuityLineIdForAgent(agentIdInput = "") {
       const agentId = String(agentIdInput || "").trim();
       if (!agentId) return null;
+      if (agentId === "http-agent" || agentId === "unknown-agent") return null;
       await this.ensureDefaultContinuityLine();
+      const activeLineId = await this.getActiveContinuityLineId();
       const rows = await this.query(`
-        SELECT id
-        FROM continuity_lines
-        WHERE agent_id = ${sqlString(agentId)} AND status = 'active' AND id != 'line_default'
-        ORDER BY updated_at DESC, created_at DESC
-        LIMIT 1;
+        ${CONTINUITY_LINE_SELECT}
+        WHERE l.agent_id = ${sqlString(agentId)} AND l.status = 'active' AND l.id != 'line_default'
+        ORDER BY l.updated_at DESC, l.created_at DESC
+        LIMIT 20;
       `);
-      return rows[0]?.id || null;
+      const lines = rows.map((row) => mapContinuityLineRow(row, activeLineId));
+      if (lines.length > 1) throw buildAmbiguousSharedLineError(agentId, lines);
+      return lines[0]?.id || null;
     },
 
     async ensureContinuityLineForAgent(agentIdInput = "") {

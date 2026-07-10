@@ -118,6 +118,57 @@ async function main() {
     throw new Error("Agent-owned writes should not move or overwrite the global active Shared Line.");
   }
   const { database } = await runtime.ensureProductCore(app);
+  const secondCodexLine = await database.createContinuityLine({
+    agentId: "codex",
+    title: "Codex second active line",
+    makeActive: false
+  });
+  let ambiguousReadError = null;
+  try {
+    await runtime.getProductSharedLine(app, { agentId: "codex" });
+  } catch (error) {
+    ambiguousReadError = error;
+  }
+  if (ambiguousReadError?.code !== "SHARED_LINE_ID_REQUIRED" || ambiguousReadError?.candidates?.length !== 2) {
+    throw new Error(`Ambiguous agent read should return both candidate lines: ${ambiguousReadError?.message}`);
+  }
+  const codexBeforeBlockedWrite = await database.getCurrentPosition(codexLine.currentPosition.lineId);
+  const secondCodexBeforeBlockedWrite = await database.getCurrentPosition(secondCodexLine.id);
+  let ambiguousWriteError = null;
+  try {
+    await runtime.saveProductSharedLine(app, {
+      agentId: "codex",
+      summary: "This ambiguous write must not reach any Shared Line."
+    });
+  } catch (error) {
+    ambiguousWriteError = error;
+  }
+  if (ambiguousWriteError?.code !== "SHARED_LINE_ID_REQUIRED" || !ambiguousWriteError.message.includes("shared_line_list")) {
+    throw new Error(`Ambiguous agent write should fail closed with recovery instructions: ${ambiguousWriteError?.message}`);
+  }
+  const codexAfterBlockedWrite = await database.getCurrentPosition(codexLine.currentPosition.lineId);
+  const secondCodexAfterBlockedWrite = await database.getCurrentPosition(secondCodexLine.id);
+  if (
+    codexAfterBlockedWrite.summary !== codexBeforeBlockedWrite.summary ||
+    secondCodexAfterBlockedWrite.summary !== secondCodexBeforeBlockedWrite.summary
+  ) {
+    throw new Error("Ambiguous Shared Line write changed a candidate line before selection.");
+  }
+  const explicitCodexWrite = await runtime.saveProductSharedLine(app, {
+    agentId: "codex",
+    lineId: secondCodexLine.id,
+    summary: "Explicit Codex line selection writes only the intended Shared Line."
+  });
+  if (
+    explicitCodexWrite.currentPosition.lineId !== secondCodexLine.id ||
+    explicitCodexWrite.currentPosition.summary !== "Explicit Codex line selection writes only the intended Shared Line."
+  ) {
+    throw new Error("Explicit Shared Line write did not use the requested lineId.");
+  }
+  const firstCodexAfterExplicitWrite = await database.getCurrentPosition(codexLine.currentPosition.lineId);
+  if (firstCodexAfterExplicitWrite.summary !== codexBeforeBlockedWrite.summary) {
+    throw new Error("Explicit Shared Line write changed a different candidate line.");
+  }
   const handoff = await database.createContinuityHandoff({
     objective: "Phase 3 handoff objective",
     completed: ["history exists"],
