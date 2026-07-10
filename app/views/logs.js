@@ -1,4 +1,4 @@
-function createClaraCoreLogsView({ dom, t, escapeHtml, getSnapshot, refreshSnapshot }) {
+function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getSnapshot, refreshSnapshot }) {
   let followEnabled = true;
   let refreshTimer = null;
   let refreshInFlight = false;
@@ -24,7 +24,7 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, getSnapshot, refreshSnaps
       createdAt: event.createdAt || "",
       kind: "runtime",
       status: event.level || "info",
-      line: `[${event.createdAt || ""}] [${event.level || "info"}/${event.source || "runtime"}] ${event.message || ""}${
+      line: `[${formatLocalDateTime(event.createdAt)}] [${event.level || "info"}/${event.source || "runtime"}] ${event.message || ""}${
         event.metadata && Object.keys(event.metadata).length ? ` ${JSON.stringify(event.metadata)}` : ""
       }`
     }));
@@ -32,7 +32,7 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, getSnapshot, refreshSnaps
       createdAt: trace.createdAt || "",
       kind: "gateway",
       status: trace.status || "ok",
-      line: `[${trace.createdAt || ""}] [gateway/${trace.status || "ok"}] ${trace.toolName || "unknown"} ${String(trace.durationMs ?? 0)}ms ${
+      line: `[${formatLocalDateTime(trace.createdAt)}] [gateway/${trace.status || "ok"}] ${trace.toolName || "unknown"} ${String(trace.durationMs ?? 0)}ms ${
         trace.error || trace.responseSummary || ""
       }`
     }));
@@ -265,7 +265,7 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, getSnapshot, refreshSnaps
                 <span>${html(item.source)} · ${html(item.status || "")}</span>
               </div>
               <p>${html(preview(item.summary) || t("logs.timeFlowNoDetail"))}</p>
-              <small>${html(item.occurredAt)}${meta ? ` · ${html(meta)}` : ""}</small>
+              <small>${html(formatLocalDateTime(item.occurredAt))}${meta ? ` · ${html(meta)}` : ""}</small>
             </div>
           </article>
         `;
@@ -279,7 +279,7 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, getSnapshot, refreshSnaps
       createdAt,
       kind: "ui",
       status: "info",
-      line: `[${createdAt}] [ui/${source}] ${message}`
+      line: `[${formatLocalDateTime(createdAt)}] [ui/${source}] ${message}`
     });
     while (liveLines.length > 80) liveLines.shift();
     render();

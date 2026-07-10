@@ -1,4 +1,4 @@
-function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, getSnapshot, refresh, showCopyNotice }) {
+function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, formatLocalDateTime, getSnapshot, refresh, showCopyNotice }) {
   let pendingRestoreBackupId = null;
 
   function fileNameFromPath(value) {
@@ -21,7 +21,7 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, getSnapshot,
           <div class="backup-item ${escapeHtml(backup.status || "")}" data-backup-id="${escapeHtml(backup.id || "")}">
             <div class="backup-item-heading">
               <div>
-                <strong>${escapeHtml(backup.created_at || "")}</strong>
+                <strong>${escapeHtml(formatLocalDateTime(backup.created_at))}</strong>
                 <span class="backup-status">${escapeHtml(backup.status || "")}</span>
               </div>
               <div class="backup-actions">
@@ -68,7 +68,7 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, getSnapshot,
               (record) => `
                 <li>
                   <span>${escapeHtml(record.title || record.id || "-")}</span>
-                  <small>${escapeHtml(record.bodyPreview || record.updatedAt || "")}</small>
+                  <small>${escapeHtml(record.bodyPreview || formatLocalDateTime(record.updatedAt))}</small>
                 </li>
               `
             )

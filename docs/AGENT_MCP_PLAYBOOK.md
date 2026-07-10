@@ -18,6 +18,19 @@ config from Settings > General > Agent Gateway.
 For the complete Codex, Claude, and Hermes migration checklist, see
 [Multi-Agent Client Migration for v0.5.0](MULTI_AGENT_CLIENT_MIGRATION_V0_5.md).
 
+The generated stdio fallback config includes three caller fields:
+
+```text
+CLARACORE_AGENT_ID=<stable-persona-id>
+CLARACORE_CLIENT_ID=<codex-app|claude-code|hermes>
+CLARACORE_CONVERSATION_ID=<optional-host-conversation-id>
+```
+
+Replace the agent and client placeholders before use. Keep the conversation
+entry only when the host refreshes or relaunches its stdio MCP process for each
+conversation; otherwise remove it so a stale id is not traced across unrelated
+work. A caller conversation id never replaces an `inner_session_*` id.
+
 ## Startup Contract
 
 After MCP is installed, connected, or restarted, run this sequence:

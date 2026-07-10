@@ -56,6 +56,8 @@ async function main() {
       innerlifeEndpoint: document.querySelector("#innerLifeEndpoint").value,
       innerlifeApiKeyReadonly: document.querySelector("#innerLifeApiKey").hasAttribute("readonly"),
       innerlifeLoop: document.querySelector("#innerLifePollSeconds").value,
+      timeZone: document.querySelector("#settingsTimeZone").value,
+      expectedTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       innerlifeStatus: document.querySelector("#innerLifeModelStatus").textContent,
       memoriaOptions: [...document.querySelectorAll("#memoriaProvider option")].map((option) => option.value),
       innerlifeOptions: [...document.querySelectorAll("#innerLifeBackend option")].map((option) => option.value),
@@ -75,6 +77,9 @@ async function main() {
     if (defaults.innerlifeEndpoint !== "https://api.deepseek.com") throw new Error(`Unexpected InnerLife endpoint: ${defaults.innerlifeEndpoint}`);
     if (defaults.innerlifeApiKeyReadonly) throw new Error("InnerLife API key reference should be editable.");
     if (defaults.innerlifeLoop !== "15") throw new Error(`Unexpected InnerLife loop minutes: ${defaults.innerlifeLoop}`);
+    if (!defaults.timeZone.includes(defaults.expectedTimeZone)) {
+      throw new Error(`Settings should show the current system time zone: ${JSON.stringify(defaults)}`);
+    }
     if (!["ready", "可用"].some((label) => defaults.innerlifeStatus.toLowerCase().includes(label))) {
       throw new Error(`Unexpected InnerLife status: ${defaults.innerlifeStatus}`);
     }

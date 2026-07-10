@@ -2,6 +2,7 @@ const fs = require("fs/promises");
 const os = require("os");
 const path = require("path");
 const { createGatewayClient, parseTextResult } = require("./gateway-client");
+const packageJson = require("../../package.json");
 
 async function main() {
   if (process.platform !== "darwin") {
@@ -44,10 +45,16 @@ async function main() {
     if (initialized.result?.serverInfo?.name !== "claracore-desktop") {
       throw new Error("Packaged Gateway initialize did not return ClaraCore Desktop server info.");
     }
+    if (initialized.result?.serverInfo?.version !== packageJson.version) {
+      throw new Error(`Packaged Gateway version mismatch: ${JSON.stringify(initialized.result?.serverInfo)}`);
+    }
 
     const docsResponse = await client.callTool("gateway_docs");
     const docsText = docsResponse.result?.content?.[0]?.text || "";
     if (!docsText.includes("ELECTRON_RUN_AS_NODE")) throw new Error("Packaged Gateway docs do not include run-as-node launch.");
+    if (!docsText.includes("CLARACORE_CLIENT_ID") || !docsText.includes("CLARACORE_CONVERSATION_ID")) {
+      throw new Error("Packaged Gateway docs do not include complete stdio caller context.");
+    }
     if (!docsText.includes("packaged app")) throw new Error("Packaged Gateway docs do not report packaged app source.");
     if (!docsText.includes(dataRoot)) throw new Error("Packaged Gateway docs do not include active data root.");
 
@@ -205,6 +212,7 @@ async function main() {
           ok: true,
           dataRoot,
           executablePath,
+          version: initialized.result.serverInfo.version,
           memoryId: created.id,
           sharedLineId: sharedLine.lineId,
           handoffId: handoffResult.handoff.id

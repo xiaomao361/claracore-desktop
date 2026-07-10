@@ -53,10 +53,13 @@ Read these before adding new features:
 
 ## Current Status
 
-The current version is `0.5.0`. It is a working desktop shell with a
+The current version is `0.5.1`. It is a working desktop shell with a
 product-owned local data store, Desktop-native Memoria, Shared Line, InnerLife,
 a Desktop-owned Gateway, with model configuration merged into the Settings
 surface.
+
+Visible timestamps follow the current system time zone. Database audit fields
+remain stored as UTC, while structured records preserve their event time zone.
 
 Included:
 
@@ -230,6 +233,11 @@ and sessions through request-level identity. Stdio MCP remains as a compatibilit
 path for clients that still require a local process.
 The default localhost endpoint is `http://127.0.0.1:50668/mcp`; Settings >
 General > Agent Gateway is the source of truth if the user changes it.
+
+The generated stdio fallback is multi-agent aware: replace its stable persona
+and host-client placeholders before use. Keep its optional conversation
+environment value only when the client refreshes the stdio process per host
+conversation; otherwise remove that entry to avoid stale trace attribution.
 
 Claude Desktop version or model changes do not change ClaraCore's Gateway
 contract by themselves. If a client supports Streamable HTTP MCP, use the

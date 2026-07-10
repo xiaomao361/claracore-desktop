@@ -5,6 +5,7 @@ function createClaraCoreSettingsView(context) {
     dom,
     t,
     getSnapshot,
+    getSystemTimeZone,
     state = {}
   } = context;
   const {
@@ -14,7 +15,7 @@ function createClaraCoreSettingsView(context) {
     innerLifeDeepModelField, innerLifeDeepModel, innerLifePollField, innerLifePollSeconds, innerLifeApiKeyField, innerLifeApiKey,
     innerLifeConnectionRow,
     innerLifeApiKeySummary, innerLifeModelStatus,
-    settingsLanguage, settingsTheme, settingsMotion, settingsCloseBehavior, settingsCloseBehaviorSummary, settingsTrayStatus,
+    settingsLanguage, settingsTheme, settingsMotion, settingsTimeZone, settingsCloseBehavior, settingsCloseBehaviorSummary, settingsTrayStatus,
     settingsThemeSummary, settingsMotionSummary, settingsDataStatus, settingsDataRoot, settingsPathSummary, settingsPathDetails,
     settingsDataRootOverride, relaunchForDataRoot,
     settingsAgentGatewayStatus, settingsAgentGatewayPort, settingsAgentGatewayToken, settingsAgentGatewayEndpoint, settingsAgentGatewayTokenFile,
@@ -219,6 +220,7 @@ function renderAppearanceSettings() {
   setInputValue(settingsLanguage, preferences.language);
   setInputValue(settingsTheme, preferences.theme);
   setInputValue(settingsMotion, preferences.motion);
+  setInputValue(settingsTimeZone, t("settings.timeZoneSystemValue", { zone: getSystemTimeZone() }));
   setInputValue(settingsCloseBehavior, preferences.closeBehavior);
   if (settingsCloseBehaviorSummary) {
     settingsCloseBehaviorSummary.textContent =

@@ -144,6 +144,7 @@ window.ClaraCoreDom = {
   settingsLanguage: document.querySelector("#settingsLanguage"),
   settingsTheme: document.querySelector("#settingsTheme"),
   settingsMotion: document.querySelector("#settingsMotion"),
+  settingsTimeZone: document.querySelector("#settingsTimeZone"),
   settingsCloseBehavior: document.querySelector("#settingsCloseBehavior"),
   settingsCloseBehaviorSummary: document.querySelector("#settingsCloseBehaviorSummary"),
   settingsTrayStatus: document.querySelector("#settingsTrayStatus"),

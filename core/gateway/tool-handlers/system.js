@@ -152,7 +152,10 @@ async function handleSystemTool(name, args, context) {
                     command: launch.command,
                     args: launch.args,
                     env: {
+                      ...launch.env,
                       CLARACORE_AGENT_ID: "<agent-stable-id>",
+                      CLARACORE_CLIENT_ID: "<codex-app|claude-code|hermes>",
+                      CLARACORE_CONVERSATION_ID: "<optional-host-conversation-id>",
                       CLARACORE_DESKTOP_DATA_DIR: paths.dataRoot
                     }
                   }
@@ -162,6 +165,8 @@ async function handleSystemTool(name, args, context) {
               2
             ),
             "```",
+            "",
+            "Replace the agent and client placeholders before use. Set the conversation value only when the stdio client relaunches or refreshes the MCP process per host conversation; otherwise remove CLARACORE_CONVERSATION_ID so a stale id is not traced across unrelated conversations.",
             "",
             "## Available Tools",
             "",

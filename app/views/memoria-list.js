@@ -3,6 +3,7 @@ function createClaraCoreMemoriaList(context) {
     t,
     escapeHtml,
     renderMarkdownPreview,
+    formatLocalDateTime,
     memoryLabelList
   } = context;
 
@@ -128,7 +129,7 @@ function createClaraCoreMemoriaList(context) {
             }
             ${searchMeta}
             <div class="memory-meta">
-              <span>${escapeHtml(memory.created_at || memory.updated_at || "")}</span>
+              <span>${escapeHtml(formatLocalDateTime(memory.created_at || memory.updated_at))}</span>
               <div>${labels}</div>
             </div>
             <div class="memory-embedding ${escapeHtml(embeddingStatus)}">

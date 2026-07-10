@@ -168,6 +168,7 @@ const {
   safeJsonObject,
   formatBytes,
   formatLocalDateTime,
+  getSystemTimeZone,
   splitListInput,
   formatSharedLineMetaValue,
   renderReadableText,
@@ -219,6 +220,7 @@ const logsView = window.createClaraCoreLogsView({
   dom: window.ClaraCoreDom,
   t,
   escapeHtml,
+  formatLocalDateTime,
   getSnapshot: () => snapshot,
   refreshSnapshot: refreshRuntimeSnapshotOnly
 });
@@ -233,6 +235,7 @@ const dataView = window.createClaraCoreDataView({
   t,
   escapeHtml,
   formatBytes,
+  formatLocalDateTime,
   getSnapshot: () => snapshot,
   refresh,
   showCopyNotice
@@ -243,6 +246,7 @@ const memoriaView = window.createClaraCoreMemoriaView({
   getSnapshot: () => snapshot,
   escapeHtml,
   renderMarkdownPreview,
+  formatLocalDateTime,
   refreshRuntimeSnapshotOnly,
   appendLiveLogLine,
   setEmbeddingProgress
@@ -275,6 +279,7 @@ const settingsView = window.createClaraCoreSettingsView({
   getSnapshot: () => snapshot,
   getAppearancePreferences,
   formatMode,
+  getSystemTimeZone,
   state: rendererState
 });
 const sharedInnerLifeView = window.createClaraCoreSharedInnerLifeView({

@@ -5,6 +5,7 @@ function createClaraCoreMemoriaView(context) {
     getSnapshot,
     escapeHtml,
     renderMarkdownPreview,
+    formatLocalDateTime,
     refreshRuntimeSnapshotOnly,
     appendLiveLogLine,
     setEmbeddingProgress
@@ -43,6 +44,7 @@ function createClaraCoreMemoriaView(context) {
     t,
     escapeHtml,
     renderMarkdownPreview,
+    formatLocalDateTime,
     memoryLabelList
   });
   const {

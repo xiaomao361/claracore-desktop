@@ -379,7 +379,7 @@ function renderSharedLineContext(sharedLine = {}, current = {}, selectedLine = {
   const title = selectedLine.title || selectedLine.id || sharedLine.lineId || t("sharedLine.detail.title");
   const agentId = selectedLine.agentId || metadata.agentId || current.agentId || sharedLine.agentId || "-";
   const status = selectedLine.status || current.interpretationStatus || "active";
-  const updatedAt = current.updatedAt || selectedLine.updatedAt || selectedLine.createdAt || "-";
+  const updatedAt = formatLocalDateTime(current.updatedAt || selectedLine.updatedAt || selectedLine.createdAt);
   const nextStep = metadata.nextStep || current.nextStep || current.metadata?.nextStep || "";
   sharedLineContextBar.innerHTML = `
     <div>
@@ -459,7 +459,7 @@ function renderSharedLine() {
   const archivedCards = renderSharedLineCards(visibleArchivedLines);
   sharedLineArchiveList.innerHTML = archivedCards || `<div class="endpoint-empty">${t("sharedLine.archiveEmpty")}</div>`;
   sharedLineSummary.innerHTML = renderReadableText(summary || t("sharedLine.currentEmpty"), "•");
-  sharedLineUpdated.textContent = current.updatedAt || "";
+  sharedLineUpdated.textContent = formatLocalDateTime(current.updatedAt);
   const currentMetadata = {
     ...(current.metadata || {}),
     ...(sharedLine.sharedReality || {}),
@@ -478,7 +478,7 @@ function renderSharedLine() {
           <article class="shared-line-history-item">
             <div>
               <strong>${escapeHtml(item.interpretationStatus || "draft")}</strong>
-              <span>${escapeHtml(item.createdAt || "")}</span>
+              <span>${escapeHtml(formatLocalDateTime(item.createdAt))}</span>
             </div>
             <p>${renderReadableText(item.summary || "", "•") || escapeHtml(item.summary || "")}</p>
             ${
@@ -500,7 +500,7 @@ function renderSharedLine() {
           <article class="shared-line-history-item">
             <div>
               <strong>${escapeHtml(item.reason || "save")}</strong>
-              <span>${escapeHtml(item.createdAt || "")}</span>
+              <span>${escapeHtml(formatLocalDateTime(item.createdAt))}</span>
             </div>
             <p>${renderReadableText(item.summary || "", "•") || escapeHtml(item.summary || "")}</p>
             <small>${escapeHtml(item.interpretationStatus || "draft")}</small>
@@ -613,10 +613,10 @@ function renderInnerLife() {
             <article class="shared-line-history-item">
               <div>
                 <strong>${escapeHtml(item.source || "desktop")}</strong>
-                <span>${escapeHtml(item.createdAt || "")}</span>
+                <span>${escapeHtml(formatLocalDateTime(item.createdAt))}</span>
               </div>
               <p>${escapeHtml(item.body || "")}</p>
-              <small>${escapeHtml(item.status || "")}${item.processedAt ? ` · ${escapeHtml(item.processedAt)}` : ""}</small>
+              <small>${escapeHtml(item.status || "")}${item.processedAt ? ` · ${escapeHtml(formatLocalDateTime(item.processedAt))}` : ""}</small>
             </article>
           `
         )
@@ -645,7 +645,7 @@ function renderInnerLife() {
           <article class="shared-line-history-item">
             <div>
               <strong>${escapeHtml(run.mode || "manual")}</strong>
-              <span>${escapeHtml(run.completedAt || run.createdAt || "")}</span>
+              <span>${escapeHtml(formatLocalDateTime(run.completedAt || run.createdAt))}</span>
             </div>
             <p>${escapeHtml(previewInnerLifeDigest(run.summary) || run.status || "")}</p>
             <small>${escapeHtml(run.status || "")}</small>
@@ -673,7 +673,7 @@ function renderInnerLife() {
           <article class="shared-line-history-item">
             <div>
               <strong>${escapeHtml(check.decision || "")}</strong>
-              <span>${escapeHtml(check.createdAt || "")}</span>
+              <span>${escapeHtml(formatLocalDateTime(check.createdAt))}</span>
             </div>
             <p>${escapeHtml(check.reason || "")}</p>
             ${check.context ? `<small>${escapeHtml(check.context)}</small>` : ""}
@@ -696,7 +696,7 @@ function renderInnerLife() {
                 <strong>${escapeHtml(innerLifeKindLabel(item.type))}</strong>
                 <span>${escapeHtml(innerLifeStateLabel(item.status))}</span>
               </div>
-              <time>${escapeHtml(item.createdAt || "")}</time>
+              <time>${escapeHtml(formatLocalDateTime(item.createdAt))}</time>
               <p>${escapeHtml(previewInnerLifeText(item.body, 220))}</p>
             </article>
           `
@@ -718,7 +718,7 @@ function renderInnerLife() {
                 <strong>${escapeHtml(innerLifeKindLabel(item.source || item.reviewStatus))}</strong>
                 <span>${escapeHtml(innerLifeStateLabel(item.reviewStatus))}</span>
               </div>
-              <time>${escapeHtml(item.createdAt || "")}</time>
+              <time>${escapeHtml(formatLocalDateTime(item.createdAt))}</time>
               <p>${escapeHtml(previewInnerLifeText(item.body, 220))}</p>
             </article>
           `
@@ -740,7 +740,7 @@ function renderInnerLife() {
                 <strong>${escapeHtml(innerLifeKindLabel(item.mode))}</strong>
                 <span>${escapeHtml(innerLifeKindLabel(item.source))}</span>
               </div>
-              <time>${escapeHtml(item.completedAt || item.createdAt || "")}</time>
+              <time>${escapeHtml(formatLocalDateTime(item.completedAt || item.createdAt))}</time>
               <p>${escapeHtml(previewInnerLifeText(item.summary, 220))}</p>
             </article>
           `
@@ -793,7 +793,7 @@ function renderInnerLife() {
             <strong>${escapeHtml(t("innerLife.thoughtBubble"))}</strong>
             <span>${escapeHtml(itemAgentId(share) || "")} · ${escapeHtml(innerLifeStateLabel(share.status))}</span>
           </div>
-          <time>${escapeHtml(share.created_at || "")}</time>
+          <time>${escapeHtml(formatLocalDateTime(share.created_at))}</time>
           <pre>${escapeHtml(share.body || "")}</pre>
         </article>
       `
@@ -805,7 +805,7 @@ function renderInnerLife() {
         <article class="innerlife-share approved" data-innerlife-share-id="${escapeHtml(share.id)}">
           <div>
             <strong>${t("innerLife.approvedOutput")}</strong>
-            <span>${escapeHtml(itemAgentId(share) || "")} · ${escapeHtml(share.updated_at || share.created_at || "")}</span>
+            <span>${escapeHtml(itemAgentId(share) || "")} · ${escapeHtml(formatLocalDateTime(share.updated_at || share.created_at))}</span>
           </div>
           <pre>${escapeHtml(share.body || "")}</pre>
         </article>

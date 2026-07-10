@@ -88,6 +88,15 @@ async function main() {
   if (server?.env?.CLARACORE_DESKTOP_DATA_DIR !== dataRoot) {
     throw new Error("Agent setup does not pass the active product data root.");
   }
+  if (server?.env?.CLARACORE_AGENT_ID !== "<agent-stable-id>") {
+    throw new Error("Agent setup does not include the stable agent id placeholder.");
+  }
+  if (server?.env?.CLARACORE_CLIENT_ID !== "<codex-app|claude-code|hermes>") {
+    throw new Error("Agent setup does not include the host client id placeholder.");
+  }
+  if (server?.env?.CLARACORE_CONVERSATION_ID !== "<optional-host-conversation-id>") {
+    throw new Error("Agent setup does not include the optional conversation id placeholder.");
+  }
   if (snapshot.connections.gatewayEnvPath !== "not used in product core reset") {
     throw new Error("Agent setup should not reference old Gateway env files.");
   }
@@ -128,6 +137,12 @@ async function main() {
     }
     if (!docsText.includes("Shared Line context is optional for InnerLife digestion")) {
       throw new Error("Gateway docs do not explain InnerLife Shared Line ambiguity handling.");
+    }
+    if (!docsText.includes("CLARACORE_CLIENT_ID") || !docsText.includes("CLARACORE_CONVERSATION_ID")) {
+      throw new Error("Gateway docs do not include the complete stdio caller context config.");
+    }
+    if (!docsText.includes("stale id")) {
+      throw new Error("Gateway docs do not explain the process-scoped stdio conversation limitation.");
     }
     if (docsText.includes(`${path.sep}.claracore${path.sep}gateway`) || docsText.includes(`${path.sep}.claracore${path.sep}memoria`)) {
       throw new Error("Gateway docs reference old service data.");

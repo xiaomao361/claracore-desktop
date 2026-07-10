@@ -53,6 +53,11 @@ CLARACORE_CONVERSATION_ID=<current-host-conversation-id>
 Only `CLARACORE_AGENT_ID` is required. Do not set a static conversation id when
 the stdio process is reused across unrelated host conversations.
 
+Desktop's generated stdio JSON includes placeholders for all three values so
+the copied config is self-describing. Replace the agent and client placeholders
+before use. Replace the conversation placeholder only when the host keeps it
+current; otherwise remove `CLARACORE_CONVERSATION_ID` from the copied config.
+
 ## InnerLife Session Contract
 
 Keep these identifiers separate:
@@ -154,6 +159,18 @@ Claude operating as `clara` cannot act on Lara's shares or sessions. Hermes
 operating as `lara` cannot act on Clara's or Codex's data. The Desktop UI may
 still request an all-agent inspection snapshot.
 
+## Codex Migration Checklist
+
+1. Keep `agentId=codex` stable.
+2. Send `X-ClaraCore-Client-ID: codex-app` for HTTP MCP.
+3. Send the current Codex conversation id through
+   `X-ClaraCore-Conversation-ID` when the host exposes it.
+4. For stdio, set `CLARACORE_CLIENT_ID=codex-app`.
+5. Omit `CLARACORE_CONVERSATION_ID` when one long-lived stdio process spans
+   multiple Codex conversations.
+6. After changing caller configuration, reconnect and run
+   `claracore_connection_test`, `gateway_docs`, and `gateway_context`.
+
 ## Claude Migration Checklist
 
 1. Keep `agentId=clara` stable.
@@ -168,6 +185,8 @@ still request an all-agent inspection snapshot.
    for any new hook call.
 7. Fully restart Claude and its MCP connection after changing stdio identity
    environment variables.
+8. For stdio, set `CLARACORE_CLIENT_ID=claude-code`; omit the conversation
+   variable when one long-lived MCP process spans multiple Claude conversations.
 
 ## Hermes Migration Checklist
 
@@ -184,6 +203,8 @@ still request an all-agent inspection snapshot.
    explicit or a missing session throws.
 8. Do not implement client-side `autoEndPrevious`; v0.5.0 intentionally does
    not use that lifecycle rule.
+9. For stdio, set `CLARACORE_CLIENT_ID=hermes`; omit the conversation variable
+   when Hermes cannot refresh the MCP process per session.
 
 ## Compatibility And Verification
 

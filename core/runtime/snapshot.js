@@ -91,6 +91,8 @@ function productAgentSetup(app, paths) {
             env: {
               ...launch.env,
               CLARACORE_AGENT_ID: "<agent-stable-id>",
+              CLARACORE_CLIENT_ID: "<codex-app|claude-code|hermes>",
+              CLARACORE_CONVERSATION_ID: "<optional-host-conversation-id>",
               CLARACORE_DESKTOP_DATA_DIR: paths.dataRoot
             }
           }

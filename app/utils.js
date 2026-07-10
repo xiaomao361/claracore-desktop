@@ -39,6 +39,10 @@ function formatLocalDateTime(value) {
   return date.toLocaleString(undefined, { hour12: false });
 }
 
+function getSystemTimeZone() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+}
+
 function splitListInput(value) {
   return String(value || "")
     .split(/\n|,/u)
@@ -219,6 +223,7 @@ window.ClaraCoreUtils = {
   safeJsonObject,
   formatBytes,
   formatLocalDateTime,
+  getSystemTimeZone,
   splitListInput,
   formatSharedLineMetaValue,
   splitReadableText,

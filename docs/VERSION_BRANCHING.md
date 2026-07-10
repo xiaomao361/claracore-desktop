@@ -4,7 +4,7 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- The current local version is `0.5.0`.
+- The current local version is `0.5.1`.
 - Historical `0.1.x` and `0.2.x` planning notes are archived under
   `docs/archive/`.
 
@@ -38,6 +38,22 @@ npm run dist:mac
 
 Only install or replace the daily-use app after the target build passes the
 focused smoke gates for its changed surface.
+
+## v0.5.1 System Time Zone And Agent Setup Polish
+
+`0.5.1` keeps database audit timestamps in UTC and consistently converts them
+to the operating system time zone for display. Settings shows the resolved IANA
+time zone as a read-only “Follow system” value. Structured record event time
+zones and `local_date` semantics are unchanged.
+
+The same patch release completes the generated stdio fallback for Codex,
+Claude, and Hermes with explicit agent, client, and optional conversation
+environment fields. Packaged configs retain `ELECTRON_RUN_AS_NODE=1`, and the
+agent guide explains that stdio conversation identity is process-scoped.
+
+Validated with the dedicated `TZ=Asia/Shanghai` formatter smoke, Settings UI
+time-zone readback, the full smoke suite, the v0.5.1 macOS package, DMG checksum
+verification, and the packaged Gateway smoke.
 
 ## v0.5.0 Multi-Agent Caller Contract
 

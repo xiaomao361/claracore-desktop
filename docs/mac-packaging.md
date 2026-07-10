@@ -31,7 +31,7 @@ Current output:
 
 ```text
 dist/mac-arm64/ClaraCore Desktop.app
-dist/ClaraCore-Desktop-0.5.0-arm64.dmg
+dist/ClaraCore-Desktop-0.5.1-arm64.dmg
 ```
 
 ## Gateway In Packaged Mode
@@ -76,7 +76,7 @@ node core/gateway/mcp-server.js
 
 Validated locally:
 
-- installed application reports version `0.5.0`
+- packaged application reports version `0.5.1`
 - `npm run check`
 - `npm run pack:mac`
 - packaged `.app` starts as a Gateway with `--gateway`
@@ -91,9 +91,10 @@ Validated locally:
 - packaged Desktop shows a current-vs-target restore preview before execution
 - packaged Desktop restore preview shows Memory records that will return and records that will be removed
 - `npm run dist:mac`
-- `hdiutil verify` reports the v0.5.0 DMG checksum as valid
+- `hdiutil verify` reports the v0.5.1 DMG checksum as valid
 - packaged Gateway smoke passes from `dist/mac-arm64/ClaraCore Desktop.app`
-- installed Streamable HTTP MCP returns server `0.5.0` and records separated
+- packaged Gateway initialize reports server version `0.5.1`
+- the last installed Streamable HTTP MCP validation used v0.5.0 and recorded separated
   `agentId`, `clientId`, and `conversationId` trace context
 
 Known remaining release work:

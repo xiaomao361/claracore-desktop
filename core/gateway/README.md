@@ -40,6 +40,10 @@ fallback when MCP is unavailable.
   Gateway uses it before any `agentId` or `agent_id` tool argument and rewrites
   trace request metadata to that process identity. Tool arguments should not be
   used to override the caller identity.
+- Generated stdio configs also include `CLARACORE_CLIENT_ID` and an optional
+  `CLARACORE_CONVERSATION_ID` placeholder. Replace the client placeholder before
+  use. Remove the conversation entry when a long-lived stdio process spans
+  multiple host conversations, because its environment is process-scoped.
 - Changing an agent's configured identity does not update an already-running
   stdio Gateway process. Restart the agent client, or stop stale packaged
   `--gateway` processes, before trusting new traces.
@@ -83,6 +87,9 @@ fallback config from Agent Access.
   currently ship a `.mcpb` Desktop Extension package.
 - Set `CLARACORE_AGENT_ID` to a stable Claude-owned id such as `claude` or
   `clara`; do not reuse another connected agent's id.
+- Set `CLARACORE_CLIENT_ID=claude-code`. Only set
+  `CLARACORE_CONVERSATION_ID` when Claude keeps the stdio process aligned with
+  the current conversation.
 - Fully quit and restart Claude Desktop after config or identity changes so the
   stdio Gateway process is relaunched.
 - Verify with `claracore_connection_test`, then read `gateway_context`.

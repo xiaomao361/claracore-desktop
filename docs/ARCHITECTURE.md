@@ -338,6 +338,12 @@ context and trace records; it is never merged into domain tool arguments. In
 particular, `X-ClaraCore-Session-ID` is a legacy conversation-header alias and
 must not overwrite `innerlife_session_end.sessionId`.
 
+Generated stdio configs expose all three caller environment fields. Agent and
+client ids must be replaced before use. Conversation identity is process-scoped
+under stdio, so clients that reuse one MCP process across conversations must
+remove `CLARACORE_CONVERSATION_ID` rather than leave a stale value. Packaged
+stdio configs also preserve `ELECTRON_RUN_AS_NODE=1`.
+
 Shared Line `continuity_lines.agent_id` is its stable owner. A caller may update
 another agent's line by naming the exact `lineId`; the write records
 `current_positions.metadata_json.writerAgentId` but does not transfer ownership.

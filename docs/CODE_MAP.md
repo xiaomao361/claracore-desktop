@@ -37,7 +37,10 @@ SQLite database.
 - `core/runtime/index.js`: public runtime facade used by Electron, CLI,
   Gateway-facing workflows, and tests.
 - `electron/http-agent-gateway.js`: localhost HTTP helper and Streamable HTTP MCP endpoint.
-- `core/gateway/mcp-server.js`: stdio MCP fallback process used by agents.
+- `core/gateway/mcp-server.js`: stdio MCP fallback process used by agents; reads
+  process-scoped agent, client, and optional conversation identity.
+- `core/runtime/snapshot.js`: generates the copyable stdio configuration,
+  including packaged launch environment and multi-agent caller placeholders.
 - `core/cli.js`: local CLI fallback for product operations.
 
 ## Read Paths By Task

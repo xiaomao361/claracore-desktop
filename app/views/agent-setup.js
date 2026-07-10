@@ -47,20 +47,28 @@ Desktop owns the product Gateway, Memoria, Shared Line, and InnerLife state for 
 
 1. Connect to ClaraCore Desktop through Streamable HTTP MCP when your agent client supports it.
 2. Send \`X-ClaraCore-Agent-ID\` with the stable persona id, \`X-ClaraCore-Client-ID\` with the host id, and \`X-ClaraCore-Conversation-ID\` with the current host conversation id.
-3. If HTTP MCP is unavailable, use the stdio MCP JSON fallback and set \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\` to your stable agent id.
+3. If HTTP MCP is unavailable, use the stdio MCP JSON fallback and replace its agent/client placeholders before restarting the client.
 4. Call \`gateway_docs\` for the product/tool boundary, then \`gateway_context\` for the current working packet.
 5. Use exposed product Gateway tools for Memory, Shared Line, InnerLife, traces, diagnostics, import/export, and maintenance.
 6. Use CLI fallback only when MCP is unavailable or when a local recovery script needs it.
 
 ## Agent Identity Contract
 
-The agent id belongs to the stable persona/data subject. The client id identifies Codex, Claude Code, or Hermes; the conversation id identifies one host conversation. These caller fields never replace domain ids such as an InnerLife \`sessionId\` or Shared Line \`lineId\`. For Streamable HTTP, send the agent id as \`X-ClaraCore-Agent-ID\`. For stdio fallback, set \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\`. Do not share one agent id across personas.
+The agent id belongs to the stable persona/data subject. The client id identifies Codex, Claude Code, or Hermes; the conversation id identifies one host conversation. These caller fields never replace domain ids such as an InnerLife \`sessionId\` or Shared Line \`lineId\`. For Streamable HTTP, send all available caller headers. For stdio fallback, set \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\`, \`CLARACORE_CLIENT_ID\`, and only a conversation id that the host can keep current. Do not share one agent id across personas.
 
 Recommended stable ids:
 
 ${agentExamples.map((item) => `- \`${item}\``).join("\n")}
 
 If you are a new agent, choose one stable id before writing any data. Keep using it in every ClaraCore MCP call.
+
+Recommended starting pairs:
+
+- Codex persona: \`agentId=codex\`, \`clientId=codex-app\`
+- Claude persona: \`agentId=clara\`, \`clientId=claude-code\`
+- Hermes persona: \`agentId=lara\`, \`clientId=hermes\`
+
+The persona id remains stable if it later moves to another host; only the client id changes.
 
 ## Connection Mode
 
@@ -92,6 +100,8 @@ Use this mode when your MCP client supports Streamable HTTP. It lets Desktop rem
 ${snapshot.connections.mcpConfig}
 \`\`\`
 
+Replace \`<agent-stable-id>\` and \`<codex-app|claude-code|hermes>\` before use. Keep \`CLARACORE_CONVERSATION_ID\` only when the client refreshes or relaunches its stdio MCP process for each host conversation; otherwise remove that environment entry to avoid tracing a stale conversation id.
+
 ## Claude Desktop Setup
 
 Claude Desktop newer builds may show MCP entry points under Settings -> Extensions. If your build supports Streamable HTTP MCP, use the endpoint and bearer header above. If it only supports custom local servers, use the generated stdio fallback config. If Claude Desktop offers a custom extension install flow, use it only after ClaraCore ships an explicit \`.mcpb\` package.
@@ -100,9 +110,10 @@ Manual stdio fallback setup:
 
 1. Open Claude Desktop settings and find the MCP or Extensions developer config entry.
 2. Add or replace the \`claracore-desktop\` server with the JSON above.
-3. Set \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\` to this Claude agent's stable id, for example \`claude\` or \`clara\`.
-4. Fully quit and restart Claude Desktop so the stdio process is relaunched with the new environment.
-5. In Claude, call \`claracore_connection_test\` once, then call \`gateway_docs\`, then call \`gateway_context\`.
+3. Set \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\` to this Claude persona's stable id, for example \`clara\`, and set \`CLARACORE_CLIENT_ID=claude-code\`.
+4. Keep \`CLARACORE_CONVERSATION_ID\` only if Claude relaunches or refreshes the MCP process for the current conversation; otherwise remove it.
+5. Fully quit and restart Claude Desktop so the stdio process is relaunched with the new environment.
+6. In Claude, call \`claracore_connection_test\` once, then call \`gateway_docs\`, then call \`gateway_context\`.
 
 If tools do not appear after a Claude Desktop update, verify the JSON is valid, confirm the command path still exists, and fully restart the app rather than only closing its window.
 
