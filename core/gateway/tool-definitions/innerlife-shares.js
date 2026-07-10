@@ -2,7 +2,7 @@ const innerlifeShareToolDefinitions = [
   {
     "name": "innerlife_digest",
     "title": "Run InnerLife Digest",
-    "description": "Run a Desktop-owned InnerLife digest and record what was digested.",
+    "description": "Run a Desktop-owned InnerLife digest and record what was digested. Pass lineId for exact Shared Line context; when omitted and multiple lines are active, digestion continues with sharedLineContext.status=ambiguous.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -13,6 +13,9 @@ const innerlifeShareToolDefinitions = [
           "type": "string"
         },
         "agentName": {
+          "type": "string"
+        },
+        "lineId": {
           "type": "string"
         },
         "mode": {
@@ -28,7 +31,7 @@ const innerlifeShareToolDefinitions = [
   {
     "name": "innerlife_share_check",
     "title": "Check InnerLife Share Timing",
-    "description": "Check whether a waiting InnerLife share fits the current context.",
+    "description": "Check whether a waiting InnerLife share fits the current context. Pass lineId for exact Shared Line context; provided context still works when Shared Line selection is ambiguous.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -39,6 +42,9 @@ const innerlifeShareToolDefinitions = [
           "type": "string"
         },
         "agentName": {
+          "type": "string"
+        },
+        "lineId": {
           "type": "string"
         },
         "shareId": {

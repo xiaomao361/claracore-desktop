@@ -343,6 +343,13 @@ owns more than one, read/context/update calls return
 must use `shared_line_list` and retry with an explicit `lineId`; the Gateway
 does not guess from recency or summary text.
 
+InnerLife treats Shared Line as optional context rather than a runtime
+prerequisite. Briefing, digest, process/daemon ticks, and share timing with
+provided context accept an explicit `lineId`; when it is omitted and selection
+is ambiguous, they continue without line context and return
+`sharedLineContext.status = "ambiguous"` plus candidate ids. Operations that
+actually write a Shared Line remain fail-closed and require an exact target.
+
 ## Import And Backup Boundary
 
 Old Memoria, Continuity, and InnerLife imports are copy-based and backup-gated.

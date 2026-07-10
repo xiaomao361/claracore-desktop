@@ -77,12 +77,16 @@ use the names listed there.
    explicit `shared_line_list` call with `status: "archived"` or `"all"`.
 2. Use `innerlife_submit_inbox`, `innerlife_submit_fact`, or
    `innerlife_submit_continuity` for material that should be digested later.
-3. Call `innerlife_pending_shares` and `innerlife_share_check` before surfacing
+3. Shared Line context is optional for InnerLife digestion. Pass `lineId` when
+   one line matters. With multiple active lines and no `lineId`, briefing,
+   digest, daemon tick, and provided-context share checks continue with
+   `sharedLineContext.status: "ambiguous"` instead of rejecting the request.
+4. Call `innerlife_pending_shares` and `innerlife_share_check` before surfacing
    a waiting share to the user.
-4. Call `innerlife_status` without arguments for the compact status packet.
+5. Call `innerlife_status` without arguments for the compact status packet.
    Pass `detail: true` only when you need full sessions, digest runs, or
    history.
-5. Call `innerlife_doctor` when InnerLife seems idle, paused, or misconfigured.
+6. Call `innerlife_doctor` when InnerLife seems idle, paused, or misconfigured.
 
 ### Diagnose Gateway State
 

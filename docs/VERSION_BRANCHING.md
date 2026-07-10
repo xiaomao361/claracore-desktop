@@ -4,7 +4,7 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- The current local version is `0.4.8`.
+- The current local version is `0.4.9`.
 - Historical `0.1.x` and `0.2.x` planning notes are archived under
   `docs/archive/`.
 
@@ -38,6 +38,28 @@ npm run dist:mac
 
 Only install or replace the daily-use app after the target build passes the
 focused smoke gates for its changed surface.
+
+## v0.4.9 Checkpoint
+
+`0.4.9` decouples InnerLife processing from ambiguous Shared Line selection:
+
+- Session start, briefing, digest, daemon processing, and share timing no
+  longer fail when an agent owns multiple active Shared Lines and omits
+  `lineId`.
+- InnerLife continues without line context and returns
+  `sharedLineContext.status = "ambiguous"` with candidate ids; callers can pass
+  `lineId` when one exact line matters.
+- Operations that actually write Shared Line state remain fail-closed.
+- Gateway definitions, generated guidance, the MCP playbook, and architecture
+  documentation now describe the optional-context contract.
+
+Validation for this checkpoint includes:
+
+```bash
+npm run test:smoke
+npm run pack:mac
+node core/tests/phase4-packaged-gateway-smoke.js
+```
 
 ## v0.4.8 Checkpoint
 

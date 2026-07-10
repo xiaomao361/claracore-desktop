@@ -120,6 +120,9 @@ async function main() {
     if (!docsText.includes("Keep old ClaraCore service processes untouched")) {
       throw new Error("Gateway docs do not include old-service isolation guidance.");
     }
+    if (!docsText.includes("Shared Line context is optional for InnerLife digestion")) {
+      throw new Error("Gateway docs do not explain InnerLife Shared Line ambiguity handling.");
+    }
     if (docsText.includes(`${path.sep}.claracore${path.sep}gateway`) || docsText.includes(`${path.sep}.claracore${path.sep}memoria`)) {
       throw new Error("Gateway docs reference old service data.");
     }
@@ -208,6 +211,13 @@ async function main() {
       })
     ).line;
     parseTextResult(await client.callTool("shared_line_archive", { lineId: archivedLine.id }));
+    const secondActiveLine = parseTextResult(
+      await client.callTool("shared_line_create", {
+        agentId: "my-agent",
+        title: "Phase4 second active Shared Line",
+        makeActive: false
+      })
+    ).line;
     const startedWithLines = parseTextResult(
       await client.callTool("innerlife_session_start", {
         agentId: "my-agent",
@@ -219,8 +229,14 @@ async function main() {
     if (!startedWithLines.shared_lines?.some((line) => line.id === activeLine.id)) {
       throw new Error(`Gateway innerlife_session_start did not include active Shared Lines: ${JSON.stringify(startedWithLines.shared_lines)}`);
     }
+    if (!startedWithLines.shared_lines?.some((line) => line.id === secondActiveLine.id)) {
+      throw new Error(`Gateway innerlife_session_start did not include the second active Shared Line: ${JSON.stringify(startedWithLines.shared_lines)}`);
+    }
     if (startedWithLines.shared_lines?.some((line) => line.id === archivedLine.id)) {
       throw new Error(`Gateway innerlife_session_start included an archived Shared Line: ${JSON.stringify(startedWithLines.shared_lines)}`);
+    }
+    if (!startedWithLines.shared_line_error?.includes("SHARED_LINE_ID_REQUIRED")) {
+      throw new Error(`Gateway innerlife_session_start should report Shared Line ambiguity without failing: ${JSON.stringify(startedWithLines)}`);
     }
     const ended = parseTextResult(
       await client.callTool("innerlife_session_end", {
@@ -232,8 +248,14 @@ async function main() {
       throw new Error("Gateway innerlife_session_end did not create a reviewable afterthought.");
     }
     const briefing = parseTextResult(await client.callTool("innerlife_briefing", { agentId: "my-agent" }));
-    if (!briefing.text.includes("Pending shares")) {
+    if (!briefing.text.includes("Pending shares") || briefing.sharedLineContext?.status !== "ambiguous") {
       throw new Error("Gateway innerlife_briefing did not return briefing text.");
+    }
+    const explicitBriefing = parseTextResult(
+      await client.callTool("innerlife_briefing", { agentId: "my-agent", lineId: activeLine.id })
+    );
+    if (explicitBriefing.sharedLineContext?.status !== "selected" || explicitBriefing.sharedLineContext?.lineId !== activeLine.id) {
+      throw new Error(`Gateway innerlife_briefing did not honor explicit lineId: ${JSON.stringify(explicitBriefing.sharedLineContext)}`);
     }
     const doctor = parseTextResult(await client.callTool("innerlife_doctor", { agentId: "my-agent" }));
     if (!["ok", "warn"].includes(doctor.status) || !Array.isArray(doctor.nextActions)) {
@@ -259,7 +281,14 @@ async function main() {
         prompt: "Gateway should create an explicit digest record."
       })
     );
-    if (!digest.digest?.id || !digest.digest?.summary || digest.snapshot.counts.digest_runs_count !== 1 || digest.snapshot.counts.pending_inbox_count !== 0) {
+    if (
+      !digest.digest?.id ||
+      !digest.digest?.summary ||
+      digest.snapshot.counts.digest_runs_count !== 1 ||
+      digest.snapshot.counts.pending_inbox_count !== 0 ||
+      digest.sharedLineContext?.status !== "ambiguous" ||
+      digest.digest.metadata?.sharedLineStatus !== "ambiguous"
+    ) {
       throw new Error("Gateway innerlife_digest did not create a digest record from pending inbox.");
     }
     const liteStatus = parseTextResult(await client.callTool("innerlife_status"));
@@ -305,9 +334,22 @@ async function main() {
     if (!daemonEnabled.enabled || daemonEnabled.status !== "enabled") {
       throw new Error(`Gateway innerlife_daemon_set did not enable daemon: ${JSON.stringify(daemonEnabled)}`);
     }
+    const daemonInbox = parseTextResult(
+      await client.callTool("innerlife_submit_inbox", {
+        agentId: "my-agent",
+        source: "phase4-daemon-ambiguous-line",
+        body: "Daemon should process this inbox even when Shared Line selection is ambiguous."
+      })
+    );
+    if (!daemonInbox.inbox?.id) throw new Error("Gateway daemon ambiguity setup did not create inbox material.");
     const daemonTick = parseTextResult(await client.callTool("innerlife_daemon_tick", { agentId: "my-agent", force: true }));
-    if (daemonTick.ran !== false || daemonTick.reason !== "idle" || daemonTick.daemon?.tickCount !== 1) {
-      throw new Error(`Gateway innerlife_daemon_tick did not record an idle tick: ${JSON.stringify(daemonTick)}`);
+    if (
+      daemonTick.ran !== true ||
+      daemonTick.reason !== "processed" ||
+      daemonTick.daemon?.tickCount !== 1 ||
+      daemonTick.result?.sharedLineContext?.status !== "ambiguous"
+    ) {
+      throw new Error(`Gateway innerlife_daemon_tick did not process inbox with ambiguous Shared Lines: ${JSON.stringify(daemonTick)}`);
     }
     const daemonPaused = parseTextResult(await client.callTool("innerlife_daemon_set", { agentId: "my-agent", action: "pause" }));
     if (daemonPaused.enabled || daemonPaused.status !== "paused") {
@@ -322,6 +364,9 @@ async function main() {
     );
     if (shareCheck.check?.decision !== "review_first") {
       throw new Error(`Gateway innerlife_share_check did not record a review-first decision: ${JSON.stringify(shareCheck.check)}`);
+    }
+    if (shareCheck.check?.metadata?.sharedLineStatus !== "ambiguous" || shareCheck.check?.metadata?.contextSource !== "provided") {
+      throw new Error(`Gateway innerlife_share_check did not preserve provided context across Shared Line ambiguity: ${JSON.stringify(shareCheck.check)}`);
     }
     const shareMark = parseTextResult(
       await client.callTool("innerlife_mark_share", {

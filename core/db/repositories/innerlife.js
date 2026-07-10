@@ -37,6 +37,26 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
     };
   }
 
+  function emptyInnerLifeResumePacket(agentId) {
+    return {
+      lineId: "",
+      currentPosition: {
+        lineId: "",
+        agentId,
+        positionId: "",
+        summary: "",
+        interpretationStatus: "",
+        factsUsed: [],
+        metadata: {},
+        updatedAt: null
+      },
+      handoffs: [],
+      sharedReality: {},
+      agentState: {},
+      nextStep: ""
+    };
+  }
+
   Object.assign(ProductDatabase.prototype, {
     ...createInnerLifeProfileRepository(helpers),
     ...createInnerLifeShareRepository(helpers),
@@ -338,9 +358,41 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       };
     },
 
-    async getInnerLifeBriefing(agentId = DEFAULT_AGENT_ID) {
+    async getOptionalInnerLifeResumePacket(input = {}, agentId = DEFAULT_AGENT_ID) {
+      const lineId = String(input?.lineId || input?.line_id || "").trim();
+      try {
+        const resumePacket = await this.getResumePacket({
+          agentId,
+          ...(lineId ? { lineId } : {}),
+          lite: true
+        });
+        return {
+          resumePacket,
+          sharedLineContext: {
+            status: "selected",
+            lineId: resumePacket.lineId || lineId || "",
+            candidateLineIds: []
+          }
+        };
+      } catch (error) {
+        if (error?.code !== "SHARED_LINE_ID_REQUIRED") throw error;
+        return {
+          resumePacket: emptyInnerLifeResumePacket(agentId),
+          sharedLineContext: {
+            status: "ambiguous",
+            lineId: "",
+            errorCode: error.code,
+            candidateLineIds: (error.candidates || []).map((candidate) => candidate.lineId).filter(Boolean)
+          }
+        };
+      }
+    },
+
+    async getInnerLifeBriefing(input = DEFAULT_AGENT_ID) {
+      const options = input && typeof input === "object" ? input : { agentId: input };
+      const agentId = resolveAgentIdentity(options || {}).id;
       const profile = await this.ensureInnerLifeProfile(agentId);
-      const resumePacket = await this.getResumePacket({ agentId: profile.agent_id, lite: true });
+      const { resumePacket, sharedLineContext } = await this.getOptionalInnerLifeResumePacket(options, profile.agent_id);
       const memories = await this.listMemories(5);
       const pendingShares = (await this.listInnerLifeShares("pending", 20)).filter((share) => share.agent_id === profile.agent_id).slice(0, 5);
       const pendingInbox = (await this.listInnerLifeInboxPage({ agentId: profile.agent_id, status: "pending", limit: 5, offset: 0 })).items;
@@ -355,6 +407,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       return {
         agentId: profile.agent_id,
         generatedAt: new Date().toISOString(),
+        sharedLineContext,
         sharedLine: resumePacket.currentPosition,
         recentHandoffs: resumePacket.handoffs || [],
         recentMemories: memories.map((memory) => ({
@@ -372,7 +425,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         text: [
           `Agent: ${profile.agent_id}`,
           summarizeInnerLifeProfile(profile),
-          `Current position: ${resumePacket.currentPosition.summary || "(empty)"}`,
+          `Current position: ${resumePacket.currentPosition.summary || (sharedLineContext.status === "ambiguous" ? "(not selected: multiple active Shared Lines)" : "(empty)")}`,
           `Pending shares: ${pendingShares.length}`,
           `Pending inbox: ${pendingInbox.length}`,
           `Recent memories: ${memories.length}`,
@@ -386,7 +439,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       const profile = await this.ensureInnerLifeProfile(agentId);
       const mode = String(input.mode || "manual").trim() || "manual";
       const prompt = String(input.prompt || "").trim();
-      const resumePacket = await this.getResumePacket({ agentId: profile.agent_id, lite: true });
+      const { resumePacket, sharedLineContext } = await this.getOptionalInnerLifeResumePacket(input, profile.agent_id);
       const memories = await this.listMemories(5);
       const inboxItems = (await this.listInnerLifeInboxPage({ agentId: profile.agent_id, status: "pending", limit: 10, offset: 0 })).items;
       const digestId = newId("inner_digest");
@@ -394,7 +447,11 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       const thoughtId = newId("inner_thought");
       const memoryLines = memories.map((memory) => `- ${memory.title || memory.body.slice(0, 80)}`).join("\n") || "- No recent Memory records.";
       const inboxLines = inboxItems.map((item) => `- ${item.source}: ${item.body}`).join("\n") || "- No pending inbox items.";
-      const currentPosition = resumePacket.currentPosition.summary || "No Shared Line position saved yet.";
+      const currentPosition = resumePacket.currentPosition.summary || (
+        sharedLineContext.status === "ambiguous"
+          ? "Shared Line selection is ambiguous; no line context was used."
+          : "No Shared Line position saved yet."
+      );
       const template = [
         "InnerLife digest",
         "",
@@ -431,6 +488,8 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
           ${jsonSql({
             lineId: resumePacket.lineId,
             positionId: resumePacket.currentPosition.positionId,
+            sharedLineStatus: sharedLineContext.status,
+            candidateLineIds: sharedLineContext.candidateLineIds,
             memoryIds: memories.map((memory) => memory.id),
             inboxIds: inboxItems.map((item) => item.id),
             generationSource: generated.source,
@@ -465,6 +524,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         eventId,
         thoughtId,
         convergence: null,
+        sharedLineContext,
         processedInboxIds: inboxItems.map((item) => item.id),
         snapshot: await this.getInnerLifeSnapshotLite()
       };
@@ -563,7 +623,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
     async processInnerLifeOnce(input = {}) {
       const agentId = resolveAgentIdentity(input || {}).id;
       const profile = await this.ensureInnerLifeProfile(agentId);
-      const resumePacket = await this.getResumePacket({ agentId: profile.agent_id, lite: true });
+      const { resumePacket, sharedLineContext } = await this.getOptionalInnerLifeResumePacket(input, profile.agent_id);
       const memories = await this.listMemories(5);
       const inboxItems = (await this.listInnerLifeInboxPage({ agentId: profile.agent_id, status: "pending", limit: 5, offset: 0 })).items;
       const prompt = String(input?.prompt || "").trim();
@@ -572,7 +632,11 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       const shareId = newId("inner_share");
       const memoryLines = memories.map((memory) => `- ${memory.title || memory.body.slice(0, 80)}`).join("\n") || "- No recent Memory records.";
       const inboxLines = inboxItems.map((item) => `- ${item.source}: ${item.body}`).join("\n") || "- No pending inbox items.";
-      const position = resumePacket.currentPosition.summary || "No Shared Line position saved yet.";
+      const position = resumePacket.currentPosition.summary || (
+        sharedLineContext.status === "ambiguous"
+          ? "Shared Line selection is ambiguous; no line context was used."
+          : "No Shared Line position saved yet."
+      );
       const template = [
         "Manual InnerLife review",
         "",
@@ -606,6 +670,8 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
           ${jsonSql({
             lineId: resumePacket.lineId,
             positionId: resumePacket.currentPosition.positionId,
+            sharedLineStatus: sharedLineContext.status,
+            candidateLineIds: sharedLineContext.candidateLineIds,
             memoryIds: memories.map((memory) => memory.id),
             inboxIds: inboxItems.map((item) => item.id)
           })}
@@ -636,6 +702,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         thoughtId,
         share: await this.getInnerLifeShare(shareId),
         convergence,
+        sharedLineContext,
         snapshot: await this.getInnerLifeSnapshotLite()
       };
     },

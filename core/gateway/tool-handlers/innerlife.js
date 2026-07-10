@@ -66,7 +66,7 @@ async function handleInnerLifeTool(name, args, context) {
   }
 
   if (name === "innerlife_briefing") {
-    return textResult(await innerlife.briefing(core, currentMcpAgentId(args)));
+    return textResult(await innerlife.briefing(core, { ...args, agentId: currentMcpAgentId(args) }));
   }
 
   if (name === "innerlife_doctor") {

@@ -109,7 +109,7 @@ function createInnerLifeShareRepository(helpers) {
       const hasExplicitAgent = Boolean(input?.agentId || input?.agent_id || input?.agent);
       const agentId = hasExplicitAgent ? resolveAgentIdentity(input || {}).id : requestedShare?.agent_id || resolveAgentIdentity(input || {}).id;
       const profile = await this.ensureInnerLifeProfile(agentId);
-      const resumePacket = await this.getResumePacket({ agentId: profile.agent_id, lite: true });
+      const { resumePacket, sharedLineContext: sharedLineSelection } = await this.getOptionalInnerLifeResumePacket(input, profile.agent_id);
       const sharedLineContext = buildSharedLineTimingContext(resumePacket);
       const context = providedContext || sharedLineContext;
       let share = requestedShare;
@@ -141,7 +141,11 @@ function createInnerLifeShareRepository(helpers) {
             ${sqlString(context)},
             'none',
             'No shareable InnerLife thought is available.',
-            '{}'
+            ${jsonSql({
+              contextSource: providedContext ? "provided" : "none",
+              sharedLineStatus: sharedLineSelection.status,
+              candidateLineIds: sharedLineSelection.candidateLineIds
+            })}
           );
         `);
         return {
@@ -167,11 +171,13 @@ function createInnerLifeShareRepository(helpers) {
       } else if (share.status === "pending" && hasConnection) {
         decision = "review_first";
         reason = overlap.length > 0
-          ? `Pending share connects to the current line: ${overlap.slice(0, 5).join(", ")}. Review before use.`
+          ? `Pending share connects to the ${sharedLineContext ? "current line" : "provided context"}: ${overlap.slice(0, 5).join(", ")}. Review before use.`
           : "Pending share may fit the current context, but it still requires review before use.";
       } else if (share.status === "approved" && hasConnection) {
         decision = "use";
-        reason = overlap.length > 0 ? `Approved share connects to the current line: ${overlap.slice(0, 5).join(", ")}.` : "Approved share fits the current context.";
+        reason = overlap.length > 0
+          ? `Approved share connects to the ${sharedLineContext ? "current line" : "provided context"}: ${overlap.slice(0, 5).join(", ")}.`
+          : "Approved share fits the current context.";
       } else if (share.status === "deferred") {
         decision = hasConnection ? "use" : "defer";
         reason = decision === "use" ? "Deferred share now matches the current context." : "Deferred share still does not match the current context.";
@@ -192,7 +198,11 @@ function createInnerLifeShareRepository(helpers) {
             explicitOverlap,
             lineOverlap,
             hasAsk,
-            contextSource: providedContext ? "provided+shared_line" : "shared_line",
+            contextSource: providedContext
+              ? sharedLineContext ? "provided+shared_line" : "provided"
+              : sharedLineContext ? "shared_line" : "none",
+            sharedLineStatus: sharedLineSelection.status,
+            candidateLineIds: sharedLineSelection.candidateLineIds,
             lineId: resumePacket.lineId || "",
             positionId: resumePacket.currentPosition?.positionId || ""
           })}

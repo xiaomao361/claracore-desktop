@@ -128,6 +128,7 @@ async function handleSystemTool(name, args, context) {
             "- Use innerlife_session_start at the beginning of a real work session when you want session-aware afterthoughts and share timing.",
             "- Use innerlife_session_end with a short summary when the work session ends.",
             "- Use innerlife_submit_inbox, innerlife_submit_fact, or innerlife_submit_continuity for material that should be digested later, not for immediate factual recall.",
+            "- Shared Line context is optional for InnerLife digestion. Pass lineId when one line matters; if multiple lines are active and lineId is omitted, briefing, digest, daemon tick, and provided-context share checks continue with sharedLineContext.status=ambiguous.",
             "- Use innerlife_pending_shares and innerlife_share_check before surfacing a waiting share to the user.",
             "- Use innerlife_doctor when InnerLife seems idle, paused, or misconfigured.",
             "",

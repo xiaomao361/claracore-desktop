@@ -26,8 +26,8 @@ async function doctor(core, agentId = "codex") {
   return core.database.getInnerLifeDoctor(agentId);
 }
 
-async function briefing(core, agentId = "codex") {
-  return core.database.getInnerLifeBriefing(agentId);
+async function briefing(core, input = {}) {
+  return core.database.getInnerLifeBriefing(input);
 }
 
 async function updateProfile(core, input = {}) {

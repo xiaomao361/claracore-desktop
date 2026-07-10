@@ -229,6 +229,7 @@ function createInnerLifeDaemonRepository(helpers) {
         try {
           const result = await this.processInnerLifeOnce({
             agentId,
+            lineId: input.lineId || input.line_id || "",
             prompt: "Daemon tick: digest pending inbox and create only one shareable thought for the next fitting moment."
           });
           await this.exec(`

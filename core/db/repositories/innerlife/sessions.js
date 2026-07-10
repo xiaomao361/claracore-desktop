@@ -144,7 +144,10 @@ function createInnerLifeSessionRepository(helpers) {
         const briefing = parseJson((await this.query(`SELECT briefing_json FROM innerlife_sessions WHERE id = ${sqlString(existing[0].id)};`))[0]?.briefing_json, {});
         return buildStartPacket(session, briefing, true);
       }
-      const briefing = await this.getInnerLifeBriefing(profile.agent_id);
+      const briefing = await this.getInnerLifeBriefing({
+        agentId: profile.agent_id,
+        lineId: input.lineId || input.line_id || ""
+      });
       const id = newId("inner_session");
       await this.exec(`
         INSERT INTO innerlife_sessions (id, agent_id, user_id, host, external_session_id, status, briefing_json, metadata_json)

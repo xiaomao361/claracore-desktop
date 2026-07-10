@@ -2,7 +2,7 @@ const innerlifeSessionToolDefinitions = [
   {
     "name": "innerlife_session_start",
     "title": "Start InnerLife Session",
-    "description": "Start a Desktop-owned InnerLife session and return a compact share_plan, session id, the active Shared Line resume packet (shared_line), and a shared_lines summary list in one call. Pass lineId to activate/switch to that Shared Line in the same call. Replaces separate shared_line_list / shared_line_activate / shared_line_get startup calls. Fetch innerlife_briefing lazily for full context.",
+    "description": "Start a Desktop-owned InnerLife session and return a compact share_plan, session id, optional Shared Line resume packet (shared_line), and a shared_lines summary list in one call. Pass lineId to activate/switch to an exact Shared Line. If multiple lines are active and lineId is omitted, the session still starts and shared_line_error explains the ambiguity. Fetch innerlife_briefing lazily for full context.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -101,11 +101,14 @@ const innerlifeSessionToolDefinitions = [
   {
     "name": "innerlife_briefing",
     "title": "Get InnerLife Briefing",
-    "description": "Read the current Desktop-owned InnerLife briefing.",
+    "description": "Read the current Desktop-owned InnerLife briefing. Shared Line context is optional: pass lineId to select one, or receive sharedLineContext.status=ambiguous while the briefing continues without it.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "agentId": {
+          "type": "string"
+        },
+        "lineId": {
           "type": "string"
         }
       },
