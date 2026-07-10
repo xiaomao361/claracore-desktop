@@ -13,6 +13,9 @@ The Desktop runtime is Node/Electron.
   - `electron/main.js`: app lifecycle, window/tray ownership, runtime snapshots,
     quit handling, and module wiring
   - `electron/ipc-handlers.js`: renderer IPC channel registration
+  - `electron/ipc-contracts.js`: main-process IPC channel registry; the
+    sandboxed preload uses a dependency-free mapper and contract lint keeps the
+    two surfaces aligned
   - `electron/http-agent-gateway.js`: token-protected localhost HTTP Agent
     Gateway lifecycle and request handling
   - `electron/schedulers.js`: InnerLife and Memoria maintenance timers
@@ -102,6 +105,11 @@ Focused renderer modules live under `app/`:
 
 New renderer work should go into a focused module, not into `app.js`.
 
+Runtime-change events carry bounded scopes such as `memory`, `shared-line`,
+`innerlife`, `logs`, and `data`. Every event refreshes the compact snapshot;
+focused Memory lists reload only for Memory-scoped events while the Memory view
+is active.
+
 `styles.css` is an import entry. Shared and view-specific styles live under
 `styles/`; add new CSS near the view or component it serves instead of growing a
 single stylesheet again.
@@ -118,6 +126,8 @@ page:
 
 - The Home status board is a compact runtime strip plus module readiness rail;
   state tones (ok, warn, error) derive from the current snapshot.
+- Healthy runtime/module diagnostics stay collapsed below the human/agent work
+  surfaces. Actionable warnings or errors expand that diagnostic section.
 - Home attention only counts human-actionable signals: missing required
   modules, embedding failures, daemon errors, and Gateway errors from the last
   30 minutes. Agent-owned waiting state such as pending InnerLife shares is
@@ -199,8 +209,7 @@ database for this Desktop runtime.
 
 Current shape:
 
-- `core/db/database.js`: connection, initialization, migrations, legacy agent
-  identity normalization, and agent identity merge
+- `core/db/database.js`: connection, initialization, and agent identity merge
 - `core/db/helpers.js`: shared repository/database helpers for SQL escaping,
   JSON parsing, agent identity normalization, label/date/value normalization,
   vector math, and JSON HTTP calls
@@ -218,8 +227,10 @@ Current shape:
 - `core/db/repositories/innerlife/`: focused InnerLife repository submodules,
   including profile, inbox, daemon, history, session, and share persistence
 
-Future schema-heavy changes should keep using repositories instead of growing
-`core/db/database.js` again.
+`core/db/migrations/index.js` runs ordered, idempotent migration modules in
+`before-schema` or `after-schema` phases and records each successful id in
+`schema_migrations`. Future schema changes should add a migration module and
+keep using repositories instead of growing `core/db/database.js` again.
 
 SQLite access is serialized through the product database helper. Long-running
 or scheduler-driven workflows should still protect their own product semantics;

@@ -118,6 +118,11 @@ async function canWriteRuntimeProbe(paths) {
 }
 
 function buildHealthChecks(app, paths, configuration, databaseSummary, canWriteRuntime) {
+  const embeddingProvider = configuration?.memoria?.provider || "unknown";
+  const embeddingReady =
+    embeddingProvider === "claracore-built-in" ||
+    embeddingProvider === "disabled" ||
+    (embeddingProvider === "ollama" && Boolean(configuration?.memoria?.endpoint));
   const checks = [
     {
       id: "data-root",
@@ -139,9 +144,9 @@ function buildHealthChecks(app, paths, configuration, databaseSummary, canWriteR
     },
     {
       id: "embedding",
-      level: configuration?.memoria?.provider === "ollama" && configuration?.memoria?.endpoint ? "ok" : "warn",
+      level: embeddingReady ? "ok" : "warn",
       labelKey: "health.embedding",
-      detail: `${configuration?.memoria?.provider || "unknown"} ${configuration?.memoria?.model || ""}`.trim()
+      detail: `${embeddingProvider} ${configuration?.memoria?.model || ""}`.trim()
     }
   ];
   return {

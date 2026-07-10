@@ -15,6 +15,8 @@ const ROOT = path.join(__dirname, "..", "db");
 
 const FILES = [
   "database.js",
+  "migrations/index.js",
+  "migrations/002_product_additions.js",
   "repositories/system.js",
   "repositories/continuity.js",
   "repositories/continuity/agents.js",
@@ -77,6 +79,7 @@ const SAFE_IDENTIFIERS = new Set([
   "tickIncrement",
   "retrySeconds",
   "SQLITE_BUSY_TIMEOUT_MS",
+  "table",
   "CONTINUITY_LINE_SELECT"
 ]);
 

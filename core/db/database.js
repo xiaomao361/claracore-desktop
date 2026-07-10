@@ -7,6 +7,7 @@ const { installInnerLifeRepository } = require("./repositories/innerlife");
 const { installMemoriaRepository } = require("./repositories/memoria");
 const { installContinuityRepository } = require("./repositories/continuity");
 const { createSystemRepository } = require("./repositories/system");
+const { recordMigration, runMigrations } = require("./migrations");
 const {
   cosineSimilarity,
   innerLifeRetrySeconds,
@@ -106,10 +107,11 @@ class ProductDatabase {
 
   async initialize() {
     await fs.mkdir(path.dirname(this.dbPath), { recursive: true });
-    await this.migratePreSchemaCompatibility();
+    await runMigrations(this, "before-schema");
     const schema = await fs.readFile(this.schemaPath, "utf8");
     await this.exec(schema);
-    await this.migrateAdditiveSchema();
+    await recordMigration(this, SCHEMA_ID);
+    await runMigrations(this, "after-schema");
     await this.seedDefaults();
     return this.getSummary();
   }
@@ -165,10 +167,6 @@ class ProductDatabase {
       .join("\n");
 
     await this.exec(`
-      INSERT INTO schema_migrations (id)
-      VALUES (${sqlString(SCHEMA_ID)})
-      ON CONFLICT(id) DO NOTHING;
-
       INSERT INTO agents (id, label, role, status)
       VALUES
         ('codex', 'Codex', 'agent', 'active'),
@@ -182,173 +180,6 @@ class ProductDatabase {
         ('memory.embedding.api_key', 'none', 'not-configured', NULL),
         ('innerlife.llm.api_key', 'deepseek', 'configured', ${sqlString(DEFAULT_INNERLIFE_API_KEY)})
       ON CONFLICT(key) DO NOTHING;
-    `);
-  }
-
-  async migratePreSchemaCompatibility() {
-    const gatewayTraceColumns = new Set((await this.query("PRAGMA table_info(gateway_traces);")).map((row) => row.name));
-    if (!gatewayTraceColumns.has("id")) return;
-    const additions = [
-      ["session_id", "ALTER TABLE gateway_traces ADD COLUMN session_id TEXT NOT NULL DEFAULT '';"],
-      ["transport", "ALTER TABLE gateway_traces ADD COLUMN transport TEXT NOT NULL DEFAULT 'stdio';"]
-    ];
-    for (const [column, sql] of additions) {
-      if (!gatewayTraceColumns.has(column)) await this.exec(sql);
-    }
-  }
-
-  async migrateAdditiveSchema() {
-    const memoryRecordColumns = new Set((await this.query("PRAGMA table_info(memory_records);")).map((row) => row.name));
-    const memoryRecordAdditions = [
-      ["user_id", "ALTER TABLE memory_records ADD COLUMN user_id TEXT NOT NULL DEFAULT 'local-user';"],
-      ["local_date", "ALTER TABLE memory_records ADD COLUMN local_date TEXT NOT NULL DEFAULT '';"],
-      ["timezone", "ALTER TABLE memory_records ADD COLUMN timezone TEXT NOT NULL DEFAULT 'Asia/Shanghai';"],
-      ["schema_version", "ALTER TABLE memory_records ADD COLUMN schema_version INTEGER NOT NULL DEFAULT 1;"],
-      ["note", "ALTER TABLE memory_records ADD COLUMN note TEXT;"],
-      ["source_agent", "ALTER TABLE memory_records ADD COLUMN source_agent TEXT;"],
-      ["source_run_id", "ALTER TABLE memory_records ADD COLUMN source_run_id TEXT;"],
-      ["dedupe_key", "ALTER TABLE memory_records ADD COLUMN dedupe_key TEXT;"]
-    ];
-    for (const [column, sql] of memoryRecordAdditions) {
-      if (!memoryRecordColumns.has(column)) await this.exec(sql);
-    }
-    const currentPositionColumns = new Set((await this.query("PRAGMA table_info(current_positions);")).map((row) => row.name));
-    const currentPositionAdditions = [
-      ["metadata_json", "ALTER TABLE current_positions ADD COLUMN metadata_json TEXT NOT NULL DEFAULT '{}';"]
-    ];
-    for (const [column, sql] of currentPositionAdditions) {
-      if (!currentPositionColumns.has(column)) await this.exec(sql);
-    }
-    const continuityLineColumns = new Set((await this.query("PRAGMA table_info(continuity_lines);")).map((row) => row.name));
-    const continuityLineAdditions = [
-      ["agent_id", "ALTER TABLE continuity_lines ADD COLUMN agent_id TEXT NOT NULL DEFAULT 'codex';"]
-    ];
-    for (const [column, sql] of continuityLineAdditions) {
-      if (!continuityLineColumns.has(column)) await this.exec(sql);
-    }
-    const gatewayTraceColumns = new Set((await this.query("PRAGMA table_info(gateway_traces);")).map((row) => row.name));
-    const gatewayTraceAdditions = [
-      ["session_id", "ALTER TABLE gateway_traces ADD COLUMN session_id TEXT NOT NULL DEFAULT '';"],
-      ["transport", "ALTER TABLE gateway_traces ADD COLUMN transport TEXT NOT NULL DEFAULT 'stdio';"]
-    ];
-    for (const [column, sql] of gatewayTraceAdditions) {
-      if (!gatewayTraceColumns.has(column)) await this.exec(sql);
-    }
-    await this.exec(`
-      UPDATE memory_records
-      SET local_date = substr(occurred_at, 1, 10)
-      WHERE local_date = '';
-
-      UPDATE continuity_lines
-      SET agent_id = 'codex'
-      WHERE agent_id IS NULL OR agent_id = '';
-
-      UPDATE continuity_lines
-      SET agent_id = 'codex'
-      WHERE agent_id = 'default';
-
-      CREATE INDEX IF NOT EXISTS idx_memory_records_user_type_time
-      ON memory_records(user_id, record_type, occurred_at DESC);
-
-      CREATE INDEX IF NOT EXISTS idx_memory_records_user_local_date
-      ON memory_records(user_id, local_date);
-
-      CREATE INDEX IF NOT EXISTS idx_continuity_lines_agent_status_updated
-      ON continuity_lines(agent_id, status, updated_at DESC);
-
-      CREATE INDEX IF NOT EXISTS idx_gateway_traces_agent_created
-      ON gateway_traces(agent_id, created_at DESC);
-
-      CREATE INDEX IF NOT EXISTS idx_gateway_traces_transport_created
-      ON gateway_traces(transport, created_at DESC);
-
-      WITH ranked_current_positions AS (
-        SELECT
-          rowid AS rid,
-          ROW_NUMBER() OVER (
-            PARTITION BY line_id
-            ORDER BY
-              julianday(updated_at) DESC,
-              CASE WHEN id = 'position_' || line_id THEN 0 ELSE 1 END,
-              rowid DESC
-          ) AS rank
-        FROM current_positions
-      )
-      DELETE FROM current_positions
-      WHERE rowid IN (
-        SELECT rid
-        FROM ranked_current_positions
-        WHERE rank > 1
-      );
-
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_current_positions_line_unique
-      ON current_positions(line_id);
-
-      CREATE TABLE IF NOT EXISTS continuity_agent_state (
-        agent_id TEXT PRIMARY KEY,
-        communication_style TEXT NOT NULL DEFAULT '',
-        relationship_position TEXT NOT NULL DEFAULT '',
-        long_term_preferences_json TEXT NOT NULL DEFAULT '[]',
-        boundaries_json TEXT NOT NULL DEFAULT '[]',
-        stable_patterns_json TEXT NOT NULL DEFAULT '[]',
-        notes TEXT NOT NULL DEFAULT '',
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS continuity_model_adjustments (
-        model TEXT PRIMARY KEY,
-        forbidden_phrases_json TEXT NOT NULL DEFAULT '[]',
-        forbidden_patterns_json TEXT NOT NULL DEFAULT '[]',
-        inject_prompt TEXT NOT NULL DEFAULT '',
-        updated_by TEXT NOT NULL DEFAULT 'desktop',
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_memory_records_dedupe
-      ON memory_records(user_id, record_type, dedupe_key)
-      WHERE dedupe_key IS NOT NULL;
-    `);
-    await this.normalizeLegacyContinuityDefaultAgent();
-  }
-
-  async normalizeLegacyContinuityDefaultAgent() {
-    const positionRows = await this.query(`
-      SELECT id, metadata_json
-      FROM current_positions
-      WHERE metadata_json LIKE '%"agentId"%default%';
-    `);
-    for (const row of positionRows) {
-      const metadata = parseJson(row.metadata_json, {});
-      if (metadata?.agentId !== "default") continue;
-      metadata.agentId = DEFAULT_AGENT_ID;
-      await this.exec(`
-        UPDATE current_positions
-        SET metadata_json = ${jsonSql(metadata)}
-        WHERE id = ${sqlString(row.id)};
-      `);
-    }
-
-    await this.exec(`
-      DELETE FROM continuity_agent_state
-      WHERE agent_id = 'default';
-
-      UPDATE continuity_agent_state
-      SET communication_style = '',
-          relationship_position = '',
-          long_term_preferences_json = '[]',
-          boundaries_json = '[]',
-          stable_patterns_json = '[]',
-          notes = '',
-          updated_at = CURRENT_TIMESTAMP
-      WHERE agent_id = ${sqlString(DEFAULT_AGENT_ID)}
-        AND (
-          communication_style LIKE '%毛仔%' OR
-          relationship_position LIKE '%姐姐%' OR
-          relationship_position LIKE '%弟弟%' OR
-          notes LIKE '%毛仔%' OR
-          notes LIKE '%Clara%' OR
-          notes LIKE '%Lara%'
-        );
     `);
   }
 

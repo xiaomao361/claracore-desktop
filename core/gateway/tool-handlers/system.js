@@ -1,3 +1,5 @@
+const continuity = require("../../continuity");
+
 async function handleSystemTool(name, args, context) {
   const {
     database,
@@ -207,7 +209,7 @@ async function handleSystemTool(name, args, context) {
   }
 
   if (name === "gateway_context") {
-    return textResult(await database.getGatewayContext(args));
+    return textResult(await continuity.gatewayContext({ database }, args));
   }
 
   if (name === "gateway_trace_list") {

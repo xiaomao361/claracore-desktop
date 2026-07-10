@@ -839,7 +839,7 @@ window.ClaraCoreTranslationsEn = {
   "agentSetup.connectionMode": "Connection mode",
   "agentSetup.modeResident": "ClaraCore Desktop stays open as the local agent service.",
   "agentSetup.modeMcp": "Agents connect through MCP and set their own CLARACORE_AGENT_ID.",
-  "agentSetup.modeLan": "Local HTTP helper is localhost-only, token-protected, and uses a runtime-assigned port.",
+  "agentSetup.modeLan": "Local HTTP helper is localhost-only, token-protected, and uses stable port 50668 by default.",
   "agentSetup.identityContract": "Agent identity",
   "agentSetup.identityBody": "Each agent sets this env value itself; do not reuse one id across agents.",
   "agentSetup.includes": "Includes",

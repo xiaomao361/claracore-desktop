@@ -13,6 +13,14 @@ async function waitForRuntimeSnapshot(page, predicate, timeoutMs = 15000) {
   throw new Error(`Timed out waiting for runtime snapshot. Last snapshot: ${JSON.stringify(lastSnapshot)}`);
 }
 
+async function fillExact(page, selector, value) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await page.fill(selector, value);
+    if ((await page.locator(selector).inputValue()) === value) return;
+  }
+  throw new Error(`Could not fill ${selector} with the exact test value.`);
+}
+
 async function main() {
   const { _electron: electron } = require("playwright");
   const electronPath = require(path.resolve(__dirname, "..", "..", "node_modules", "electron"));
@@ -88,23 +96,33 @@ async function main() {
 
     await page.selectOption("#memoriaProvider", "ollama");
     await page.waitForFunction(() => !document.querySelector("#memoriaEndpointField")?.hidden && !document.querySelector("#memoriaConnectionRow")?.hidden);
-    await page.fill("#memoriaEndpoint", "http://127.0.0.1:11437");
-    await page.fill("#memoriaModel", "bge-m3-ui-smoke");
+    await fillExact(page, "#memoriaEndpoint", "http://127.0.0.1:11437");
+    await fillExact(page, "#memoriaModel", "bge-m3-ui-smoke");
     await page.selectOption("#innerLifeBackend", "ollama");
-    await page.fill("#innerLifeEndpoint", "http://127.0.0.1:11438");
-    await page.fill("#innerLifeLightModel", "ui-light");
-    await page.fill("#innerLifeDeepModel", "ui-deep");
-    await page.fill("#innerLifePollSeconds", "44");
+    await fillExact(page, "#innerLifeEndpoint", "http://127.0.0.1:11438");
+    await fillExact(page, "#innerLifeLightModel", "ui-light");
+    await fillExact(page, "#innerLifeDeepModel", "ui-deep");
+    await fillExact(page, "#innerLifePollSeconds", "44");
     const modelFormBeforeSave = await page.evaluate(() => ({
       memoriaProvider: document.querySelector("#memoriaProvider").value,
       memoriaEndpoint: document.querySelector("#memoriaEndpoint").value,
       memoriaModel: document.querySelector("#memoriaModel").value,
       innerLifeBackend: document.querySelector("#innerLifeBackend").value,
+      innerLifeEndpoint: document.querySelector("#innerLifeEndpoint").value,
+      innerLifeLightModel: document.querySelector("#innerLifeLightModel").value,
+      innerLifeDeepModel: document.querySelector("#innerLifeDeepModel").value,
+      innerLifePollSeconds: document.querySelector("#innerLifePollSeconds").value,
       activePanel: document.querySelector(".settings-tab-panel.active")?.dataset.settingsPanel
     }));
     if (
       modelFormBeforeSave.memoriaProvider !== "ollama"
       || modelFormBeforeSave.memoriaEndpoint !== "http://127.0.0.1:11437"
+      || modelFormBeforeSave.memoriaModel !== "bge-m3-ui-smoke"
+      || modelFormBeforeSave.innerLifeBackend !== "ollama"
+      || modelFormBeforeSave.innerLifeEndpoint !== "http://127.0.0.1:11438"
+      || modelFormBeforeSave.innerLifeLightModel !== "ui-light"
+      || modelFormBeforeSave.innerLifeDeepModel !== "ui-deep"
+      || modelFormBeforeSave.innerLifePollSeconds !== "44"
       || modelFormBeforeSave.activePanel !== "models"
     ) {
       throw new Error(`Settings model form was not ready before save: ${JSON.stringify(modelFormBeforeSave)}`);
@@ -137,7 +155,7 @@ async function main() {
       throw new Error("Settings UI did not persist Memoria endpoint.");
     }
     if (snapshot.configuration.memoria.model !== "bge-m3-ui-smoke") {
-      throw new Error("Settings UI did not persist Memoria model.");
+      throw new Error(`Settings UI did not persist Memoria model: ${JSON.stringify(snapshot.configuration.memoria)}`);
     }
     if (snapshot.configuration.innerlife.backend !== "ollama") {
       throw new Error("Settings UI did not persist InnerLife backend.");

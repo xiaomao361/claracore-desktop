@@ -72,9 +72,11 @@ async function main() {
     });
     await page.click("[data-view='innerlife']");
     await page.evaluate(() => window.ClaraCoreTestHooks.refresh());
-    await page.waitForFunction(() => document.querySelector("#innerLifeDoctorStatus")?.textContent.includes("ok"), null, {
-      timeout: 15000
-    });
+    await page.waitForFunction(
+      () => ["ok", "warn"].includes(document.querySelector("#innerLifeDoctorStatus")?.textContent.trim()),
+      null,
+      { timeout: 15000 }
+    );
     await page.waitForFunction(
       () =>
         document.querySelector("#innerLifeShareList")?.textContent.includes("Agent inbox item should render") &&
@@ -144,7 +146,7 @@ async function main() {
     if (result.digestRuns !== 1 || result.shareChecks !== 1) {
       throw new Error(`InnerLife UI digest/share check counts mismatch: ${JSON.stringify(result)}`);
     }
-    if (result.doctorStatus !== "ok" || !result.doctorText.includes("healthy")) {
+    if (result.doctorStatus !== "warn" || !result.doctorText.includes("model_disabled")) {
       throw new Error(`InnerLife UI doctor state mismatch: ${JSON.stringify(result)}`);
     }
     if (!result.digestText.includes("Current position")) {

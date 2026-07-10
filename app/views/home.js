@@ -21,6 +21,7 @@ function createClaraCoreHomeView(context) {
     homeAgentActivityTabs,
     homeAgentViewList,
     homeTraceList,
+    homeRuntimeDetails,
     healthSummary,
     healthList,
     mcpCommand,
@@ -253,6 +254,9 @@ function createClaraCoreHomeView(context) {
     homeRuntimeStatus.textContent =
       healthStatus === "ok" ? t("common.ready") : healthStatus === "error" ? t("status.healthError") : t("common.needsAttention");
     homeRuntimeStatus.className = `runtime-state ${healthStatus === "ok" ? "ok" : healthStatus === "error" ? "error" : "warn"}`;
+    if (homeRuntimeDetails && (healthStatus === "error" || attentionItems().length > 0)) {
+      homeRuntimeDetails.open = true;
+    }
     homeRuntimeDetail.textContent = `${formatMode(snapshot.mode)} · ${snapshot.data?.databasePresent ? t("status.databaseReady") : t("status.databaseMissing")}`;
     homeRuntimeStrip.innerHTML = runtimeMetricItems()
       .map(
@@ -851,6 +855,14 @@ function createClaraCoreHomeView(context) {
     return actionableGatewayErrors(getSnapshot()?.gatewayTraces || []).length;
   }
 
+  function actionableAttentionCount() {
+    return attentionItems().length;
+  }
+
+  function hasActionableError() {
+    return attentionItems().some((item) => item.tone === "error");
+  }
+
   homeAgentActivityTabs?.forEach((button) => {
     button.addEventListener("click", () => {
       activeAgentActivityPeriod = button.dataset.agentActivityPeriod || "7d";
@@ -859,12 +871,14 @@ function createClaraCoreHomeView(context) {
   });
 
   return {
+    actionableAttentionCount,
     renderModules,
     renderEvents,
     renderHomeDashboard,
     renderHealth,
     renderConnections,
-    actionableGatewayErrorCount
+    actionableGatewayErrorCount,
+    hasActionableError
   };
 }
 

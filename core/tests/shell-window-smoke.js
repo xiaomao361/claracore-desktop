@@ -22,6 +22,7 @@ async function main() {
     });
     const page = await app.firstWindow();
     await page.waitForSelector(".topbar", { timeout: 15000 });
+    await page.waitForSelector("#homeView > .page-focus", { timeout: 15000 });
 
     const result = await page.evaluate(async () => {
       const shellState = await window.ClaraCoreDesktop.getShellState();
@@ -36,6 +37,12 @@ async function main() {
         topbarRegion,
         sidebarRegion,
         navRegion,
+        homeTruth: {
+          attentionItems: document.querySelectorAll("#homeAttentionList .attention-item").length,
+          focusTone: document.querySelector("#homeView > .page-focus")?.className || "",
+          healthTone: document.querySelector("#topbarHealthIcon")?.className || "",
+          runtimeExpanded: Boolean(document.querySelector("#homeRuntimeDetails")?.open)
+        },
         text: document.body.textContent
       };
     });
@@ -60,6 +67,28 @@ async function main() {
     }
     if (result.navRegion !== "no-drag") {
       throw new Error(`Interactive controls are not excluded from drag regions: ${JSON.stringify(result)}`);
+    }
+    if (
+      result.homeTruth.attentionItems !== 0 ||
+      !result.homeTruth.focusTone.includes("ok") ||
+      !result.homeTruth.healthTone.includes("ok-dot") ||
+      result.homeTruth.runtimeExpanded
+    ) {
+      throw new Error(`Fresh-install Home truth is inconsistent: ${JSON.stringify(result.homeTruth)}`);
+    }
+
+    const scopedRefresh = await page.evaluate(async () => {
+      document.querySelector("[data-view='innerlife']")?.click();
+      const memoryListBefore = document.querySelector("#memoryList")?.innerHTML || "";
+      window.ClaraCoreTestHooks.handleRuntimeChanged({ scopes: ["snapshot", "innerlife"] });
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      return {
+        activeView: document.querySelector(".active-view")?.id,
+        memoryListPreserved: (document.querySelector("#memoryList")?.innerHTML || "") === memoryListBefore
+      };
+    });
+    if (scopedRefresh.activeView !== "innerlifeView" || !scopedRefresh.memoryListPreserved) {
+      throw new Error(`Scoped runtime refresh disturbed an unrelated view: ${JSON.stringify(scopedRefresh)}`);
     }
 
     const hiddenState = await app.evaluate(async ({ BrowserWindow, app: electronApp }) => {

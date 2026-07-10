@@ -1,265 +1,269 @@
 const { contextBridge, ipcRenderer } = require("electron");
+// Sandboxed preload scripts cannot require local modules. Keep this mapper
+// dependency-free; core/tests/ipc-contract-lint.js verifies every referenced
+// name against electron/ipc-contracts.js.
+const ipcChannel = (name) => `claracore:${name}`;
 
 contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   getRuntimeSnapshot() {
-    return ipcRenderer.invoke("claracore:getRuntimeSnapshot");
+    return ipcRenderer.invoke(ipcChannel("getRuntimeSnapshot"));
   },
   getResourceSnapshot() {
-    return ipcRenderer.invoke("claracore:getResourceSnapshot");
+    return ipcRenderer.invoke(ipcChannel("getResourceSnapshot"));
   },
   getImportPreview() {
-    return ipcRenderer.invoke("claracore:getImportPreview");
+    return ipcRenderer.invoke(ipcChannel("getImportPreview"));
   },
   clearLogs() {
-    return ipcRenderer.invoke("claracore:clearLogs");
+    return ipcRenderer.invoke(ipcChannel("clearLogs"));
   },
   saveSettings(updates) {
-    return ipcRenderer.invoke("claracore:saveSettings", updates);
+    return ipcRenderer.invoke(ipcChannel("saveSettings"), updates);
   },
   listModels(input) {
-    return ipcRenderer.invoke("claracore:listModels", input);
+    return ipcRenderer.invoke(ipcChannel("listModels"), input);
   },
   testModelConnection(input) {
-    return ipcRenderer.invoke("claracore:testModelConnection", input);
+    return ipcRenderer.invoke(ipcChannel("testModelConnection"), input);
   },
   rotateAgentGatewayToken() {
-    return ipcRenderer.invoke("claracore:rotateAgentGatewayToken");
+    return ipcRenderer.invoke(ipcChannel("rotateAgentGatewayToken"));
   },
   updateAgentGatewayConfig(input) {
-    return ipcRenderer.invoke("claracore:updateAgentGatewayConfig", input);
+    return ipcRenderer.invoke(ipcChannel("updateAgentGatewayConfig"), input);
   },
   setWindowPreferences(preferences) {
-    return ipcRenderer.invoke("claracore:setWindowPreferences", preferences);
+    return ipcRenderer.invoke(ipcChannel("setWindowPreferences"), preferences);
   },
   createMemory(input) {
-    return ipcRenderer.invoke("claracore:createMemory", input);
+    return ipcRenderer.invoke(ipcChannel("createMemory"), input);
   },
   updateMemory(id, input) {
-    return ipcRenderer.invoke("claracore:updateMemory", id, input);
+    return ipcRenderer.invoke(ipcChannel("updateMemory"), id, input);
   },
   deleteMemory(id) {
-    return ipcRenderer.invoke("claracore:deleteMemory", id);
+    return ipcRenderer.invoke(ipcChannel("deleteMemory"), id);
   },
   archiveMemory(id) {
-    return ipcRenderer.invoke("claracore:archiveMemory", id);
+    return ipcRenderer.invoke(ipcChannel("archiveMemory"), id);
   },
   restoreMemory(id) {
-    return ipcRenderer.invoke("claracore:restoreMemory", id);
+    return ipcRenderer.invoke(ipcChannel("restoreMemory"), id);
   },
   restoreArchivedMemory(id) {
-    return ipcRenderer.invoke("claracore:restoreArchivedMemory", id);
+    return ipcRenderer.invoke(ipcChannel("restoreArchivedMemory"), id);
   },
   restrictMemory(id) {
-    return ipcRenderer.invoke("claracore:restrictMemory", id);
+    return ipcRenderer.invoke(ipcChannel("restrictMemory"), id);
   },
   unrestrictMemory(id) {
-    return ipcRenderer.invoke("claracore:unrestrictMemory", id);
+    return ipcRenderer.invoke(ipcChannel("unrestrictMemory"), id);
   },
   getMemories(limit) {
-    return ipcRenderer.invoke("claracore:getMemories", limit);
+    return ipcRenderer.invoke(ipcChannel("getMemories"), limit);
   },
   getRestrictedMemories(limit) {
-    return ipcRenderer.invoke("claracore:getRestrictedMemories", limit);
+    return ipcRenderer.invoke(ipcChannel("getRestrictedMemories"), limit);
   },
   getDeletedMemories(limit) {
-    return ipcRenderer.invoke("claracore:getDeletedMemories", limit);
+    return ipcRenderer.invoke(ipcChannel("getDeletedMemories"), limit);
   },
   getArchivedMemories(limit) {
-    return ipcRenderer.invoke("claracore:getArchivedMemories", limit);
+    return ipcRenderer.invoke(ipcChannel("getArchivedMemories"), limit);
   },
   getMemoryStats() {
-    return ipcRenderer.invoke("claracore:getMemoryStats");
+    return ipcRenderer.invoke(ipcChannel("getMemoryStats"));
   },
   createMemoryLabelAlias(input) {
-    return ipcRenderer.invoke("claracore:createMemoryLabelAlias", input);
+    return ipcRenderer.invoke(ipcChannel("createMemoryLabelAlias"), input);
   },
   deleteMemoryLabelAlias(alias) {
-    return ipcRenderer.invoke("claracore:deleteMemoryLabelAlias", alias);
+    return ipcRenderer.invoke(ipcChannel("deleteMemoryLabelAlias"), alias);
   },
   getMemoryLabelAliases() {
-    return ipcRenderer.invoke("claracore:getMemoryLabelAliases");
+    return ipcRenderer.invoke(ipcChannel("getMemoryLabelAliases"));
   },
   getMemoryGraph(input) {
-    return ipcRenderer.invoke("claracore:getMemoryGraph", input);
+    return ipcRenderer.invoke(ipcChannel("getMemoryGraph"), input);
   },
   getMemoryMaintenance() {
-    return ipcRenderer.invoke("claracore:getMemoryMaintenance");
+    return ipcRenderer.invoke(ipcChannel("getMemoryMaintenance"));
   },
   runMemoryMaintenance(input) {
-    return ipcRenderer.invoke("claracore:runMemoryMaintenance", input);
+    return ipcRenderer.invoke(ipcChannel("runMemoryMaintenance"), input);
   },
   getMemoryMergeSuggestions(input) {
-    return ipcRenderer.invoke("claracore:getMemoryMergeSuggestions", input);
+    return ipcRenderer.invoke(ipcChannel("getMemoryMergeSuggestions"), input);
   },
   mergeMemories(input) {
-    return ipcRenderer.invoke("claracore:mergeMemories", input);
+    return ipcRenderer.invoke(ipcChannel("mergeMemories"), input);
   },
   getMemoryArchiveSuggestions(input) {
-    return ipcRenderer.invoke("claracore:getMemoryArchiveSuggestions", input);
+    return ipcRenderer.invoke(ipcChannel("getMemoryArchiveSuggestions"), input);
   },
   archiveDormantMemories(input) {
-    return ipcRenderer.invoke("claracore:archiveDormantMemories", input);
+    return ipcRenderer.invoke(ipcChannel("archiveDormantMemories"), input);
   },
   createMemoryRecord(input) {
-    return ipcRenderer.invoke("claracore:createMemoryRecord", input);
+    return ipcRenderer.invoke(ipcChannel("createMemoryRecord"), input);
   },
   getMemoryRecords(input) {
-    return ipcRenderer.invoke("claracore:getMemoryRecords", input);
+    return ipcRenderer.invoke(ipcChannel("getMemoryRecords"), input);
   },
   searchMemories(input) {
-    return ipcRenderer.invoke("claracore:searchMemories", input);
+    return ipcRenderer.invoke(ipcChannel("searchMemories"), input);
   },
   embedMemory(id) {
-    return ipcRenderer.invoke("claracore:embedMemory", id);
+    return ipcRenderer.invoke(ipcChannel("embedMemory"), id);
   },
   processMemoryEmbeddings(limit) {
-    return ipcRenderer.invoke("claracore:processMemoryEmbeddings", limit);
+    return ipcRenderer.invoke(ipcChannel("processMemoryEmbeddings"), limit);
   },
   getSharedLine(input) {
-    return ipcRenderer.invoke("claracore:getSharedLine", input);
+    return ipcRenderer.invoke(ipcChannel("getSharedLine"), input);
   },
   saveSharedLine(input) {
-    return ipcRenderer.invoke("claracore:saveSharedLine", input);
+    return ipcRenderer.invoke(ipcChannel("saveSharedLine"), input);
   },
   createSharedLine(input) {
-    return ipcRenderer.invoke("claracore:createSharedLine", input);
+    return ipcRenderer.invoke(ipcChannel("createSharedLine"), input);
   },
   activateSharedLine(lineId) {
-    return ipcRenderer.invoke("claracore:activateSharedLine", lineId);
+    return ipcRenderer.invoke(ipcChannel("activateSharedLine"), lineId);
   },
   renameSharedLine(lineId, title) {
-    return ipcRenderer.invoke("claracore:renameSharedLine", lineId, title);
+    return ipcRenderer.invoke(ipcChannel("renameSharedLine"), lineId, title);
   },
   archiveSharedLine(lineId) {
-    return ipcRenderer.invoke("claracore:archiveSharedLine", lineId);
+    return ipcRenderer.invoke(ipcChannel("archiveSharedLine"), lineId);
   },
   restoreSharedLine(lineId, makeActive) {
-    return ipcRenderer.invoke("claracore:restoreSharedLine", lineId, makeActive);
+    return ipcRenderer.invoke(ipcChannel("restoreSharedLine"), lineId, makeActive);
   },
   createSharedLineHandoff(input) {
-    return ipcRenderer.invoke("claracore:createSharedLineHandoff", input);
+    return ipcRenderer.invoke(ipcChannel("createSharedLineHandoff"), input);
   },
   getInnerLife() {
-    return ipcRenderer.invoke("claracore:getInnerLife");
+    return ipcRenderer.invoke(ipcChannel("getInnerLife"));
   },
   getInnerLifeSessions(input) {
-    return ipcRenderer.invoke("claracore:getInnerLifeSessions", input);
+    return ipcRenderer.invoke(ipcChannel("getInnerLifeSessions"), input);
   },
   getInnerLifeDigestRuns(input) {
-    return ipcRenderer.invoke("claracore:getInnerLifeDigestRuns", input);
+    return ipcRenderer.invoke(ipcChannel("getInnerLifeDigestRuns"), input);
   },
   getInnerLifeInbox(input) {
-    return ipcRenderer.invoke("claracore:getInnerLifeInbox", input);
+    return ipcRenderer.invoke(ipcChannel("getInnerLifeInbox"), input);
   },
   updateInnerLifeProfile(input) {
-    return ipcRenderer.invoke("claracore:updateInnerLifeProfile", input);
+    return ipcRenderer.invoke(ipcChannel("updateInnerLifeProfile"), input);
   },
   processInnerLifeOnce(input) {
-    return ipcRenderer.invoke("claracore:processInnerLifeOnce", input);
+    return ipcRenderer.invoke(ipcChannel("processInnerLifeOnce"), input);
   },
   runInnerLifeDigest(input) {
-    return ipcRenderer.invoke("claracore:runInnerLifeDigest", input);
+    return ipcRenderer.invoke(ipcChannel("runInnerLifeDigest"), input);
   },
   checkInnerLifeShareTiming(input) {
-    return ipcRenderer.invoke("claracore:checkInnerLifeShareTiming", input);
+    return ipcRenderer.invoke(ipcChannel("checkInnerLifeShareTiming"), input);
   },
   setInnerLifeDaemon(input) {
-    return ipcRenderer.invoke("claracore:setInnerLifeDaemon", input);
+    return ipcRenderer.invoke(ipcChannel("setInnerLifeDaemon"), input);
   },
   tickInnerLifeDaemon(input) {
-    return ipcRenderer.invoke("claracore:tickInnerLifeDaemon", input);
+    return ipcRenderer.invoke(ipcChannel("tickInnerLifeDaemon"), input);
   },
   startInnerLifeSession(input) {
-    return ipcRenderer.invoke("claracore:startInnerLifeSession", input);
+    return ipcRenderer.invoke(ipcChannel("startInnerLifeSession"), input);
   },
   submitInnerLifeInbox(input) {
-    return ipcRenderer.invoke("claracore:submitInnerLifeInbox", input);
+    return ipcRenderer.invoke(ipcChannel("submitInnerLifeInbox"), input);
   },
   endInnerLifeSession(sessionId, input) {
-    return ipcRenderer.invoke("claracore:endInnerLifeSession", sessionId, input);
+    return ipcRenderer.invoke(ipcChannel("endInnerLifeSession"), sessionId, input);
   },
   reviewInnerLifeShare(id, decision, reason) {
-    return ipcRenderer.invoke("claracore:reviewInnerLifeShare", id, decision, reason);
+    return ipcRenderer.invoke(ipcChannel("reviewInnerLifeShare"), id, decision, reason);
   },
   markInnerLifeShare(id, action, reason) {
-    return ipcRenderer.invoke("claracore:markInnerLifeShare", id, action, reason);
+    return ipcRenderer.invoke(ipcChannel("markInnerLifeShare"), id, action, reason);
   },
   applyInnerLifeShareToMemory(id) {
-    return ipcRenderer.invoke("claracore:applyInnerLifeShareToMemory", id);
+    return ipcRenderer.invoke(ipcChannel("applyInnerLifeShareToMemory"), id);
   },
   applyInnerLifeShareToSharedLine(id) {
-    return ipcRenderer.invoke("claracore:applyInnerLifeShareToSharedLine", id);
+    return ipcRenderer.invoke(ipcChannel("applyInnerLifeShareToSharedLine"), id);
   },
   createBackup() {
-    return ipcRenderer.invoke("claracore:createBackup");
+    return ipcRenderer.invoke(ipcChannel("createBackup"));
   },
   deleteBackup(backupId) {
-    return ipcRenderer.invoke("claracore:deleteBackup", backupId);
+    return ipcRenderer.invoke(ipcChannel("deleteBackup"), backupId);
   },
   exportProductJson(input) {
-    return ipcRenderer.invoke("claracore:exportProductJson", input);
+    return ipcRenderer.invoke(ipcChannel("exportProductJson"), input);
   },
   importProductJson(input) {
-    return ipcRenderer.invoke("claracore:importProductJson", input);
+    return ipcRenderer.invoke(ipcChannel("importProductJson"), input);
   },
   exportMemoryArchive(input) {
-    return ipcRenderer.invoke("claracore:exportMemoryArchive", input);
+    return ipcRenderer.invoke(ipcChannel("exportMemoryArchive"), input);
   },
   importMemoryArchive(input) {
-    return ipcRenderer.invoke("claracore:importMemoryArchive", input);
+    return ipcRenderer.invoke(ipcChannel("importMemoryArchive"), input);
   },
   importOldMemoria(input) {
-    return ipcRenderer.invoke("claracore:importOldMemoria", input);
+    return ipcRenderer.invoke(ipcChannel("importOldMemoria"), input);
   },
   importOldContinuity(input) {
-    return ipcRenderer.invoke("claracore:importOldContinuity", input);
+    return ipcRenderer.invoke(ipcChannel("importOldContinuity"), input);
   },
   importOldInnerLife(input) {
-    return ipcRenderer.invoke("claracore:importOldInnerLife", input);
+    return ipcRenderer.invoke(ipcChannel("importOldInnerLife"), input);
   },
   restoreBackup(backupId) {
-    return ipcRenderer.invoke("claracore:restoreBackup", backupId);
+    return ipcRenderer.invoke(ipcChannel("restoreBackup"), backupId);
   },
   previewRestore(backupId) {
-    return ipcRenderer.invoke("claracore:previewRestore", backupId);
+    return ipcRenderer.invoke(ipcChannel("previewRestore"), backupId);
   },
   getDataRootPreference() {
-    return ipcRenderer.invoke("claracore:getDataRootPreference");
+    return ipcRenderer.invoke(ipcChannel("getDataRootPreference"));
   },
   chooseDataRoot() {
-    return ipcRenderer.invoke("claracore:chooseDataRoot");
+    return ipcRenderer.invoke(ipcChannel("chooseDataRoot"));
   },
   saveDataRootPreference(dataRoot) {
-    return ipcRenderer.invoke("claracore:saveDataRootPreference", dataRoot);
+    return ipcRenderer.invoke(ipcChannel("saveDataRootPreference"), dataRoot);
   },
   relaunch() {
-    return ipcRenderer.invoke("claracore:relaunch");
+    return ipcRenderer.invoke(ipcChannel("relaunch"));
   },
   openPath(targetPath) {
-    return ipcRenderer.invoke("claracore:openPath", targetPath);
+    return ipcRenderer.invoke(ipcChannel("openPath"), targetPath);
   },
   openExternal(targetUrl) {
-    return ipcRenderer.invoke("claracore:openExternal", targetUrl);
+    return ipcRenderer.invoke(ipcChannel("openExternal"), targetUrl);
   },
   copyText(value) {
-    return ipcRenderer.invoke("claracore:copyText", value);
+    return ipcRenderer.invoke(ipcChannel("copyText"), value);
   },
   setLanguage(language) {
-    return ipcRenderer.invoke("claracore:setLanguage", language);
+    return ipcRenderer.invoke(ipcChannel("setLanguage"), language);
   },
   getUiPreferences() {
-    return ipcRenderer.invoke("claracore:getUiPreferences");
+    return ipcRenderer.invoke(ipcChannel("getUiPreferences"));
   },
   saveUiPreferences(updates) {
-    return ipcRenderer.invoke("claracore:saveUiPreferences", updates);
+    return ipcRenderer.invoke(ipcChannel("saveUiPreferences"), updates);
   },
   getShellState() {
-    return ipcRenderer.invoke("claracore:getShellState");
+    return ipcRenderer.invoke(ipcChannel("getShellState"));
   },
   onRuntimeChanged(callback) {
     if (typeof callback !== "function") return () => {};
     const listener = (_event, payload) => callback(payload);
-    ipcRenderer.on("claracore:runtimeChanged", listener);
-    return () => ipcRenderer.removeListener("claracore:runtimeChanged", listener);
+    ipcRenderer.on(ipcChannel("runtimeChanged"), listener);
+    return () => ipcRenderer.removeListener(ipcChannel("runtimeChanged"), listener);
   }
 });

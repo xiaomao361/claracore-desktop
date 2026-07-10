@@ -75,17 +75,19 @@
           </article>
         </section>
 
-        <section class="panel home-status-board" aria-label="Runtime status">
-          <div class="panel-heading">
+        <details id="homeRuntimeDetails" class="panel home-status-board" aria-label="Runtime status">
+          <summary class="panel-heading">
             <div>
               <h2 data-i18n="home.runtime.title">Runtime Overview</h2>
               <p id="homeRuntimeDetail" class="quiet">Checking local core...</p>
             </div>
             <span id="homeRuntimeStatus" class="runtime-state">Checking</span>
+          </summary>
+          <div class="home-runtime-details-body">
+            <div id="homeRuntimeStrip" class="home-runtime-strip"></div>
+            <section id="moduleGrid" class="module-grid" aria-live="polite"></section>
           </div>
-          <div id="homeRuntimeStrip" class="home-runtime-strip"></div>
-          <section id="moduleGrid" class="module-grid" aria-live="polite"></section>
-        </section>
+        </details>
 
       </section>
 

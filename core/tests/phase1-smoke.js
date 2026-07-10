@@ -46,6 +46,11 @@ async function main() {
   ]) {
     if (!tables.has(table)) throw new Error(`Missing table: ${table}`);
   }
+  const migrations = await database.query("SELECT id FROM schema_migrations ORDER BY id;");
+  const migrationIds = migrations.map((row) => row.id);
+  for (const expectedId of ["000_gateway_trace_compatibility", "001_product_core_schema", "002_product_additions"]) {
+    if (!migrationIds.includes(expectedId)) throw new Error(`Missing applied migration: ${expectedId}`);
+  }
 
   const settings = await database.getSettings();
   const expectedSettings = {
@@ -94,6 +99,9 @@ async function main() {
   });
 
   const snapshot = await runtime.buildProductSnapshot(app);
+  if (snapshot.health.status !== "ok" || snapshot.health.checks.find((check) => check.id === "embedding")?.level !== "ok") {
+    throw new Error(`Built-in Memory embedding should be healthy by default: ${JSON.stringify(snapshot.health)}`);
+  }
   if (snapshot.data.databasePath !== paths.databasePath) {
     throw new Error("Snapshot does not point at the product database.");
   }

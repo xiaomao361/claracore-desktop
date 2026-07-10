@@ -28,6 +28,8 @@ SQLite database.
   Gateway mode, renderer sandbox policy, runtime snapshot wiring, and quit
   behavior.
 - `electron/preload.js`: safe renderer bridge over Electron IPC.
+- `electron/ipc-contracts.js`: main-process IPC channel registry, shared with
+  registration and enforced against the sandboxed preload by contract lint.
 - `index.html`: static renderer shell, navigation, page sections, and script
   ordering, plus the renderer CSP.
 - `app.js`: renderer state, refresh loop, cross-view event wiring, and view

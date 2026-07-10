@@ -51,6 +51,7 @@ window.ClaraCoreDom = {
   healthSummary: document.querySelector("#healthSummary"),
   healthList: document.querySelector("#healthList"),
   homeCognitiveSystems: document.querySelector("#homeCognitiveSystems"),
+  homeRuntimeDetails: document.querySelector("#homeRuntimeDetails"),
   homeRuntimeStatus: document.querySelector("#homeRuntimeStatus"),
   homeRuntimeDetail: document.querySelector("#homeRuntimeDetail"),
   homeRuntimeStrip: document.querySelector("#homeRuntimeStrip"),

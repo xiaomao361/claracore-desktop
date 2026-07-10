@@ -204,6 +204,7 @@ const rendererState = {
   dataRootPreference: null
 };
 let runtimeRefreshTimer = null;
+const pendingRuntimeScopes = new Set();
 const appearance = window.createClaraCoreAppearance({
   desktop: window.ClaraCoreDesktop,
   onSystemPreferenceChange: () => renderSettings()
@@ -519,18 +520,13 @@ function renderPageFocus() {
   const innerLife = snapshot.innerLife || {};
   const innerCounts = innerLife.counts || {};
   const daemon = innerLife.daemon || {};
-  const modules = snapshot.modules || [];
-  const missingRequired = modules.filter((module) => module.required && !module.present).length;
   // Pending shares are agent-owned waiting state, not human work; they are
   // shown as ambient counts but never counted as attention.
-  const attentionCount =
-    gatewayErrors +
-    Number(stats.pendingEmbeddingCount || 0) +
-    Number(stats.failedEmbeddingCount || 0) +
-    missingRequired;
+  const attentionCount = homeView.actionableAttentionCount();
+  const attentionHasError = homeView.hasActionableError();
 
   renderFocusBlock("home", {
-    tone: healthStatus === "error" || gatewayErrors ? "error" : attentionCount ? "warn" : "ok",
+    tone: attentionHasError ? "error" : attentionCount ? "warn" : "ok",
     title: attentionCount ? t("focus.home.attention", { count: String(attentionCount) }) : t("focus.home.ok"),
     body: currentLine.summary
       ? t("focus.home.line", { summary: currentLine.summary })
@@ -773,6 +769,14 @@ async function refreshRuntimeSnapshotOnly() {
   renderSnapshot();
 }
 
+async function refreshForRuntimeScopes(scopes = []) {
+  await refreshRuntimeSnapshotOnly();
+  if (scopes.includes("memory") && activeView === "memory") {
+    memoriaView.resetLoadedTabs();
+    await loadMemoryTabData(memoriaView.getActiveTab());
+  }
+}
+
 function syncLogRefreshTimer() {
   logsView.syncRefreshTimer(activeView);
 }
@@ -782,11 +786,14 @@ async function refreshResources() {
   renderResourceSnapshot(resources);
 }
 
-function scheduleRuntimeRefresh() {
+function scheduleRuntimeRefresh(scopes = ["snapshot"]) {
+  scopes.forEach((scope) => pendingRuntimeScopes.add(scope));
   if (runtimeRefreshTimer) return;
   runtimeRefreshTimer = window.setTimeout(() => {
     runtimeRefreshTimer = null;
-    refresh().catch(console.error);
+    const nextScopes = [...pendingRuntimeScopes];
+    pendingRuntimeScopes.clear();
+    refreshForRuntimeScopes(nextScopes).catch(console.error);
   }, 250);
 }
 
@@ -1117,7 +1124,8 @@ openDesignPlan?.addEventListener("click", () => {
 });
 
 window.ClaraCoreTestHooks = {
-  refresh: () => refresh()
+  refresh: () => refresh(),
+  handleRuntimeChanged: (payload = {}) => scheduleRuntimeRefresh(Array.isArray(payload.scopes) ? payload.scopes : ["snapshot"])
 };
 
 refresh().catch((error) => {
@@ -1138,6 +1146,8 @@ appearance.initialize();
 window.ClaraCoreDesktop.setLanguage(currentLanguage).catch(console.error);
 hydrateUiPreferences().catch(console.error);
 if (typeof window.ClaraCoreDesktop.onRuntimeChanged === "function") {
-  window.ClaraCoreDesktop.onRuntimeChanged(() => scheduleRuntimeRefresh());
+  window.ClaraCoreDesktop.onRuntimeChanged((payload) => {
+    scheduleRuntimeRefresh(Array.isArray(payload?.scopes) ? payload.scopes : ["snapshot"]);
+  });
 }
 setView("home");

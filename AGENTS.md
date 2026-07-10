@@ -28,7 +28,9 @@ For Gateway, InnerLife, or runtime polish, avoid disturbing the live app. Use is
 - `CLARACORE_DESKTOP_DATA_DIR=/tmp/...`
 - `CLARACORE_DESKTOP_TEST_INSTANCE=1`
 
-Do not describe the gateway port as fixed; it is runtime-assigned and session-specific.
+The Gateway uses stable localhost port `50668` by default. Tests may request a
+runtime-assigned port by passing port `0`; do not describe that test behavior as
+the normal product contract.
 
 ## Validation
 

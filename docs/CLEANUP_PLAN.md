@@ -185,7 +185,8 @@ A review pass over `core/db/repositories/` found and fixed:
      direct point-lookup methods (see "Database Review Findings" above).
    - Done: `core/tests/sql-interpolation-lint.js` guards SQL template
      interpolation across `core/db/repositories/` and `core/db/database.js`.
-   - Add explicit migrations before new schema-heavy features.
+   - Done: ordered before/after-schema migrations run from
+     `core/db/migrations/` and record successful ids in `schema_migrations`.
 
 5. Documentation cleanup
    - Keep current architecture, development, runtime, packaging, and data docs.
@@ -211,6 +212,10 @@ A review pass over `core/db/repositories/` found and fixed:
      `electron/http-agent-gateway.js`.
    - Done: Electron background schedulers moved to `electron/schedulers.js`.
    - Done: Electron IPC registration moved to `electron/ipc-handlers.js`.
+   - Done: IPC channel names are checked against
+     `electron/ipc-contracts.js` without weakening the sandboxed preload.
+   - Done: runtime-change scopes avoid reloading focused Memory data for
+     unrelated background events.
 
 7. Packaging resource checks
    - Done: bundled `sqlite3` tools live under `resources/sqlite/` and are copied

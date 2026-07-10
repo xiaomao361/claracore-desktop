@@ -4,7 +4,7 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- The current local version is `0.4.5`.
+- The current local version is `0.4.7`.
 - Historical `0.1.x` and `0.2.x` planning notes are archived under
   `docs/archive/`.
 
@@ -38,6 +38,22 @@ npm run dist:mac
 
 Only install or replace the daily-use app after the target build passes the
 focused smoke gates for its changed surface.
+
+## v0.4.7 Checkpoint
+
+`0.4.7` is an architecture-truth and maintainability checkpoint:
+
+- Fresh installs treat the built-in Memory embedding provider as healthy, and
+  every Home status surface consumes the same actionable-attention result.
+- Runtime diagnostics are collapsed when healthy and expand automatically when
+  an actionable warning or error exists.
+- Database upgrades run through ordered before/after-schema migration modules
+  and record successful ids in `schema_migrations`.
+- `runtimeChanged` events carry scopes, so unrelated background activity does
+  not reset focused Memory view state.
+- Electron IPC names are checked against one 86-channel registry without
+  weakening the sandboxed preload boundary.
+- `gateway_context` routes through the Continuity domain facade.
 
 ## v0.4.6 Checkpoint
 

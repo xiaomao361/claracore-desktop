@@ -38,6 +38,32 @@
   margin-bottom: 16px;
 }
 
+.home-status-board > summary {
+  cursor: pointer;
+  list-style: none;
+  margin-bottom: 0;
+}
+
+.home-status-board > summary::-webkit-details-marker {
+  display: none;
+}
+
+.home-status-board > summary::after {
+  content: "+";
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.home-status-board[open] > summary::after {
+  content: "−";
+}
+
+.home-runtime-details-body {
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
 .home-runtime-strip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));

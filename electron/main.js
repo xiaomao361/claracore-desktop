@@ -7,6 +7,7 @@ const { promisify } = require("util");
 const { PRODUCT_VERSION } = require("../core/version");
 const { createHttpAgentGateway } = require("./http-agent-gateway");
 const { createSchedulers } = require("./schedulers");
+const { ipcChannel } = require("./ipc-contracts");
 const { registerIpcHandlers } = require("./ipc-handlers");
 const {
   buildProductSnapshot,
@@ -735,10 +736,22 @@ function createWindow() {
   mainWindow.loadFile(path.join(APP_ROOT, "index.html"));
 }
 
+function runtimeChangeScopes(reason) {
+  if (reason === "product-json-import") return ["snapshot", "memory", "shared-line", "innerlife", "logs", "data"];
+  if (reason.startsWith("memory-") || reason === "old-memoria-import") return ["snapshot", "memory"];
+  if (reason.startsWith("innerlife-") || reason === "old-innerlife-import") return ["snapshot", "innerlife"];
+  if (reason === "old-continuity-import") return ["snapshot", "shared-line"];
+  if (reason === "logs-clear") return ["snapshot", "logs"];
+  if (reason.startsWith("backup-")) return ["snapshot", "data"];
+  if (reason.startsWith("agent-gateway-")) return ["snapshot", "agent-setup", "logs"];
+  return ["snapshot"];
+}
+
 function notifyRuntimeChanged(reason, payload = {}) {
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  mainWindow.webContents.send("claracore:runtimeChanged", {
+  mainWindow.webContents.send(ipcChannel("runtimeChanged"), {
     reason,
+    scopes: runtimeChangeScopes(reason),
     ...payload
   });
 }
