@@ -246,12 +246,20 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
     ).trim() || "http-agent";
   }
 
-  function currentHttpSessionId(request, requestUrl, args = {}) {
+  function currentHttpClientId(request, requestUrl) {
     return String(
-      request.headers["x-claracore-session-id"] ||
+      request.headers["x-claracore-client-id"] ||
+        requestUrl.searchParams.get("clientId") ||
+        "http-client"
+    ).trim() || "http-client";
+  }
+
+  function currentHttpConversationId(request, requestUrl) {
+    return String(
+      request.headers["x-claracore-conversation-id"] ||
+        request.headers["x-claracore-session-id"] ||
+        requestUrl.searchParams.get("conversationId") ||
         requestUrl.searchParams.get("sessionId") ||
-        args.sessionId ||
-        args.session_id ||
         ""
     ).trim();
   }
@@ -395,13 +403,17 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
     const startedAt = Date.now();
     const { paths, database } = await ensureProductCore(app);
     const agentId = currentHttpAgentId(request, requestUrl, args);
-    const sessionId = currentHttpSessionId(request, requestUrl, args);
-    const callArgs = { ...(args || {}), agentId, sessionId };
+    const clientId = currentHttpClientId(request, requestUrl);
+    const conversationId = currentHttpConversationId(request, requestUrl);
+    const caller = { agentId, clientId, conversationId, transport: "streamable-http" };
+    // Caller metadata belongs to Gateway context and traces. Domain tool
+    // arguments (notably InnerLife sessionId) must remain untouched.
+    const callArgs = { ...(args || {}), agentId };
     delete callArgs.agent_id;
-    delete callArgs.session_id;
     const { callToolBody } = createGatewayTools({
       serverInfo: SERVER_INFO,
       currentMcpAgentId: (toolArgs = {}) => currentHttpAgentId(request, requestUrl, toolArgs),
+      currentCallerContext: () => caller,
       gatewayLaunchConfig,
       runtimeAppForGateway: () => app,
       textResult
@@ -410,7 +422,8 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
       const result = await callToolBody(name, callArgs, paths, database);
       await database.recordGatewayTrace({
         agentId,
-        sessionId,
+        clientId,
+        conversationId,
         transport: "streamable-http",
         toolName: name,
         status: "ok",
@@ -422,7 +435,8 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
     } catch (error) {
       await database.recordGatewayTrace({
         agentId,
-        sessionId,
+        clientId,
+        conversationId,
         transport: "streamable-http",
         toolName: name,
         status: "error",
@@ -452,7 +466,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
         transport: "streamable-http",
         protocolVersion: PROTOCOL_VERSION,
         endpoint: `${baseUrl()}/mcp`,
-        note: "Send MCP JSON-RPC requests with POST. Server-initiated event streams are not used in this local v0.4.x endpoint."
+        note: "Send MCP JSON-RPC requests with POST. Server-initiated event streams are not used in this local v0.5.x endpoint."
       });
       return;
     }
@@ -593,7 +607,8 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
             headers: {
               Authorization: `Bearer ${state.token}`,
               "X-ClaraCore-Agent-ID": "<agent-stable-id>",
-              "X-ClaraCore-Session-ID": "<conversation-or-session-id>"
+              "X-ClaraCore-Client-ID": "<client-host-id>",
+              "X-ClaraCore-Conversation-ID": "<host-conversation-id>"
             }
           },
           serverName: snapshot.connections.mcpServerName,

@@ -31,27 +31,39 @@ Current output:
 
 ```text
 dist/mac-arm64/ClaraCore Desktop.app
-dist/ClaraCore-Desktop-0.1.0-arm64.dmg
+dist/ClaraCore-Desktop-0.5.0-arm64.dmg
 ```
 
 ## Gateway In Packaged Mode
 
-The packaged app supports Gateway mode directly:
+The running packaged app exposes the preferred Streamable HTTP MCP endpoint at
+the configured localhost port. Agent Access shows the current URL, bearer-token
+source, and v0.5 caller identity headers.
+
+The packaged app also supports a stdio compatibility Gateway. The generated
+Agent Access config launches the bundled Node entry with `ELECTRON_RUN_AS_NODE`:
 
 ```bash
-"/path/to/ClaraCore Desktop.app/Contents/MacOS/ClaraCore Desktop" --gateway
+ELECTRON_RUN_AS_NODE=1 \
+  "/path/to/ClaraCore Desktop.app/Contents/MacOS/ClaraCore Desktop" \
+  "/path/to/ClaraCore Desktop.app/Contents/Resources/app.asar/core/gateway/mcp-server.js"
 ```
 
-Agent setup should include:
+The older `--gateway` app mode remains a compatibility path, not the preferred
+new-client setup.
+
+Stdio agent setup should include:
 
 - command: the packaged app executable
-- args: `["--gateway"]`
-- env: `CLARACORE_DESKTOP_DATA_DIR` only when using a custom data directory
+- args: the packaged `app.asar/core/gateway/mcp-server.js` path
+- env: `ELECTRON_RUN_AS_NODE=1`, stable `CLARACORE_AGENT_ID`, optional
+  `CLARACORE_CLIENT_ID` / `CLARACORE_CONVERSATION_ID`, and
+  `CLARACORE_DESKTOP_DATA_DIR` only for a custom data directory
 
 By default, packaged Desktop data is created under:
 
 ```text
-~/Library/Application Support/ClaraCore Desktop/data
+~/Library/Application Support/claracore-desktop/data
 ```
 
 Development mode still uses:
@@ -64,6 +76,7 @@ node core/gateway/mcp-server.js
 
 Validated locally:
 
+- installed application reports version `0.5.0`
 - `npm run check`
 - `npm run pack:mac`
 - packaged `.app` starts as a Gateway with `--gateway`
@@ -78,7 +91,10 @@ Validated locally:
 - packaged Desktop shows a current-vs-target restore preview before execution
 - packaged Desktop restore preview shows Memory records that will return and records that will be removed
 - `npm run dist:mac`
-- generated DMG mounts and contains `ClaraCore Desktop.app`
+- `hdiutil verify` reports the v0.5.0 DMG checksum as valid
+- packaged Gateway smoke passes from `dist/mac-arm64/ClaraCore Desktop.app`
+- installed Streamable HTTP MCP returns server `0.5.0` and records separated
+  `agentId`, `clientId`, and `conversationId` trace context
 
 Known remaining release work:
 

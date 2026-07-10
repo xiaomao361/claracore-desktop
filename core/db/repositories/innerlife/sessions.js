@@ -177,6 +177,9 @@ function createInnerLifeSessionRepository(helpers) {
         LIMIT 1;
       `);
       let session = rows[0];
+      if (session && callerAgentId && session.agent_id !== callerAgentId) {
+        session = null;
+      }
       if (!session) {
         // Agents often pass the external session id they registered at start
         // instead of the internal id; accept it, preferring active sessions.
@@ -190,7 +193,21 @@ function createInnerLifeSessionRepository(helpers) {
         `);
         session = fallbackRows[0];
       }
-      if (!session) throw new Error("InnerLife session not found.");
+      if (!session) {
+        // The SessionEnd hook is a fail-open safety net that fires for every
+        // Claude session exit, including sessions whose session_start never
+        // registered a row (e.g. the Desktop was unavailable or the start
+        // request was interrupted). For that path a
+        // missing session means "nothing to close", not an error — return a
+        // benign no-op so it does not surface as a red gateway trace. Explicit
+        // model calls (which pass a summary, not the hook transcript) still get
+        // a hard error so a mistyped session id stays visible.
+        const legacyHookFallback = String(input.transcript || "").startsWith("[SessionEnd hook");
+        if (input.bestEffort === true || legacyHookFallback) {
+          return { session: null, missing: true, repeated: false };
+        }
+        throw new Error("InnerLife session not found.");
+      }
       const id = session.id;
       if (session.status === "ended") {
         // Ending the same session twice is documented as safe; do not write

@@ -58,7 +58,6 @@ function installContinuityRepository(ProductDatabase, helpers) {
     return { items, total: arr.length, truncated: items.length < arr.length };
   }
   const SHARED_REALITY_FIELDS = [
-    ["agentId", ["agentId", "agent_id"]],
     ["visibility", ["visibility"]],
     ["mode", ["mode"]],
     ["nextStep", ["nextStep", "next_step"]],
@@ -493,6 +492,8 @@ function installContinuityRepository(ProductDatabase, helpers) {
       const snapshotId = newId("position_snapshot");
       const snapshotReason = changesConfirmedPosition ? "confirmed_overwrite" : "save";
       const metadata = buildContinuityMetadata(input || {}, current);
+      const writerAgentId = String(input?.agentId || input?.agent_id || "").trim();
+      if (writerAgentId) metadata.writerAgentId = resolveAgentIdentity({ agentId: writerAgentId }).id;
       await this.exec(`
         INSERT INTO current_positions (id, line_id, summary, interpretation_status, facts_used_json, metadata_json, updated_at)
         VALUES (${sqlString(positionId)}, ${sqlString(lineId)}, ${sqlString(summary)}, ${sqlString(status)}, ${jsonSql(factsUsed)}, ${jsonSql(metadata)}, CURRENT_TIMESTAMP)
@@ -513,14 +514,6 @@ function installContinuityRepository(ProductDatabase, helpers) {
         SET updated_at = CURRENT_TIMESTAMP
         WHERE id = ${sqlString(lineId)};
       `);
-      if (metadata.agentId) {
-        await this.exec(`
-          UPDATE continuity_lines
-          SET agent_id = ${sqlString(metadata.agentId)},
-              updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${sqlString(lineId)};
-        `);
-      }
       return this.getCurrentPosition(lineId);
     },
 
@@ -778,7 +771,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
       const [sharedLine, memories, innerLife, doctor] = await Promise.all([
         this.getResumePacket(input.lineId ? { lineId: input.lineId } : { agentId }),
         query ? this.searchMemories(query, limit).then((result) => result.results.slice(0, limit)) : this.listMemories(limit),
-        this.getInnerLifeSnapshot(),
+        this.getInnerLifeSnapshot(agentId),
         this.getInnerLifeDoctor(agentId)
       ]);
       const sameAgent = (item) => String(item?.agentId || item?.agent_id || "").trim() === agentId;

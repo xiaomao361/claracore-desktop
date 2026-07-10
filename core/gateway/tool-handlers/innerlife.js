@@ -34,7 +34,11 @@ async function handleInnerLifeTool(name, args, context) {
     } catch (error) {
       sharedLineError = error.message || String(error);
     }
-    const lines = await continuity.list(core, { limit: 20, status: "active" });
+    const lines = await continuity.list(core, {
+      agentId: currentMcpAgentId(args),
+      limit: 20,
+      status: "active"
+    });
     return textResult({
       ...startPacket,
       shared_line: sharedLine,
@@ -60,8 +64,9 @@ async function handleInnerLifeTool(name, args, context) {
   }
 
   if (name === "innerlife_status") {
+    const agentId = currentMcpAgentId(args);
     return textResult(
-      args.detail === true ? await innerlife.snapshot(core) : await innerlife.snapshotLite(core)
+      args.detail === true ? await innerlife.snapshot(core, agentId) : await innerlife.snapshotLite(core, agentId)
     );
   }
 
@@ -96,40 +101,43 @@ async function handleInnerLifeTool(name, args, context) {
   }
 
   if (name === "innerlife_submit_inbox") {
+    const agentId = currentMcpAgentId(args);
     return textResult({
       inbox: await innerlife.submitInbox(core, args),
-      innerLife: await innerlife.snapshotLite(core)
+      innerLife: await innerlife.snapshotLite(core, agentId)
     });
   }
 
   if (name === "innerlife_submit_fact") {
+    const agentId = currentMcpAgentId(args);
     return textResult({
-      inbox: await innerlife.submitInbox(core, { ...args, agentId: currentMcpAgentId(args), source: "fact", body: args.body }),
-      innerLife: await innerlife.snapshotLite(core)
+      inbox: await innerlife.submitInbox(core, { ...args, agentId, source: "fact", body: args.body }),
+      innerLife: await innerlife.snapshotLite(core, agentId)
     });
   }
 
   if (name === "innerlife_submit_continuity") {
+    const agentId = currentMcpAgentId(args);
     return textResult({
-      inbox: await innerlife.submitInbox(core, { ...args, agentId: currentMcpAgentId(args), source: "continuity", body: args.body }),
-      innerLife: await innerlife.snapshotLite(core)
+      inbox: await innerlife.submitInbox(core, { ...args, agentId, source: "continuity", body: args.body }),
+      innerLife: await innerlife.snapshotLite(core, agentId)
     });
   }
 
   if (name === "innerlife_pending_shares") {
     return textResult({
-      shares: await innerlife.pendingShares(core, args.status || "pending", args.limit || 20)
+      shares: await innerlife.pendingShares(core, args.status || "pending", args.limit || 20, currentMcpAgentId(args))
     });
   }
 
   if (name === "innerlife_share_actions") {
     return textResult({
-      actions: await innerlife.shareActions(core, args.shareId || null, args.limit || 20)
+      actions: await innerlife.shareActions(core, args.shareId || null, args.limit || 20, currentMcpAgentId(args))
     });
   }
 
   if (name === "innerlife_mark_share") {
-    return textResult(await innerlife.markShare(core, args.id, args.action, args.reason || ""));
+    return textResult(await innerlife.markShare(core, args.id, args.action, args.reason || "", currentMcpAgentId(args)));
   }
 
   if (name === "innerlife_daemon_status") {

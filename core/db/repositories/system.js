@@ -23,10 +23,15 @@ function createSystemRepository(helpers) {
   }
 
   function mapGatewayTraceRow(row) {
+    const conversationId = row.conversation_id || row.session_id || "";
     return {
       id: row.id,
       agentId: row.agent_id,
-      sessionId: row.session_id || "",
+      clientId: row.client_id || "",
+      conversationId,
+      // Backward-compatible UI/API alias. This is a caller conversation id,
+      // never a domain tool argument such as an InnerLife session id.
+      sessionId: conversationId,
       transport: row.transport || "stdio",
       toolName: row.tool_name,
       status: row.status,
@@ -44,6 +49,8 @@ function createSystemRepository(helpers) {
       if (!columns.has("id")) return;
       const additions = [];
       if (!columns.has("session_id")) additions.push("ALTER TABLE gateway_traces ADD COLUMN session_id TEXT NOT NULL DEFAULT '';");
+      if (!columns.has("client_id")) additions.push("ALTER TABLE gateway_traces ADD COLUMN client_id TEXT NOT NULL DEFAULT '';");
+      if (!columns.has("conversation_id")) additions.push("ALTER TABLE gateway_traces ADD COLUMN conversation_id TEXT NOT NULL DEFAULT '';");
       if (!columns.has("transport")) additions.push("ALTER TABLE gateway_traces ADD COLUMN transport TEXT NOT NULL DEFAULT 'stdio';");
       if (additions.length) {
         await this.exec(additions.join("\n"));
@@ -54,6 +61,12 @@ function createSystemRepository(helpers) {
 
         CREATE INDEX IF NOT EXISTS idx_gateway_traces_transport_created
         ON gateway_traces(transport, created_at DESC);
+
+        CREATE INDEX IF NOT EXISTS idx_gateway_traces_client_created
+        ON gateway_traces(client_id, created_at DESC);
+
+        CREATE INDEX IF NOT EXISTS idx_gateway_traces_conversation_created
+        ON gateway_traces(conversation_id, created_at DESC);
       `);
     },
 
@@ -155,7 +168,10 @@ function createSystemRepository(helpers) {
       await this.ensureGatewayTraceCompatibility();
       const id = newId("gateway_trace");
       const agentId = resolveAgentIdentity(input || {}).id;
-      const sessionId = String(input.sessionId || input.session_id || "").trim().slice(0, 120);
+      const clientId = String(input.clientId || input.client_id || "").trim().slice(0, 120);
+      const conversationId = String(
+        input.conversationId || input.conversation_id || input.sessionId || input.session_id || ""
+      ).trim().slice(0, 120);
       const transport = ["stdio", "streamable-http", "http"].includes(input.transport) ? input.transport : "stdio";
       const toolName = String(input.toolName || "unknown").trim() || "unknown";
       const status = input.status === "error" ? "error" : "ok";
@@ -163,11 +179,13 @@ function createSystemRepository(helpers) {
       const responseSummary = String(input.responseSummary || "").slice(0, 500);
       const error = String(input.error || "").slice(0, 500);
       await this.exec(`
-        INSERT INTO gateway_traces (id, agent_id, session_id, transport, tool_name, status, duration_ms, request_json, response_summary, error)
+        INSERT INTO gateway_traces (id, agent_id, client_id, conversation_id, session_id, transport, tool_name, status, duration_ms, request_json, response_summary, error)
         VALUES (
           ${sqlString(id)},
           ${sqlString(agentId)},
-          ${sqlString(sessionId)},
+          ${sqlString(clientId)},
+          ${sqlString(conversationId)},
+          ${sqlString(conversationId)},
           ${sqlString(transport)},
           ${sqlString(toolName)},
           ${sqlString(status)},
@@ -185,7 +203,7 @@ function createSystemRepository(helpers) {
       const traceId = String(id || "").trim();
       if (!traceId) throw new Error("Gateway trace id is required.");
       const rows = await this.query(`
-        SELECT id, agent_id, session_id, transport, tool_name, status, duration_ms, request_json, response_summary, error, created_at
+        SELECT id, agent_id, client_id, conversation_id, session_id, transport, tool_name, status, duration_ms, request_json, response_summary, error, created_at
         FROM gateway_traces
         WHERE id = ${sqlString(traceId)}
         LIMIT 1;
@@ -203,7 +221,7 @@ function createSystemRepository(helpers) {
       if (status) filters.push(`status = ${sqlString(status)}`);
       const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
       const rows = await this.query(`
-        SELECT id, agent_id, session_id, transport, tool_name, status, duration_ms, request_json, response_summary, error, created_at
+        SELECT id, agent_id, client_id, conversation_id, session_id, transport, tool_name, status, duration_ms, request_json, response_summary, error, created_at
         FROM gateway_traces
         ${where}
         ORDER BY created_at DESC, id DESC

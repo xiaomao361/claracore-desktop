@@ -1,8 +1,9 @@
 const { sqlString } = require("../helpers");
 const gatewayTraceCompatibility = require("./000_gateway_trace_compatibility");
 const productAdditions = require("./002_product_additions");
+const multiAgentCallerContext = require("./003_multi_agent_caller_context");
 
-const MIGRATIONS = [gatewayTraceCompatibility, productAdditions];
+const MIGRATIONS = [gatewayTraceCompatibility, productAdditions, multiAgentCallerContext];
 
 async function ensureMigrationTable(database) {
   await database.exec(`

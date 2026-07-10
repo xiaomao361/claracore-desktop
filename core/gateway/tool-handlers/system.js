@@ -3,6 +3,7 @@ const continuity = require("../../continuity");
 async function handleSystemTool(name, args, context) {
   const {
     database,
+    currentCallerContext,
     currentMcpAgentId,
     gatewayLaunchConfig,
     paths,
@@ -42,7 +43,7 @@ async function handleSystemTool(name, args, context) {
             "",
             "## Identity",
             "",
-            "Use a stable agent id for each calling agent. Streamable HTTP callers send X-ClaraCore-Agent-ID. Stdio fallback callers set CLARACORE_AGENT_ID for the process. Do not reuse another agent's id.",
+            "Use a stable persona id for each calling agent. Streamable HTTP callers send X-ClaraCore-Agent-ID, X-ClaraCore-Client-ID, and X-ClaraCore-Conversation-ID. Stdio fallback callers set CLARACORE_AGENT_ID plus optional CLARACORE_CLIENT_ID and CLARACORE_CONVERSATION_ID. Caller conversation ids never replace domain ids such as InnerLife sessionId.",
             "Preferred ids: lara, clara, codex. If an old tool-prefixed id needs consolidation, use agent_identity_merge instead of editing SQLite.",
             "",
             "## What You Can Rely On",
@@ -188,12 +189,15 @@ async function handleSystemTool(name, args, context) {
 
   if (name === "claracore_connection_test") {
     const agentId = currentMcpAgentId(args);
+    const caller = currentCallerContext(args);
     const summary = await database.getSummary();
     const daemonState = await database.ensureInnerLifeDaemonState(agentId);
     return textResult({
       ok: true,
       agentId,
-      transport: "mcp",
+      clientId: caller.clientId,
+      conversationId: caller.conversationId,
+      transport: caller.transport,
       server: serverInfo,
       dataRoot: paths.dataRoot,
       database: {

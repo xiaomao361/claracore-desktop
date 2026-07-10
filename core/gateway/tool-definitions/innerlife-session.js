@@ -38,7 +38,7 @@ const innerlifeSessionToolDefinitions = [
   {
     "name": "innerlife_session_end",
     "title": "End InnerLife Session",
-    "description": "End a Desktop-owned InnerLife session and create a waiting share afterthought.",
+    "description": "End a Desktop-owned InnerLife session and create a waiting share afterthought. sessionId is a domain session reference (the inner_session id returned by start, or its registered externalSessionId); Gateway caller conversation headers never replace it. Hooks may pass bestEffort=true when a missing session should be a safe no-op.",
     "inputSchema": {
       "type": "object",
       "required": [
@@ -53,6 +53,10 @@ const innerlifeSessionToolDefinitions = [
         },
         "transcript": {
           "type": "string"
+        },
+        "bestEffort": {
+          "type": "boolean",
+          "description": "For host lifecycle hooks only: return a missing acknowledgement instead of failing when no session was registered."
         }
       },
       "additionalProperties": false

@@ -24,7 +24,8 @@ fallback when MCP is unavailable.
 
 - Streamable HTTP keeps Desktop as the single local Gateway service. Agents send
   `Authorization: Bearer <token>`, `X-ClaraCore-Agent-ID`, and optionally
-  `X-ClaraCore-Session-ID` with each request.
+  `X-ClaraCore-Client-ID` and `X-ClaraCore-Conversation-ID` with each request.
+  `X-ClaraCore-Session-ID` remains a compatible conversation-header alias.
 - Each stdio agent client normally launches Gateway as its own helper process.
 - The process keeps one cached product database connection and closes it on
   stdin close, process exit, `SIGINT`, and `SIGTERM`.
@@ -61,7 +62,7 @@ port intentionally. Do not silently fall back to a random port for normal
 Desktop use, because existing MCP client configs would then point at the wrong
 endpoint.
 
-The v0.4.x endpoint supports the MCP JSON-RPC methods needed for local tools:
+The v0.5.x endpoint supports the MCP JSON-RPC methods needed for local tools:
 
 - `initialize`
 - `tools/list`

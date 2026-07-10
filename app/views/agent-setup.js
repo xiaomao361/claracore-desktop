@@ -46,7 +46,7 @@ Desktop owns the product Gateway, Memoria, Shared Line, and InnerLife state for 
 ## Agent Use Order
 
 1. Connect to ClaraCore Desktop through Streamable HTTP MCP when your agent client supports it.
-2. Send \`X-ClaraCore-Agent-ID\` with your stable agent id and \`X-ClaraCore-Session-ID\` with the current conversation/session id.
+2. Send \`X-ClaraCore-Agent-ID\` with the stable persona id, \`X-ClaraCore-Client-ID\` with the host id, and \`X-ClaraCore-Conversation-ID\` with the current host conversation id.
 3. If HTTP MCP is unavailable, use the stdio MCP JSON fallback and set \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\` to your stable agent id.
 4. Call \`gateway_docs\` for the product/tool boundary, then \`gateway_context\` for the current working packet.
 5. Use exposed product Gateway tools for Memory, Shared Line, InnerLife, traces, diagnostics, import/export, and maintenance.
@@ -54,7 +54,7 @@ Desktop owns the product Gateway, Memoria, Shared Line, and InnerLife state for 
 
 ## Agent Identity Contract
 
-The agent id belongs to the calling agent. For Streamable HTTP, send it as \`X-ClaraCore-Agent-ID\`. For stdio fallback, set \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\`. Do not share one id across agents.
+The agent id belongs to the stable persona/data subject. The client id identifies Codex, Claude Code, or Hermes; the conversation id identifies one host conversation. These caller fields never replace domain ids such as an InnerLife \`sessionId\` or Shared Line \`lineId\`. For Streamable HTTP, send the agent id as \`X-ClaraCore-Agent-ID\`. For stdio fallback, set \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\`. Do not share one agent id across personas.
 
 Recommended stable ids:
 
@@ -80,7 +80,8 @@ If you are a new agent, choose one stable id before writing any data. Keep using
 - Endpoint: \`${streamableEndpoint?.url || "not yet available"}\`
 - Header: \`${streamableEndpoint?.authHeader || "Authorization: Bearer <token>"}\`
 - Agent header: \`X-ClaraCore-Agent-ID: <agent-stable-id>\`
-- Session header: \`X-ClaraCore-Session-ID: <conversation-or-session-id>\`
+- Client header: \`X-ClaraCore-Client-ID: <codex-app|claude-code|hermes>\`
+- Conversation header: \`X-ClaraCore-Conversation-ID: <host-conversation-id>\` (\`X-ClaraCore-Session-ID\` remains a compatibility alias)
 - Token file: \`${tokenFile}\`
 
 Use this mode when your MCP client supports Streamable HTTP. It lets Desktop remain the single local Gateway while multiple agents and sessions connect through request-level identity.

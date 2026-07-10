@@ -86,7 +86,8 @@ async function main() {
       "Content-Type": "application/json",
       Authorization: endpoint.authHeader.replace(/^Authorization:\s*/, ""),
       "X-ClaraCore-Agent-ID": "clara",
-      "X-ClaraCore-Session-ID": "session-smoke"
+      "X-ClaraCore-Client-ID": "claude-code",
+      "X-ClaraCore-Conversation-ID": "session-smoke"
     };
     async function postMcp(message) {
       const response = await fetch(endpoint.url, {
@@ -117,8 +118,47 @@ async function main() {
     const trace = traces.find((item) => item.toolName === "claracore_connection_test");
     assert(trace, "Streamable HTTP tools/call should record a Gateway trace");
     assert.strictEqual(trace.agentId, "clara");
+    assert.strictEqual(trace.clientId, "claude-code");
+    assert.strictEqual(trace.conversationId, "session-smoke");
     assert.strictEqual(trace.sessionId, "session-smoke");
     assert.strictEqual(trace.transport, "streamable-http");
+
+    const started = await postMcp({
+      jsonrpc: "2.0",
+      id: 4,
+      method: "tools/call",
+      params: {
+        name: "innerlife_session_start",
+        arguments: {
+          host: "claude-code",
+          externalSessionId: "claude-host-session-a"
+        }
+      }
+    });
+    const startedPacket = JSON.parse(started.result.content[0].text);
+    assert(startedPacket.session?.id, "HTTP InnerLife session start should return a domain session id");
+    headers["X-ClaraCore-Conversation-ID"] = "claude-conversation-b";
+    const ended = await postMcp({
+      jsonrpc: "2.0",
+      id: 5,
+      method: "tools/call",
+      params: {
+        name: "innerlife_session_end",
+        arguments: {
+          sessionId: startedPacket.session.id,
+          summary: "Caller conversation changed, but the InnerLife session reference must survive."
+        }
+      }
+    });
+    const endedPacket = JSON.parse(ended.result.content[0].text);
+    assert.strictEqual(endedPacket.session.id, startedPacket.session.id);
+    assert.strictEqual(endedPacket.session.status, "ended");
+    const endTrace = (await database.listGatewayTraces({ limit: 10 })).find(
+      (item) => item.toolName === "innerlife_session_end"
+    );
+    assert(endTrace, "HTTP InnerLife session end should record a Gateway trace");
+    assert.strictEqual(endTrace.conversationId, "claude-conversation-b");
+    assert.strictEqual(endTrace.request.sessionId, startedPacket.session.id);
     gateway.stop();
 
     const restarted = createHttpAgentGateway({

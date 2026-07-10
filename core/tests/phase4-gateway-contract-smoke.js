@@ -95,7 +95,13 @@ async function main() {
     throw new Error("Agent setup references old Gateway data.");
   }
 
-  const client = createGatewayClient(dataRoot);
+  const client = createGatewayClient(dataRoot, {
+    env: {
+      CLARACORE_AGENT_ID: "my-agent",
+      CLARACORE_CLIENT_ID: "contract-smoke",
+      CLARACORE_CONVERSATION_ID: "phase4-conversation"
+    }
+  });
   try {
     const initialized = await client.request("initialize", {
       protocolVersion: "2025-06-18",

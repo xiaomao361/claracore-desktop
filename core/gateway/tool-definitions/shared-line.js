@@ -149,7 +149,7 @@ const sharedLineToolDefinitions = [
   {
     "name": "shared_line_update",
     "title": "Update Shared Line",
-    "description": "Update a ClaraCore Desktop Shared Line. Passing lineId writes that exact line. Without lineId, an identified agent may default only when it owns zero or one active non-default line; multiple active lines return SHARED_LINE_ID_REQUIRED without writing, so call shared_line_list and retry with lineId. A missing agentId uses the global active line.",
+    "description": "Update a ClaraCore Desktop Shared Line. Passing lineId writes that exact line and records the caller as writer without changing the line owner. Without lineId, an identified agent may default only when it owns zero or one active non-default line; multiple active lines return SHARED_LINE_ID_REQUIRED without writing, so call shared_line_list and retry with lineId. A missing agentId uses the global active line.",
     "inputSchema": {
       "type": "object",
       "required": [

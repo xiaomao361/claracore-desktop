@@ -4,7 +4,7 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- The current local version is `0.4.9`.
+- The current local version is `0.5.0`.
 - Historical `0.1.x` and `0.2.x` planning notes are archived under
   `docs/archive/`.
 
@@ -38,6 +38,34 @@ npm run dist:mac
 
 Only install or replace the daily-use app after the target build passes the
 focused smoke gates for its changed surface.
+
+## v0.5.0 Multi-Agent Caller Contract
+
+`0.5.0` gives Codex, Claude, and Hermes one explicit caller contract:
+
+- `agentId` is the stable persona/data subject (`codex`, `clara`, or `lara`).
+- `clientId` identifies the host (`codex-app`, `claude-code`, or `hermes`).
+- `conversationId` identifies one host conversation and is recorded in Gateway
+  traces; it never replaces a domain tool argument such as InnerLife
+  `sessionId`.
+- HTTP accepts `X-ClaraCore-Client-ID` and `X-ClaraCore-Conversation-ID`;
+  `X-ClaraCore-Session-ID` remains a compatible conversation-header alias.
+- stdio accepts optional `CLARACORE_CLIENT_ID` and
+  `CLARACORE_CONVERSATION_ID`; `CLARACORE_SESSION_ID` remains a compatibility
+  alias.
+- Shared Line ownership no longer changes on an explicit cross-agent write;
+  the writer is recorded separately as `writerAgentId`.
+- Agent-facing InnerLife reads and share actions are scoped to the caller.
+- Lifecycle hooks can pass `bestEffort=true` for an explicit missing-session
+  safe no-op.
+
+Validation target: static checks plus Streamable HTTP, phase 3 Gateway, phase 4
+contract, and phase 5 InnerLife smokes on isolated temporary data roots.
+
+Release validation completed locally with the unsigned arm64 DMG, `hdiutil
+verify`, packaged Gateway smoke, installation under `/Applications`, and a live
+MCP readback reporting server version `0.5.0`. Public distribution still
+requires code signing and notarization.
 
 ## v0.4.9 Checkpoint
 

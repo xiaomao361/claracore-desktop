@@ -7,11 +7,16 @@ instead of reading packaged app source files.
 Prefer the Streamable HTTP MCP endpoint shown in Agent Access when the client
 supports it. Use the generated stdio MCP config only as a compatibility fallback.
 Streamable HTTP callers should send `Authorization: Bearer <token>`,
-`X-ClaraCore-Agent-ID`, and optionally `X-ClaraCore-Session-ID`.
+`X-ClaraCore-Agent-ID`, `X-ClaraCore-Client-ID`, and optionally
+`X-ClaraCore-Conversation-ID`. `X-ClaraCore-Session-ID` remains a legacy
+conversation-header alias and is not an InnerLife session reference.
 The localhost endpoint uses stable default port `50668` and the bearer token
 persists in the local `agent-gateway.json` token file until the user rotates it.
 Users can change the port, generate a new token, and copy a complete agent
 config from Settings > General > Agent Gateway.
+
+For the complete Codex, Claude, and Hermes migration checklist, see
+[Multi-Agent Client Migration for v0.5.0](MULTI_AGENT_CLIENT_MIGRATION_V0_5.md).
 
 ## Startup Contract
 

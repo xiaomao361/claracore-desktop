@@ -164,9 +164,20 @@ function textResult(value) {
 function currentMcpAgentId(args = {}) {
   return String(process.env.CLARACORE_AGENT_ID || args.agentId || args.agent_id || "").trim() || UNKNOWN_AGENT_ID;
 }
+function currentCallerContext(args = {}) {
+  return {
+    agentId: currentMcpAgentId(args),
+    clientId: String(process.env.CLARACORE_CLIENT_ID || "stdio-client").trim() || "stdio-client",
+    conversationId: String(
+      process.env.CLARACORE_CONVERSATION_ID || process.env.CLARACORE_SESSION_ID || ""
+    ).trim(),
+    transport: "stdio"
+  };
+}
 const { toolDefinitions, callToolBody } = createGatewayTools({
   serverInfo: SERVER_INFO,
   currentMcpAgentId,
+  currentCallerContext,
   gatewayLaunchConfig,
   runtimeAppForGateway,
   textResult
@@ -206,16 +217,16 @@ function summarizeToolResponse(result) {
 async function callTool(name, args = {}) {
   const startedAt = Date.now();
   const { paths, database } = await openDatabase();
-  const agentId = currentMcpAgentId(args);
-  const sessionId = String(args.sessionId || args.session_id || "").trim();
+  const caller = currentCallerContext(args);
+  const agentId = caller.agentId;
   const callArgs = { ...args, agentId };
   delete callArgs.agent_id;
-  delete callArgs.session_id;
   try {
     const result = await callToolBody(name, callArgs, paths, database);
     await database.recordGatewayTrace({
       agentId,
-      sessionId,
+      clientId: caller.clientId,
+      conversationId: caller.conversationId,
       transport: "stdio",
       toolName: name,
       status: "ok",
@@ -227,7 +238,8 @@ async function callTool(name, args = {}) {
   } catch (error) {
     await database.recordGatewayTrace({
       agentId,
-      sessionId,
+      clientId: caller.clientId,
+      conversationId: caller.conversationId,
       transport: "stdio",
       toolName: name,
       status: "error",

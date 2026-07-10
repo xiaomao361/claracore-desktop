@@ -8,7 +8,7 @@ shortest useful read paths.
 
 ClaraCore Desktop is a local Electron product around four agent-facing domains:
 
-- Gateway: agent contract and activity traces.
+- Gateway: agent/client/conversation caller contract and activity traces.
 - Memoria: memory facts, labels, search, graph, archive, and maintenance.
 - Shared Line: continuity lines, current position, handoffs, agent state, and
   resume packets.
@@ -134,8 +134,11 @@ Repository ownership:
   repositories, including SQL escaping, JSON/date parsing, agent identity,
   label/value normalization, vector math, and JSON HTTP calls.
 - `core/db/repositories/system.js`: settings, secrets, configuration,
-  runtime events, Gateway traces, backup records, LLM calls, and database
-  summary persistence.
+  runtime events, Gateway traces with agent/client/conversation identity,
+  backup records, LLM calls, and database summary persistence.
+- `core/db/migrations/003_multi_agent_caller_context.js`: additive v0.5
+  migration for Gateway trace `client_id` / `conversation_id` columns and
+  legacy `session_id` backfill.
 - `core/db/repositories/memoria/labels.js`: Memoria label alias listing,
   creation, deletion, and canonicalization.
 - `core/db/repositories/memoria/records.js`: Memoria structured record create,
@@ -145,8 +148,9 @@ Repository ownership:
 - `core/db/repositories/memoria/maintenance.js`: Memoria archive suggestions,
   maintenance reports and repair, audit reports, merge suggestions, and merge
   persistence.
-- `core/db/repositories/continuity.js`: Shared Line tables, current position,
-  history, snapshots, handoffs, arc lifecycle, and Gateway context composition.
+- `core/db/repositories/continuity.js`: Shared Line tables, stable owner plus
+  writer provenance, current position, history, snapshots, handoffs, arc
+  lifecycle, and Gateway context composition.
 - `core/db/repositories/continuity/agents.js`: Shared Line agent state and
   model adjustment persistence.
 - `core/db/repositories/innerlife.js`: InnerLife repository aggregation plus
@@ -160,8 +164,9 @@ Repository ownership:
   enable/pause/tick scheduling, and per-agent tick locking.
 - `core/db/repositories/innerlife/history.js`: InnerLife history, experience,
   summary, and digest-summary read models.
-- `core/db/repositories/innerlife/sessions.js`: InnerLife session count, list,
-  page, start packet, and session-end persistence.
+- `core/db/repositories/innerlife/sessions.js`: agent-scoped InnerLife session
+  count/list/page, start packet, canonical internal/external session lookup,
+  best-effort lifecycle-hook close, and session-end persistence.
 - `core/db/repositories/innerlife/shares.js`: InnerLife share list, timing
   checks, review/mark actions, and apply-to-Memory/Shared-Line persistence.
   Timing checks may use the current Shared Line resume packet as implicit

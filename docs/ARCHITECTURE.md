@@ -318,7 +318,7 @@ the current endpoint/config, agent identity rules, active data root, and
 first-call order.
 
 Streamable HTTP keeps one Desktop Gateway service alive and records per-request
-agent/session identity. Stdio clients may still own sibling Gateway processes;
+agent/client/conversation identity. Stdio clients may still own sibling Gateway processes;
 database writes must therefore remain correct under SQLite's cross-process WAL
 and busy-timeout rules. The Desktop UI's quit path best-effort stops packaged
 sibling Gateway processes so replacing `/Applications/ClaraCore Desktop.app` is
@@ -330,6 +330,17 @@ Agent identity belongs to the caller. Streamable HTTP treats
 request-level `agentId` or `agent_id`. After an identity rename,
 `agent_identity_merge` is the supported repair path; it updates agent-owned
 tables and stored Gateway trace request JSON.
+
+Gateway caller context has three independent identities. `agentId` is the
+stable persona and data subject, `clientId` is the host application, and
+`conversationId` is one host conversation. Transport metadata stays in Gateway
+context and trace records; it is never merged into domain tool arguments. In
+particular, `X-ClaraCore-Session-ID` is a legacy conversation-header alias and
+must not overwrite `innerlife_session_end.sessionId`.
+
+Shared Line `continuity_lines.agent_id` is its stable owner. A caller may update
+another agent's line by naming the exact `lineId`; the write records
+`current_positions.metadata_json.writerAgentId` but does not transfer ownership.
 
 Gateway tool responses must describe the actual record a write changed. For
 example `shared_line_update` saves one current position and then reads the

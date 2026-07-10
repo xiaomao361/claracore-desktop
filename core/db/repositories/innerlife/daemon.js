@@ -122,7 +122,7 @@ function createInnerLifeDaemonRepository(helpers) {
     async tickInnerLifeDaemon(input = {}) {
       const requestedAgentId = resolveAgentIdentity(input || {}).id;
       const includeSnapshot = input.includeSnapshot !== false;
-      const snapshotIfRequested = async () => includeSnapshot ? this.getInnerLifeSnapshot() : undefined;
+      const snapshotIfRequested = async () => includeSnapshot ? this.getInnerLifeSnapshot(requestedAgentId) : undefined;
       const force = Boolean(input.force);
       if (!includeSnapshot && !force) {
         const settings = await this.getSettings();
@@ -268,7 +268,7 @@ function createInnerLifeDaemonRepository(helpers) {
             reason: "processed",
             result,
             daemon: await this.ensureInnerLifeDaemonState(agentId),
-            snapshot: await this.getInnerLifeSnapshot()
+            snapshot: await this.getInnerLifeSnapshot(agentId)
           };
         } catch (error) {
           const failureCount = Math.max(0, Number.parseInt(String(state.metadata?.failureCount || 0), 10) || 0) + 1;

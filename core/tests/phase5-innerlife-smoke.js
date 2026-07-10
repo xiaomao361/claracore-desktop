@@ -320,6 +320,47 @@ async function main() {
     throw new Error(`InnerLife SQLite counts are wrong: ${JSON.stringify(row)}`);
   }
 
+  const otherSession = await runtime.startProductInnerLifeSession(app, {
+    agentId: "other-agent",
+    host: "other-client",
+    externalSessionId: "other-conversation"
+  });
+  let crossAgentSessionEndBlocked = false;
+  try {
+    await runtime.endProductInnerLifeSession(app, otherSession.session.id, {
+      agentId: "my-agent",
+      summary: "Wrong agent must not close this session."
+    });
+  } catch (error) {
+    crossAgentSessionEndBlocked = String(error.message || "").includes("not found");
+  }
+  if (!crossAgentSessionEndBlocked) {
+    throw new Error("InnerLife allowed one agent to end another agent's session.");
+  }
+  const otherEnded = await runtime.endProductInnerLifeSession(app, otherSession.session.id, {
+    agentId: "other-agent",
+    summary: "Other agent data must not leak into my-agent status or actions."
+  });
+  const scopedSnapshot = await database.getInnerLifeSnapshotLite("my-agent");
+  const globalSnapshot = await database.getInnerLifeSnapshotLite("all");
+  if (scopedSnapshot.counts.pending_shares_count !== 0 || globalSnapshot.counts.pending_shares_count !== 1) {
+    throw new Error(`InnerLife agent-scoped counts are not isolated: ${JSON.stringify({ scoped: scopedSnapshot.counts, global: globalSnapshot.counts })}`);
+  }
+  const scopedShares = await database.listInnerLifeShares("pending", 20, "my-agent");
+  if (scopedShares.some((share) => share.agent_id !== "my-agent")) {
+    throw new Error(`InnerLife pending shares leaked across agents: ${JSON.stringify(scopedShares)}`);
+  }
+  let crossAgentActionBlocked = false;
+  try {
+    await database.markInnerLifeShare(otherEnded.share.id, "discarded", "wrong caller", "my-agent");
+  } catch (error) {
+    crossAgentActionBlocked = String(error.message || "").includes("another agent");
+  }
+  if (!crossAgentActionBlocked) {
+    throw new Error("InnerLife allowed one agent to act on another agent's share.");
+  }
+  await database.markInnerLifeShare(otherEnded.share.id, "discarded", "owner cleanup", "other-agent");
+
   await runtime.saveProductSettings(app, {
     "innerlife.loop_seconds": 1,
     "innerlife.provider": "disabled"

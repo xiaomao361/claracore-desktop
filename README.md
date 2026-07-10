@@ -39,6 +39,9 @@ Read these before adding new features:
   pagination, resource ownership, memory telemetry, and long-run checks.
 - [macOS Packaging](docs/mac-packaging.md): current local packaging and packaged
   Gateway validation notes.
+- [Multi-Agent Client Migration v0.5.0](docs/MULTI_AGENT_CLIENT_MIGRATION_V0_5.md):
+  Codex, Claude, and Hermes identity, conversation, InnerLife session, and
+  Shared Line integration rules.
 - Module boundary notes:
   - [Renderer modules](app/README.md)
   - [Runtime](core/runtime/README.md)
@@ -50,7 +53,7 @@ Read these before adding new features:
 
 ## Current Status
 
-The current version is `0.4.9`. It is a working desktop shell with a
+The current version is `0.5.0`. It is a working desktop shell with a
 product-owned local data store, Desktop-native Memoria, Shared Line, InnerLife,
 a Desktop-owned Gateway, with model configuration merged into the Settings
 surface.
@@ -92,6 +95,9 @@ Included:
 - Verified SQLite product backups with restore preview and safety-backup restore
 - Full product JSON export/import for portable ClaraCore Desktop data
 - Agent identity is stable per calling agent: Streamable HTTP uses `X-ClaraCore-Agent-ID`, stdio fallback uses `CLARACORE_AGENT_ID`; preferred stable ids are `lara`, `clara`, and `codex`, while legacy tool-prefixed ids can be consolidated with `agent_identity_merge`
+- Gateway caller context separates the stable persona (`agentId`), client host (`clientId`), and host conversation (`conversationId`) from domain ids such as `inner_session_*` and `line_*`; caller metadata is traced without overwriting tool arguments
+- Shared Line `agent_id` is the stable owner. An explicit cross-agent update records `writerAgentId` provenance and never transfers ownership implicitly
+- Agent-facing InnerLife status, pending shares, and share actions are scoped to the calling agent; Desktop UI snapshots may still request the all-agent view
 - Settings page with General (language, theme, motion, close-window behavior, data paths, runtime facts), Models, and Data tabs
 - Terminal-style runtime log view for maintenance and Gateway traces, plus a
   read-only time flow across Memory, Shared Line, InnerLife, Gateway, and runtime
@@ -107,7 +113,7 @@ Included:
 Not included yet:
 
 - LAN Agent Gateway mode and HTTP management console for the Desktop-owned Gateway
-- Packaged macOS release artifact
+- Signed and notarized public macOS release artifact
 - Windows package
 - Old Memoria REST API compatibility
 
@@ -184,7 +190,7 @@ ClaraCore product data lives under one data root. By default, Desktop stores
 product files under the Electron user data `data/` subdirectory:
 
 ```text
-~/Library/Application Support/ClaraCore Desktop/data
+~/Library/Application Support/claracore-desktop/data
 ```
 
 The product database is `claracore.db`; backups, exports, logs, and runtime

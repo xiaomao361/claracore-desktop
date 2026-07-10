@@ -237,6 +237,27 @@ async function main() {
       throw new Error("Gateway explicit Shared Line write did not use the requested lineId.");
     }
 
+    const ownedLine = parseTextResult(
+      await client.callTool("shared_line_create", {
+        agentId: "owner-agent",
+        title: "Owner must survive a cross-agent write",
+        makeActive: false
+      })
+    ).line;
+    const crossAgentWrite = parseTextResult(
+      await client.callTool("shared_line_update", {
+        agentId: "writer-agent",
+        lineId: ownedLine.id,
+        summary: "An explicit collaborator updated this line without taking ownership."
+      })
+    );
+    if (crossAgentWrite.currentPosition.agentId !== "owner-agent") {
+      throw new Error(`Cross-agent write changed Shared Line owner: ${JSON.stringify(crossAgentWrite.currentPosition)}`);
+    }
+    if (crossAgentWrite.currentPosition.metadata?.writerAgentId !== "writer-agent") {
+      throw new Error(`Cross-agent write did not preserve writer provenance: ${JSON.stringify(crossAgentWrite.currentPosition.metadata)}`);
+    }
+
     const statusResponse = await client.callTool("claracore_status");
     const status = parseTextResult(statusResponse);
     if (!status.dataRoot.startsWith(dataRoot)) {

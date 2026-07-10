@@ -1,9 +1,9 @@
-async function snapshot(core) {
-  return core.database.getInnerLifeSnapshot();
+async function snapshot(core, agentId = "all") {
+  return core.database.getInnerLifeSnapshot(agentId);
 }
 
-async function snapshotLite(core) {
-  return core.database.getInnerLifeSnapshotLite();
+async function snapshotLite(core, agentId = "all") {
+  return core.database.getInnerLifeSnapshotLite(agentId);
 }
 
 async function sessions(core, input = {}) {
@@ -66,12 +66,12 @@ async function checkShareTiming(core, input) {
   return core.database.checkInnerLifeShareTiming(input);
 }
 
-async function pendingShares(core, status = "pending", limit = 20) {
-  return core.database.listInnerLifeShares(status, limit);
+async function pendingShares(core, status = "pending", limit = 20, agentId = "all") {
+  return core.database.listInnerLifeShares(status, limit, agentId);
 }
 
-async function shareActions(core, shareId = null, limit = 20) {
-  return core.database.listInnerLifeShareActions(shareId, limit);
+async function shareActions(core, shareId = null, limit = 20, agentId = "all") {
+  return core.database.listInnerLifeShareActions(shareId, limit, agentId);
 }
 
 async function setDaemon(core, input) {
@@ -86,8 +86,8 @@ async function tickDaemon(core, input) {
   return core.database.tickInnerLifeDaemon(input);
 }
 
-async function markShare(core, id, action, reason = "") {
-  return core.database.markInnerLifeShare(id, action, reason);
+async function markShare(core, id, action, reason = "", agentId = "") {
+  return core.database.markInnerLifeShare(id, action, reason, agentId);
 }
 
 async function reviewShare(core, id, decision, reason = "") {

@@ -839,7 +839,7 @@ window.ClaraCoreTranslationsZh = {
   "agentSetup.connectionMode": "连接方式",
   "agentSetup.modeResident": "ClaraCore Desktop 打开后作为本地智能体服务常驻。",
   "agentSetup.modeMcp": "智能体通过 MCP 接入，并自行设置 CLARACORE_AGENT_ID。",
-  "agentSetup.modeLan": "本机 HTTP 辅助入口只绑定 localhost、带 token，并使用运行时动态端口。",
+  "agentSetup.modeLan": "本机 HTTP 辅助入口只绑定 localhost、带 token，并默认使用稳定端口 50668。",
   "agentSetup.identityContract": "智能体身份",
   "agentSetup.identityBody": "每个智能体自己设置这个环境变量；不要多个智能体共用同一个 id。",
   "agentSetup.includes": "包含内容",

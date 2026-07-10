@@ -48,10 +48,14 @@ function createInnerLifeShareRepository(helpers) {
   }
 
   return {
-    async listInnerLifeShares(status = "pending", limit = 20) {
+    async listInnerLifeShares(status = "pending", limit = 20, agentId = "all") {
       const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 20));
       const statusFilter = String(status || "pending").trim();
-      const whereClause = statusFilter === "all" ? "" : `WHERE s.status = ${sqlString(statusFilter)}`;
+      const agentFilter = String(agentId || "all").trim();
+      const filters = [];
+      if (statusFilter !== "all") filters.push(`s.status = ${sqlString(statusFilter)}`);
+      if (agentFilter !== "all") filters.push(`s.agent_id = ${sqlString(agentFilter)}`);
+      const whereClause = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
       const rows = await this.query(`
         SELECT
           s.id,
@@ -108,6 +112,9 @@ function createInnerLifeShareRepository(helpers) {
       const requestedShare = requestedShareId ? await this.getInnerLifeShare(requestedShareId) : null;
       const hasExplicitAgent = Boolean(input?.agentId || input?.agent_id || input?.agent);
       const agentId = hasExplicitAgent ? resolveAgentIdentity(input || {}).id : requestedShare?.agent_id || resolveAgentIdentity(input || {}).id;
+      if (requestedShare && requestedShare.agent_id !== agentId) {
+        throw new Error("InnerLife share belongs to another agent.");
+      }
       const profile = await this.ensureInnerLifeProfile(agentId);
       const { resumePacket, sharedLineContext: sharedLineSelection } = await this.getOptionalInnerLifeResumePacket(input, profile.agent_id);
       const sharedLineContext = buildSharedLineTimingContext(resumePacket);
@@ -151,7 +158,7 @@ function createInnerLifeShareRepository(helpers) {
         return {
           check: await this.getInnerLifeShareCheck(checkId),
           share: null,
-          snapshot: await this.getInnerLifeSnapshotLite()
+          snapshot: await this.getInnerLifeSnapshotLite(profile.agent_id)
         };
       }
       const explicitTokens = meaningfulTokens(providedContext);
@@ -211,7 +218,7 @@ function createInnerLifeShareRepository(helpers) {
       return {
         check: await this.getInnerLifeShareCheck(checkId),
         share,
-        snapshot: await this.getInnerLifeSnapshotLite()
+        snapshot: await this.getInnerLifeSnapshotLite(profile.agent_id)
       };
     },
 
@@ -245,7 +252,7 @@ function createInnerLifeShareRepository(helpers) {
       return rows[0];
     },
 
-    async markInnerLifeShare(id, action, reason = "") {
+    async markInnerLifeShare(id, action, reason = "", agentId = "") {
       const shareId = String(id || "").trim();
       if (!shareId) throw new Error("InnerLife share id is required.");
       const normalized = String(action || "").trim().toLowerCase();
@@ -257,6 +264,10 @@ function createInnerLifeShareRepository(helpers) {
       const nextStatus = statusByAction[normalized];
       if (!nextStatus) throw new Error("InnerLife share action must be used, deferred, or discarded.");
       const share = await this.getInnerLifeShare(shareId);
+      const callerAgentId = String(agentId || "").trim();
+      if (callerAgentId && share.agent_id !== callerAgentId) {
+        throw new Error("InnerLife share belongs to another agent.");
+      }
       if (!["pending", "approved", "deferred"].includes(share.status)) {
         throw new Error(`InnerLife share cannot be marked ${normalized} from ${share.status}.`);
       }
@@ -284,9 +295,12 @@ function createInnerLifeShareRepository(helpers) {
       };
     },
 
-    async listInnerLifeShareActions(shareId = null, limit = 20) {
+    async listInnerLifeShareActions(shareId = null, limit = 20, agentId = "all") {
       const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 20));
-      const whereClause = shareId ? `WHERE share_id = ${sqlString(shareId)}` : "";
+      const filters = [];
+      if (shareId) filters.push(`share_id = ${sqlString(shareId)}`);
+      if (agentId && agentId !== "all") filters.push(`agent_id = ${sqlString(agentId)}`);
+      const whereClause = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
       return this.query(`
         SELECT id, share_id, agent_id, action, reason, created_at, metadata_json
         FROM innerlife_share_actions

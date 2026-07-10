@@ -6,12 +6,13 @@ const { handleInnerLifeTool } = require("./tool-handlers/innerlife");
 
 const HANDLERS = [handleSystemTool, handleMemoriaTool, handleSharedLineTool, handleInnerLifeTool];
 
-function createGatewayTools({ serverInfo, currentMcpAgentId, gatewayLaunchConfig, runtimeAppForGateway, textResult }) {
+function createGatewayTools({ serverInfo, currentMcpAgentId, currentCallerContext, gatewayLaunchConfig, runtimeAppForGateway, textResult }) {
   async function callToolBody(name, args = {}, paths, database) {
     const core = { paths, database };
     const context = {
       serverInfo,
       currentMcpAgentId,
+      currentCallerContext: currentCallerContext || (() => ({ agentId: currentMcpAgentId({}) })),
       gatewayLaunchConfig,
       runtimeAppForGateway,
       textResult,
