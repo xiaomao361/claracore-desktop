@@ -11,6 +11,24 @@ function createInnerLifeDaemonRepository(helpers) {
   } = helpers;
 
   return {
+    async listEnabledInnerLifeDaemonAgentIds() {
+      const settings = await this.getSettings();
+      if (!settings["innerlife.enabled"]) return [];
+      let rows = await this.query(`
+        SELECT agent_id
+        FROM innerlife_daemon_state
+        WHERE enabled = 1 AND status != 'paused'
+        ORDER BY agent_id ASC;
+      `);
+      if (rows.length === 0) {
+        const defaultState = await this.ensureInnerLifeDaemonState(DEFAULT_AGENT_ID);
+        if (defaultState.enabled && defaultState.status !== "paused") {
+          rows = [{ agent_id: defaultState.agentId }];
+        }
+      }
+      return rows.map((row) => String(row.agent_id || "").trim()).filter(Boolean);
+    },
+
     async ensureInnerLifeDaemonState(agentId = DEFAULT_AGENT_ID) {
       const profile = await this.ensureInnerLifeProfile(agentId);
       const settings = await this.getSettings();
@@ -172,7 +190,6 @@ function createInnerLifeDaemonRepository(helpers) {
           pendingInbox = pendingInboxPage.items;
         }
         if (pendingInbox.length === 0) {
-          const tickIncrement = force ? "tick_count + 1" : "tick_count";
           await this.exec(`
             UPDATE innerlife_daemon_state
             SET status = 'enabled',
@@ -180,7 +197,7 @@ function createInnerLifeDaemonRepository(helpers) {
                 next_run_at = datetime('now', '+${pollSeconds} seconds'),
                 last_result = 'idle',
                 last_error = '',
-                tick_count = ${tickIncrement},
+                tick_count = tick_count + 1,
                 updated_at = CURRENT_TIMESTAMP,
                 metadata_json = ${jsonSql({
                   pollSeconds,

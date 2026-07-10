@@ -243,7 +243,11 @@ poll: the Electron host computes the next scheduled local hour from product
 settings, sets a single timer, runs a missed same-day job immediately if the app
 starts after the scheduled hour, then schedules the following day after
 completion. Use short polling only for loops that are genuinely interactive,
-such as InnerLife daemon due checks.
+such as InnerLife daemon due checks. The InnerLife scheduler must enumerate
+every enabled agent and tick each one with an explicit `agentId`; a single
+identity-free tick would otherwise fall back to the default agent and starve
+other agents. Idle due checks still advance `last_tick_at`, `next_run_at`, and
+`tick_count` so scheduler health remains observable.
 
 The Node runtime uses a cached `ProductDatabase` connection per process. In
 packaged mode, `node:sqlite` may be unavailable, so the database helper can

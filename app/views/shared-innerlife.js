@@ -5,6 +5,7 @@ function createClaraCoreSharedInnerLifeView(context) {
     getSnapshot,
     escapeHtml,
     formatSharedLineMetaValue,
+    formatLocalDateTime,
     renderReadableText,
     itemAgentId,
     filterByAgent,
@@ -539,7 +540,7 @@ function renderInnerLife() {
   if (innerLifeDaemonToggleLabel) {
     innerLifeDaemonToggleLabel.textContent = daemonEnabled ? t("innerLife.pauseDaemon") : t("innerLife.enableDaemon");
   }
-  innerLifeNextRun.textContent = daemon.nextRunAt || "-";
+  innerLifeNextRun.textContent = formatLocalDateTime(daemon.nextRunAt);
   innerLifeLastResult.textContent = daemon.lastResult || daemon.lastError || "-";
   const retrySeconds = Number.parseInt(String(daemon.metadata?.retrySeconds || 0), 10) || 0;
   const failureCount = Number.parseInt(String(daemon.metadata?.failureCount || 0), 10) || 0;

@@ -4,7 +4,7 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- The current local version is `0.4.7`.
+- The current local version is `0.4.8`.
 - Historical `0.1.x` and `0.2.x` planning notes are archived under
   `docs/archive/`.
 
@@ -38,6 +38,24 @@ npm run dist:mac
 
 Only install or replace the daily-use app after the target build passes the
 focused smoke gates for its changed surface.
+
+## v0.4.8 Checkpoint
+
+`0.4.8` fixes InnerLife scheduling and observability for multiple agents:
+
+- Scheduled ticks enumerate every enabled agent and call the daemon with an
+  explicit identity instead of repeatedly falling back to Codex.
+- A failed agent tick does not block the remaining agents, and idle due checks
+  advance the tick counter so scheduler health stays visible.
+- The renderer converts SQLite UTC `nextRunAt` values to local time.
+
+Validation for this checkpoint includes:
+
+```bash
+npm run test:smoke
+npm run pack:mac
+node core/tests/phase4-packaged-gateway-smoke.js
+```
 
 ## v0.4.7 Checkpoint
 

@@ -37,12 +37,29 @@ function createSchedulers({
     if (innerLifeSchedulerBusy || isQuitting()) return;
     innerLifeSchedulerBusy = true;
     try {
-      const result = await tickProductInnerLifeDaemon(app, { force: false, includeSnapshot: false });
-      if (result?.reason && result.reason !== "paused" && result.reason !== "not_due") {
-        notifyRuntimeChanged("innerlife-daemon", {
-          daemonReason: result.reason,
-          ran: Boolean(result.ran)
-        });
+      const { database } = await ensureProductCore(app);
+      const agentIds = await database.listEnabledInnerLifeDaemonAgentIds();
+      for (const agentId of agentIds) {
+        try {
+          const result = await tickProductInnerLifeDaemon(app, {
+            agentId,
+            force: false,
+            includeSnapshot: false
+          });
+          if (result?.reason && result.reason !== "paused" && result.reason !== "not_due") {
+            notifyRuntimeChanged("innerlife-daemon", {
+              agentId,
+              daemonReason: result.reason,
+              ran: Boolean(result.ran)
+            });
+          }
+        } catch (error) {
+          console.error(`InnerLife scheduler failed for ${agentId}:`, error);
+          notifyRuntimeChanged("innerlife-daemon-error", {
+            agentId,
+            error: error.message || String(error)
+          });
+        }
       }
     } catch (error) {
       console.error("InnerLife scheduler failed:", error);
@@ -143,7 +160,8 @@ function createSchedulers({
     startInnerLife,
     startMemoryMaintenance,
     stopInnerLife,
-    stopMemoryMaintenance
+    stopMemoryMaintenance,
+    runInnerLifeScheduledTick
   };
 }
 

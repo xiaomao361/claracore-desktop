@@ -28,6 +28,17 @@ function formatBytes(bytes) {
   return `${(value / 1024 / 1024 / 1024).toFixed(1)} GB`;
 }
 
+function formatLocalDateTime(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "-";
+  const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/u.test(raw)
+    ? `${raw.replace(" ", "T")}Z`
+    : raw;
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return raw;
+  return date.toLocaleString(undefined, { hour12: false });
+}
+
 function splitListInput(value) {
   return String(value || "")
     .split(/\n|,/u)
@@ -207,6 +218,7 @@ window.ClaraCoreUtils = {
   escapeHtml,
   safeJsonObject,
   formatBytes,
+  formatLocalDateTime,
   splitListInput,
   formatSharedLineMetaValue,
   splitReadableText,

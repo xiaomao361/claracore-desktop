@@ -63,7 +63,11 @@ async function main() {
       return {
         daemonLastResult: snapshot.innerLife.daemon.lastResult,
         daemonTicks: snapshot.innerLife.daemon.tickCount,
-        renderedLastResult: document.querySelector("#innerLifeLastResult")?.textContent || ""
+        renderedLastResult: document.querySelector("#innerLifeLastResult")?.textContent || "",
+        renderedNextRun: document.querySelector("#innerLifeNextRun")?.textContent || "",
+        expectedNextRun: new Date(`${snapshot.innerLife.daemon.nextRunAt.replace(" ", "T")}Z`).toLocaleString(undefined, {
+          hour12: false
+        })
       };
     });
     let result = null;
@@ -91,6 +95,9 @@ async function main() {
       await page.waitForTimeout(250);
     }
     result.daemonLastResult = processedState.daemonLastResult;
+    if (processedState.renderedNextRun !== processedState.expectedNextRun) {
+      throw new Error(`InnerLife next run should render in local time: ${JSON.stringify(processedState)}`);
+    }
     if (!result.databasePath.startsWith(dataRoot)) {
       throw new Error(`InnerLife scheduler UI wrote outside product data root: ${result.databasePath}`);
     }

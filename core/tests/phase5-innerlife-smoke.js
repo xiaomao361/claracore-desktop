@@ -2,6 +2,7 @@ const fs = require("fs/promises");
 const os = require("os");
 const path = require("path");
 const runtime = require("../runtime");
+const { createSchedulers } = require("../../electron/schedulers");
 
 async function main() {
   const dataRoot = await fs.mkdtemp(path.join(os.tmpdir(), "claracore-phase5-innerlife-"));
@@ -317,6 +318,64 @@ async function main() {
     row.daemon_status !== "paused"
   ) {
     throw new Error(`InnerLife SQLite counts are wrong: ${JSON.stringify(row)}`);
+  }
+
+  await runtime.saveProductSettings(app, {
+    "innerlife.loop_seconds": 1,
+    "innerlife.provider": "disabled"
+  });
+  for (const agentId of ["codex", "lara"]) {
+    await runtime.setProductInnerLifeDaemon(app, { agentId, action: "enable" });
+    await runtime.submitProductInnerLifeInbox(app, {
+      agentId,
+      source: "phase5-multi-agent-scheduler",
+      body: `${agentId} scheduled inbox should be processed without starving another agent.`
+    });
+  }
+  await runtime.setProductInnerLifeDaemon(app, { agentId: "idle-agent", action: "enable" });
+  await database.exec(`
+    UPDATE innerlife_daemon_state
+    SET next_run_at = CURRENT_TIMESTAMP
+    WHERE agent_id IN ('codex', 'lara', 'idle-agent');
+  `);
+  const schedulerNotifications = [];
+  const schedulers = createSchedulers({
+    app,
+    ensureProductCore: runtime.ensureProductCore,
+    isQuitting: () => false,
+    notifyRuntimeChanged: (scope, detail) => schedulerNotifications.push({ scope, detail }),
+    runProductMemoryMaintenance: async () => ({}),
+    saveProductSettings: runtime.saveProductSettings,
+    tickProductInnerLifeDaemon: runtime.tickProductInnerLifeDaemon
+  });
+  await schedulers.runInnerLifeScheduledTick();
+  const multiAgentRows = await database.query(`
+    SELECT
+      d.agent_id,
+      d.last_result,
+      d.tick_count,
+      (SELECT COUNT(*) FROM innerlife_inbox i WHERE i.agent_id = d.agent_id AND i.status = 'pending') AS pending_count
+    FROM innerlife_daemon_state d
+    WHERE d.agent_id IN ('codex', 'lara', 'idle-agent')
+    ORDER BY d.agent_id;
+  `);
+  const processedAgentRows = multiAgentRows.filter((state) => state.agent_id === "codex" || state.agent_id === "lara");
+  const idleAgentRow = multiAgentRows.find((state) => state.agent_id === "idle-agent");
+  if (
+    multiAgentRows.length !== 3 ||
+    processedAgentRows.some((state) => !String(state.last_result || "").startsWith("processed") || state.tick_count < 1 || state.pending_count !== 0) ||
+    idleAgentRow?.last_result !== "idle" ||
+    idleAgentRow?.tick_count !== 1
+  ) {
+    throw new Error(`InnerLife multi-agent scheduler did not tick every enabled agent: ${JSON.stringify(multiAgentRows)}`);
+  }
+  const notifiedAgentIds = new Set(
+    schedulerNotifications
+      .filter((item) => item.scope === "innerlife-daemon")
+      .map((item) => item.detail?.agentId)
+  );
+  if (!notifiedAgentIds.has("codex") || !notifiedAgentIds.has("lara")) {
+    throw new Error(`InnerLife multi-agent scheduler notifications are incomplete: ${JSON.stringify(schedulerNotifications)}`);
   }
 
   console.log(
