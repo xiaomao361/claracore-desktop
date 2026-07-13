@@ -18,7 +18,7 @@ const memoriaCoreToolDefinitions = [
   {
     "name": "memoria_search",
     "title": "Search Memories",
-    "description": "Search ClaraCore Desktop memory records with keyword and vector search when available. Results include `related`: memories linked to the hits (1-hop neighborhood) with link kind and strength.",
+    "description": "Search ClaraCore Desktop memory records with keyword and vector search when available. Search before writing a potentially changed fact. Defaults to current facts; use timeView=historical or all only when the question needs prior state. Results expose stateRole, supersedes, supersededBy, and related links.",
     "inputSchema": {
       "type": "object",
       "required": [
@@ -32,6 +32,11 @@ const memoriaCoreToolDefinitions = [
           "type": "number",
           "minimum": 1,
           "maximum": 100
+        },
+        "timeView": {
+          "type": "string",
+          "enum": ["current", "historical", "all"],
+          "description": "State view for recall. current (default) returns active facts, historical returns superseded facts, and all returns both."
         }
       },
       "additionalProperties": false
@@ -57,7 +62,7 @@ const memoriaCoreToolDefinitions = [
   {
     "name": "memoria_create",
     "title": "Create Memory",
-    "description": "Create a ClaraCore Desktop memory record. Use factual, reviewable content.",
+    "description": "Create a ClaraCore Desktop memory record. Search first. For a confirmed changed state, create the new fact and then call memoria_supersede; for unresolved conflict, use a contradicts link.",
     "inputSchema": {
       "type": "object",
       "required": [
@@ -97,7 +102,7 @@ const memoriaCoreToolDefinitions = [
   {
     "name": "memoria_update",
     "title": "Update Memory",
-    "description": "Update an existing ClaraCore Desktop memory record.",
+    "description": "Update an existing active Memory only when correcting or refining the same fact. When a confirmed new state replaces an old fact, create a new Memory and call memoria_supersede instead.",
     "inputSchema": {
       "type": "object",
       "required": [

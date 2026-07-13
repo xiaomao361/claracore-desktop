@@ -451,6 +451,7 @@ function graphThemeColors(isDarkTheme) {
           causes: "176, 128, 224",
           "evolved-from": "215, 159, 75",
           contradicts: "214, 118, 101",
+          supersedes: "232, 120, 72",
           "part-of": "121, 201, 164"
         }
       }
@@ -475,6 +476,7 @@ function graphThemeColors(isDarkTheme) {
           causes: "122, 75, 176",
           "evolved-from": "189, 127, 40",
           contradicts: "166, 64, 54",
+          supersedes: "196, 82, 43",
           "part-of": "40, 116, 90"
         }
       };
@@ -570,7 +572,7 @@ function drawMemoryGraphCanvas() {
       alpha = 0.38 + strength * 0.4;
       width = 1 + strength * 2.1;
       dashed = kind === "contradicts";
-      arrow = kind === "causes" || kind === "evolved-from" || kind === "part-of";
+      arrow = kind === "causes" || kind === "evolved-from" || kind === "part-of" || kind === "supersedes";
     } else if (edge.kind === "uses") {
       color = theme.core;
       alpha = 0.2;

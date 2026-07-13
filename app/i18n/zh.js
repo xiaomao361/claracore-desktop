@@ -345,6 +345,7 @@ window.ClaraCoreTranslationsZh = {
   "memory.graph.link.causes": "因果",
   "memory.graph.link.evolved-from": "演化自",
   "memory.graph.link.contradicts": "矛盾",
+  "memory.graph.link.supersedes": "替代",
   "memory.graph.link.part-of": "属于",
   "memory.graph.panel.title": "连接",
   "memory.graph.panel.empty": "点击节点查看它的连接与理由。",

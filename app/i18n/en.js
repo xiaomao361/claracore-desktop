@@ -345,6 +345,7 @@ window.ClaraCoreTranslationsEn = {
   "memory.graph.link.causes": "Causes",
   "memory.graph.link.evolved-from": "Evolved from",
   "memory.graph.link.contradicts": "Contradicts",
+  "memory.graph.link.supersedes": "Supersedes",
   "memory.graph.link.part-of": "Part of",
   "memory.graph.panel.title": "Connections",
   "memory.graph.panel.empty": "Click a node to see its connections and why they exist.",

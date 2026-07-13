@@ -65,6 +65,10 @@ async function createLink(core, input) {
   return core.database.createMemoryLink(input);
 }
 
+async function supersede(core, input) {
+  return core.database.supersedeMemory(input);
+}
+
 async function links(core, input = {}) {
   return core.database.listMemoryLinks(input || {});
 }
@@ -109,7 +113,8 @@ async function search(core, input) {
   const query = String(input?.query || "").trim();
   const limit = Math.max(1, Number.parseInt(String(input?.limit || 50), 10) || 50);
   return core.database.searchMemories(query, limit, {
-    agentId: input?.agentId || input?.agent_id || ""
+    agentId: input?.agentId || input?.agent_id || "",
+    timeView: input?.timeView || input?.time_view || "current"
   });
 }
 
@@ -203,6 +208,7 @@ module.exports = {
   restricted,
   search,
   stats,
+  supersede,
   tag,
   unrestrict,
   update

@@ -63,6 +63,7 @@ const SAFE_IDENTIFIERS = new Set([
   "nextRunSql",
   "agentClause",
   "searchClause",
+  "statusClause",
   "filters",
   "clauses",
   "safeLimit",

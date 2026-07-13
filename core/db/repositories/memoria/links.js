@@ -1,4 +1,4 @@
-const LINK_KINDS = ["related", "causes", "evolved-from", "contradicts", "part-of"];
+const LINK_KINDS = ["related", "causes", "evolved-from", "contradicts", "part-of", "supersedes"];
 const LINK_SOURCES = ["manual", "innerlife", "co-recall"];
 
 function createMemoriaLinkRepository(helpers) {
@@ -8,6 +8,14 @@ function createMemoriaLinkRepository(helpers) {
     const kind = String(value || "related").trim().toLowerCase();
     if (!LINK_KINDS.includes(kind)) {
       throw new Error(`Link kind must be one of: ${LINK_KINDS.join(", ")}.`);
+    }
+    return kind;
+  }
+
+  function normalizeDirectKind(value) {
+    const kind = normalizeKind(value);
+    if (kind === "supersedes") {
+      throw new Error("Use memoria_supersede so the link and historical status are updated atomically.");
     }
     return kind;
   }
@@ -49,7 +57,7 @@ function createMemoriaLinkRepository(helpers) {
       const toId = String(input.toMemoryId || input.to_memory_id || input.toId || "").trim();
       if (!fromId || !toId) throw new Error("Both fromMemoryId and toMemoryId are required.");
       if (fromId === toId) throw new Error("A memory cannot link to itself.");
-      const kind = normalizeKind(input.kind);
+      const kind = normalizeDirectKind(input.kind);
       const source = normalizeSource(input.source);
       const strength = normalizeStrength(input.strength);
       const note = String(input.note || "").trim();
@@ -99,6 +107,84 @@ function createMemoriaLinkRepository(helpers) {
       `);
       if (rows.length === 0) throw new Error("Memory link was not persisted.");
       return normalizeLinkRow(rows[0]);
+    },
+
+    async supersedeMemory(input = {}) {
+      const currentMemoryId = String(input.currentMemoryId || input.current_memory_id || "").trim();
+      const historicalMemoryId = String(input.historicalMemoryId || input.historical_memory_id || "").trim();
+      const note = String(input.note || "").trim();
+      if (!currentMemoryId || !historicalMemoryId) {
+        throw new Error("Both currentMemoryId and historicalMemoryId are required.");
+      }
+      if (currentMemoryId === historicalMemoryId) throw new Error("A memory cannot supersede itself.");
+
+      const endpoints = await this.query(`
+        SELECT id, status FROM memories
+        WHERE id IN (${sqlString(currentMemoryId)}, ${sqlString(historicalMemoryId)});
+      `);
+      const byId = new Map(endpoints.map((row) => [row.id, row]));
+      if (byId.get(currentMemoryId)?.status !== "active") {
+        throw new Error("The current memory must exist and be active.");
+      }
+      if (!["active", "superseded"].includes(byId.get(historicalMemoryId)?.status)) {
+        throw new Error("The historical memory must exist and be active or already superseded.");
+      }
+
+      const id = newId("memlink");
+      const updatedAt = new Date().toISOString();
+      await this.exec(`
+        BEGIN IMMEDIATE;
+        INSERT INTO memory_links (id, from_memory_id, to_memory_id, kind, strength, source, note)
+        VALUES (
+          ${sqlString(id)}, ${sqlString(currentMemoryId)}, ${sqlString(historicalMemoryId)},
+          'supersedes', 1, 'manual', ${note ? sqlString(note) : "NULL"}
+        )
+        ON CONFLICT(from_memory_id, to_memory_id, kind) DO UPDATE SET
+          strength = 1,
+          note = COALESCE(excluded.note, memory_links.note),
+          updated_at = ${sqlString(updatedAt)};
+        UPDATE memories
+        SET status = 'superseded', updated_at = ${sqlString(updatedAt)}
+        WHERE id = ${sqlString(historicalMemoryId)} AND status IN ('active', 'superseded');
+        COMMIT;
+      `);
+      const links = await this.listMemoryLinks({ memoryId: historicalMemoryId, kind: "supersedes" });
+      const link = links.find(
+        (item) => item.fromMemoryId === currentMemoryId && item.toMemoryId === historicalMemoryId
+      );
+      if (!link) throw new Error("Memory supersession was not persisted.");
+      return {
+        link,
+        current: await this.getMemory(currentMemoryId),
+        historical: await this.getMemory(historicalMemoryId)
+      };
+    },
+
+    async annotateMemoryStates(memories = []) {
+      const items = Array.isArray(memories) ? memories : [];
+      const ids = [...new Set(items.map((memory) => String(memory?.id || "").trim()).filter(Boolean))];
+      if (ids.length === 0) return items;
+      const idList = ids.map(sqlString).join(", ");
+      const rows = await this.query(`
+        SELECT from_memory_id, to_memory_id
+        FROM memory_links
+        WHERE kind = 'supersedes'
+          AND (from_memory_id IN (${idList}) OR to_memory_id IN (${idList}));
+      `);
+      const supersedes = new Map();
+      const supersededBy = new Map();
+      for (const row of rows) {
+        if (!supersedes.has(row.from_memory_id)) supersedes.set(row.from_memory_id, []);
+        if (!supersededBy.has(row.to_memory_id)) supersededBy.set(row.to_memory_id, []);
+        supersedes.get(row.from_memory_id).push(row.to_memory_id);
+        supersededBy.get(row.to_memory_id).push(row.from_memory_id);
+      }
+      return items.map((memory) => ({
+        ...memory,
+        stateRole: memory.status === "superseded" ? "historical" : "current",
+        supersedes: supersedes.get(memory.id) || [],
+        supersededBy: supersededBy.get(memory.id) || []
+      }));
     },
 
     async listMemoryLinks(input = {}) {

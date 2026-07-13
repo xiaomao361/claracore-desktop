@@ -31,8 +31,12 @@ Current output:
 
 ```text
 dist/mac-arm64/ClaraCore Desktop.app
-dist/ClaraCore-Desktop-0.5.1-arm64.dmg
+dist/ClaraCore-Desktop-0.5.2-arm64.dmg
 ```
+
+The unpacked `0.5.2` `.app` has been built and tested locally. A `0.5.2` DMG
+has not been produced in this checkpoint; the most recent DMG verification
+record below remains for `0.5.1`.
 
 ## Gateway In Packaged Mode
 
@@ -74,13 +78,22 @@ node core/gateway/mcp-server.js
 
 ## Validation Status
 
-Validated locally:
+Validated locally for `0.5.2`:
 
-- packaged application reports version `0.5.1`
+- packaged application reports version `0.5.2`
 - `npm run check`
 - `npm run pack:mac`
+- full `npm run test:smoke`
+- Streamable HTTP Gateway smoke, including machine-readable `/agent/setup`
+  guidance for current/historical Memory writes
+- focused Memory and Gateway smoke tests cover `memoria_supersede` plus
+  current/historical recall semantics before packaging
+- packaged Gateway smoke passes from `dist/mac-arm64/ClaraCore Desktop.app`
+- packaged Gateway initialize reports server version `0.5.2`
+
+Previously validated packaging behavior retained by this build:
+
 - packaged `.app` starts as a Gateway with `--gateway`
-- packaged Gateway can create and search a Memory record
 - packaged Desktop UI opens and shows Agent Setup with `--gateway`
 - packaged Desktop UI shows the Home page first-run check
 - packaged app includes `assets/icon.icns` as the macOS app icon, with matching SVG/PNG sources under `assets/`
@@ -90,10 +103,8 @@ Validated locally:
 - packaged Desktop can restore a verified backup after confirmation and the `RESTORE` phrase
 - packaged Desktop shows a current-vs-target restore preview before execution
 - packaged Desktop restore preview shows Memory records that will return and records that will be removed
-- `npm run dist:mac`
+- `npm run dist:mac` for `0.5.1`
 - `hdiutil verify` reports the v0.5.1 DMG checksum as valid
-- packaged Gateway smoke passes from `dist/mac-arm64/ClaraCore Desktop.app`
-- packaged Gateway initialize reports server version `0.5.1`
 - the last installed Streamable HTTP MCP validation used v0.5.0 and recorded separated
   `agentId`, `clientId`, and `conversationId` trace context
 

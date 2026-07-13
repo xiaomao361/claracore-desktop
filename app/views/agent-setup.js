@@ -138,13 +138,14 @@ Do not invent tool names. If you are uncertain, call \`gateway_docs\` and use th
 
 1. Call \`memoria_search\` with the topic first.
 2. If an existing memory is the same fact, call \`memoria_update\`.
-3. If it is new, call \`memoria_create\`.
-4. Add labels such as \`agent-id:<your-agent-id>\`, project labels, and stable topic labels.
+3. For a confirmed changed state, call \`memoria_create\` for the new fact, then \`memoria_supersede\` with new → old IDs.
+4. If the conflict is unresolved, use a \`contradicts\` link instead of superseding either fact.
+5. If it is independent and new, call \`memoria_create\`. Add stable labels.
 
 ### Connect related memories
 
 1. Call \`memoria_link_list\` before adding more links.
-2. Call \`memoria_link_create\` with \`kind\` set to \`related\`, \`causes\`, \`evolved-from\`, \`contradicts\`, or \`part-of\`.
+2. Call \`memoria_link_create\` with \`kind\` set to \`related\`, \`causes\`, \`evolved-from\`, \`contradicts\`, or \`part-of\`. Use \`memoria_supersede\` for confirmed replacement.
 3. Add a short \`note\` explaining why the link exists.
 
 ### Update the current Shared Line
@@ -166,11 +167,13 @@ Do not invent tool names. If you are uncertain, call \`gateway_docs\` and use th
 - Always search first with \`memoria_search\` before creating a new memory.
 - Use \`memoria_create\` only for durable, factual, reviewable information. Keep one memory focused on one fact or decision.
 - Add useful labels at write time, especially \`agent-id:<your-agent-id>\`, project/module labels, and stable topic labels.
-- Use \`memoria_update\` when correcting or refining the same fact. Do not create duplicate memories for the same fact.
+- Use \`memoria_update\` when correcting or refining the same fact. For a confirmed changed state, create the new fact and call \`memoria_supersede\`.
+- \`memoria_supersede\` direction is \`currentMemoryId\` (new/current) → \`historicalMemoryId\` (old). It preserves history instead of deleting or archiving it.
+- \`memoria_search\` defaults to \`timeView: "current"\`; use \`historical\` for prior state and \`all\` only to compare both.
 - Use \`memoria_link_create\` after creating or finding related memories. Prefer:
   - \`related\` for loose association
   - \`causes\` when one fact caused another
-  - \`evolved-from\` when a newer decision replaces an older one
+  - \`evolved-from\` for lineage that does not make the older memory non-current
   - \`contradicts\` when two memories conflict and need review
   - \`part-of\` when one memory belongs inside a broader topic
 - Give links a short \`note\` explaining why the connection exists, and set \`strength\` only when you have a reason.

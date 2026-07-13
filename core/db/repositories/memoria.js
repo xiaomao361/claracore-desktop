@@ -31,6 +31,14 @@ function installMemoriaRepository(ProductDatabase, helpers) {
     `;
   }
 
+  function memoryStatusClause(timeView, alias = "m") {
+    const view = String(timeView || "current").trim().toLowerCase();
+    if (view === "historical") return `${alias}.status = 'superseded'`;
+    if (view === "all") return `${alias}.status IN ('active', 'superseded')`;
+    if (view !== "current") throw new Error("timeView must be current, historical, or all.");
+    return `${alias}.status = 'active'`;
+  }
+
   Object.assign(ProductDatabase.prototype, {
     ...createMemoriaLabelRepository(helpers),
     async createMemory(input) {
@@ -257,6 +265,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
       const safeOffset = Math.max(0, Number.parseInt(String(options.offset || 0), 10) || 0);
       const query = String(search || "").trim();
       const includeRestricted = Boolean(options.includeRestricted);
+      const statusClause = memoryStatusClause(options.timeView, "m");
       const agentClause = options.agentId || options.agent_id ? agentLabelClause(options.agentId || options.agent_id) : "";
       const searchClause = query
         ? `AND (
@@ -288,7 +297,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
         FROM memories m
         LEFT JOIN memory_labels l ON l.memory_id = m.id
         LEFT JOIN memory_embeddings e ON e.memory_id = m.id
-        WHERE m.status = 'active'
+        WHERE ${statusClause}
         ${includeRestricted ? "" : "AND m.sensitivity != 'restricted'"}
         ${agentClause}
         ${searchClause}
@@ -409,6 +418,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
             (SELECT COUNT(*) FROM memories WHERE status = 'active' AND sensitivity = 'restricted') AS restricted_count,
             (SELECT COUNT(*) FROM memories WHERE status = 'deleted') AS deleted_count,
             (SELECT COUNT(*) FROM memories WHERE status = 'archived') AS archived_count,
+            (SELECT COUNT(*) FROM memories WHERE status = 'superseded') AS superseded_count,
             (SELECT COUNT(*) FROM memories) AS total_count,
             (SELECT COUNT(*) FROM memory_embeddings WHERE status = 'ready') AS embedded_count,
             (SELECT COUNT(*) FROM memory_embeddings WHERE status = 'pending') AS pending_embedding_count,
@@ -432,6 +442,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
         restrictedCount: counts.restricted_count || 0,
         deletedCount: counts.deleted_count || 0,
         archivedCount: counts.archived_count || 0,
+        supersededCount: counts.superseded_count || 0,
         totalCount: counts.total_count || 0,
         embeddedCount: counts.embedded_count || 0,
         pendingEmbeddingCount: counts.pending_embedding_count || 0,

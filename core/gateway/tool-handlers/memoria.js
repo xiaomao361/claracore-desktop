@@ -152,6 +152,10 @@ async function handleMemoriaTool(name, args, context) {
     });
   }
 
+  if (name === "memoria_supersede") {
+    return textResult(await memoria.supersede(core, args));
+  }
+
   if (name === "memoria_link_list") {
     return textResult({
       links: await memoria.links(core, args)

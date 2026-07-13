@@ -100,6 +100,15 @@ async function main() {
       }
       return response.json();
     }
+    const setupResponse = await fetch(`http://127.0.0.1:${port}/agent/setup`, {
+      headers: { Authorization: headers.Authorization }
+    });
+    assert.strictEqual(setupResponse.status, 200, "Agent setup should be readable with the bearer token");
+    const setup = await setupResponse.json();
+    assert(setup.firstCalls?.some((item) => item.includes("gateway_docs")), "Agent setup should direct new agents to gateway_docs");
+    assert(setup.memoriaUsage?.confirmedChange?.includes("memoria_supersede"), "Agent setup should explain confirmed Memory replacement");
+    assert(setup.memoriaUsage?.unresolvedConflict?.includes("contradicts"), "Agent setup should preserve unresolved conflicts");
+    assert(setup.memoriaUsage?.recall?.includes("timeView=current"), "Agent setup should explain current and historical recall");
     const initialized = await postMcp({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} });
     assert.strictEqual(initialized.result.serverInfo.name, "claracore-desktop");
     const tools = await postMcp({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} });

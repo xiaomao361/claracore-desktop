@@ -77,6 +77,14 @@ function createMemoriaEmbeddingRepository(helpers) {
     `;
   }
 
+  function memoryStatusClause(timeView, alias = "m") {
+    const view = String(timeView || "current").trim().toLowerCase();
+    if (view === "historical") return `${alias}.status = 'superseded'`;
+    if (view === "all") return `${alias}.status IN ('active', 'superseded')`;
+    if (view !== "current") throw new Error("timeView must be current, historical, or all.");
+    return `${alias}.status = 'active'`;
+  }
+
   return {
     async createEmbedding(text) {
       const settings = await this.getSettings();
@@ -122,6 +130,7 @@ function createMemoriaEmbeddingRepository(helpers) {
     async vectorMemoryCandidates(limit = 200, options = {}) {
       const safeLimit = Math.max(1, Math.min(500, Number.parseInt(String(limit), 10) || 200));
       const agentClause = options.agentId || options.agent_id ? agentLabelClause(options.agentId || options.agent_id) : "";
+      const statusClause = memoryStatusClause(options.timeView, "m");
       const rows = await this.query(`
         SELECT
           m.id,
@@ -142,7 +151,7 @@ function createMemoriaEmbeddingRepository(helpers) {
         FROM memories m
         JOIN memory_embeddings e ON e.memory_id = m.id
         LEFT JOIN memory_labels l ON l.memory_id = m.id
-        WHERE m.status = 'active'
+        WHERE ${statusClause}
           AND m.sensitivity != 'restricted'
           AND e.status = 'ready'
           AND e.vector_json IS NOT NULL
@@ -161,15 +170,20 @@ function createMemoriaEmbeddingRepository(helpers) {
       const text = String(query || "").trim();
       const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 50));
       const includeRestricted = Boolean(options.includeRestricted);
+      const timeView = String(options.timeView || "current").trim().toLowerCase();
+      memoryStatusClause(timeView);
       if (!text) {
         const listResults = await this.listMemories(Math.min(20, safeLimit), "", {
           includeRestricted,
-          agentId: options.agentId || options.agent_id || ""
+          agentId: options.agentId || options.agent_id || "",
+          timeView
         });
+        const annotatedResults = await this.annotateMemoryStates(listResults);
         return {
           mode: "list",
           query: "",
-          results: listResults,
+          timeView,
+          results: annotatedResults,
           related: await this.getMemoryNeighbors(listResults.map((memory) => memory.id)),
           error: null
         };
@@ -177,7 +191,8 @@ function createMemoriaEmbeddingRepository(helpers) {
 
       const keywordResults = await this.listMemories(safeLimit, text, {
         includeRestricted,
-        agentId: options.agentId || options.agent_id || ""
+        agentId: options.agentId || options.agent_id || "",
+        timeView
       });
       const merged = new Map(
         keywordResults.map((memory) => [
@@ -192,7 +207,10 @@ function createMemoriaEmbeddingRepository(helpers) {
 
       try {
         const { vector: queryVector } = await this.createEmbedding(text);
-        const candidates = await this.vectorMemoryCandidates(200, { agentId: options.agentId || options.agent_id || "" });
+        const candidates = await this.vectorMemoryCandidates(200, {
+          agentId: options.agentId || options.agent_id || "",
+          timeView
+        });
         const vectorResults = candidates
           .map(({ vector, vector_json: _vectorJson, ...memory }) => ({
             ...memory,
@@ -228,22 +246,26 @@ function createMemoriaEmbeddingRepository(helpers) {
           })
           .slice(0, safeLimit);
 
+        const annotatedResults = await this.annotateMemoryStates(results);
         return {
           mode: vectorResults.length > 0 ? "hybrid" : "keyword",
           query: text,
-          results,
+          timeView,
+          results: annotatedResults,
           related: await this.getMemoryNeighbors(results.map((memory) => memory.id)),
           error: null
         };
       } catch (error) {
+        const annotatedResults = await this.annotateMemoryStates(keywordResults.map((memory) => ({
+          ...memory,
+          search_source: "keyword",
+          search_score: 0
+        })));
         return {
           mode: "keyword",
           query: text,
-          results: keywordResults.map((memory) => ({
-            ...memory,
-            search_source: "keyword",
-            search_score: 0
-          })),
+          timeView,
+          results: annotatedResults,
           related: await this.getMemoryNeighbors(keywordResults.map((memory) => memory.id)),
           error: error.message
         };

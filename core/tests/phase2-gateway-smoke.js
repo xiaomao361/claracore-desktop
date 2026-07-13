@@ -24,6 +24,7 @@ async function main() {
       "memoria_get",
       "memoria_create",
       "memoria_update",
+      "memoria_supersede",
       "memoria_tag",
       "memoria_delete",
       "memoria_restore",
@@ -57,7 +58,7 @@ async function main() {
 
     const docs = await client.callTool("gateway_docs");
     const docsText = docs.result?.content?.[0]?.text || "";
-    if (!docsText.includes(dataRoot) || !docsText.includes("memoria_create")) {
+    if (!docsText.includes(dataRoot) || !docsText.includes("memoria_create") || !docsText.includes("memoria_supersede")) {
       throw new Error("Gateway docs do not include the active data root and Memory tools.");
     }
     if (docsText.includes(`${path.sep}.claracore${path.sep}memoria`)) {
@@ -95,6 +96,29 @@ async function main() {
     const search = parseTextResult(searchResponse);
     if (!search.results.some((memory) => memory.id === created.id)) {
       throw new Error("Gateway memoria_search did not find the created Memory.");
+    }
+    const oldState = parseTextResult(await client.callTool("memoria_create", {
+      title: "Old gateway state",
+      body: "Gateway temporal subject currently uses the old state."
+    })).memory;
+    const newState = parseTextResult(await client.callTool("memoria_create", {
+      title: "New gateway state",
+      body: "Gateway temporal subject currently uses the new state."
+    })).memory;
+    const superseded = parseTextResult(await client.callTool("memoria_supersede", {
+      currentMemoryId: newState.id,
+      historicalMemoryId: oldState.id,
+      note: "Confirmed during Gateway smoke."
+    }));
+    if (superseded.historical?.status !== "superseded") {
+      throw new Error(`Gateway memoria_supersede did not preserve historical state: ${JSON.stringify(superseded)}`);
+    }
+    const historical = parseTextResult(await client.callTool("memoria_search", {
+      query: "Gateway temporal subject",
+      timeView: "historical"
+    }));
+    if (!historical.results.some((memory) => memory.id === oldState.id && memory.supersededBy.includes(newState.id))) {
+      throw new Error(`Gateway historical recall did not return supersession metadata: ${JSON.stringify(historical)}`);
     }
     const graph = parseTextResult(await client.callTool("memoria_graph", { limit: 20 }));
     if (!graph.nodes.some((node) => node.kind === "memory" && node.refId === created.id)) {
@@ -294,7 +318,7 @@ async function main() {
       throw new Error("Gateway memoria_restore did not restore the Memory.");
     }
     const statsAfterRestore = parseTextResult(await client.callTool("memoria_stats"));
-    if (statsAfterRestore.deletedCount !== 1 || statsAfterRestore.activeCount !== 3) {
+    if (statsAfterRestore.deletedCount !== 1 || statsAfterRestore.activeCount !== 4 || statsAfterRestore.supersededCount !== 1) {
       throw new Error(`Gateway memoria_stats did not reflect restore: ${JSON.stringify(statsAfterRestore)}`);
     }
     if (!statsAfterRestore.labels.some((item) => item.label === "agent-facing")) {

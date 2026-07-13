@@ -53,7 +53,7 @@ Read these before adding new features:
 
 ## Current Status
 
-The current version is `0.5.1`. It is a working desktop shell with a
+The current version is `0.5.2`. It is a working desktop shell with a
 product-owned local data store, Desktop-native Memoria, Shared Line, InnerLife,
 a Desktop-owned Gateway, with model configuration merged into the Settings
 surface.

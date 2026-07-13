@@ -4,7 +4,7 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- The current local version is `0.5.1`.
+- The current local version is `0.5.2`.
 - Historical `0.1.x` and `0.2.x` planning notes are archived under
   `docs/archive/`.
 
@@ -38,6 +38,20 @@ npm run dist:mac
 
 Only install or replace the daily-use app after the target build passes the
 focused smoke gates for its changed surface.
+
+## v0.5.2 Current And Historical Memory
+
+`0.5.2` adds a deliberately small Ghost Memory safeguard to Desktop Memoria.
+`memoria_supersede` atomically links a confirmed new/current fact to the old
+fact and marks the old fact `superseded` without deleting or archiving it.
+`memoria_search` defaults to current facts and accepts `timeView` values
+`current`, `historical`, and `all` for explicit state-aware recall.
+
+Agent-facing MCP definitions, generated Gateway docs, Agent Setup guidance,
+and the MCP playbook all require search-before-write. Agents update the same
+fact, supersede only a confirmed changed state, and use `contradicts` when the
+current state is unresolved. Continuity remains unchanged and independently
+usable.
 
 ## v0.5.1 System Time Zone And Agent Setup Polish
 

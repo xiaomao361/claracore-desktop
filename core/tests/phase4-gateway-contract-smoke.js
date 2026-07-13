@@ -14,6 +14,7 @@ const EXPECTED_TOOLS = [
   "memoria_get",
   "memoria_create",
   "memoria_update",
+  "memoria_supersede",
   "memoria_tag",
   "memoria_delete",
   "memoria_restore",

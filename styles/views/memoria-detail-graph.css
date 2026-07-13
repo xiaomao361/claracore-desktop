@@ -321,6 +321,7 @@
 .graph-legend-swatch.kind-causes { background: #7a4bb0; }
 .graph-legend-swatch.kind-evolved-from { background: #bd7f28; }
 .graph-legend-swatch.kind-contradicts { background: var(--red); }
+.graph-legend-swatch.kind-supersedes { background: #c4522b; }
 .graph-legend-swatch.kind-part-of { background: var(--green); }
 
 .graph-tooltip {

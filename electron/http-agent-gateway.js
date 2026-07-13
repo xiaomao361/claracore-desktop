@@ -615,7 +615,19 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
           command: snapshot.connections.mcpCommand,
           config: JSON.parse(snapshot.connections.mcpConfig)
         },
-        firstCall: "GET /gateway/context with the bearer token, or call gateway_context through MCP."
+        firstCalls: [
+          "Call claracore_connection_test after installing or changing the MCP connection.",
+          "Call gateway_docs to read the current product and Memory write contract.",
+          "Call gateway_context to load the selected Shared Line, current Memory, and InnerLife state."
+        ],
+        memoriaUsage: {
+          writePolicy: "Search before writing a potentially changed fact.",
+          sameFact: "Use memoria_update when correcting or refining the same fact.",
+          confirmedChange: "Create the new fact, then call memoria_supersede with currentMemoryId=new and historicalMemoryId=old.",
+          unresolvedConflict: "Use memoria_link_create with kind=contradicts; do not supersede either fact yet.",
+          recall: "memoria_search defaults to timeView=current; use historical for prior state and all only to compare both.",
+          historyPolicy: "Superseded facts remain durable history and should not be deleted or archived merely because they are no longer current."
+        }
       });
       return;
     }

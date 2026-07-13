@@ -62,9 +62,12 @@ use the names listed there.
 
 1. Call `memoria_search` with the topic first.
 2. If an existing memory is the same fact, call `memoria_update`.
-3. If it is new, call `memoria_create`.
-4. Add labels such as `agent-id:<your-agent-id>`, project labels, and stable
-   topic labels.
+3. If a confirmed new state replaces an old fact, call `memoria_create` for
+   the new fact, then `memoria_supersede` with `currentMemoryId` = new and
+   `historicalMemoryId` = old.
+4. If the conflict is unresolved, connect the facts with `contradicts` instead
+   of superseding either one.
+5. If it is independent and new, call `memoria_create` and add stable labels.
 
 ### Connect Related Memories
 
@@ -75,7 +78,17 @@ use the names listed there.
    - `evolved-from`
    - `contradicts`
    - `part-of`
-3. Add a short `note` explaining why the link exists.
+3. Use `memoria_supersede`, not `memoria_link_create`, for confirmed state
+   replacement. Add a short `note` explaining the evidence.
+
+### Recall Current Or Historical State
+
+- `memoria_search` defaults to `timeView: "current"` and excludes superseded
+  facts.
+- Use `timeView: "historical"` when the question asks what used to be true.
+- Use `timeView: "all"` only when comparing the current and historical states.
+- Superseded facts remain durable history; do not archive or delete them merely
+  because they are no longer current.
 
 ### Update The Current Shared Line
 

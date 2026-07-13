@@ -2,7 +2,7 @@ const memoriaLinkToolDefinitions = [
   {
     "name": "memoria_link_create",
     "title": "Create Memory Link",
-    "description": "Create or update a typed link between two Memories. Links are first-class connections in the shared world graph.",
+    "description": "Create or update a non-supersession link between two Memories. Use contradicts when the conflict is unresolved. Use memoria_supersede, not this tool, for a confirmed state replacement.",
     "inputSchema": {
       "type": "object",
       "required": [
@@ -53,10 +53,34 @@ const memoriaLinkToolDefinitions = [
         },
         "kind": {
           "type": "string",
-          "enum": ["related", "causes", "evolved-from", "contradicts", "part-of"]
+          "enum": ["related", "causes", "evolved-from", "contradicts", "part-of", "supersedes"]
         },
         "limit": {
           "type": "number"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "memoria_supersede",
+    "title": "Supersede Historical Memory",
+    "description": "Atomically mark an old fact historical and link the confirmed current fact to it. Direction is currentMemoryId (new fact) -> historicalMemoryId (old fact). Search first; use contradicts instead when it is unclear which fact is current. History is preserved, not archived or deleted.",
+    "inputSchema": {
+      "type": "object",
+      "required": ["currentMemoryId", "historicalMemoryId"],
+      "properties": {
+        "currentMemoryId": {
+          "type": "string",
+          "description": "The confirmed new/current fact. It must be active."
+        },
+        "historicalMemoryId": {
+          "type": "string",
+          "description": "The old fact that is no longer current. It remains available to historical recall."
+        },
+        "note": {
+          "type": "string",
+          "description": "Optional concise evidence or reason for the state replacement."
         }
       },
       "additionalProperties": false

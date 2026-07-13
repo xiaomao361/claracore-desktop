@@ -66,7 +66,11 @@ port intentionally. Do not silently fall back to a random port for normal
 Desktop use, because existing MCP client configs would then point at the wrong
 endpoint.
 
-The v0.5.x endpoint supports the MCP JSON-RPC methods needed for local tools:
+The v0.5.x endpoint supports the MCP JSON-RPC methods needed for local tools.
+Memory writers must search first: update the same fact, use
+`memoria_supersede` for a confirmed new state, and use `contradicts` when the
+conflict is unresolved. `memoria_search` defaults to current facts and accepts
+`timeView: historical|all` for explicit temporal recall:
 
 - `initialize`
 - `tools/list`

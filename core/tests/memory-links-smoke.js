@@ -97,6 +97,49 @@ async function main() {
     throw new Error(`Neighbor link metadata is wrong: ${JSON.stringify(neighborEntry.via)}`);
   }
 
+  const historicalFact = await runtime.createProductMemory(app, {
+    title: "Historical residence",
+    body: "Temporal smoke user currently lives in Shanghai.",
+    labels: "temporal-smoke"
+  });
+  const currentFact = await runtime.createProductMemory(app, {
+    title: "Current residence",
+    body: "Temporal smoke user currently lives in Hangzhou.",
+    labels: "temporal-smoke"
+  });
+  const supersession = await database.supersedeMemory({
+    currentMemoryId: currentFact.id,
+    historicalMemoryId: historicalFact.id,
+    note: "The confirmed residence changed."
+  });
+  if (supersession.link.kind !== "supersedes" || supersession.historical.status !== "superseded") {
+    throw new Error(`Supersession was not applied atomically: ${JSON.stringify(supersession)}`);
+  }
+  const repeatedSupersession = await database.supersedeMemory({
+    currentMemoryId: currentFact.id,
+    historicalMemoryId: historicalFact.id
+  });
+  if (repeatedSupersession.link.id !== supersession.link.id) {
+    throw new Error("Repeated supersession should be idempotent.");
+  }
+  const currentSearch = await database.searchMemories("Temporal smoke user currently lives", 10);
+  if (!currentSearch.results.some((memory) => memory.id === currentFact.id && memory.stateRole === "current")) {
+    throw new Error(`Current recall missed the replacement fact: ${JSON.stringify(currentSearch.results)}`);
+  }
+  if (currentSearch.results.some((memory) => memory.id === historicalFact.id)) {
+    throw new Error("Default current recall returned a superseded fact.");
+  }
+  const historicalSearch = await database.searchMemories("Temporal smoke user currently lives", 10, { timeView: "historical" });
+  const historicalHit = historicalSearch.results.find((memory) => memory.id === historicalFact.id);
+  if (historicalHit?.stateRole !== "historical" || !historicalHit.supersededBy.includes(currentFact.id)) {
+    throw new Error(`Historical recall did not explain its replacement: ${JSON.stringify(historicalSearch.results)}`);
+  }
+  const allSearch = await database.searchMemories("Temporal smoke user currently lives", 10, { timeView: "all" });
+  const allCurrent = allSearch.results.find((memory) => memory.id === currentFact.id);
+  if (!allCurrent?.supersedes.includes(historicalFact.id) || !allSearch.results.some((memory) => memory.id === historicalFact.id)) {
+    throw new Error(`All-state recall did not preserve both states: ${JSON.stringify(allSearch.results)}`);
+  }
+
   await database.archiveMemory(second.id);
   const searchAfterArchive = await database.searchMemories("First memory for link smoke", 10);
   if ((searchAfterArchive.related || []).some((entry) => entry.memory.id === second.id)) {
@@ -107,6 +150,14 @@ async function main() {
   await expectRejection(
     database.createMemoryLink({ fromMemoryId: first.id, toMemoryId: first.id }),
     "Self link"
+  );
+  await expectRejection(
+    database.createMemoryLink({ fromMemoryId: currentFact.id, toMemoryId: historicalFact.id, kind: "supersedes" }),
+    "Direct supersedes link"
+  );
+  await expectRejection(
+    database.supersedeMemory({ currentMemoryId: currentFact.id, historicalMemoryId: currentFact.id }),
+    "Self supersession"
   );
   await expectRejection(
     database.createMemoryLink({ fromMemoryId: first.id, toMemoryId: "mem_missing" }),
