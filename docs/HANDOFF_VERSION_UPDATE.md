@@ -2,7 +2,8 @@
 
 Date: 2026-07-16
 
-Status: local Stage 1 implementation complete; live published-Release acceptance pending.
+Status: `v0.5.4` published with both installers; real Windows installation and
+the first packaged old-to-new upgrade remain pending.
 
 ## User Need
 
@@ -26,7 +27,8 @@ or usage-history ideas in this implementation slice.
 - Current macOS targets: `dmg` and unpacked `dir`
 - Current Windows target: x64 NSIS installer and unpacked `dir`
 - Current package identity is `null`; the app is not yet signed or notarized
-- The repository currently has no GitHub Releases (`latestRelease: null`)
+- GitHub Release `v0.5.4` is public with macOS arm64, Windows x64, and SHA-256
+  checksum assets
 - A local arm64 `0.5.4` DMG exists at approximately 199 MB
 
 The working tree was already substantially dirty before this handoff was
@@ -140,10 +142,10 @@ The API call should set a short timeout and an explicit user agent. Four clients
 checking no more than daily are well inside normal unauthenticated GitHub API
 usage. Do not put a GitHub token in the app.
 
-Before the UI can report a real update, publish one stable GitHub Release with
-both supported assets and release notes. A draft release is suitable for
-release-pipeline testing but is not returned by the production latest-release
-path.
+The public `v0.5.4` Release now contains both supported assets and release
+notes. Live API validation confirms that `0.5.4` reports up to date and that a
+synthetic `0.5.3` client selects the correct macOS or Windows asset. A future
+`v0.5.5` is still required to validate the complete packaged old-to-new flow.
 
 ## Smallest Useful Implementation Loop
 

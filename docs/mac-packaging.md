@@ -56,6 +56,12 @@ not download, execute, mount, replace, relaunch, or silently install anything.
 Run `npm run test:update` for mocked release and Settings UI coverage before
 performing a live published-Release check.
 
+`v0.5.4` is published at
+`https://github.com/xiaomao361/claracore-desktop/releases/tag/v0.5.4` with both
+installer assets and `SHA256SUMS.txt`. The live Release API returns `0.5.4` as
+up to date and selects the correct asset for simulated older macOS arm64 and
+Windows x64 clients.
+
 ## Gateway In Packaged Mode
 
 The running packaged app exposes the preferred Streamable HTTP MCP endpoint at
