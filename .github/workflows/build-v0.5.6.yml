@@ -1,0 +1,78 @@
+name: Build v0.5.6 Windows
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/build-v0.5.6.yml"
+      - "package.json"
+      - "package-lock.json"
+      - "scripts/**"
+      - "core/tests/packaged-builtin-embedding-smoke.js"
+      - "resources/models/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-v0.5.6-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Windows x64 Full and Lite
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Windows dependencies
+        run: npm ci
+
+      - name: Run source checks
+        run: |
+          npm run check
+          npm run test:builtin-embedding
+
+      - name: Build Windows Full installer
+        run: npm run dist:win
+
+      - name: Validate packaged Full built-in embedding
+        run: npm run test:builtin-embedding:packaged
+
+      - name: Build Windows Lite installer
+        run: npm run dist:win:lite
+
+      - name: Verify Full and Lite package boundaries
+        run: npm run test:package:win:lite
+
+      - name: Write checksums
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem dist, dist-lite -Filter '*-Setup.exe'
+          $lines = foreach ($file in $files) {
+            $hash = (Get-FileHash -Algorithm SHA256 $file.FullName).Hash.ToLowerInvariant()
+            "$hash  $($file.Name)"
+          }
+          $lines | Set-Content -Encoding ascii SHA256SUMS-windows.txt
+
+      - name: Upload Windows installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: claracore-desktop-v0.5.6-windows-x64
+          path: |
+            dist/*-Setup.exe
+            dist-lite/*-Setup.exe
+            SHA256SUMS-windows.txt
+          if-no-files-found: error
+          retention-days: 7

@@ -58,6 +58,13 @@ ClaraCore-Desktop-<version>-x64-Setup.exe
 ClaraCore-Desktop-<version>-lite-x64-Setup.exe
 ```
 
+For `v0.5.6`, macOS artifacts are built and validated locally. Windows Full and
+Lite artifacts are built by the manually triggered
+`.github/workflows/build-v0.5.6.yml` workflow on `windows-latest`. The workflow
+must run the packaged Full built-in embedding smoke before its installers are
+accepted, so incomplete `sharp`/libvips native DLL packaging fails in CI instead
+of on a tester's machine.
+
 The app opens the validated GitHub Release URL in the system browser. If the API
 check fails, the fixed `releases/latest` address remains available to open or
 copy. It does not download, execute, mount, replace, relaunch, or silently
