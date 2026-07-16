@@ -2,10 +2,10 @@
 
 Date: 2026-07-16
 
-Status: `v0.5.5` published with Full/Lite macOS packages, Windows Full, and a
-generic GitHub Release-page update flow. The live API reports `v0.5.5` to a
-simulated `v0.5.4` client; physical old-package replacement remains for user
-acceptance.
+Status: `v0.5.6` published with Full/Lite macOS and Windows packages plus a
+generic GitHub Release-page update flow. Windows Full passed a packaged
+512-dimensional built-in embedding smoke on GitHub's Windows runner; physical
+old-package replacement remains user-directed.
 
 ## User Need
 
@@ -23,13 +23,13 @@ or usage-history ideas in this implementation slice.
 - Repository: `/Users/zhouwei/Documents/ClaraCore/apps/claracore-desktop`
 - Remote: `git@github.com:xiaomao361/claracore-desktop.git`
 - GitHub repository visibility: public
-- Current package version at handoff: `0.5.5`
+- Current package version at handoff: `0.5.6`
 - Product version source: `package.json`, read through `core/version.js`
 - Desktop stack: Electron `43`, `electron-builder` `26.15.3`
 - Current macOS targets: `dmg` and unpacked `dir`
 - Current Windows target: x64 NSIS installer and unpacked `dir`
 - Current package identity is `null`; the app is not yet signed or notarized
-- GitHub Release `v0.5.5` is public with macOS Full/Lite, Windows Full, and
+- GitHub Release `v0.5.6` is public with macOS Full/Lite, Windows Full/Lite, and
   SHA-256 checksum assets
 - The Full and Lite macOS DMGs both pass `hdiutil verify`
 
@@ -89,7 +89,8 @@ The published Stage 1 implementation includes:
 Validated locally on macOS arm64 with `git diff --check`, `npm run check`, the
 existing Settings UI smoke, `npm run test:update`, `npm run pack:mac`, and the
 packaged macOS update UI smoke. `npm run dist:win` produced the expected x64
-installer. Running and installing that artifact on Windows remains unverified.
+installer. The current `v0.5.6` workflow additionally executes the packaged
+Full built-in embedding path on Windows before publication.
 
 ## Agreed Product Direction
 

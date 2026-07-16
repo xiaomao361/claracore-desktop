@@ -32,16 +32,16 @@ Current output:
 
 ```text
 dist/mac-arm64/ClaraCore Desktop.app
-dist/ClaraCore-Desktop-0.5.5-arm64.dmg
-dist-lite/ClaraCore-Desktop-0.5.5-lite-arm64.dmg
-dist/ClaraCore-Desktop-0.5.5-x64-Setup.exe
-dist-lite/ClaraCore-Desktop-0.5.5-lite-x64-Setup.exe
+dist/ClaraCore-Desktop-0.5.6-arm64.dmg
+dist-lite/ClaraCore-Desktop-0.5.6-lite-arm64.dmg
+ClaraCore-Desktop-0.5.6-x64-Setup.exe
+ClaraCore-Desktop-0.5.6-lite-x64-Setup.exe
 ```
 
-The `0.5.5` Full/Lite arm64 DMGs and Full Windows x64 NSIS installer were
-published. The Windows Lite package has since been produced and inspected
-locally for the `0.5.6` test checkpoint. Windows runtime installation still
-requires acceptance on a real Windows x64 computer.
+The `0.5.6` Full/Lite arm64 DMGs and Windows x64 NSIS installers are published
+in GitHub Release `v0.5.6`. Windows Full/Lite are built on `windows-latest`; the
+packaged Full executable must generate a real 512-dimensional built-in
+embedding before its installers are uploaded.
 
 ## Manual Release Update Channel
 
@@ -72,11 +72,9 @@ install anything.
 Run `npm run test:update` for mocked release and Settings UI coverage before
 performing a live published-Release check.
 
-`v0.5.5` is published at
-`https://github.com/xiaomao361/claracore-desktop/releases/tag/v0.5.5` with Full
-and Lite macOS DMGs, the Windows installer, and `SHA256SUMS.txt`. The live
-Release API reports `0.5.5` as available to a simulated `0.5.4` client and
-returns the validated Release page URL.
+`v0.5.6` is published at
+`https://github.com/xiaomao361/claracore-desktop/releases/tag/v0.5.6` with Full
+and Lite macOS DMGs, Full and Lite Windows installers, and `SHA256SUMS.txt`.
 
 ## Gateway In Packaged Mode
 
@@ -118,24 +116,26 @@ node core/gateway/mcp-server.js
 
 ## Validation Status
 
-Validated locally for `0.5.5`:
+Validated for `0.5.6`:
 
-- packaged application reports version `0.5.5`
+- packaged application reports version `0.5.6`
 - `npm run check`
 - `npm run test:update`
-- packaged macOS update UI smoke with mocked `0.5.6`, up-to-date, and network
+- packaged macOS update UI smoke with mocked newer, up-to-date, and network
   fallback states
 - `npm run pack:mac`
 - Full and Lite DMGs both pass `hdiutil verify`
-- `npm run dist:win` produced the deterministic x64 NSIS installer; real
-  Windows installation remains pending
+- GitHub Actions built both Windows NSIS installers from a clean Windows
+  dependency install
+- packaged Windows Full generated a real 512-dimensional built-in embedding
+- Full/Lite Windows package-boundary checks passed
 - focused Memory-link and Memory UI smoke tests
 - Streamable HTTP Gateway smoke, including machine-readable `/agent/setup`
   guidance for current/historical Memory writes
 - focused Memory and Gateway smoke tests cover `memoria_supersede` plus
   current/historical recall semantics before packaging
 - packaged Gateway smoke passes from `dist/mac-arm64/ClaraCore Desktop.app`
-- packaged Gateway initialize reports server version `0.5.5`
+- packaged Gateway initialize reports server version `0.5.6`
 
 Previously validated packaging behavior retained by this build:
 

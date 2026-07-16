@@ -1,6 +1,6 @@
-# ClaraCore Desktop v0.5.6 Local Test Checkpoint
+# ClaraCore Desktop v0.5.6 Release Notes
 
-Status: release-candidate testing; no public `v0.5.6` Release has been published.
+Status: published as GitHub Release `v0.5.6` on 2026-07-16.
 
 ## What Changed
 
@@ -38,9 +38,9 @@ node core/tests/phase3-gateway-smoke.js
 node core/tests/phase3-shared-line-smoke.js
 ```
 
-The Windows release-candidate workflow is `.github/workflows/build-v0.5.6.yml`.
-It must pass `npm run test:builtin-embedding:packaged` before its installers are
-accepted for physical-device testing.
+The Windows release workflow is `.github/workflows/build-v0.5.6.yml`. Its
+successful release run passed `npm run test:builtin-embedding:packaged` before
+the installers were accepted for publication.
 
 ## Packaging Validation
 
@@ -55,6 +55,21 @@ Local macOS arm64 validation completed on 2026-07-16:
 - The Full/Lite package boundary check passed; the unpacked Lite app measured
   292.7 MiB versus Full at 532.1 MiB.
 
+GitHub Actions Windows x64 validation completed on 2026-07-16:
+
+- Run `29483512008` completed successfully on `windows-latest`.
+- The packaged Full executable loaded the built-in model and generated a
+  512-dimensional embedding, covering the complete Sharp/libvips native DLL
+  path that failed in the earlier Mac-cross-built Windows package.
+- Full installer: `ClaraCore-Desktop-0.5.6-x64-Setup.exe`, approximately
+  170 MiB, SHA-256
+  `93a37e341caa55a1a72b93643900e6377a73f1c8935b49598cbf163955c15975`.
+- Lite installer: `ClaraCore-Desktop-0.5.6-lite-x64-Setup.exe`, approximately
+  104 MiB, SHA-256
+  `afd864648158336df3cbd619fd8a1759d2c057c39ed38f8230700e031bc30c1f`.
+- The downloaded artifact matched the checksums generated on the Windows
+  runner.
+
 ## User Acceptance
 
 - Start the local build against an isolated or disposable data root.
@@ -63,6 +78,6 @@ Local macOS arm64 validation completed on 2026-07-16:
 - In Full Settings > Models, confirm ClaraCore built-in shows no external
   endpoint/model/key/test fields and Ollama restores them.
 - Confirm normal existing data does not show the onboarding panel.
-- Windows x64 installation and real Ollama use remain separate physical-device
-  acceptance steps after the GitHub-built installers pass their packaged
-  built-in embedding gate.
+- Windows x64 physical installation and real Ollama use remain post-release
+  device acceptance checks. The packaged Full built-in embedding gate is
+  already green on the Windows runner.

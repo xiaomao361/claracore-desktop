@@ -2,7 +2,7 @@
 
 Date: 2026-07-01
 
-## v0.5.6 Local Test Checkpoint
+## v0.5.6 Release Checkpoint
 
 Updated: 2026-07-16
 

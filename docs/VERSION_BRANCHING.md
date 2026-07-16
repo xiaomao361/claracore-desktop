@@ -4,7 +4,7 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- The current local version is `0.5.6`.
+- The current release version is `0.5.6`.
 - Historical `0.1.x` and `0.2.x` planning notes are archived under
   `docs/archive/`.
 
@@ -41,10 +41,10 @@ npm run dist:win
 Only install or replace the daily-use app after the target build passes the
 focused smoke gates for its changed surface.
 
-## v0.5.6 Local Test Checkpoint
+## v0.5.6 Release
 
-`0.5.6` is a local test checkpoint after the published `v0.5.5`; it is not yet
-a public release. It combines the following bounded changes for user testing:
+`0.5.6` is the current public release. It combines the following bounded
+changes:
 
 - `shared_line_get` now returns a lite resume packet scoped to the selected
   line instead of repeating every active line, archived line, and other
@@ -61,10 +61,11 @@ a public release. It combines the following bounded changes for user testing:
   and keeps Agent Access as the primary connection surface.
 - Full's built-in Memory embedding provider no longer renders external endpoint,
   model, API-key, fetch, or connection-test controls. Ollama still exposes them.
-- Windows Lite packaging uses the same flavor marker and dependency-removal
-  checks as macOS Lite; physical Windows installation remains unverified.
+- Windows Full/Lite packaging runs on GitHub's Windows runner. Full must
+  generate a real packaged 512-dimensional built-in embedding, and Lite uses
+  the same flavor marker and dependency-removal checks as macOS Lite.
 
-Validation for this local checkpoint:
+Validation for this release:
 
 ```bash
 npm run check

@@ -2,9 +2,9 @@
 
 Date: 2026-07-16
 
-Status: macOS arm64 Full/Lite implementation completed and published in
-`v0.5.5`; Windows Lite packaging is implemented and locally inspected for the
-`0.5.6` test checkpoint, with physical Windows acceptance still pending.
+Status: macOS arm64 and Windows x64 Full/Lite packages are published in
+`v0.5.6`. Windows Full passed a packaged 512-dimensional built-in embedding
+smoke on GitHub's Windows runner; physical-device acceptance remains ongoing.
 
 ## Decision
 
@@ -27,10 +27,9 @@ back to the bundled model.
 - Repository: `/Users/zhouwei/Documents/ClaraCore/apps/claracore-desktop`
 - Remote: `git@github.com:xiaomao361/claracore-desktop.git`
 - Branch at handoff: `main`
-- Release commit/tag: `86fa30d` / `v0.5.5`
-- Product version at the published release handoff: `0.5.5`
-- Current local test version: `0.5.6`
-- Current release: public GitHub Release `v0.5.5`
+- Release tag: `v0.5.6`
+- Product version at the published release handoff: `0.5.6`
+- Current release: public GitHub Release `v0.5.6`
 - Build stack: Electron `43`, `electron-builder` `26.15.3`
 
 The Full/Lite, update-check, and concurrent InnerLife delivery-evidence changes

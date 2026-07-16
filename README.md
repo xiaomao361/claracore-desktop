@@ -39,8 +39,9 @@ Read these before adding new features:
   pagination, resource ownership, memory telemetry, and long-run checks.
 - [macOS Packaging](docs/mac-packaging.md): current local packaging and packaged
   Gateway validation notes.
-- [v0.5.6 local test notes](docs/RELEASE_NOTES_V0.5.6.md): first-run onboarding,
-  demo data, scoped Shared Line reads, Full model-form cleanup, and Windows Lite.
+- [v0.5.6 release notes](docs/RELEASE_NOTES_V0.5.6.md): first-run onboarding,
+  demo data, scoped Shared Line reads, Full model-form cleanup, and validated
+  Windows Full/Lite packaging.
 - [Multi-Agent Client Migration v0.5.0](docs/MULTI_AGENT_CLIENT_MIGRATION_V0_5.md):
   Codex, Claude, and Hermes identity, conversation, InnerLife session, and
   Shared Line integration rules.
@@ -55,7 +56,7 @@ Read these before adding new features:
 
 ## Current Status
 
-The current local test version is `0.5.6`. It is a working desktop shell with a
+The current release version is `0.5.6`. It is a working desktop shell with a
 product-owned local data store, Desktop-native Memoria, Shared Line, InnerLife,
 a Desktop-owned Gateway, with model configuration merged into the Settings
 surface.
