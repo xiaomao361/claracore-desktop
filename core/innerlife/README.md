@@ -110,6 +110,10 @@ Useful MCP tools include:
 - `innerlife_pending_shares`
 - `innerlife_share_actions`
 - `innerlife_mark_share`
+
+Marking a share as `used` requires `deliveryEvidence` with a conversation id,
+the actual response excerpt, and the share timestamp. Candidate, pending, or
+discarded rows are not counted as confirmed shares on Home.
 - `innerlife_daemon_status`
 - `innerlife_daemon_set`
 - `innerlife_daemon_tick`

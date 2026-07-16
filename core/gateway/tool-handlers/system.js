@@ -1,4 +1,5 @@
 const continuity = require("../../continuity");
+const { BUILD_FLAVOR, HAS_BUILT_IN_EMBEDDING } = require("../../build-flavor");
 
 async function handleSystemTool(name, args, context) {
   const {
@@ -58,11 +59,16 @@ async function handleSystemTool(name, args, context) {
             "- Do not read local source files as the normal workflow.",
             "- Do not mutate SQLite directly.",
             "- Do not stop or replace external legacy ClaraCore services.",
-            "- Do not treat the built-in Memory embedding model as a chat or InnerLife model. It is only for local 512-dimensional Memory embeddings.",
+            HAS_BUILT_IN_EMBEDDING
+              ? "- Do not treat the built-in Memory embedding model as a chat or InnerLife model. It is only for local 512-dimensional Memory embeddings."
+              : "- This Lite build does not include the ClaraCore built-in Memory embedding model. Use Ollama or disable semantic embeddings.",
             "",
             "## Model Defaults",
             "",
-            "- Memory embedding defaults to ClaraCore built-in Xenova/bge-small-zh-v1.5.",
+            HAS_BUILT_IN_EMBEDDING
+              ? "- Memory embedding defaults to ClaraCore built-in Xenova/bge-small-zh-v1.5."
+              : "- Memory embedding uses Ollama in this Lite build. Select an installed Ollama embedding model before testing or embedding.",
+            `- Desktop build flavor: ${BUILD_FLAVOR}.`,
             "- InnerLife defaults to an OpenAI-compatible DeepSeek provider when configured by Desktop.",
             "- If a provider is disabled or unreachable, tools should report that state instead of inventing model output.",
             "",

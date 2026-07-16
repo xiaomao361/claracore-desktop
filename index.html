@@ -695,6 +695,7 @@
             <p class="quiet" data-i18n="settings.aboutBody">Read-only application and runtime information.</p>
             <div class="metric-list">
               <div><span data-i18n="settings.appVersion">App version</span><strong id="settingsAppVersion">-</strong></div>
+              <div><span data-i18n="settings.buildFlavor">Build flavor</span><strong id="settingsBuildFlavor">-</strong></div>
               <div><span data-i18n="settings.runtimeMode">Runtime mode</span><strong id="settingsRuntimeMode">-</strong></div>
               <div><span data-i18n="settings.databaseState">Local database</span><strong id="settingsDatabaseState">-</strong></div>
               <div><span data-i18n="settings.closeBehavior">Close window</span><strong id="settingsCloseBehaviorSummary">-</strong></div>
@@ -705,9 +706,9 @@
               <div><span data-i18n="settings.nodeVersion">Node</span><strong id="settingsNodeVersion">-</strong></div>
             </div>
             <div class="settings-actions compact-actions">
-              <button id="checkForUpdates" data-i18n="settings.update.check">Check for updates</button>
-              <button id="downloadUpdate" class="primary" data-i18n="settings.update.download" hidden>Download update</button>
-              <button id="viewUpdateNotes" data-i18n="settings.update.notes" hidden>View release notes</button>
+              <button id="checkForUpdates" class="secondary" data-i18n="settings.update.check">Check for updates</button>
+              <button id="downloadUpdate" class="primary" data-i18n="settings.update.download" hidden>Open download page</button>
+              <button id="copyUpdateUrl" class="secondary" data-i18n="settings.update.copyUrl" hidden>Copy download address</button>
             </div>
             <p id="updateCheckStatus" class="quiet" data-i18n="settings.update.ready">Checks public GitHub Releases. Installation stays manual.</p>
             <section class="source-map-card settings-source-card">
@@ -752,6 +753,7 @@
                   </div>
                   <span id="memoriaModelStatus" class="badge ok">ready</span>
                 </div>
+                <p id="memoriaProviderNotice" class="quiet" hidden></p>
                 <div class="settings-grid">
                   <label class="field">
                     <span data-i18n="home.model.provider">Provider</span>

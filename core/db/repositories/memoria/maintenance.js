@@ -136,7 +136,7 @@ function createMemoriaMaintenanceRepository(helpers) {
       }
       const settings = await this.getSettings();
       const provider = settings["memory.embedding.provider"] || "claracore-built-in";
-      const model = settings["memory.embedding.model"] || "Xenova/bge-small-zh-v1.5";
+      const model = settings["memory.embedding.model"] ?? (provider === "claracore-built-in" ? "Xenova/bge-small-zh-v1.5" : "");
       const dimension = Number.parseInt(String(settings["memory.embedding.dimension"] || 512), 10);
       const embeddingRows = await this.query(`
         SELECT m.id

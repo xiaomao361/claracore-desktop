@@ -506,7 +506,7 @@ function createClaraCoreHomeView(context) {
     }
     homeAgentActivityList.innerHTML = agents
       .map((agent) => {
-        const total = Number(agent.newMemories || 0) + Number(agent.formedConnections || 0) + Number(agent.proactiveShares || 0) + Number(agent.sharedLineUpdates || 0);
+        const total = Number(agent.newMemories || 0) + Number(agent.formedConnections || 0) + Number(agent.confirmedShares || 0) + Number(agent.sharedLineUpdates || 0);
         return `
           <article class="home-agent-activity-card">
             <div class="home-agent-activity-head">
@@ -516,7 +516,7 @@ function createClaraCoreHomeView(context) {
             <div class="home-agent-activity-stats">
               <div><span>${escapeHtml(t("home.agentActivity.newMemories"))}</span><strong>${escapeHtml(agent.newMemories || 0)}</strong></div>
               <div><span>${escapeHtml(t("home.agentActivity.formedConnections"))}</span><strong>${escapeHtml(agent.formedConnections || 0)}</strong></div>
-              <div><span>${escapeHtml(t("home.agentActivity.proactiveShares"))}</span><strong>${escapeHtml(agent.proactiveShares || 0)}</strong></div>
+              <div><span>${escapeHtml(t("home.agentActivity.confirmedShares"))}</span><strong>${escapeHtml(agent.confirmedShares || 0)}</strong></div>
               <div><span>${escapeHtml(t("home.agentActivity.sharedLineUpdates"))}</span><strong>${escapeHtml(agent.sharedLineUpdates || 0)}</strong></div>
             </div>
           </article>

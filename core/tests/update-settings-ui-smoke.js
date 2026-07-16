@@ -21,16 +21,20 @@ async function main() {
       }
     });
     const page = await app.firstWindow();
-    const fixture = await app.evaluate(async ({ app, shell }) => {
+    const fixture = await app.evaluate(async ({ app, clipboard, shell }) => {
       const platform = process.platform;
       const arch = process.arch;
-      const version = "0.5.5";
+      const version = "0.5.6";
       const assetName = platform === "darwin"
         ? `ClaraCore-Desktop-${version}-arm64.dmg`
         : `ClaraCore-Desktop-${version}-x64-Setup.exe`;
       globalThis.__claracoreOpenedUpdateUrl = null;
+      globalThis.__claracoreCopiedUpdateUrl = null;
       shell.openExternal = async (url) => {
         globalThis.__claracoreOpenedUpdateUrl = url;
+      };
+      clipboard.writeText = (value) => {
+        globalThis.__claracoreCopiedUpdateUrl = value;
       };
       globalThis.fetch = async () => ({
         status: 200,
@@ -53,7 +57,7 @@ async function main() {
           };
         }
       });
-      return { platform, arch, appVersion: app.getVersion(), assetName };
+      return { platform, arch, appVersion: app.getVersion(), assetName, version };
     });
 
     await page.waitForSelector("[data-view='settings']", { timeout: 15000 });
@@ -61,7 +65,7 @@ async function main() {
     await page.click("[data-settings-tab='general']");
     await page.click("#checkForUpdates");
     await page.waitForFunction(
-      () => document.querySelector("#updateCheckStatus")?.textContent.includes("0.5.5"),
+      () => document.querySelector("#updateCheckStatus")?.textContent.includes("0.5.6"),
       null,
       { timeout: 10000 }
     );
@@ -69,18 +73,31 @@ async function main() {
     const rendered = await page.evaluate(() => ({
       status: document.querySelector("#updateCheckStatus")?.textContent,
       downloadHidden: document.querySelector("#downloadUpdate")?.hidden,
-      notesHidden: document.querySelector("#viewUpdateNotes")?.hidden,
-      buttonDisabled: document.querySelector("#checkForUpdates")?.disabled
+      copyHidden: document.querySelector("#copyUpdateUrl")?.hidden,
+      buttonDisabled: document.querySelector("#checkForUpdates")?.disabled,
+      checkButtonSecondary: document.querySelector("#checkForUpdates")?.classList.contains("secondary"),
+      downloadButtonPrimary: document.querySelector("#downloadUpdate")?.classList.contains("primary"),
+      copyButtonSecondary: document.querySelector("#copyUpdateUrl")?.classList.contains("secondary")
     }));
-    if (rendered.downloadHidden || rendered.notesHidden || rendered.buttonDisabled) {
+    if (
+      rendered.downloadHidden
+      || rendered.copyHidden
+      || rendered.buttonDisabled
+      || !rendered.checkButtonSecondary
+      || !rendered.downloadButtonPrimary
+      || !rendered.copyButtonSecondary
+    ) {
       throw new Error(`Update actions were not rendered correctly: ${JSON.stringify(rendered)}`);
     }
 
     await page.click("#downloadUpdate");
     const openedUrl = await app.evaluate(() => globalThis.__claracoreOpenedUpdateUrl);
-    if (!openedUrl?.endsWith(`/${fixture.assetName}`)) {
+    if (openedUrl !== `https://github.com/xiaomao361/claracore-desktop/releases/tag/v${fixture.version}`) {
       throw new Error(`Download action opened the wrong URL: ${openedUrl}`);
     }
+    await page.click("#copyUpdateUrl");
+    const copiedUrl = await app.evaluate(() => globalThis.__claracoreCopiedUpdateUrl);
+    if (copiedUrl !== openedUrl) throw new Error(`Copy action used the wrong URL: ${copiedUrl}`);
     const blocked = await page.evaluate(() => window.ClaraCoreDesktop.openUpdateUrl("https://example.com/evil.exe"));
     if (blocked !== false) throw new Error("Untrusted update URL was not blocked.");
 
@@ -103,18 +120,33 @@ async function main() {
     });
     await page.click("#checkForUpdates");
     await page.waitForFunction(
-      () => !document.querySelector("#updateCheckStatus")?.textContent.includes("0.5.5"),
+      () => !document.querySelector("#updateCheckStatus")?.textContent.includes("0.5.6"),
       null,
       { timeout: 10000 }
     );
     const current = await page.evaluate(() => ({
       status: document.querySelector("#updateCheckStatus")?.textContent,
-      downloadHidden: document.querySelector("#downloadUpdate")?.hidden
+      downloadHidden: document.querySelector("#downloadUpdate")?.hidden,
+      copyHidden: document.querySelector("#copyUpdateUrl")?.hidden
     }));
-    if (!current.downloadHidden) throw new Error(`Up-to-date state kept download visible: ${JSON.stringify(current)}`);
+    if (!current.downloadHidden || !current.copyHidden) throw new Error(`Up-to-date state kept update actions visible: ${JSON.stringify(current)}`);
+
+    await app.evaluate(() => {
+      globalThis.fetch = async () => { throw new Error("offline"); };
+    });
+    await page.click("#checkForUpdates");
+    await page.waitForFunction(() => !document.querySelector("#downloadUpdate")?.hidden);
+    const fallback = await page.evaluate(() => ({
+      status: document.querySelector("#updateCheckStatus")?.textContent,
+      downloadHidden: document.querySelector("#downloadUpdate")?.hidden,
+      copyHidden: document.querySelector("#copyUpdateUrl")?.hidden
+    }));
+    if (fallback.downloadHidden || fallback.copyHidden) {
+      throw new Error(`Network failure hid the fallback Release actions: ${JSON.stringify(fallback)}`);
+    }
 
     await app.close();
-    console.log(JSON.stringify({ ok: true, packaged: Boolean(packagedExecutable), fixture, rendered, current, dataRoot }, null, 2));
+    console.log(JSON.stringify({ ok: true, packaged: Boolean(packagedExecutable), fixture, rendered, current, fallback, dataRoot }, null, 2));
   } catch (error) {
     if (app) await app.close().catch(() => {});
     throw error;

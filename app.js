@@ -908,6 +908,11 @@ saveAgentGatewayConfig?.addEventListener("click", async () => {
 
 saveSettings.addEventListener("click", async () => {
   const form = collectSettingsForm();
+  const validationError = settingsView.settingsValidationError(form);
+  if (validationError) {
+    settingsNotice.textContent = t(validationError);
+    return;
+  }
   if (settingsView.embeddingConfigChanged(form) && !window.confirm(t("settings.embedding.rebuildConfirm"))) {
     return;
   }

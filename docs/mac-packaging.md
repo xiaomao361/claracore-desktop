@@ -31,28 +31,33 @@ Current output:
 
 ```text
 dist/mac-arm64/ClaraCore Desktop.app
-dist/ClaraCore-Desktop-0.5.4-arm64.dmg
-dist/ClaraCore-Desktop-0.5.4-x64-Setup.exe
+dist/ClaraCore-Desktop-0.5.5-arm64.dmg
+dist-lite/ClaraCore-Desktop-0.5.5-lite-arm64.dmg
+dist/ClaraCore-Desktop-0.5.5-x64-Setup.exe
 ```
 
-The unpacked `0.5.4` `.app`, arm64 DMG, and Windows x64 NSIS installer have
-been produced locally. Windows runtime installation still requires acceptance
-on a real Windows x64 computer.
+The `0.5.5` Full/Lite arm64 DMGs and Windows x64 NSIS installer have been
+produced locally. Windows runtime installation still requires acceptance on a
+real Windows x64 computer.
 
 ## Manual Release Update Channel
 
-The manual update check reads the latest public stable GitHub Release and
-selects an exact asset for `darwin-arm64` or `win32-x64`. Build publishable
-assets with `npm run dist:mac` and `npm run dist:win`, then upload both files to
-the same `v<version>` GitHub Release. Use these names:
+The manual update check reads the latest public stable GitHub Release, then
+opens or copies the generic Release page so the user chooses Full/Lite and the
+correct platform. Build publishable assets with `npm run dist:mac`,
+`npm run dist:mac:lite`, and `npm run dist:win`, then upload them to the same
+`v<version>` GitHub Release. Use these names:
 
 ```text
 ClaraCore-Desktop-<version>-arm64.dmg
+ClaraCore-Desktop-<version>-lite-arm64.dmg
 ClaraCore-Desktop-<version>-x64-Setup.exe
 ```
 
-The app opens the validated GitHub download URL in the system browser. It does
-not download, execute, mount, replace, relaunch, or silently install anything.
+The app opens the validated GitHub Release URL in the system browser. If the API
+check fails, the fixed `releases/latest` address remains available to open or
+copy. It does not download, execute, mount, replace, relaunch, or silently
+install anything.
 Run `npm run test:update` for mocked release and Settings UI coverage before
 performing a live published-Release check.
 
@@ -102,14 +107,15 @@ node core/gateway/mcp-server.js
 
 ## Validation Status
 
-Validated locally for `0.5.4`:
+Validated locally for `0.5.5`:
 
-- packaged application reports version `0.5.4`
+- packaged application reports version `0.5.5`
 - `npm run check`
 - `npm run test:update`
-- packaged macOS update UI smoke with mocked `0.5.5` and up-to-date states
+- packaged macOS update UI smoke with mocked `0.5.6`, up-to-date, and network
+  fallback states
 - `npm run pack:mac`
-- `npm run dist:mac` and a valid `hdiutil verify` result for the `0.5.4` DMG
+- Full and Lite DMGs both pass `hdiutil verify`
 - `npm run dist:win` produced the deterministic x64 NSIS installer; real
   Windows installation remains pending
 - focused Memory-link and Memory UI smoke tests
@@ -118,7 +124,7 @@ Validated locally for `0.5.4`:
 - focused Memory and Gateway smoke tests cover `memoria_supersede` plus
   current/historical recall semantics before packaging
 - packaged Gateway smoke passes from `dist/mac-arm64/ClaraCore Desktop.app`
-- packaged Gateway initialize reports server version `0.5.4`
+- packaged Gateway initialize reports server version `0.5.5`
 
 Previously validated packaging behavior retained by this build:
 
@@ -142,7 +148,6 @@ Known remaining release work:
 - Add code signing.
 - Add notarization.
 - Complete real Windows x64 installation acceptance.
-- Validate the first live old-to-new flow when a version newer than `0.5.4` is
-  published.
+- Validate the live `v0.5.4 -> v0.5.5` flow after publication.
 - Consider automatic update installation only after signing and the release
   workflow are stable.

@@ -2,8 +2,9 @@
 
 Date: 2026-07-16
 
-Status: `v0.5.4` published with both installers; real Windows installation and
-the first packaged old-to-new upgrade remain pending.
+Status: `v0.5.5` release candidate prepared with Full/Lite macOS packages and a
+generic GitHub Release-page update flow; live `v0.5.4 -> v0.5.5` testing follows
+publication.
 
 ## User Need
 
@@ -21,7 +22,7 @@ or usage-history ideas in this implementation slice.
 - Repository: `/Users/zhouwei/Documents/ClaraCore/apps/claracore-desktop`
 - Remote: `git@github.com:xiaomao361/claracore-desktop.git`
 - GitHub repository visibility: public
-- Current package version at handoff: `0.5.4`
+- Current package version at handoff: `0.5.5`
 - Product version source: `package.json`, read through `core/version.js`
 - Desktop stack: Electron `43`, `electron-builder` `26.15.3`
 - Current macOS targets: `dmg` and unpacked `dir`
@@ -104,12 +105,12 @@ Implement this stage first.
 - Compare the current product version with the latest non-draft,
   non-prerelease release.
 - Return a small structured result through the preload/IPC boundary: current
-  version, latest version, status, release name/notes URL, publish time, and the
-  matching DMG or EXE download URL when present.
-- When an update exists, let the user open the release page or installer download in
-  the system browser. Keep installation user-directed.
+  version, latest version, status, Release page URL, and publish time.
+- When an update exists, let the user open or copy the Release page URL and
+  choose the correct Full/Lite and platform package. Keep installation
+  user-directed.
 - Show clear states for checking, up to date, update available, offline/network
-  failure, malformed release metadata, and missing compatible asset.
+  failure, and malformed release metadata.
 - A failed check must never block app startup or affect the local database,
   Gateway, Memoria, Shared Line, or InnerLife.
 - Do not download, mount, replace, relaunch, or silently install the app in this
@@ -126,6 +127,51 @@ Defer this stage until code signing, notarization, and a stable release pipeline
 exist. Evaluate `electron-updater` or a native signed update mechanism only at
 that point. Do not let Stage 2 expand the first implementation slice.
 
+## Signing Decision And Revisit Trigger
+
+Decision recorded on 2026-07-16: with only four to five test users, keep both
+macOS and Windows packages unsigned for now. The immediate priority is proving
+the GitHub Release check, compatible-asset selection, manual download, checksum,
+and install/replace flow with `v0.5.4 -> v0.5.5`. Do not purchase certificates
+or add signing secrets and CI signing configuration during this test phase.
+
+Expected unsigned-package behavior must remain explicit to testers:
+
+- macOS may require a manual Gatekeeper override because the app has neither a
+  Developer ID signature nor Apple notarization.
+- Windows may show an unknown-publisher or Microsoft Defender SmartScreen
+  warning. Testers may need to choose `More info -> Run anyway`.
+- Published SHA-256 checksum files verify download integrity but do not replace
+  operating-system code signing or establish a verified publisher identity.
+
+Revisit signing when the app moves beyond the small known-tester group, when
+installation warnings become recurring support friction, or before implementing
+automatic download and installation. At that checkpoint:
+
+1. Enroll in the Apple Developer Program, sign the macOS app with a Developer ID
+   Application certificate, notarize it, staple the result, and verify it with
+   `codesign` and `spctl`.
+2. Obtain a Windows Authenticode OV code-signing identity suitable for the
+   publisher's verified legal or individual name. Do not assume an Apple
+   certificate can sign Windows artifacts.
+3. Prefer a Windows GitHub Actions runner for the signed Windows build. Keep
+   certificate material, hardware-token access, or cloud-signing credentials in
+   protected CI secrets rather than the repository.
+4. Sign and timestamp the application executables and NSIS installer, then
+   validate the final artifact with `signtool verify` and
+   `Get-AuthenticodeSignature` before uploading it to GitHub Releases.
+5. Reassess Microsoft Artifact Signing availability for the publisher's country
+   and identity type at that time; its Public Trust eligibility is region
+   dependent and should not be assumed from the current documentation.
+6. Add a release gate that rejects unsigned production artifacts once signing
+   becomes required, while retaining an explicitly marked unsigned developer
+   build path if still useful.
+
+An EV certificate is not part of the current plan. Reevaluate it only if normal
+OV signing and accumulated SmartScreen reputation still leave a demonstrated
+distribution problem large enough to justify the additional cost and key
+management constraints.
+
 ## Release Source Contract
 
 Recommended first contract:
@@ -133,10 +179,8 @@ Recommended first contract:
 - Latest release metadata:
   `https://api.github.com/repos/xiaomao361/claracore-desktop/releases/latest`
 - Release tag: prefer `v<package version>`, for example `v0.5.5`
-- macOS asset naming: continue the current builder convention,
-  `ClaraCore-Desktop-<version>-<arch>.dmg`
-- Windows asset naming: `ClaraCore-Desktop-<version>-x64-Setup.exe`
-- Initial supported platforms: packaged macOS arm64 and Windows x64
+- The client does not infer an installer asset. It opens the generic Release
+  page so Full/Lite and platform selection remains explicit.
 
 The API call should set a short timeout and an explicit user agent. Four clients
 checking no more than daily are well inside normal unauthenticated GitHub API
@@ -169,13 +213,13 @@ synthetic `0.5.3` client selects the correct macOS or Windows asset. A future
 ## Acceptance Criteria For Stage 1
 
 - Packaged Desktop shows its current version and a manual update-check action.
-- With a newer compatible release fixture, the UI reports the new version and
-  opens the expected release/download URL through the system browser.
+- With a newer release fixture, the UI reports the new version and opens or
+  copies the expected Release page URL.
 - With the same or an older release fixture, the UI reports that the app is up
   to date.
 - Drafts and prereleases are not offered by the stable channel.
-- A missing arm64 DMG or x64 EXE is reported as unavailable rather than
-  selecting an incompatible asset.
+- Release detection remains valid before assets finish uploading because client
+  behavior does not depend on a specific asset list.
 - Network timeout, offline state, rate-limit response, invalid JSON, and missing
   fields are handled without an unhandled rejection.
 - Update checks do not write to or migrate `claracore.db`.

@@ -53,7 +53,7 @@ Read these before adding new features:
 
 ## Current Status
 
-The current version is `0.5.4`. It is a working desktop shell with a
+The current version is `0.5.5`. It is a working desktop shell with a
 product-owned local data store, Desktop-native Memoria, Shared Line, InnerLife,
 a Desktop-owned Gateway, with model configuration merged into the Settings
 surface.
@@ -75,12 +75,12 @@ Included:
 - Desktop-owned Gateway Streamable HTTP endpoint for Gateway context, Memoria, Shared Line, and InnerLife MCP tools; stdio remains available for clients that do not support HTTP MCP yet
 - Shared Line defaults are agent-scoped for Gateway callers: without an explicit `lineId`, `X-ClaraCore-Agent-ID` / `CLARACORE_AGENT_ID` reads and writes the agent's own line only when that choice is unambiguous. Multiple active lines fail closed with `SHARED_LINE_ID_REQUIRED`; the agent must list lines and retry with an explicit `lineId`. InnerLife shared-line context follows the same agent scope.
 - Home Agent View includes period-based agent change summaries for yesterday, today, recent 7 days, and recent 30 days
-- The built-in Memory embedding model stays lazy-loaded; Ollama and OpenAI-compatible providers do not load it.
+- The Full build's built-in Memory embedding model stays lazy-loaded; Ollama and OpenAI-compatible providers do not load it. Lite excludes that runtime entirely.
 - Memoria CLI for store, recall, get, update, tag, delete, restore, archive, import/export, records, and maintenance audit/run
 - View-focused Memoria UI with four tabs: Memories (empty search lists all, with paging), Labels, Graph, and Archive & restricted (restricted, archived, and deleted review plus delete/restore)
 - Lazy-loaded Memoria list tabs and canvas graph with Obsidian-style memory map, relationship-network, and historical-to-current state-chain views, primary/restricted layers, state/conflict inspection, zoom/pan, and reduced-motion fallback
 - Vector maintenance behind a disclosure that auto-opens only when pending or failed vectors exist, plus daily small-batch Memoria database maintenance
-- Default local Memory embeddings use the bundled ClaraCore built-in `Xenova/bge-small-zh-v1.5` model with 512-dimensional vectors
+- Full defaults to the bundled ClaraCore built-in `Xenova/bge-small-zh-v1.5` Memory embedding model with 512-dimensional vectors. Fresh Lite starts with Ollama and requires the user to fetch and select an installed embedding model.
 - Shared Line CLI and Desktop-owned Gateway MCP tools for agent-driven line create/list/get/activate/rename/archive/restore/update/handoff, agent state, model adjustments, and arc compaction
 - Shared-reality and affective fields as first-class inputs, with a managed arc lifecycle: momentary readings stay transient, duplicates are de-duplicated, persisted arcs are capped, resume packets truncate by default (fullArc for the complete arc), and needs-review nodes are always protected
 - View-focused Shared Line UI for line browsing, agent filtering, current position, metadata, history, snapshots, handoffs, and resume packet review; selecting a line only changes the reviewed detail, not the agent-active line
@@ -91,9 +91,9 @@ Included:
 - InnerLife share timing checks connect against the current Shared Line context
   by default and record explicit/context/line overlap metadata before an agent
   chooses whether to use or defer a share
-- Settings > Models tab keeps provider flows explicit: Memory embedding exposes
-  ClaraCore built-in, Ollama, or Disabled, while InnerLife exposes Disabled,
-  Ollama, or OpenAI-compatible provider settings
+- Settings > Models keeps provider flows explicit: Full exposes ClaraCore
+  built-in, Ollama, or Disabled for Memory embedding; Lite exposes only Ollama
+  or Disabled. InnerLife exposes Disabled, Ollama, or OpenAI-compatible in both.
 - InnerLife runtime panel for daemon enable/pause/tick and doctor status; sessions, digests, inbox, and timing checks sit behind a collapsed Pipeline evidence section
 - Verified SQLite product backups with restore preview and safety-backup restore
 - Full product JSON export/import for portable ClaraCore Desktop data
@@ -162,7 +162,24 @@ Useful narrower smoke gates:
 npm run test:phase5
 npm run test:backup
 npm run test:import-preview
+npm run test:lite
 ```
+
+## Full And Lite Builds
+
+Full keeps the bundled local Memory embedding runtime. Lite removes its model,
+Xenova, ONNX, Sharp, and transitive production packages, while retaining Ollama
+embedding and all other Desktop domains.
+
+```bash
+npm run pack:mac          # Full unpacked app under dist/
+npm run pack:mac:lite     # Lite unpacked app under dist-lite/
+npm run test:package:lite # compare and inspect both packages
+npm run dist:mac:lite     # Lite DMG under dist-lite/
+```
+
+`npm run test:lite:ollama` is an opt-in real-runtime gate and requires Ollama at
+`http://127.0.0.1:11434` with `bge-m3` available.
 
 Run the opt-in long-run memory stability check:
 

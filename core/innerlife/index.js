@@ -86,8 +86,8 @@ async function tickDaemon(core, input) {
   return core.database.tickInnerLifeDaemon(input);
 }
 
-async function markShare(core, id, action, reason = "", agentId = "") {
-  return core.database.markInnerLifeShare(id, action, reason, agentId);
+async function markShare(core, id, action, reason = "", agentId = "", deliveryEvidence = null) {
+  return core.database.markInnerLifeShare(id, action, reason, agentId, deliveryEvidence);
 }
 
 async function reviewShare(core, id, decision, reason = "") {

@@ -2,6 +2,7 @@ const path = require("path");
 const fs = require("fs/promises");
 const { previewImportSources } = require("../import-preview");
 const { PRODUCT_VERSION } = require("../version");
+const { buildFlavorInfo } = require("../build-flavor");
 const { buildDecayAudit } = require("./decay");
 const { readDesktopSettings } = require("./paths");
 
@@ -122,9 +123,9 @@ async function canWriteRuntimeProbe(paths) {
 function buildHealthChecks(app, paths, configuration, databaseSummary, canWriteRuntime) {
   const embeddingProvider = configuration?.memoria?.provider || "unknown";
   const embeddingReady =
-    embeddingProvider === "claracore-built-in" ||
+    (embeddingProvider === "claracore-built-in" && configuration?.memoria?.providerSupported !== false) ||
     embeddingProvider === "disabled" ||
-    (embeddingProvider === "ollama" && Boolean(configuration?.memoria?.endpoint));
+    (embeddingProvider === "ollama" && Boolean(configuration?.memoria?.endpoint) && Boolean(configuration?.memoria?.model));
   const checks = [
     {
       id: "data-root",
@@ -191,6 +192,7 @@ function createSnapshotRuntime({ ensureProductCore }) {
     return {
       mode: process.env.CLARACORE_DESKTOP_DATA_DIR || desktopSettings.dataRoot ? "custom-product-data" : "isolated-product-dev",
       productVersion: PRODUCT_VERSION,
+      build: buildFlavorInfo(),
       root: paths.appRoot,
       appRoot: paths.appRoot,
       coreStatus: health.status === "ok" ? "Ready" : "Needs attention",

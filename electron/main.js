@@ -5,6 +5,7 @@ const os = require("os");
 const { execFile, spawnSync } = require("child_process");
 const { promisify } = require("util");
 const { PRODUCT_VERSION } = require("../core/version");
+const { resolveListedModelName } = require("../core/model-provider-utils");
 const { checkForUpdates, isAllowedUpdateUrl } = require("../core/update/github-release-client");
 const { createHttpAgentGateway } = require("./http-agent-gateway");
 const { createSchedulers } = require("./schedulers");
@@ -523,14 +524,28 @@ async function listConfiguredModels(input = {}) {
   if (provider === "ollama") {
     const payload = await fetchJsonWithTimeout(`${baseUrl}/api/tags`);
     const models = Array.isArray(payload.models) ? payload.models.map((item) => item.name || item.model) : [];
-    return { provider, endpoint: baseUrl, models: uniqueSortedModelNames(models), supported: true };
+    const listedModels = uniqueSortedModelNames(models);
+    return {
+      provider,
+      endpoint: baseUrl,
+      models: listedModels,
+      resolvedModel: resolveListedModelName(input.model, listedModels, provider),
+      supported: true
+    };
   }
   if (provider === "openai-compatible") {
     const apiKey = resolveApiKeyRef(input.apiKeyRef);
     const headers = apiKey ? { Authorization: `Bearer ${apiKey}` } : {};
     const payload = await fetchJsonWithTimeout(openAiModelsUrl(baseUrl), { headers });
     const models = Array.isArray(payload.data) ? payload.data.map((item) => item.id || item.name) : [];
-    return { provider, endpoint: baseUrl, models: uniqueSortedModelNames(models), supported: true };
+    const listedModels = uniqueSortedModelNames(models);
+    return {
+      provider,
+      endpoint: baseUrl,
+      models: listedModels,
+      resolvedModel: resolveListedModelName(input.model, listedModels, provider),
+      supported: true
+    };
   }
   return { provider, endpoint: baseUrl, models: [], supported: false };
 }
@@ -560,11 +575,13 @@ async function testConfiguredModel(input = {}) {
   }
   const result = await listConfiguredModels(input);
   const models = Array.isArray(result.models) ? result.models : [];
-  const found = models.includes(model);
+  const resolvedModel = result.resolvedModel || "";
+  const found = Boolean(resolvedModel);
   return {
     provider,
     endpoint: result.endpoint,
     model,
+    resolvedModel,
     ok: found,
     supported: result.supported !== false,
     checkedAt: new Date().toISOString(),

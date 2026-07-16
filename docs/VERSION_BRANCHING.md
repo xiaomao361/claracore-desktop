@@ -4,7 +4,7 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- The current local version is `0.5.4`.
+- The current local version is `0.5.5`.
 - Historical `0.1.x` and `0.2.x` planning notes are archived under
   `docs/archive/`.
 
@@ -40,6 +40,16 @@ npm run dist:win
 
 Only install or replace the daily-use app after the target build passes the
 focused smoke gates for its changed surface.
+
+## v0.5.5 Full/Lite Builds And Release-Page Updates
+
+`v0.5.5` adds explicit Full and Lite macOS distributions, preserves saved
+Ollama model configuration, resolves Ollama default-tag aliases, and prevents a
+Lite runtime from exposing or loading the built-in embedding provider. Update
+checks now direct every build flavor to the GitHub Release page and offer a copy
+action, so the user chooses the correct Full or Lite package without platform
+asset inference. InnerLife activity now counts only shares with recorded
+delivery evidence. See `docs/RELEASE_NOTES_V0.5.5.md`.
 
 ## v0.5.4 Manual Updates And Graph Reopen Reliability
 

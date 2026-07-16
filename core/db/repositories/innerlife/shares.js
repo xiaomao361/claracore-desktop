@@ -29,6 +29,24 @@ function createInnerLifeShareRepository(helpers) {
     return [...new Set(tokens || [])];
   }
 
+  function normalizeDeliveryEvidence(input = {}) {
+    const conversationId = String(input.conversationId || "").trim();
+    const responseId = String(input.responseId || "").trim();
+    const responseExcerpt = String(input.responseExcerpt || "").replace(/\s+/g, " ").trim();
+    const sharedAt = String(input.sharedAt || "").trim();
+    const source = String(input.source || "agent").trim() || "agent";
+    if (!conversationId) throw new Error("Used InnerLife shares require deliveryEvidence.conversationId.");
+    if (responseExcerpt.length < 12) throw new Error("Used InnerLife shares require a deliveryEvidence.responseExcerpt of at least 12 characters.");
+    if (!sharedAt || Number.isNaN(Date.parse(sharedAt))) throw new Error("Used InnerLife shares require a valid deliveryEvidence.sharedAt timestamp.");
+    return {
+      conversationId,
+      ...(responseId ? { responseId } : {}),
+      responseExcerpt: responseExcerpt.slice(0, 1200),
+      sharedAt: new Date(sharedAt).toISOString(),
+      source
+    };
+  }
+
   function buildSharedLineTimingContext(resumePacket = {}) {
     const current = resumePacket.currentPosition || {};
     const sharedReality = resumePacket.sharedReality || {};
@@ -252,7 +270,7 @@ function createInnerLifeShareRepository(helpers) {
       return rows[0];
     },
 
-    async markInnerLifeShare(id, action, reason = "", agentId = "") {
+    async markInnerLifeShare(id, action, reason = "", agentId = "", deliveryEvidence = null) {
       const shareId = String(id || "").trim();
       if (!shareId) throw new Error("InnerLife share id is required.");
       const normalized = String(action || "").trim().toLowerCase();
@@ -271,6 +289,7 @@ function createInnerLifeShareRepository(helpers) {
       if (!["pending", "approved", "deferred"].includes(share.status)) {
         throw new Error(`InnerLife share cannot be marked ${normalized} from ${share.status}.`);
       }
+      const normalizedEvidence = normalized === "used" ? normalizeDeliveryEvidence(deliveryEvidence || {}) : null;
       const actionId = newId("inner_share_action");
       await this.exec(`
         UPDATE innerlife_shares
@@ -286,7 +305,7 @@ function createInnerLifeShareRepository(helpers) {
           ${sqlString(share.agent_id)},
           ${sqlString(normalized)},
           ${sqlString(String(reason || "").trim())},
-          '{}'
+          ${jsonSql(normalizedEvidence ? { deliveryEvidence: normalizedEvidence } : {})}
         );
       `);
       return {

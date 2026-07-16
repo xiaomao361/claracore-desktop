@@ -471,7 +471,22 @@ async function runMemoryCommand(app, command, subcommand, options) {
       });
     }
     if (subcommand === "mark-share") {
-      return runtime.markProductInnerLifeShare(app, requireOption(options, "id"), requireOption(options, "action"), options.reason || "");
+      const deliveryEvidence = options["conversation-id"] || options.conversationId || options["response-excerpt"] || options.responseExcerpt
+        ? {
+            conversationId: options["conversation-id"] || options.conversationId || "",
+            responseId: options["response-id"] || options.responseId || "",
+            responseExcerpt: options["response-excerpt"] || options.responseExcerpt || "",
+            sharedAt: options["shared-at"] || options.sharedAt || "",
+            source: options.source || "cli"
+          }
+        : null;
+      return runtime.markProductInnerLifeShare(
+        app,
+        requireOption(options, "id"),
+        requireOption(options, "action"),
+        options.reason || "",
+        deliveryEvidence
+      );
     }
     if (subcommand === "share-actions") {
       const { database } = await runtime.ensureProductCore(app);

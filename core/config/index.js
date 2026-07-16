@@ -1,3 +1,8 @@
+const {
+  HAS_BUILT_IN_EMBEDDING,
+  MEMORY_EMBEDDING_PROVIDERS
+} = require("../build-flavor");
+
 const DEFAULT_AGENT_ID = "codex";
 
 // Shared DeepSeek key shipped as the out-of-box default so fresh installs get a
@@ -6,9 +11,9 @@ const DEFAULT_AGENT_ID = "codex";
 const DEFAULT_INNERLIFE_API_KEY = "sk-31a59c1d9fdc421194c876972241290f";
 
 const DEFAULT_SETTINGS = {
-  "memory.embedding.provider": "claracore-built-in",
+  "memory.embedding.provider": HAS_BUILT_IN_EMBEDDING ? "claracore-built-in" : "ollama",
   "memory.embedding.base_url": "http://127.0.0.1:11434",
-  "memory.embedding.model": "Xenova/bge-small-zh-v1.5",
+  "memory.embedding.model": HAS_BUILT_IN_EMBEDDING ? "Xenova/bge-small-zh-v1.5" : "",
   "memory.embedding.dimension": 512,
   "memory.embedding.max_chars": 2000,
   "memory.maintenance.enabled": true,
@@ -51,7 +56,10 @@ const WRITABLE_SETTINGS = new Set([
 function normalizeSettingValue(key, value) {
   if (key === "memory.embedding.provider") {
     const provider = String(value || "").trim().toLowerCase();
-    return provider || "claracore-built-in";
+    if (!MEMORY_EMBEDDING_PROVIDERS.includes(provider)) {
+      throw new Error(`Memory embedding provider '${provider || "empty"}' is not available in this build.`);
+    }
+    return provider;
   }
   if (key === "memory.embedding.base_url") {
     const endpoint = String(value || "").trim();
@@ -67,7 +75,6 @@ function normalizeSettingValue(key, value) {
   }
   if (key === "memory.embedding.model") {
     const model = String(value || "").trim();
-    if (!model) throw new Error("Embedding model is required.");
     return model;
   }
   if (key === "memory.embedding.dimension" || key === "memory.embedding.max_chars" || key === "innerlife.loop_seconds") {

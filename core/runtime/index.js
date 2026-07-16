@@ -255,8 +255,8 @@ async function tickProductInnerLifeDaemon(app, input) {
   return innerlife.tickDaemon(await ensureProductCore(app), input);
 }
 
-async function markProductInnerLifeShare(app, id, action, reason = "") {
-  return innerlife.markShare(await ensureProductCore(app), id, action, reason);
+async function markProductInnerLifeShare(app, id, action, reason = "", deliveryEvidence = null) {
+  return innerlife.markShare(await ensureProductCore(app), id, action, reason, "", deliveryEvidence);
 }
 
 async function reviewProductInnerLifeShare(app, id, decision, reason = "") {

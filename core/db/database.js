@@ -2,6 +2,7 @@ const { spawn } = require("child_process");
 const fs = require("fs/promises");
 const path = require("path");
 const { DEFAULT_AGENT_ID, DEFAULT_INNERLIFE_API_KEY, DEFAULT_SETTINGS, WRITABLE_SETTINGS, normalizeSettingValue } = require("../config");
+const { BUILD_FLAVOR, HAS_BUILT_IN_EMBEDDING, MEMORY_EMBEDDING_PROVIDERS } = require("../build-flavor");
 const { sqliteCommand } = require("../sqlite-binary");
 const { installInnerLifeRepository } = require("./repositories/innerlife");
 const { installMemoriaRepository } = require("./repositories/memoria");
@@ -339,7 +340,10 @@ class ProductDatabase {
 }
 
 Object.assign(ProductDatabase.prototype, createSystemRepository({
+  BUILD_FLAVOR,
   DEFAULT_AGENT_ID,
+  HAS_BUILT_IN_EMBEDDING,
+  MEMORY_EMBEDDING_PROVIDERS,
   WRITABLE_SETTINGS,
   jsonSql,
   newId,

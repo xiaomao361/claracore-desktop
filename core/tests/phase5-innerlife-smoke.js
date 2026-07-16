@@ -141,8 +141,32 @@ async function main() {
   }
   const deferred = await runtime.markProductInnerLifeShare(app, approved.id, "deferred", "wait for a better moment");
   if (deferred.share.status !== "deferred") throw new Error("InnerLife deferred action did not update share status.");
-  const usedAgain = await runtime.markProductInnerLifeShare(app, approved.id, "used", "shared in the conversation");
+  let unverifiedUseBlocked = false;
+  try {
+    await runtime.markProductInnerLifeShare(app, approved.id, "used", "claimed without evidence");
+  } catch (error) {
+    unverifiedUseBlocked = String(error.message || "").includes("deliveryEvidence");
+  }
+  if (!unverifiedUseBlocked) throw new Error("InnerLife allowed a used share without delivery evidence.");
+  const usedAgain = await runtime.markProductInnerLifeShare(
+    app,
+    approved.id,
+    "used",
+    "shared in the conversation",
+    {
+      conversationId: "phase5-conversation-001",
+      responseId: "phase5-response-001",
+      responseExcerpt: "The response actually included the Phase 5 InnerLife review thought.",
+      sharedAt: new Date().toISOString(),
+      source: "phase5-smoke"
+    }
+  );
   if (usedAgain.share.status !== "used") throw new Error("InnerLife used action did not update share status.");
+  const activity = await core.database.getAgentActivitySummary();
+  const activityAgent = activity.periods["30d"].agents.find((agent) => agent.agentId === "my-agent");
+  if (activityAgent?.confirmedShares !== 1 || Object.prototype.hasOwnProperty.call(activityAgent || {}, "proactiveShares")) {
+    throw new Error(`Agent activity did not count only confirmed shares: ${JSON.stringify(activityAgent)}`);
+  }
 
   await runtime.setProductInnerLifeDaemon(app, { agentId: "my-agent", action: "pause" });
   const pausedDaemon = await runtime.tickProductInnerLifeDaemon(app, { agentId: "my-agent", force: true });

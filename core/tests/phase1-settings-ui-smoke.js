@@ -40,6 +40,20 @@ async function main() {
       }
     });
     const page = await app.firstWindow();
+    await app.evaluate(() => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = async (url, options) => {
+        if (String(url).endsWith("/api/tags")) {
+          return {
+            ok: true,
+            async json() {
+              return { models: [{ name: "bge-m3:latest" }] };
+            }
+          };
+        }
+        return originalFetch(url, options);
+      };
+    });
     // Changing the embedding provider/model now raises a rebuild-vectors confirm;
     // accept it so the save proceeds under headless automation.
     page.on("dialog", (dialog) => dialog.accept().catch(() => {}));
@@ -102,6 +116,21 @@ async function main() {
     await page.selectOption("#memoriaProvider", "ollama");
     await page.waitForFunction(() => !document.querySelector("#memoriaEndpointField")?.hidden && !document.querySelector("#memoriaConnectionRow")?.hidden);
     await fillExact(page, "#memoriaEndpoint", "http://127.0.0.1:11437");
+    await fillExact(page, "#memoriaModel", "bge-m3");
+    await page.click("#testMemoriaConnection");
+    await page.waitForFunction(
+      () => document.querySelector("#memoriaConnectionNotice")?.textContent.includes("bge-m3:latest")
+        && document.querySelector("#memoriaConnectionNotice")?.classList.contains("ok"),
+      null,
+      { timeout: 10000 }
+    );
+    await page.click("#refreshMemoriaModels");
+    await page.waitForFunction(
+      () => document.querySelector("#memoriaModel")?.value === "bge-m3:latest"
+        && /save|保存/i.test(document.querySelector("#memoriaModelNotice")?.textContent || ""),
+      null,
+      { timeout: 10000 }
+    );
     await fillExact(page, "#memoriaModel", "bge-m3-ui-smoke");
     await page.selectOption("#innerLifeBackend", "ollama");
     await fillExact(page, "#innerLifeEndpoint", "http://127.0.0.1:11438");
@@ -223,6 +252,30 @@ async function main() {
     }
 
     await app.close();
+    app = await electron.launch({
+      executablePath: electronPath,
+      args: ["."],
+      cwd: path.resolve(__dirname, "..", ".."),
+      env: {
+        ...process.env,
+        CLARACORE_DESKTOP_DATA_DIR: dataRoot,
+        CLARACORE_DESKTOP_USER_DATA_DIR: userDataRoot,
+        CLARACORE_DESKTOP_TEST_INSTANCE: "1"
+      }
+    });
+    const restartedPage = await app.firstWindow();
+    const restartedSnapshot = await waitForRuntimeSnapshot(
+      restartedPage,
+      (currentSnapshot) => currentSnapshot?.configuration?.memoria?.model === "bge-m3-ui-smoke"
+    );
+    if (
+      restartedSnapshot.configuration.memoria.provider !== "ollama"
+      || restartedSnapshot.configuration.memoria.endpoint !== "http://127.0.0.1:11437"
+    ) {
+      throw new Error(`Saved Memoria configuration did not survive restart: ${JSON.stringify(restartedSnapshot.configuration.memoria)}`);
+    }
+    await app.close();
+    app = null;
     console.log(
       JSON.stringify(
         {
@@ -231,6 +284,7 @@ async function main() {
           databasePath: snapshot.data.databasePath,
           endpoint: snapshot.configuration.memoria.endpoint,
           model: snapshot.configuration.memoria.model,
+          persistedAfterRestart: restartedSnapshot.configuration.memoria.model,
           innerlifeBackend: snapshot.configuration.innerlife.backend
         },
         null,

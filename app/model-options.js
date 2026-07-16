@@ -18,6 +18,7 @@ function createClaraCoreModelOptions({ dom, t, getSecretInputValue }) {
     const button = isMemoria ? dom.refreshMemoriaModels : dom.refreshInnerLifeModels;
     const notice = isMemoria ? dom.memoriaModelNotice : dom.innerLifeModelNotice;
     const options = isMemoria ? dom.memoriaModelOptions : dom.innerLifeModelOptions;
+    const modelInput = isMemoria ? dom.memoriaModel : dom.innerLifeDeepModel;
     if (!providerInput || !endpointInput || !window.ClaraCoreDesktop?.listModels) return;
     const provider = providerInput.value;
     const endpoint = endpointInput.value;
@@ -32,14 +33,24 @@ function createClaraCoreModelOptions({ dom, t, getSecretInputValue }) {
       const result = await window.ClaraCoreDesktop.listModels({
         provider,
         endpoint,
-        apiKeyRef: getSecretInputValue(apiKeyInput)
+        apiKeyRef: getSecretInputValue(apiKeyInput),
+        model: modelInput?.value || ""
       });
       const models = Array.isArray(result?.models) ? result.models : [];
       setModelOptions(options, models);
+      let selectedModel = "";
+      if (!silent && modelInput) {
+        const configuredModel = String(modelInput.value || "").trim();
+        selectedModel = String(result?.resolvedModel || "").trim();
+        if (!selectedModel && !configuredModel && models.length === 1) selectedModel = models[0];
+        if (selectedModel && selectedModel !== configuredModel) modelInput.value = selectedModel;
+      }
       if (notice) {
-        notice.textContent = models.length
-          ? t("settings.modelsLoaded", { count: String(models.length) })
-          : t(result?.supported === false ? "settings.modelFetchUnsupported" : "settings.modelsEmpty");
+        notice.textContent = selectedModel
+          ? t("settings.modelsLoadedSelected", { count: String(models.length), model: selectedModel })
+          : models.length
+            ? t("settings.modelsLoaded", { count: String(models.length) })
+            : t(result?.supported === false ? "settings.modelFetchUnsupported" : "settings.modelsEmpty");
       }
     } catch (error) {
       console.error(error);
@@ -90,7 +101,7 @@ function createClaraCoreModelOptions({ dom, t, getSecretInputValue }) {
       if (notice) {
         notice.className = `connection-test-notice ${result?.ok ? "ok" : "missing"}`;
         notice.textContent = result?.ok
-          ? t("settings.connectionOk", { time, model: result.model || "-" })
+          ? t("settings.connectionOk", { time, model: result.resolvedModel || result.model || "-" })
           : t("settings.connectionFailed", { time, error: result?.error || t("settings.connectionUnknownError") });
       }
       return result;

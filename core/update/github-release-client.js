@@ -1,4 +1,5 @@
 const RELEASE_API_URL = "https://api.github.com/repos/xiaomao361/claracore-desktop/releases/latest";
+const RELEASE_PAGE_URL = "https://github.com/xiaomao361/claracore-desktop/releases/latest";
 const RELEASE_PATH_PREFIX = "/xiaomao361/claracore-desktop/releases/";
 const DEFAULT_TIMEOUT_MS = 8000;
 
@@ -19,16 +20,6 @@ function compareVersions(left, right) {
   return 0;
 }
 
-function releaseAssetName(version, platform, arch) {
-  if (platform === "darwin" && arch === "arm64") {
-    return `ClaraCore-Desktop-${version}-arm64.dmg`;
-  }
-  if (platform === "win32" && arch === "x64") {
-    return `ClaraCore-Desktop-${version}-x64-Setup.exe`;
-  }
-  return null;
-}
-
 function isAllowedUpdateUrl(value) {
   try {
     const url = new URL(String(value || ""));
@@ -46,7 +37,7 @@ function result(status, currentVersion, platform, arch, details = {}) {
     arch,
     latestVersion: null,
     releaseName: null,
-    releaseUrl: null,
+    releaseUrl: RELEASE_PAGE_URL,
     publishedAt: null,
     assetName: null,
     assetUrl: null,
@@ -63,9 +54,6 @@ async function checkForUpdates({
 } = {}) {
   const currentParts = parseVersion(currentVersion);
   if (!currentParts) return result("invalid-current-version", currentVersion, platform, arch);
-  if (!releaseAssetName(currentVersion, platform, arch)) {
-    return result("unsupported-platform", currentVersion, platform, arch);
-  }
   if (typeof fetchImpl !== "function") {
     return result("network-error", currentVersion, platform, arch, { errorCode: "fetch-unavailable" });
   }
@@ -119,8 +107,7 @@ async function checkForUpdates({
     release.draft === true ||
     release.prerelease === true ||
     !isAllowedUpdateUrl(release.html_url) ||
-    typeof release.published_at !== "string" ||
-    !Array.isArray(release.assets)
+    typeof release.published_at !== "string"
   ) {
     return result("invalid-response", currentVersion, platform, arch);
   }
@@ -133,34 +120,17 @@ async function checkForUpdates({
   };
   if (comparison <= 0) return result("up-to-date", currentVersion, platform, arch, releaseDetails);
 
-  const expectedAssetName = releaseAssetName(latestVersion, platform, arch);
-  const asset = release.assets.find(
-    (candidate) =>
-      candidate &&
-      candidate.name === expectedAssetName &&
-      candidate.state === "uploaded" &&
-      isAllowedUpdateUrl(candidate.browser_download_url)
-  );
-  if (!asset) {
-    return result("asset-unavailable", currentVersion, platform, arch, {
-      ...releaseDetails,
-      assetName: expectedAssetName
-    });
-  }
-
   return result("update-available", currentVersion, platform, arch, {
-    ...releaseDetails,
-    assetName: asset.name,
-    assetUrl: asset.browser_download_url
+    ...releaseDetails
   });
 }
 
 module.exports = {
   DEFAULT_TIMEOUT_MS,
   RELEASE_API_URL,
+  RELEASE_PAGE_URL,
   checkForUpdates,
   compareVersions,
   isAllowedUpdateUrl,
-  parseVersion,
-  releaseAssetName
+  parseVersion
 };

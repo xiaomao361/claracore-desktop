@@ -1,5 +1,6 @@
 const path = require("path");
 const fs = require("fs");
+const { HAS_BUILT_IN_EMBEDDING } = require("../../../build-flavor");
 
 const BUILT_IN_EMBEDDING_PROVIDER = "claracore-built-in";
 const BUILT_IN_EMBEDDING_MODEL = "Xenova/bge-small-zh-v1.5";
@@ -18,6 +19,9 @@ function resolveBuiltInModelRoot() {
 }
 
 async function getBuiltInExtractor(model) {
+  if (!HAS_BUILT_IN_EMBEDDING) {
+    throw new Error("The Lite build does not include the ClaraCore built-in embedding model. Switch Memory embedding to Ollama or Disabled.");
+  }
   if (!builtInExtractorPromise) {
     builtInExtractorLoadStarted = true;
     builtInExtractorPromise = (async () => {
@@ -90,14 +94,18 @@ function createMemoriaEmbeddingRepository(helpers) {
       const settings = await this.getSettings();
       const provider = settings["memory.embedding.provider"] || BUILT_IN_EMBEDDING_PROVIDER;
       const baseUrl = settings["memory.embedding.base_url"] || "http://127.0.0.1:11434";
-      const model = settings["memory.embedding.model"] || BUILT_IN_EMBEDDING_MODEL;
+      const model = String(settings["memory.embedding.model"] ?? (provider === BUILT_IN_EMBEDDING_PROVIDER ? BUILT_IN_EMBEDDING_MODEL : "")).trim();
       const maxChars = Number.parseInt(String(settings["memory.embedding.max_chars"] || 2000), 10);
       const prompt = String(text || "").trim().slice(0, maxChars);
       if (!prompt) throw new Error("Embedding text is required.");
       if (provider === BUILT_IN_EMBEDDING_PROVIDER) {
+        if (!HAS_BUILT_IN_EMBEDDING) {
+          throw new Error("The saved Memory embedding provider is not available in the Lite build. Switch to Ollama or Disabled.");
+        }
         return createBuiltInEmbedding(prompt, model || BUILT_IN_EMBEDDING_MODEL);
       }
       if (provider === "ollama") {
+        if (!model) throw new Error("Select an Ollama embedding model in Settings before creating embeddings.");
         const response = await postJson(`${baseUrl}/api/embeddings`, { model, prompt }, { errorPrefix: "Ollama" });
         const vector = parseVector(response.embedding);
         if (vector.length === 0) {
@@ -106,6 +114,7 @@ function createMemoriaEmbeddingRepository(helpers) {
         return { provider, model, vector };
       }
       if (provider === "openai-compatible") {
+        if (!model) throw new Error("Select an embedding model in Settings before creating embeddings.");
         const secrets = await this.getSecretRefs();
         const apiKeyRef = secrets["memory.embedding.api_key"]?.ref || "";
         const apiKey = apiKeyRef.startsWith("env:") ? process.env[apiKeyRef.slice(4)] || "" : apiKeyRef;
@@ -279,7 +288,7 @@ function createMemoriaEmbeddingRepository(helpers) {
         VALUES (
           ${sqlString(memoryId)},
           ${sqlString(settings["memory.embedding.provider"] || BUILT_IN_EMBEDDING_PROVIDER)},
-          ${sqlString(settings["memory.embedding.model"] || BUILT_IN_EMBEDDING_MODEL)},
+          ${sqlString(settings["memory.embedding.model"] ?? "")},
           ${Number.parseInt(String(settings["memory.embedding.dimension"] || 512), 10)},
           'pending',
           NULL,
@@ -306,7 +315,7 @@ function createMemoriaEmbeddingRepository(helpers) {
       }
       const settings = await this.getSettings();
       const provider = settings["memory.embedding.provider"] || BUILT_IN_EMBEDDING_PROVIDER;
-      const model = settings["memory.embedding.model"] || BUILT_IN_EMBEDDING_MODEL;
+      const model = settings["memory.embedding.model"] ?? (provider === BUILT_IN_EMBEDDING_PROVIDER ? BUILT_IN_EMBEDDING_MODEL : "");
       try {
         const text = `${memory.title || ""}\n${memory.body || ""}`.trim();
         const embedding = await this.createEmbedding(text);

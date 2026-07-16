@@ -1,6 +1,9 @@
 function createSystemRepository(helpers) {
   const {
+    BUILD_FLAVOR,
     DEFAULT_AGENT_ID,
+    HAS_BUILT_IN_EMBEDDING,
+    MEMORY_EMBEDDING_PROVIDERS,
     WRITABLE_SETTINGS,
     jsonSql,
     newId,
@@ -270,7 +273,7 @@ function createSystemRepository(helpers) {
       async function rowsForPeriod(window) {
         const memoryTimeClause = timeClause("m.created_at", window);
         const linkTimeClause = timeClause("k.created_at", window);
-        const shareTimeClause = timeClause("created_at", window);
+        const shareTimeClause = timeClause("a.created_at", window);
         const historyTimeClause = timeClause("h.created_at", window);
         const traceTimeClause = timeClause("created_at", window);
         const [memories, links, shares, lineUpdates, gatewayCalls] = await Promise.all([
@@ -291,10 +294,11 @@ function createSystemRepository(helpers) {
             WHERE ${linkTimeClause}
           `),
           this.query(`
-            SELECT agent_id AS agent_id, COUNT(*) AS count
-            FROM innerlife_shares
-            WHERE ${shareTimeClause}
-            GROUP BY agent_id;
+            SELECT s.id AS share_id, s.agent_id AS agent_id, a.metadata_json AS metadata_json
+            FROM innerlife_share_actions a
+            JOIN innerlife_shares s ON s.id = a.share_id
+            WHERE a.action = 'used'
+              AND ${shareTimeClause};
           `),
           this.query(`
             SELECT l.agent_id AS agent_id, COUNT(h.id) AS count
@@ -319,7 +323,7 @@ function createSystemRepository(helpers) {
               agentId: id,
               newMemories: 0,
               formedConnections: 0,
-              proactiveShares: 0,
+              confirmedShares: 0,
               sharedLineUpdates: 0,
               gatewayCalls: 0
             });
@@ -339,16 +343,24 @@ function createSystemRepository(helpers) {
         }
         addUnique(memories, "newMemories");
         addUnique(links, "formedConnections");
-        for (const row of shares) ensure(row.agent_id).proactiveShares += Number(row.count || 0);
+        const confirmedShareIds = new Set();
+        for (const row of shares) {
+          const evidence = parseJson(row.metadata_json, {}).deliveryEvidence || {};
+          if (!evidence.conversationId || !evidence.responseExcerpt || !evidence.sharedAt) continue;
+          const key = `${row.agent_id}:${row.share_id}`;
+          if (confirmedShareIds.has(key)) continue;
+          confirmedShareIds.add(key);
+          ensure(row.agent_id).confirmedShares += 1;
+        }
         for (const row of lineUpdates) ensure(row.agent_id).sharedLineUpdates += Number(row.count || 0);
         for (const row of gatewayCalls) ensure(row.agent_id).gatewayCalls += Number(row.count || 0);
         return Array.from(agents.values())
           .filter((agent) =>
-            agent.newMemories || agent.formedConnections || agent.proactiveShares || agent.sharedLineUpdates || agent.gatewayCalls
+            agent.newMemories || agent.formedConnections || agent.confirmedShares || agent.sharedLineUpdates || agent.gatewayCalls
           )
           .sort((left, right) => {
-            const leftTotal = left.newMemories + left.formedConnections + left.proactiveShares + left.sharedLineUpdates + left.gatewayCalls;
-            const rightTotal = right.newMemories + right.formedConnections + right.proactiveShares + right.sharedLineUpdates + right.gatewayCalls;
+            const leftTotal = left.newMemories + left.formedConnections + left.confirmedShares + left.sharedLineUpdates + left.gatewayCalls;
+            const rightTotal = right.newMemories + right.formedConnections + right.confirmedShares + right.sharedLineUpdates + right.gatewayCalls;
             return rightTotal - leftTotal || left.agentId.localeCompare(right.agentId);
           });
       }
@@ -485,10 +497,14 @@ function createSystemRepository(helpers) {
       const settings = await this.getSettings();
       const secrets = await this.getSecretRefs();
       return {
+        build: {
+          flavor: BUILD_FLAVOR,
+          hasBuiltInEmbedding: HAS_BUILT_IN_EMBEDDING
+        },
         memoria: {
-          provider: settings["memory.embedding.provider"] || "claracore-built-in",
+          provider: settings["memory.embedding.provider"] || MEMORY_EMBEDDING_PROVIDERS[0],
           endpoint: settings["memory.embedding.base_url"] || "http://127.0.0.1:11434",
-          model: settings["memory.embedding.model"] || "Xenova/bge-small-zh-v1.5",
+          model: settings["memory.embedding.model"] ?? (HAS_BUILT_IN_EMBEDDING ? "Xenova/bge-small-zh-v1.5" : ""),
           dimension: String(settings["memory.embedding.dimension"] || 512),
           maxChars: String(settings["memory.embedding.max_chars"] || 2000),
           maintenanceEnabled: settings["memory.maintenance.enabled"] !== false,
@@ -496,6 +512,8 @@ function createSystemRepository(helpers) {
           maintenanceLastRunDate: settings["memory.maintenance.last_run_date"] || "",
           apiKeyStatus: secrets["memory.embedding.api_key"]?.status || "not-configured",
           apiKeyRef: secrets["memory.embedding.api_key"]?.ref || "",
+          availableProviders: [...MEMORY_EMBEDDING_PROVIDERS],
+          providerSupported: MEMORY_EMBEDDING_PROVIDERS.includes(settings["memory.embedding.provider"] || MEMORY_EMBEDDING_PROVIDERS[0]),
           source: "claracore.db"
         },
         innerlife: {

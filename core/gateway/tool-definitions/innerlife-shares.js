@@ -182,7 +182,7 @@ const innerlifeShareToolDefinitions = [
   {
     "name": "innerlife_mark_share",
     "title": "Mark InnerLife Share",
-    "description": "Mark an InnerLife share as used, deferred, or discarded.",
+    "description": "Mark an InnerLife share as used, deferred, or discarded. Used shares require auditable delivery evidence from the actual response.",
     "inputSchema": {
       "type": "object",
       "required": [
@@ -203,6 +203,35 @@ const innerlifeShareToolDefinitions = [
         },
         "reason": {
           "type": "string"
+        },
+        "deliveryEvidence": {
+          "type": "object",
+          "description": "Required when action is used. Identifies the conversation and preserves an excerpt of the response that actually included the share.",
+          "required": [
+            "conversationId",
+            "responseExcerpt",
+            "sharedAt"
+          ],
+          "properties": {
+            "conversationId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "responseId": {
+              "type": "string"
+            },
+            "responseExcerpt": {
+              "type": "string",
+              "minLength": 12
+            },
+            "sharedAt": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

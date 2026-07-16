@@ -11,7 +11,7 @@ function createClaraCoreSettingsView(context) {
   } = context;
   const {
     memoriaProvider, memoriaEndpointField, memoriaEndpoint, memoriaModelField, memoriaModel, memoriaApiKeyField, memoriaApiKey,
-    memoriaConnectionRow, memoriaModelStatus,
+    memoriaConnectionRow, memoriaModelStatus, memoriaProviderNotice,
     innerLifeBackend, innerLifeEndpointField, innerLifeEndpoint, innerLifeLightModelField, innerLifeLightModel,
     innerLifeDeepModelField, innerLifeDeepModel, innerLifePollField, innerLifePollSeconds, innerLifeApiKeyField, innerLifeApiKey,
     innerLifeConnectionRow,
@@ -20,7 +20,7 @@ function createClaraCoreSettingsView(context) {
     settingsThemeSummary, settingsMotionSummary, settingsDataStatus, settingsDataRoot, settingsPathSummary, settingsPathDetails,
     settingsDataRootOverride, relaunchForDataRoot,
     settingsAgentGatewayStatus, settingsAgentGatewayPort, settingsAgentGatewayToken, settingsAgentGatewayEndpoint, settingsAgentGatewayTokenFile,
-    settingsAppVersion, checkForUpdates, downloadUpdate, viewUpdateNotes, updateCheckStatus,
+    settingsAppVersion, settingsBuildFlavor, checkForUpdates, downloadUpdate, copyUpdateUrl, updateCheckStatus,
     settingsRuntimeMode, settingsDatabaseState, settingsElectronVersion, settingsNodeVersion,
     settingsAppRoot, settingsChromeVersion
   } = dom;
@@ -81,7 +81,7 @@ function setHidden(element, hidden) {
 }
 
 function updateModelFieldVisibility() {
-  const memoryProvider = memoriaProvider?.value || "claracore-built-in";
+  const memoryProvider = memoriaProvider?.value || "";
   const memoryExternal = memoryProvider === "ollama";
   setHidden(memoriaEndpointField, !memoryExternal);
   setHidden(memoriaModelField, !memoryExternal);
@@ -165,6 +165,7 @@ function renderDataPaths() {
 function renderAbout() {
   const snapshot = getSnapshot();
   if (settingsAppVersion) settingsAppVersion.textContent = snapshot?.productVersion || "-";
+  if (settingsBuildFlavor) settingsBuildFlavor.textContent = snapshot?.build?.flavor === "lite" ? "Lite" : "Full";
   if (state.updateCheckResult) renderUpdateResult(state.updateCheckResult);
   if (settingsRuntimeMode) settingsRuntimeMode.textContent = snapshot?.mode ? formatMode(snapshot.mode) : "-";
   if (settingsDatabaseState) {
@@ -194,10 +195,9 @@ function updateStatusKey(status) {
 
 function renderUpdateResult(result) {
   state.updateCheckResult = result || null;
-  const canDownload = result?.status === "update-available" && Boolean(result.assetUrl);
-  const canViewNotes = Boolean(result?.releaseUrl);
+  const canDownload = result?.status !== "up-to-date" && Boolean(result?.releaseUrl);
   if (downloadUpdate) downloadUpdate.hidden = !canDownload;
-  if (viewUpdateNotes) viewUpdateNotes.hidden = !canViewNotes;
+  if (copyUpdateUrl) copyUpdateUrl.hidden = !canDownload;
   if (updateCheckStatus) {
     updateCheckStatus.textContent = t(updateStatusKey(result?.status), {
       version: result?.latestVersion || "",
@@ -210,7 +210,7 @@ async function runUpdateCheck() {
   if (!checkForUpdates || !desktop?.checkForUpdates) return;
   checkForUpdates.disabled = true;
   if (downloadUpdate) downloadUpdate.hidden = true;
-  if (viewUpdateNotes) viewUpdateNotes.hidden = true;
+  if (copyUpdateUrl) copyUpdateUrl.hidden = true;
   if (updateCheckStatus) updateCheckStatus.textContent = t("settings.update.checking");
   try {
     renderUpdateResult(await desktop.checkForUpdates());
@@ -224,12 +224,14 @@ async function runUpdateCheck() {
 function bindEvents() {
   checkForUpdates?.addEventListener("click", () => runUpdateCheck());
   downloadUpdate?.addEventListener("click", () => {
-    const url = state.updateCheckResult?.assetUrl;
-    if (url) desktop.openUpdateUrl(url).catch(console.error);
-  });
-  viewUpdateNotes?.addEventListener("click", () => {
     const url = state.updateCheckResult?.releaseUrl;
     if (url) desktop.openUpdateUrl(url).catch(console.error);
+  });
+  copyUpdateUrl?.addEventListener("click", async () => {
+    const url = state.updateCheckResult?.releaseUrl;
+    if (!url) return;
+    const copied = await desktop.copyText(url).catch(() => false);
+    if (copied && updateCheckStatus) updateCheckStatus.textContent = t("settings.update.urlCopied");
   });
 }
 
@@ -252,9 +254,26 @@ function renderSettings() {
   if (!snapshot?.configuration) return;
   const memoria = snapshot.configuration.memoria;
   const innerlife = snapshot.configuration.innerlife;
-  memoriaProvider.value = memoria.provider;
+  const lite = snapshot?.build?.flavor === "lite";
+  const builtInOption = memoriaProvider.querySelector("option[value='claracore-built-in']");
+  if (lite && builtInOption) builtInOption.remove();
+  let unsupportedOption = memoriaProvider.querySelector("option[data-unsupported-provider]");
+  if (memoria.providerSupported === false) {
+    if (!unsupportedOption) {
+      unsupportedOption = document.createElement("option");
+      unsupportedOption.value = "";
+      unsupportedOption.disabled = true;
+      unsupportedOption.dataset.unsupportedProvider = "true";
+      memoriaProvider.prepend(unsupportedOption);
+    }
+    unsupportedOption.textContent = t("settings.liteUnsupportedProviderOption");
+    memoriaProvider.value = "";
+  } else {
+    unsupportedOption?.remove();
+    memoriaProvider.value = memoria.provider;
+  }
   memoriaEndpoint.value = memoria.endpoint;
-  memoriaModel.value = memoria.model;
+  memoriaModel.value = memoria.providerSupported === false ? "" : memoria.model;
   setSecretInput(memoriaApiKey, memoria.apiKeyRef || "");
   innerLifeBackend.value = innerlife.backend;
   innerLifeEndpoint.value = innerlife.baseUrl;
@@ -263,10 +282,16 @@ function renderSettings() {
   innerLifePollSeconds.value = secondsToDisplayMinutes(innerlife.pollSeconds);
   setSecretInput(innerLifeApiKey, innerlife.apiKeyRef || "");
   innerLifeApiKeySummary.textContent = maskMiddle(innerlife.apiKeyRef);
-  const memoriaStatus = modelStatus(memoria.provider, Boolean(memoria.model));
+  const memoriaStatus = memoria.providerSupported === false
+    ? { label: t("common.needsAttention"), className: "badge warn", note: t("settings.liteUnsupportedProvider") }
+    : modelStatus(memoria.provider, Boolean(memoria.model));
   memoriaModelStatus.textContent = memoriaStatus.label;
   memoriaModelStatus.className = memoriaStatus.className;
   memoriaModelStatus.title = memoriaStatus.note;
+  if (memoriaProviderNotice) {
+    memoriaProviderNotice.hidden = memoria.providerSupported !== false;
+    memoriaProviderNotice.textContent = memoria.providerSupported === false ? t("settings.liteUnsupportedProvider") : "";
+  }
   const innerLifeStatus = modelStatus(innerlife.backend, Boolean(innerlife.lightModel || innerlife.deepModel));
   innerLifeModelStatus.textContent = innerLifeStatus.label;
   innerLifeModelStatus.className = innerLifeStatus.className;
@@ -327,6 +352,14 @@ function collectSettingsForm() {
   return form;
 }
 
+function settingsValidationError(form) {
+  const provider = String(form?.["memory.embedding.provider"] || "").trim();
+  const model = String(form?.["memory.embedding.model"] || "").trim();
+  if (!provider) return "settings.embedding.providerRequired";
+  if (provider === "ollama" && !model) return "settings.embedding.modelRequired";
+  return "";
+}
+
 function collectAppearanceSettingsForm() {
   return {
     language: settingsLanguage.value,
@@ -370,6 +403,7 @@ function agentGatewayCopyBlock() {
     collectAppearanceSettingsForm,
     collectAgentGatewayConfigForm,
     collectSettingsForm,
+    settingsValidationError,
     embeddingConfigChanged,
     getSecretInputValue,
     renderAppearanceSettings,

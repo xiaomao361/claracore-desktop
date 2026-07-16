@@ -137,7 +137,14 @@ async function handleInnerLifeTool(name, args, context) {
   }
 
   if (name === "innerlife_mark_share") {
-    return textResult(await innerlife.markShare(core, args.id, args.action, args.reason || "", currentMcpAgentId(args)));
+    return textResult(await innerlife.markShare(
+      core,
+      args.id,
+      args.action,
+      args.reason || "",
+      currentMcpAgentId(args),
+      args.deliveryEvidence || null
+    ));
   }
 
   if (name === "innerlife_daemon_status") {

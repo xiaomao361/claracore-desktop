@@ -92,6 +92,22 @@ async function main() {
       null,
       { timeout: 15000 }
     );
+    await page.waitForFunction(
+      () => {
+        const text = document.querySelector("#homeAgentActivityList")?.textContent || "";
+        return text.includes("Confirmed shares") || text.includes("已确认分享");
+      },
+      null,
+      { timeout: 15000 }
+    );
+    const confirmedShareValue = await page.evaluate(() => {
+      const stat = [...document.querySelectorAll("#homeAgentActivityList .home-agent-activity-stats div")]
+        .find((item) => ["Confirmed shares", "已确认分享"].includes(item.querySelector("span")?.textContent || ""));
+      return stat?.querySelector("strong")?.textContent || "";
+    });
+    if (confirmedShareValue !== "0") {
+      throw new Error(`Home counted an unconfirmed InnerLife candidate as shared: ${confirmedShareValue}`);
+    }
     await page.click("[data-view='agent-setup']");
     await page.waitForFunction(
       () =>
@@ -127,6 +143,7 @@ async function main() {
         timeFlowText: document.querySelector("#logTimeFlowList")?.textContent || ""
       };
     });
+    result.confirmedShareValue = confirmedShareValue;
     if (!result.databasePath.startsWith(dataRoot)) {
       throw new Error(`Gateway trace UI wrote outside product data root: ${result.databasePath}`);
     }
