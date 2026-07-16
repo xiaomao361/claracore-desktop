@@ -191,8 +191,8 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   reviewInnerLifeShare(id, decision, reason) {
     return ipcRenderer.invoke(ipcChannel("reviewInnerLifeShare"), id, decision, reason);
   },
-  markInnerLifeShare(id, action, reason) {
-    return ipcRenderer.invoke(ipcChannel("markInnerLifeShare"), id, action, reason);
+  markInnerLifeShare(id, action, reason, deliveryEvidence) {
+    return ipcRenderer.invoke(ipcChannel("markInnerLifeShare"), id, action, reason, deliveryEvidence);
   },
   applyInnerLifeShareToMemory(id) {
     return ipcRenderer.invoke(ipcChannel("applyInnerLifeShareToMemory"), id);

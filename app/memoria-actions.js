@@ -32,19 +32,11 @@ function createClaraCoreMemoriaActions({
   async function changeAgentFilter() {
     state.activeMemoryAgentFilter = dom.memoryAgentFilter.value || "";
     memoriaView.setActiveAgentFilter(state.activeMemoryAgentFilter);
-    if (memoriaView.getActiveTab() === "search") {
-      await search();
-      return;
-    }
-    await loadMemoryTabData(memoriaView.getActiveTab(), { force: true });
+    await search();
   }
 
   async function selectTab(tab) {
-    const nextTab = tab.dataset.memoryTab || "search";
-    if (nextTab === "archive" && memoriaView.getActiveTab() !== "archive" && !window.confirm(t("memory.restricted.confirm"))) {
-      renderMemoryTabs();
-      return;
-    }
+    const nextTab = tab.dataset.memoryTab || "labels";
     memoriaView.setActiveTab(nextTab);
     renderMemoryTabs();
     try {
@@ -124,72 +116,45 @@ function createClaraCoreMemoriaActions({
     });
   }
 
-  async function handleDeleteAction(button) {
-    if (!window.confirm(t("memory.delete.confirm"))) return;
-    button.disabled = true;
-    await desktop.deleteMemory(button.dataset.memoryId);
-    await refresh();
-    showCopyNotice(t("memory.form.deleted"));
-  }
-
-  function bindActiveList(list, actionName = "delete") {
-    list?.addEventListener("click", async (event) => {
-      const button = event.target.closest("[data-memory-action]");
-      if (!button || button.dataset.memoryAction !== actionName) return;
-      await handleDeleteAction(button);
+  function bindMemorySelection() {
+    dom.memoryList?.addEventListener("click", (event) => {
+      const item = event.target.closest("[data-memory-id]");
+      if (item) memoriaView.selectMemory(item.dataset.memoryId || "");
     });
-  }
-
-  function bindArchivedList() {
-    dom.archivedMemoryList?.addEventListener("click", async (event) => {
-      const button = event.target.closest("[data-memory-action='restore-archived']");
-      if (!button) return;
-      button.disabled = true;
-      try {
-        await desktop.restoreArchivedMemory(button.dataset.memoryId);
-        await refresh();
-        showCopyNotice(t("memory.archive.restoreDone"));
-      } catch (error) {
-        console.error(error);
-        showCopyNotice(t("memory.form.saveFailed"));
+    dom.memoryList?.addEventListener("keydown", (event) => {
+      const item = event.target.closest("[data-memory-id]");
+      if (!item) return;
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        memoriaView.selectMemory(item.dataset.memoryId || "", { focus: true });
+        return;
       }
-    });
-  }
-
-  function bindDeletedList() {
-    dom.deletedMemoryList?.addEventListener("click", async (event) => {
-      const button = event.target.closest("[data-memory-action='restore']");
-      if (!button) return;
-      button.disabled = true;
-      try {
-        await desktop.restoreMemory(button.dataset.memoryId);
-        await refresh();
-        showCopyNotice(t("memory.form.restored"));
-      } catch (error) {
-        console.error(error);
-        showCopyNotice(t("memory.form.saveFailed"));
-      }
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+      event.preventDefault();
+      const items = [...dom.memoryList.querySelectorAll("[data-memory-id]")];
+      const index = items.indexOf(item);
+      const nextIndex = event.key === "ArrowDown" ? Math.min(items.length - 1, index + 1) : Math.max(0, index - 1);
+      memoriaView.selectMemory(items[nextIndex]?.dataset.memoryId || "", { focus: true });
     });
   }
 
   function bindEvents() {
     dom.searchMemory?.addEventListener("click", () => search().catch(console.error));
     dom.memoryAgentFilter?.addEventListener("change", () => changeAgentFilter().catch(console.error));
-    dom.processMemoryEmbeddings?.addEventListener("click", () => memoriaView.processEmbeddings().catch(console.error));
     dom.memorySearchInput?.addEventListener("keydown", (event) => {
       if (event.key === "Enter") search().catch(console.error);
     });
     dom.memoryTabs?.forEach((tab) => {
       tab.addEventListener("click", () => selectTab(tab).catch(console.error));
     });
-    bindLabelList(dom.memoryLabelList);
     bindLabelList(dom.memoryAllLabelList);
+    dom.memoryAdvancedDetails?.addEventListener("toggle", () => {
+      if (!dom.memoryAdvancedDetails.open) return;
+      loadMemoryTabData(memoriaView.getActiveTab()).catch(console.error);
+    });
     bindLoadMore();
     bindGraph();
-    bindActiveList(dom.memoryList);
-    bindActiveList(dom.restrictedMemoryList, "delete-restricted");
-    bindArchivedList();
-    bindDeletedList();
+    bindMemorySelection();
   }
 
   return {

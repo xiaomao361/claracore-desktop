@@ -256,6 +256,23 @@ function installContinuityRepository(ProductDatabase, helpers) {
       return lineId;
     },
 
+    async getActiveContinuityLineIdReadOnly() {
+      const settings = await this.getSettings();
+      const configured = String(settings["continuity.active_line_id"] || "").trim();
+      const rows = await this.query(`
+        SELECT id
+        FROM continuity_lines
+        WHERE status = 'active'
+        ORDER BY
+          CASE WHEN id = ${sqlString(configured)} THEN 0 ELSE 1 END,
+          CASE WHEN id = 'line_default' THEN 0 ELSE 1 END,
+          updated_at DESC,
+          created_at DESC
+        LIMIT 1;
+      `);
+      return rows[0]?.id || null;
+    },
+
     async resolveContinuityLineId(lineId = null) {
       const requested = String(lineId || "").trim();
       if (!requested) return this.getActiveContinuityLineId();
@@ -270,12 +287,24 @@ function installContinuityRepository(ProductDatabase, helpers) {
       return rows[0].id;
     },
 
+    async resolveContinuityLineIdReadOnly(lineId = null) {
+      const requested = String(lineId || "").trim();
+      if (!requested) return (await this.getActiveContinuityLineIdReadOnly()) || "line_default";
+      const rows = await this.query(`
+        SELECT id
+        FROM continuity_lines
+        WHERE id = ${sqlString(requested)} AND status = 'active'
+        LIMIT 1;
+      `);
+      if (!rows[0]?.id && requested !== "line_default") throw new Error("Shared Line not found.");
+      return requested;
+    },
+
     async findContinuityLineIdForAgent(agentIdInput = "") {
       const agentId = String(agentIdInput || "").trim();
       if (!agentId) return null;
       if (agentId === "http-agent" || agentId === "unknown-agent") return null;
-      await this.ensureDefaultContinuityLine();
-      const activeLineId = await this.getActiveContinuityLineId();
+      const activeLineId = await this.getActiveContinuityLineIdReadOnly();
       const rows = await this.query(`
         ${CONTINUITY_LINE_SELECT}
         WHERE l.agent_id = ${sqlString(agentId)} AND l.status = 'active' AND l.id != 'line_default'
@@ -308,8 +337,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
     },
 
     async listContinuityLines(input = 20) {
-      await this.ensureDefaultContinuityLine();
-      const activeLineId = await this.getActiveContinuityLineId();
+      const activeLineId = await this.getActiveContinuityLineIdReadOnly();
       const options = typeof input === "object" && input !== null ? input : { limit: input };
       const safeLimit = Math.max(1, Math.min(Number.parseInt(String(options.limit || 20), 10) || 20, 100));
       const agentId = String(options.agentId || options.agent_id || "").trim();
@@ -333,7 +361,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
     async getContinuityLine(lineId) {
       const id = String(lineId || "").trim();
       if (!id) return null;
-      const activeLineId = await this.getActiveContinuityLineId();
+      const activeLineId = await this.getActiveContinuityLineIdReadOnly();
       const rows = await this.query(`
         ${CONTINUITY_LINE_SELECT}
         WHERE l.id = ${sqlString(id)} AND l.status != 'deleted'
@@ -431,7 +459,22 @@ function installContinuityRepository(ProductDatabase, helpers) {
     },
 
     async getCurrentPosition(lineIdInput = null) {
-      const lineId = await this.resolveContinuityLineId(lineIdInput);
+      const requestedLineId = String(lineIdInput || "").trim();
+      const lineId = requestedLineId || (await this.getActiveContinuityLineIdReadOnly());
+      if (!lineId) {
+        return {
+          lineId: "line_default",
+          agentId: DEFAULT_AGENT_ID,
+          lineTitle: "Default Shared Line",
+          lineStatus: "empty",
+          positionId: "position_default",
+          summary: "",
+          interpretationStatus: "unconfirmed",
+          factsUsed: [],
+          metadata: {},
+          updatedAt: null
+        };
+      }
       const rows = await this.query(`
         SELECT
           l.id AS line_id,
@@ -450,6 +493,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
         ORDER BY p.updated_at DESC
         LIMIT 1;
       `);
+      if (requestedLineId && !rows[0]) throw new Error("Shared Line not found.");
       const row = rows[0] || {};
       return {
         lineId,
@@ -518,7 +562,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
     },
 
     async listContinuitySnapshots(limit = 8, lineIdInput = null) {
-      const lineId = await this.resolveContinuityLineId(lineIdInput);
+      const lineId = await this.resolveContinuityLineIdReadOnly(lineIdInput);
       const safeLimit = Math.max(1, Math.min(Number.parseInt(String(limit), 10) || 8, 30));
       const rows = await this.query(`
         SELECT id, line_id, position_id, summary, interpretation_status, facts_used_json, reason, created_at
@@ -540,7 +584,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
     },
 
     async listContinuityPositionHistory(limit = 8, lineIdInput = null) {
-      const lineId = await this.resolveContinuityLineId(lineIdInput);
+      const lineId = await this.resolveContinuityLineIdReadOnly(lineIdInput);
       const safeLimit = Math.max(1, Math.min(Number.parseInt(String(limit), 10) || 8, 30));
       const rows = await this.query(`
         SELECT id, line_id, position_id, summary, interpretation_status, facts_used_json, source, created_at
@@ -562,7 +606,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
     },
 
     async listContinuityHandoffs(limit = 5, lineIdInput = null) {
-      const lineId = await this.resolveContinuityLineId(lineIdInput);
+      const lineId = await this.resolveContinuityLineIdReadOnly(lineIdInput);
       const safeLimit = Math.max(1, Math.min(Number.parseInt(String(limit), 10) || 5, 20));
       const rows = await this.query(`
         SELECT id, line_id, objective, completed_json, open_items_json, next_step, created_at

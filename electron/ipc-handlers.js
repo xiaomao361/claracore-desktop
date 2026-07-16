@@ -362,9 +362,16 @@ function registerIpcHandlers({
     if (typeof id !== "string" || typeof decision !== "string") return false;
     return reviewProductInnerLifeShare(app, id, decision, typeof reason === "string" ? reason : "");
   });
-  ipcMain.handle(ipcChannel("markInnerLifeShare"), async (_event, id, action, reason) => {
+  ipcMain.handle(ipcChannel("markInnerLifeShare"), async (_event, id, action, reason, deliveryEvidence) => {
     if (typeof id !== "string" || typeof action !== "string") return false;
-    return markProductInnerLifeShare(app, id, action, typeof reason === "string" ? reason : "");
+    if (deliveryEvidence !== undefined && !isPlainObject(deliveryEvidence)) return false;
+    return markProductInnerLifeShare(
+      app,
+      id,
+      action,
+      typeof reason === "string" ? reason : "",
+      deliveryEvidence || null
+    );
   });
   ipcMain.handle(ipcChannel("applyInnerLifeShareToMemory"), async (_event, id) => {
     if (typeof id !== "string") return false;

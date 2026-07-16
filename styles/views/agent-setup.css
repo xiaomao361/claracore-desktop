@@ -164,7 +164,26 @@
 
 .agent-access-side {
   display: grid;
-  gap: 9px;
+  gap: 24px;
+  min-height: 300px;
+}
+
+.agent-invite-action {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding-top: 8px;
+}
+
+.agent-invite-action .primary {
+  min-height: 46px;
+  font-size: 14px;
+}
+
+.agent-invite-action p,
+.agent-setup-status {
+  margin: 0;
+  text-align: center;
 }
 
 .agent-access-side .section-title {

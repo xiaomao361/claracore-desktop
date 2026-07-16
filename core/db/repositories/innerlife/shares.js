@@ -29,6 +29,15 @@ function createInnerLifeShareRepository(helpers) {
     return [...new Set(tokens || [])];
   }
 
+  function mapShareRow(row) {
+    const deliveryMetadata = parseJson(row.delivery_metadata_json, {}) || {};
+    const { delivery_metadata_json: _deliveryMetadataJson, ...share } = row;
+    return {
+      ...share,
+      deliveryEvidence: deliveryMetadata.deliveryEvidence || null
+    };
+  }
+
   function normalizeDeliveryEvidence(input = {}) {
     const conversationId = String(input.conversationId || "").trim();
     const responseId = String(input.responseId || "").trim();
@@ -85,14 +94,21 @@ function createInnerLifeShareRepository(helpers) {
           s.created_at,
           s.updated_at,
           t.event_id,
-          t.review_status
+          t.review_status,
+          (
+            SELECT a.metadata_json
+            FROM innerlife_share_actions a
+            WHERE a.share_id = s.id AND a.action = 'used'
+            ORDER BY a.created_at DESC, a.id DESC
+            LIMIT 1
+          ) AS delivery_metadata_json
         FROM innerlife_shares s
         LEFT JOIN innerlife_thoughts t ON t.id = s.thought_id
         ${whereClause}
         ORDER BY s.updated_at DESC, s.created_at DESC
         LIMIT ${safeLimit};
       `);
-      return rows;
+      return rows.map(mapShareRow);
     },
 
     async listInnerLifeShareChecks(agentId = DEFAULT_AGENT_ID, limit = 10) {
@@ -262,12 +278,27 @@ function createInnerLifeShareRepository(helpers) {
         );
       `);
       const rows = await this.query(`
-        SELECT id, agent_id, thought_id, status, body, decision_reason, created_at, updated_at
-        FROM innerlife_shares
-        WHERE id = ${sqlString(shareId)};
+        SELECT
+          s.id,
+          s.agent_id,
+          s.thought_id,
+          s.status,
+          s.body,
+          s.decision_reason,
+          s.created_at,
+          s.updated_at,
+          (
+            SELECT a.metadata_json
+            FROM innerlife_share_actions a
+            WHERE a.share_id = s.id AND a.action = 'used'
+            ORDER BY a.created_at DESC, a.id DESC
+            LIMIT 1
+          ) AS delivery_metadata_json
+        FROM innerlife_shares s
+        WHERE s.id = ${sqlString(shareId)};
       `);
       if (!rows[0]) throw new Error("InnerLife share not found.");
-      return rows[0];
+      return mapShareRow(rows[0]);
     },
 
     async markInnerLifeShare(id, action, reason = "", agentId = "", deliveryEvidence = null) {

@@ -56,7 +56,8 @@ Read these before adding new features:
 
 ## Current Status
 
-The current release version is `0.5.6`. It is a working desktop shell with a
+The current development version is `0.5.7`; the current public release is
+`0.5.6`. It is a working desktop shell with a
 product-owned local data store, Desktop-native Memoria, Shared Line, InnerLife,
 a Desktop-owned Gateway, with model configuration merged into the Settings
 surface.
@@ -67,29 +68,37 @@ remain stored as UTC, while structured records preserve their event time zone.
 Included:
 
 - Electron desktop app
-- Empty-data Home onboarding with direct Agent Access / model-setting entry
-  points and removable demo data; seed and clear actions create a backup first
-  and remove only fixture-owned records.
+- Empty-data Home with one quiet shared-consciousness core and a direct Agent
+  Access entry; configured-only Agents are never presented as recently active.
 - ClaraCore root detection
 - Product-owned SQLite data root under Desktop user data
 - Home, Memoria, Shared Line, InnerLife, Agent Access, Logs, and Settings pages (model and data management live inside Settings tabs)
-- Home dashboard with Gateway, Memoria, Shared Line, InnerLife, agent-view, attention queue, and Gateway trace summaries; attention counts only human-actionable signals (agent-owned waiting state like pending shares stays ambient, and Gateway errors age out of attention after 30 minutes)
-- Compact Home status board that merges the runtime strip and core module readiness below the Agent View and Attention panels
-- Gateway trace chain on Home that expands one priority call as `agent -> Desktop Gateway -> MCP tool -> result`, compresses additional calls into a recent list, and sends overflow review to Agent Access
-- Agent Setup page with Streamable HTTP MCP endpoint, stdio fallback config, token-protected localhost helper URLs, CLI fallback notes, runtime paths, and recent Gateway activity
+- Home presence surface with one bounded Canvas core representing the shared
+  consciousness space, at most three recently observed Agent lights, stable
+  identity colors, capped signal flows, reduced-motion fallback, and strict
+  animation/pixel budgets. It uses recent Gateway activity as presence truth
+  and keeps Shared Line / eligible InnerLife text readable without Canvas.
+- Agent Access page with connected-agent/recent-activity evidence and one
+  primary `复制给智能体` / `Copy for agent` action. The copied brief carries
+  the current Streamable HTTP endpoint, bearer authorization, setup order, and
+  stdio fallback without duplicating a technical manual in the human UI.
 - Streamable HTTP MCP uses stable localhost port `50668` by default and persisted local token file; port/token edits, random token generation, and copyable agent config live in Settings > General > Agent Gateway
 - Desktop-owned Gateway Streamable HTTP endpoint for Gateway context, Memoria, Shared Line, and InnerLife MCP tools; stdio remains available for clients that do not support HTTP MCP yet
 - Shared Line defaults are agent-scoped for Gateway callers: without an explicit `lineId`, `X-ClaraCore-Agent-ID` / `CLARACORE_AGENT_ID` reads and writes the agent's own line only when that choice is unambiguous. Multiple active lines fail closed with `SHARED_LINE_ID_REQUIRED`; the agent must list lines and retry with an explicit `lineId`. InnerLife shared-line context follows the same agent scope.
-- Home Agent View includes period-based agent change summaries for yesterday, today, recent 7 days, and recent 30 days
 - The Full build's built-in Memory embedding model stays lazy-loaded; Ollama and OpenAI-compatible providers do not load it. Lite excludes that runtime entirely.
 - Memoria CLI for store, recall, get, update, tag, delete, restore, archive, import/export, records, and maintenance audit/run
-- View-focused Memoria UI with four tabs: Memories (empty search lists all, with paging), Labels, Graph, and Archive & restricted (restricted, archived, and deleted review plus delete/restore)
-- Lazy-loaded Memoria list tabs and canvas graph with Obsidian-style memory map, relationship-network, and historical-to-current state-chain views, primary/restricted layers, state/conflict inspection, zoom/pan, and reduced-motion fallback
-- Vector maintenance behind a disclosure that auto-opens only when pending or failed vectors exist, plus daily small-batch Memoria database maintenance
+- Read-only human Memoria path: search, select, and inspect full Memory detail,
+  with Agent filtering, paging, truthful labels/time evidence, and keyboard
+  selection. Labels and the graph remain lazy behind one closed Advanced view;
+  mutations, vector maintenance, restricted/archive/deleted management, scores,
+  and maintenance counts stay Agent/runtime owned rather than primary UI.
 - Full defaults to the bundled ClaraCore built-in `Xenova/bge-small-zh-v1.5` Memory embedding model with 512-dimensional vectors. Fresh Lite starts with Ollama and requires the user to fetch and select an installed embedding model.
 - Shared Line CLI and Desktop-owned Gateway MCP tools for agent-driven line create/list/get/activate/rename/archive/restore/update/handoff, agent state, model adjustments, and arc compaction
 - Shared-reality and affective fields as first-class inputs, with a managed arc lifecycle: momentary readings stay transient, duplicates are de-duplicated, persisted arcs are capped, resume packets truncate by default (fullArc for the complete arc), and needs-review nodes are always protected
-- View-focused Shared Line UI for line browsing, agent filtering, current position, metadata, history, snapshots, handoffs, and resume packet review; selecting a line only changes the reviewed detail, not the agent-active line
+- Read-only, line-first Shared Line UI: active lines on the left and selected
+  `过去 -> 现在 -> 下一步`, shared understanding, and unresolved material on
+  the right. Selecting a line only changes reviewed detail, never Agent-active
+  state; history, snapshots, metadata, and Agent evidence stay under Advanced.
 - Desktop-owned InnerLife storage, agent profiles, inbox, sessions, events, thoughts, shares, digest runs, exploration, convergence, and daemon state
 - Model-backed InnerLife generation for digest, process-once, exploration, convergence, and session afterthoughts, with deterministic template fallback when no model is configured or a model call fails
 - Fresh installs enable InnerLife by default with the bundled DeepSeek-compatible model/key settings
@@ -102,18 +111,24 @@ Included:
   or Disabled. Selecting the Full built-in provider hides endpoint, model, key,
   fetch, and connection-test controls because no external wiring is required.
   InnerLife exposes Disabled, Ollama, or OpenAI-compatible in both.
-- InnerLife runtime panel for daemon enable/pause/tick and doctor status; sessions, digests, inbox, and timing checks sit behind a collapsed Pipeline evidence section
+- Read-only human InnerLife view organized by selected profile, current focus,
+  full unshared thoughts, and verified shared history. A thought appears as
+  shared only after a `used` action with conversational delivery evidence;
+  daemon/pipeline controls and raw diagnostics are not primary human UI.
 - Verified SQLite product backups with restore preview and safety-backup restore
 - Full product JSON export/import for portable ClaraCore Desktop data
 - Agent identity is stable per calling agent: Streamable HTTP uses `X-ClaraCore-Agent-ID`, stdio fallback uses `CLARACORE_AGENT_ID`; preferred stable ids are `lara`, `clara`, and `codex`, while legacy tool-prefixed ids can be consolidated with `agent_identity_merge`
 - Gateway caller context separates the stable persona (`agentId`), client host (`clientId`), and host conversation (`conversationId`) from domain ids such as `inner_session_*` and `line_*`; caller metadata is traced without overwriting tool arguments
 - Shared Line `agent_id` is the stable owner. An explicit cross-agent update records `writerAgentId` provenance and never transfers ownership implicitly
 - Agent-facing InnerLife status, pending shares, and share actions are scoped to the calling agent; Desktop UI snapshots may still request the all-agent view
-- Settings page with General (language, theme, motion, close-window behavior, data paths, runtime facts), Models, and Data tabs
+- Settings with Common / Capabilities / Advanced hierarchy: appearance,
+  window behavior, version/privacy/update checks, intentionally collapsed
+  Memory and InnerLife provider controls, Agent Gateway access, storage,
+  backup/import/export, and diagnostic paths.
 - Manual GitHub Release update check for macOS arm64 DMG and Windows x64 EXE installers, with user-directed download and installation
-- Terminal-style runtime log view for maintenance and Gateway traces, plus a
-  read-only time flow across Memory, Shared Line, InnerLife, Gateway, and runtime
-  events
+- Read-only Logs with one recent-error status, local filters, terminal stream,
+  Refresh/Follow controls, and closed Advanced Diagnostics containing Decay
+  Audit and technical Time Flow evidence.
 - Read-only decay audit that flags dormant Memory, Shared Line review items,
   old waiting InnerLife shares/inbox items, and InnerLife daemon errors without
   mutating product state

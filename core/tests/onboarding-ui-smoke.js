@@ -4,15 +4,16 @@ const path = require("path");
 
 async function main() {
   const { _electron: electron } = require("playwright");
-  const electronPath = require(path.resolve(__dirname, "..", "..", "node_modules", "electron"));
-  const dataRoot = await fs.mkdtemp(path.join(os.tmpdir(), "claracore-onboarding-"));
+  const appRoot = path.resolve(__dirname, "..", "..");
+  const electronPath = require(path.join(appRoot, "node_modules", "electron"));
+  const dataRoot = await fs.mkdtemp(path.join(os.tmpdir(), "claracore-empty-home-"));
   const userDataRoot = path.join(dataRoot, "user-data");
   let app;
   try {
     app = await electron.launch({
       executablePath: electronPath,
       args: ["."],
-      cwd: path.resolve(__dirname, "..", ".."),
+      cwd: appRoot,
       env: {
         ...process.env,
         CLARACORE_DESKTOP_DATA_DIR: dataRoot,
@@ -21,52 +22,30 @@ async function main() {
       }
     });
     const page = await app.firstWindow();
-    await page.waitForSelector(".topbar", { timeout: 15000 });
-    await page.waitForFunction(() => document.querySelector("#homeOnboarding") && !document.querySelector("#homeOnboarding").hidden, null, { timeout: 15000 });
-
+    await page.waitForFunction(
+      () => window.ClaraCoreTestHooks?.homeVision && document.querySelector("#homePresenceEmptyAction")?.hidden === false,
+      null,
+      { timeout: 15000 }
+    );
     const emptyState = await page.evaluate(() => ({
-      loadHidden: document.querySelector("#loadDemoData")?.hidden,
-      clearHidden: document.querySelector("#clearDemoData")?.hidden,
-      steps: document.querySelectorAll("[data-onboarding-step]").length
+      agentCount: document.querySelectorAll("#homePresenceAgents .home-presence-agent").length,
+      emptyActionHidden: document.querySelector("#homePresenceEmptyAction")?.hidden,
+      title: document.querySelector("#homePresenceTitle")?.textContent || "",
+      checklistPresent: Boolean(document.querySelector("#homeOnboarding")),
+      legacyDashboardPresent: Boolean(document.querySelector("#homeRuntimeDetails, .home-command-grid")),
+      vision: window.ClaraCoreTestHooks.homeVision()
     }));
-    if (emptyState.loadHidden || !emptyState.clearHidden || emptyState.steps !== 2) {
-      throw new Error(`Empty-state onboarding rendered incorrectly: ${JSON.stringify(emptyState)}`);
+    if (
+      emptyState.agentCount !== 0 ||
+      emptyState.emptyActionHidden ||
+      emptyState.checklistPresent ||
+      emptyState.legacyDashboardPresent ||
+      emptyState.vision.agentCount !== 0 ||
+      emptyState.vision.particleCount !== 96
+    ) {
+      throw new Error(`Empty Home rendered incorrectly: ${JSON.stringify(emptyState)}`);
     }
-
-    await page.click("#loadDemoData");
-    await page.waitForFunction(() => !document.querySelector("#clearDemoData")?.hidden, null, { timeout: 30000 });
-
-    const seededState = await page.evaluate(async () => {
-      const snapshot = await window.ClaraCoreDesktop.getRuntimeSnapshot();
-      return {
-        onboardingHidden: document.querySelector("#homeOnboarding")?.hidden,
-        loadHidden: document.querySelector("#loadDemoData")?.hidden,
-        memories: snapshot.memoryStats?.activeCount ?? 0,
-        traces: (snapshot.gatewayTraces || []).length,
-        notice: document.querySelector("#demoDataNotice")?.textContent || ""
-      };
-    });
-    if (seededState.onboardingHidden || !seededState.loadHidden || seededState.memories < 3 || seededState.traces < 4 || !seededState.notice) {
-      throw new Error(`Demo seed did not render expected state: ${JSON.stringify(seededState)}`);
-    }
-
-    await page.click("#clearDemoData");
-    await page.waitForFunction(() => !document.querySelector("#loadDemoData")?.hidden, null, { timeout: 30000 });
-
-    const clearedState = await page.evaluate(async () => {
-      const snapshot = await window.ClaraCoreDesktop.getRuntimeSnapshot();
-      return {
-        onboardingHidden: document.querySelector("#homeOnboarding")?.hidden,
-        clearHidden: document.querySelector("#clearDemoData")?.hidden,
-        memories: snapshot.memoryStats?.activeCount ?? 0,
-        traces: (snapshot.gatewayTraces || []).length
-      };
-    });
-    if (clearedState.onboardingHidden || !clearedState.clearHidden || clearedState.memories !== 0 || clearedState.traces !== 0) {
-      throw new Error(`Demo clear did not restore empty onboarding state: ${JSON.stringify(clearedState)}`);
-    }
-
-    console.log(JSON.stringify({ ok: true, emptyState, seededState: { memories: seededState.memories, traces: seededState.traces }, clearedState: { memories: clearedState.memories } }, null, 2));
+    console.log(JSON.stringify({ ok: true, emptyState }, null, 2));
   } finally {
     if (app) await app.close();
     await fs.rm(dataRoot, { recursive: true, force: true });

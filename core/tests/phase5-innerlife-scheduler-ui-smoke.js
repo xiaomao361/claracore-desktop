@@ -53,7 +53,7 @@ async function main() {
     await page.waitForFunction(
       () =>
         document.querySelector("#innerLifeLastResult")?.textContent.includes("processed") &&
-        document.querySelector("#innerLifeShareList")?.textContent.includes("Scheduler agent item"),
+        document.querySelector("#innerLifeUnsharedList")?.textContent.includes("Scheduler agent item"),
       null,
       { timeout: 15000 }
     );
@@ -84,11 +84,12 @@ async function main() {
           daemonEnabled: snapshot.innerLife.daemon.enabled,
           daemonTicks: snapshot.innerLife.daemon.tickCount,
           missingManualControls:
-            Boolean(document.querySelector("#innerLifeDaemonToggle")) &&
+            !document.querySelector("#innerLifeDaemonToggle") &&
             !document.querySelector("#tickInnerLifeDaemon") &&
             !document.querySelector("#processInnerLifeOnce") &&
-            !document.querySelector("[data-innerlife-action]"),
-          shareText: document.querySelector("#innerLifeShareList").textContent
+            !document.querySelector("[data-innerlife-action]") &&
+            !document.querySelector("#saveInnerLifeProfile"),
+          shareText: document.querySelector("#innerLifeUnsharedList").textContent
         };
       });
       if (result.daemonStatus === "paused" && result.daemonEnabled === false) break;

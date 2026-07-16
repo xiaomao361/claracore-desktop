@@ -41,6 +41,12 @@ After MCP is installed, connected, or restarted, run this sequence:
 4. `gateway_context` with an explicit `lineId` when your agent owns multiple
    active lines
 
+After these calls, proactively respond in the user's current language with the
+truthful connection result, ClaraCore's Memory, Shared Line, InnerLife, and
+Gateway/diagnostics capabilities, a bounded summary of actual context, three to
+five natural-language example requests, and one evidence-backed next action
+when appropriate. Do not wait for the user to ask how to use ClaraCore.
+
 `gateway_docs` explains the product boundary and available tools.
 `gateway_context` returns the current working packet: Shared Line, recent
 Memory, InnerLife state, Doctor guidance, and recovery advice.

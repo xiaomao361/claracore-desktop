@@ -60,6 +60,30 @@
     grid-template-columns: 1fr;
   }
 
+  .memory-toolbar,
+  .memory-reader-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .memory-browser-panel,
+  .memory-detail-panel {
+    min-height: auto;
+  }
+
+  .memory-list {
+    max-height: 420px;
+  }
+
+  .shared-line-page-heading,
+  .shared-line-detail-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .shared-line-readonly-badge {
+    align-self: flex-start;
+  }
+
   .topbar {
     display: grid;
   }
@@ -113,6 +137,11 @@
     position: static;
   }
 
+  .shared-line-list-panel,
+  .shared-line-detail-panel {
+    padding: 18px;
+  }
+
   .innerlife-share-list,
   .backup-list,
   .innerlife-record-grid .compact-list,
@@ -138,6 +167,25 @@
     grid-template-columns: 1fr;
   }
 
+  .model-config-head,
+  .settings-section-head,
+  .advanced-settings-group > summary,
+  .path-root-row {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .model-config-head,
+  .settings-section-head,
+  .advanced-settings-group > summary {
+    flex-direction: column;
+  }
+
+  .capability-summary-action,
+  .settings-version-line {
+    align-self: flex-start;
+  }
+
   .shared-line-detail-row {
     grid-template-columns: 1fr;
   }
@@ -145,6 +193,27 @@
   .section-heading-line {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .log-status-line,
+  .log-filter-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .log-status-line .quiet,
+  .log-filter-row > span {
+    white-space: normal;
+    text-align: left;
+  }
+
+  .log-filter-row label {
+    justify-content: space-between;
+  }
+
+  .log-filter-row select {
+    flex: 1;
+    min-width: 0;
   }
 
   .shared-line-filter {
@@ -158,6 +227,15 @@
 
   .memory-label-alias-section .memory-search {
     grid-template-columns: 1fr;
+  }
+
+  .memory-page-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .memory-readonly-badge {
+    align-self: flex-start;
   }
 
   .settings-roadmap-grid {
@@ -181,6 +259,28 @@
 
   .innerlife-agent-filter select {
     width: 100%;
+  }
+
+  .innerlife-reader {
+    padding: 24px;
+  }
+
+  .innerlife-section-heading,
+  .innerlife-agent-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .innerlife-section-heading p {
+    max-width: none;
+    text-align: left;
+  }
+
+  .innerlife-record-grid,
+  .innerlife-pipeline-grid,
+  .innerlife-raw-grid,
+  .innerlife-runtime-facts {
+    grid-template-columns: 1fr;
   }
 
   .daemon-control-actions {
@@ -212,6 +312,39 @@
 @media (max-width: 560px) {
   nav {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .memory-toolbar .memory-search,
+  .memory-toolbar,
+  .memory-detail-facts > div {
+    grid-template-columns: 1fr;
+  }
+
+  .memory-agent-filter {
+    grid-template-columns: 1fr;
+  }
+
+  .shared-line-list-panel,
+  .shared-line-detail-panel {
+    padding: 16px;
+  }
+
+  .shared-line-stage {
+    gap: 14px;
+  }
+
+  .innerlife-reader {
+    padding: 18px;
+  }
+
+  .innerlife-shared-list,
+  .innerlife-advanced-body {
+    padding-left: 0;
+  }
+
+  .innerlife-thought-meta {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .event-list li,

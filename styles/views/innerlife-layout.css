@@ -1,256 +1,274 @@
 .innerlife-shell {
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 
-.innerlife-status-strip {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+.innerlife-page-heading {
+  display: flex;
+  justify-content: flex-end;
 }
 
-.innerlife-status-strip > div {
-  min-width: 0;
-  padding: 14px 16px 13px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: linear-gradient(180deg, #fffefa 0%, #f7f4ec 100%);
-  box-shadow: 0 10px 28px rgba(45, 36, 24, 0.06);
-}
-
-.innerlife-status-strip span,
-.innerlife-status-strip strong {
-  display: block;
-}
-
-.innerlife-status-strip span {
+.innerlife-readonly-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
   font-size: 12px;
-  font-weight: 650;
-  color: var(--muted);
-  text-transform: uppercase;
+  font-weight: 680;
 }
 
-.innerlife-status-strip strong {
-  margin-top: 6px;
-  overflow: hidden;
-  color: #23382f;
-  font-size: 22px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.innerlife-readonly-badge i {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--green);
+  box-shadow: 0 0 0 4px rgba(67, 124, 94, 0.1);
 }
 
-.innerlife-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.18fr) minmax(340px, 0.82fr);
-  gap: 16px;
-  align-items: start;
+.innerlife-reader {
+  width: min(900px, 100%);
+  margin: 0 auto;
+  padding: clamp(22px, 4vw, 42px);
 }
 
-.innerlife-panel-heading {
-  display: block;
-  margin-bottom: 16px;
-}
-
-.innerlife-panel-copy {
-  min-width: 0;
-  max-width: 620px;
-}
-
-.innerlife-panel-copy h2 {
-  margin-bottom: 4px;
-}
-
-.innerlife-panel-copy p {
-  margin: 0;
-  max-width: 560px;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.45;
+.innerlife-agent-row {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
 }
 
 .innerlife-agent-filter {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  width: auto;
-}
-
-.innerlife-agent-filter span {
-  max-width: none;
-  line-height: 1.15;
-  text-align: left;
-  white-space: nowrap;
-}
-
-.innerlife-agent-filter select {
-  width: 190px;
-  min-width: 0;
-}
-
-.innerlife-side {
   display: grid;
-  gap: 16px;
-  min-width: 0;
-  max-height: calc(100vh - 320px);
-  overflow: auto;
-  overflow-x: hidden;
-  padding-right: 4px;
-  padding-bottom: 84px;
-  position: sticky;
-  top: 18px;
+  gap: 7px;
+  min-width: min(300px, 100%);
 }
 
-.innerlife-share-heading {
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.innerlife-context-bar {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.innerlife-context-bar > div,
-.innerlife-context-bar > p {
-  min-width: 0;
-  margin: 0;
-  padding: 9px 10px;
-  border: 1px solid rgba(43, 61, 52, 0.08);
-  border-radius: 8px;
-  background: var(--surface-soft);
-}
-
-.innerlife-context-bar > p {
-  grid-column: 1 / -1;
-}
-
-.innerlife-context-bar span,
-.innerlife-context-bar strong {
-  display: block;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.innerlife-context-bar span {
+.innerlife-agent-filter > span {
   color: var(--muted);
   font-size: 11px;
   font-weight: 760;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.innerlife-context-bar strong {
-  margin-top: 4px;
-  color: var(--text);
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.innerlife-share-section {
-  display: grid;
-  gap: 9px;
-}
-
-.innerlife-share-section + .innerlife-share-section {
-  margin-top: 12px;
-}
-
-.innerlife-share-section h3 {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 760;
-  text-transform: uppercase;
-}
-
-.innerlife-share-heading-copy {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  min-width: 0;
-}
-
-.innerlife-share-heading-copy strong,
-.innerlife-share-heading-copy span {
-  min-width: 0;
-}
-
-.innerlife-side .panel {
-  min-width: 0;
-}
-
-.innerlife-side .shared-line-history-list,
-.innerlife-side .shared-line-history-item {
-  min-width: 0;
-  overflow-x: hidden;
-}
-
-.innerlife-side .shared-line-history-item > div {
-  min-width: 0;
-}
-
-.innerlife-side .shared-line-history-item strong,
-.innerlife-side .shared-line-history-item span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.innerlife-side .shared-line-history-item p,
-.innerlife-side .shared-line-history-item small {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-.innerlife-deep-section {
-  margin-top: 12px;
-  padding: 10px 11px;
+.innerlife-agent-filter select {
+  min-height: 42px;
+  padding: 0 38px 0 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #fafaf7;
-}
-
-.innerlife-deep-section > summary {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-}
-
-.innerlife-deep-section > summary span {
+  border-radius: 9px;
+  background: var(--surface);
   color: var(--text);
-  font-size: 13px;
-  font-weight: 720;
+  font: inherit;
+  font-weight: 680;
 }
 
-.innerlife-deep-section > summary small {
+.innerlife-profile-name {
+  color: var(--faint);
+  font-size: 13px;
+}
+
+.innerlife-focus-section {
+  padding: 34px 0 30px;
+}
+
+.innerlife-section-kicker {
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 780;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.innerlife-focus {
+  max-width: 720px;
+  margin: 10px 0 0;
+  color: var(--text);
+  font-size: clamp(20px, 2.7vw, 29px);
+  font-weight: 610;
+  letter-spacing: -0.025em;
+  line-height: 1.28;
+}
+
+.innerlife-interests {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 17px;
+}
+
+.innerlife-interests span {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--surface-soft);
   color: var(--muted);
   font-size: 12px;
-  line-height: 1.35;
+}
+
+.innerlife-primary-section {
+  padding: 30px 0 10px;
+  border-top: 1px solid var(--border);
+}
+
+.innerlife-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 18px;
+}
+
+.innerlife-section-heading h2 {
+  margin: 5px 0 0;
+  font-size: 21px;
+  letter-spacing: -0.015em;
+}
+
+.innerlife-section-heading p {
+  max-width: 360px;
+  margin: 0;
+  color: var(--faint);
+  font-size: 12px;
+  line-height: 1.45;
   text-align: right;
 }
 
-.innerlife-deep-section[open] > summary {
-  margin-bottom: 10px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid rgba(43, 61, 52, 0.08);
+.innerlife-thought-list {
+  display: grid;
+  gap: 12px;
+}
+
+.innerlife-thought {
+  padding: 19px 20px 20px;
+  border: 1px solid rgba(67, 124, 94, 0.18);
+  border-radius: 12px;
+  background: linear-gradient(145deg, var(--surface) 0%, var(--surface-soft) 100%);
+}
+
+.innerlife-thought.is-shared {
+  border-color: var(--border);
+  background: var(--surface);
+}
+
+.innerlife-thought-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  color: var(--faint);
+  font-size: 11px;
+}
+
+.innerlife-thought-meta span {
+  color: var(--green);
+  font-weight: 720;
+}
+
+.innerlife-thought.is-shared .innerlife-thought-meta span {
+  color: var(--muted);
+}
+
+.innerlife-thought p {
+  margin: 13px 0 0;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.innerlife-disclosure {
+  margin-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.innerlife-disclosure > summary {
+  display: flex;
+  padding: 20px 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.innerlife-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.innerlife-disclosure > summary::before {
+  content: "+";
+  display: inline-grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  margin-right: 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+}
+
+.innerlife-disclosure[open] > summary::before {
+  content: "−";
+}
+
+.innerlife-disclosure > summary span {
+  display: grid;
+  gap: 3px;
+}
+
+.innerlife-disclosure > summary strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.innerlife-disclosure > summary small {
+  color: var(--faint);
+  font-size: 12px;
+  font-weight: 520;
+}
+
+.innerlife-shared-list,
+.innerlife-advanced-body {
+  padding: 0 0 12px 32px;
+}
+
+.innerlife-advanced-body {
+  display: grid;
+  gap: 22px;
+}
+
+.innerlife-advanced-body > section {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+
+.innerlife-advanced-body h3 {
+  margin: 0 0 12px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.innerlife-runtime-facts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .innerlife-record-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
-.innerlife-pipeline-details[open] {
-  display: grid;
-  gap: 10px;
+.innerlife-record-grid > div {
+  min-width: 0;
 }
 
-.innerlife-pipeline-details > .panel {
-  margin: 0;
+.innerlife-pipeline-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.innerlife-record-grid .shared-line-history-list {
+  max-height: 340px;
+  overflow: auto;
 }

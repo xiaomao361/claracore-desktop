@@ -2,6 +2,38 @@
 
 Date: 2026-07-01
 
+## v0.5.7 Agent-First Design Review
+
+Updated: 2026-07-16
+
+- Review each page from a new user's perspective before changing Home.
+- Preserve the product rule: agents create, update, organize, and maintain
+  product data; the human Desktop surface is for reading and verification, not
+  direct data management.
+- Redesign Shared Line around long-lived lines and a Past / Now / Next
+  continuity path. Keep shared understanding and unresolved material on the
+  primary path; hide secondary evidence by default.
+- Remove Resume Packet and archive actions from the human Shared Line page.
+  Keep archived lines read-only and defer the decision about whether humans
+  may explicitly end a line.
+- Redesign InnerLife around the selected agent's current focus, full unshared
+  thoughts, and actually delivered share history. Human reading must never
+  mutate share state or count as conversational delivery.
+- Hide InnerLife pipeline/runtime/profile evidence by default and keep it
+  read-only. Remove human review, apply, profile-edit, and daemon controls from
+  the content page while preserving agent-facing capabilities.
+- Simplify Logs around one bounded recent-error status, filters, the evidence
+  stream, Refresh, and Follow. Keep Decay Audit and technical Time Flow inside
+  a closed read-only Advanced Diagnostics disclosure.
+- Remove Clear Logs from the human page while preserving the underlying
+  preload, IPC, runtime, database, and domain-test contract.
+- Simplify Settings into Common / Capabilities / Advanced. Keep human
+  preferences and updates on the first screen, reveal external-provider forms
+  only on request, and close technical, storage, Gateway, and recovery groups
+  by default. Completed locally for v0.5.7 with isolated Electron QA.
+- Discuss Home last, after every supporting page has one clear human-readable
+  purpose.
+
 ## v0.5.6 Release Checkpoint
 
 Updated: 2026-07-16
@@ -705,20 +737,23 @@ Acceptance:
 
 - Users can isolate relevant log categories without reading the whole stream.
 
-### P1: Confirm Before Clearing Logs
+### P1: Remove Human Log Maintenance
 
 Problem:
 
-The clear action can remove useful diagnostic evidence.
+The clear action made the human responsible for deleting diagnostic evidence
+from a page whose purpose is read-only verification.
 
 Adjustment:
 
-- Add a confirmation step before clearing logs.
-- Mention that recent debugging evidence may be removed.
+- Remove Clear from the Logs renderer.
+- Preserve the underlying clear-log capability for agent/runtime and domain
+  use; do not move it into Settings in this slice.
 
 Acceptance:
 
-- Logs cannot be cleared by a single accidental click.
+- Logs cannot be cleared from the human evidence page.
+- Existing backend clear-log contracts still pass.
 
 ## Models
 
@@ -845,12 +880,14 @@ Acceptance:
 1. Memory: default summary mode for search results.
 2. Memory: graph legend and label grouping.
 3. Shared Line: sticky selected-line context and status-label cleanup.
-4. InnerLife: simplify first screen and separate pending/approved/history.
+4. InnerLife: completed for v0.5.7 — selected agent, current focus, unshared
+   thoughts, verified shared history, and closed read-only Advanced view.
 
 ### Pass 3: Operational Surfaces
 
 1. Models: connection tests and current configuration summary.
-2. Logs: filters and clear confirmation.
+2. Logs: completed for v0.5.7 — bounded status, filters and log stream,
+   read-only Advanced Diagnostics, and no human Clear control.
 3. Data: import risk copy and backup artifact labels.
 4. Settings: docs/source entry and cleaner runtime facts.
 

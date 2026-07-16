@@ -641,8 +641,24 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
         },
         firstCalls: [
           "Call claracore_connection_test after installing or changing the MCP connection.",
-          "Call gateway_docs to read the current product and Memory write contract.",
-          "Call gateway_context to load the selected Shared Line, current Memory, and InnerLife state."
+          "Call gateway_docs and read First Connection and What ClaraCore Lets You Do.",
+          "Call shared_line_list with status=active.",
+          "Call gateway_context with an explicit lineId when selection is required."
+        ],
+        capabilities: {
+          memory: "Remember and retrieve durable facts, preferences, decisions, and prior knowledge when they matter.",
+          sharedLine: "Find where ongoing work stopped and continue without starting over.",
+          innerLife: "Keep and revisit background thoughts, then share them when useful and timely.",
+          gateway: "Verify the connection and inspect bounded evidence when calls or runtime behavior fail."
+        },
+        afterConnect:
+          "In the user's current language, proactively report connection success only after verification and summarize the current resumable context.",
+        userIntroductionRequirements: [
+          "Truthful connection result",
+          "Four ClaraCore capabilities in natural language",
+          "Bounded summary of actual current context",
+          "Three to five natural-language example requests",
+          "One evidence-backed next action when appropriate"
         ],
         memoriaUsage: {
           writePolicy: "Search before writing a potentially changed fact.",

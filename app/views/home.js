@@ -25,6 +25,18 @@ function createClaraCoreHomeView(context) {
     homeAgentActivityTabs,
     homeAgentViewList,
     homeTraceList,
+    homePresenceTitle,
+    homePresenceDetail,
+    homePresenceEmptyAction,
+    homeSharedLineSection,
+    homeSharedLineText,
+    homeEmergingSection,
+    homeEmergingText,
+    homeActionableIssue,
+    homeVisionField,
+    homeVisionCanvas,
+    homeVisionFallback,
+    homePresenceAgents,
     homeRuntimeDetails,
     healthSummary,
     healthList,
@@ -50,6 +62,12 @@ function createClaraCoreHomeView(context) {
     escapeHtml,
     safeJsonObject,
     getSnapshot
+  });
+  const presenceBuilder = window.createClaraCoreHomePresence({ t, actionableGatewayErrors });
+  const homeVision = window.createClaraCoreHomeVision({
+    canvas: homeVisionCanvas,
+    container: homeVisionField,
+    fallback: homeVisionFallback
   });
   let activeAgentActivityPeriod = "7d";
 
@@ -576,66 +594,29 @@ function createClaraCoreHomeView(context) {
   function renderHomeDashboard() {
     const snapshot = getSnapshot();
     if (!snapshot) return;
-    renderOnboarding();
-    renderRuntimeOverview();
-    renderAttentionQueue();
-    renderAgentActivity();
-
-    const agentIds = homeAgentIds();
-    const useGlobalPendingFallback = Boolean((snapshot?.innerLife?.pendingShares || []).length) && !hasAgentShareMatch(snapshot?.innerLife?.pendingShares || [], agentIds);
-    homeAgentViewList.innerHTML = agentIds
-      .map((agentId, index) => homeAgentView(agentId, { useGlobalPendingFallback: useGlobalPendingFallback && index === 0 }))
+    const model = presenceBuilder.build(snapshot);
+    homePresenceTitle.textContent = model.title;
+    homePresenceDetail.textContent = model.detail;
+    homePresenceEmptyAction.hidden = model.agents.length > 0;
+    homeSharedLineSection.hidden = !model.core.currentSummary;
+    homeSharedLineText.textContent = model.core.currentLineTitle
+      ? `${model.core.currentLineTitle} · ${model.core.currentSummary}`
+      : model.core.currentSummary;
+    homeEmergingSection.hidden = !model.core.emergingThought;
+    homeEmergingText.textContent = model.core.emergingThought;
+    homeActionableIssue.hidden = !model.actionableIssue;
+    homeActionableIssue.textContent = model.actionableIssue?.text || "";
+    homePresenceAgents.innerHTML = model.agents
       .map(
         (agent) => `
-          <article class="home-agent-card">
-            <div class="home-agent-head">
-              <strong>${escapeHtml(agent.displayName)}</strong>
-              <span>${escapeHtml(agent.lineTitle)}</span>
-            </div>
-            <p>${escapeHtml(agent.lineBody)}</p>
-            <div class="home-agent-stats">
-              <div><span>${escapeHtml(t("home.agentView.recalledMemories"))}</span><strong>${escapeHtml(agent.recalledMemories)}</strong></div>
-              <div><span>${escapeHtml(t("home.agentView.pendingThoughts"))}</span><strong>${escapeHtml(agent.pendingThoughts)}</strong></div>
-              <div><span>${escapeHtml(t("home.agentView.gatewayDecisions"))}</span><strong>${escapeHtml(agent.gatewayDecisions)}</strong></div>
-            </div>
-          </article>
+          <span class="home-presence-agent ${escapeHtml(agent.presence)}${agent.arrival ? " arrival" : ""}" style="--agent-color:${escapeHtml(agent.color)}" title="${escapeHtml(agent.label)} · ${escapeHtml(formatRelativeTime(agent.lastObservedAt))}" tabindex="0" aria-label="${escapeHtml(agent.label)} · ${escapeHtml(formatRelativeTime(agent.lastObservedAt))}">
+            <i class="home-presence-agent-dot"></i>
+            <span class="home-presence-agent-label">${escapeHtml(agent.label)}</span>
+          </span>
         `
       )
       .join("");
-
-    if (homeTraceList) {
-      const traces = [...(snapshot.gatewayTraces || [])].sort((a, b) => {
-        const priorityDiff = tracePriority(b) - tracePriority(a);
-        if (priorityDiff) return priorityDiff;
-        return traceTimeValue(b) - traceTimeValue(a);
-      });
-      if (!traces.length) {
-        homeTraceList.innerHTML = `<div class="endpoint-empty">${escapeHtml(t("home.trace.empty"))}</div>`;
-      } else {
-        const featuredTrace = traces[0];
-        const showExpandedTrace = featuredTrace.status === "error";
-        const compactTraces = traces.slice(showExpandedTrace ? 1 : 0, showExpandedTrace ? 5 : 4);
-        const shownCount = compactTraces.length + (showExpandedTrace ? 1 : 0);
-        const hiddenCount = Math.max(0, traces.length - shownCount);
-        homeTraceList.innerHTML = `
-          ${showExpandedTrace ? renderTraceFlow(featuredTrace) : ""}
-          ${
-            compactTraces.length
-              ? `
-                <section class="trace-compact-list">
-                  <div class="trace-compact-heading">
-                    <span>${escapeHtml(t("home.trace.recent"))}</span>
-                    <strong>${escapeHtml(t("home.trace.showing", { shown: shownCount, total: traces.length }))}</strong>
-                  </div>
-                  ${compactTraces.map((trace) => traceCompactRow(trace)).join("")}
-                </section>
-              `
-              : ""
-          }
-          ${hiddenCount ? `<div class="trace-more">${escapeHtml(t("home.trace.more", { count: hiddenCount }))}</div>` : ""}
-        `;
-      }
-    }
+    homeVision.setModel(model);
   }
 
   function renderHealth() {
@@ -790,21 +771,8 @@ function createClaraCoreHomeView(context) {
   function renderConnections() {
     const snapshot = getSnapshot();
     if (!snapshot?.connections) return;
-    mcpCommand.textContent = snapshot.connections.mcpCommand;
-    mcpConfig.textContent = snapshot.connections.mcpConfig;
-    const identity = snapshot.connections.agentIdentity || {};
-    const examples = identity.examples || [];
-    if (agentIdentityList) {
-      agentIdentityList.innerHTML = `
-        <div class="endpoint-card">
-          <div>
-            <strong>${escapeHtml(identity.envKey || "CLARACORE_AGENT_ID")}</strong>
-            <code>${escapeHtml(examples.join(" · ") || "<agent-stable-id>")}</code>
-            <span>${escapeHtml(t("agentSetup.identityBody"))}</span>
-          </div>
-        </div>
-      `;
-    }
+    if (mcpCommand) mcpCommand.textContent = snapshot.connections.mcpCommand;
+    if (mcpConfig) mcpConfig.textContent = snapshot.connections.mcpConfig;
     const traces = snapshot.gatewayTraces || [];
     const agents = summarizeAgentsFromTraces(traces);
     if (gatewayHandshakeList) {
@@ -834,6 +802,7 @@ function createClaraCoreHomeView(context) {
           .join("");
       }
     }
+    if (!gatewayTraceList) return;
     if (traces.length === 0) {
       gatewayTraceList.innerHTML = `<div class="endpoint-empty">${t("connections.noGatewayTraces")}</div>`;
     } else {
@@ -863,6 +832,7 @@ function createClaraCoreHomeView(context) {
       `;
     }
     const endpoints = snapshot.connections.httpEndpoints || [];
+    if (!httpEndpointList) return;
     if (endpoints.length === 0) {
       const gatewayError = snapshot.connections.httpGateway?.error;
       httpEndpointList.innerHTML = `<div class="endpoint-empty">${escapeHtml(gatewayError?.message || t("connections.noEndpoints"))}</div>`;
@@ -927,7 +897,9 @@ function createClaraCoreHomeView(context) {
     renderHealth,
     renderConnections,
     actionableGatewayErrorCount,
-    hasActionableError
+    hasActionableError,
+    setActive: homeVision.setActive,
+    getVisionDebugState: homeVision.debugState
   };
 }
 

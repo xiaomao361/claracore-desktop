@@ -17,36 +17,49 @@
   color: var(--text);
 }
 
-.log-status-strip {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
+.log-status-line {
+  display: flex;
+  align-items: center;
+  gap: 9px;
   margin-top: 14px;
-}
-
-.log-status-strip div {
-  min-width: 0;
-  padding: 10px 12px;
+  min-height: 42px;
+  padding: 9px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-soft);
 }
 
-.log-status-strip span,
-.log-status-strip strong {
-  display: block;
+.log-status-line strong {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
 }
 
-.log-status-strip span {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.log-status-strip strong {
-  margin-top: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.log-status-line .quiet {
   white-space: nowrap;
+}
+
+.log-status-dot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--muted);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muted) 14%, transparent);
+}
+
+.log-status-line.ok .log-status-dot {
+  background: #2f7d63;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #2f7d63 14%, transparent);
+}
+
+.log-status-line.error {
+  border-color: rgba(190, 57, 57, 0.34);
+}
+
+.log-status-line.error .log-status-dot {
+  background: #be3939;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #be3939 14%, transparent);
 }
 
 .log-filter-row {
@@ -92,10 +105,66 @@
   text-align: right;
 }
 
+.log-advanced-details {
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.log-advanced-details > summary {
+  display: flex;
+  align-items: center;
+  min-height: 50px;
+  padding: 11px 13px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.log-advanced-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.log-advanced-details > summary::before {
+  content: "›";
+  margin-right: 10px;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+  transform: rotate(0deg);
+  transition: transform 140ms ease;
+}
+
+.log-advanced-details[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.log-advanced-details > summary span,
+.log-advanced-details > summary strong,
+.log-advanced-details > summary small {
+  display: block;
+  min-width: 0;
+}
+
+.log-advanced-details > summary small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.log-advanced-content {
+  padding: 0 13px 13px;
+  border-top: 1px solid var(--border);
+}
+
 .decay-audit-panel,
 .time-flow-panel {
-  margin-top: 14px;
   padding-top: 14px;
+}
+
+.time-flow-panel {
+  margin-top: 14px;
   border-top: 1px solid var(--border);
 }
 

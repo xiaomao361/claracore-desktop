@@ -188,8 +188,41 @@ body[data-theme="dark"] .gateway-activity-row {
 
 body[data-theme="dark"] .shared-line-card:hover,
 body[data-theme="dark"] .shared-line-card.active-line {
-  border-color: var(--blue);
-  background: #223447;
+  border-color: var(--green);
+  background: #1f3b31 !important;
+  color: var(--text);
+}
+
+body[data-theme="dark"] .shared-line-card:not(.active-line) {
+  background: #262c28 !important;
+}
+
+body[data-theme="dark"] .innerlife-thought,
+body[data-theme="dark"] .innerlife-advanced-body > section,
+body[data-theme="dark"] .innerlife-raw-grid pre {
+  border-color: var(--border);
+  background: var(--surface) !important;
+  color: var(--text);
+}
+
+body[data-theme="dark"] .innerlife-thought:not(.is-shared) {
+  border-color: rgba(112, 180, 142, 0.28);
+  background: linear-gradient(145deg, #23362e 0%, #202b26 100%) !important;
+}
+
+body[data-theme="dark"] .shared-line-card strong,
+body[data-theme="dark"] .shared-line-card p {
+  color: var(--text);
+}
+
+body[data-theme="dark"] .shared-line-card-marker,
+body[data-theme="dark"] .shared-line-stage-node {
+  background: var(--surface);
+}
+
+body[data-theme="dark"] .shared-line-unresolved-section {
+  border-color: rgba(214, 170, 93, 0.3);
+  background: var(--surface-warm);
 }
 
 body[data-theme="dark"] .shared-line-tabs button.active {
@@ -438,6 +471,7 @@ body[data-theme="dark"] .label-overview-row strong {
 }
 
 body[data-theme="dark"] .memoria-tabs button.active,
+body[data-theme="dark"] .memory-item.selected,
 body[data-theme="dark"] .active-line,
 body[data-theme="dark"] .graph-layer.active,
 body[data-theme="dark"] .state-timeline-item:hover,
@@ -460,6 +494,7 @@ body[data-theme="dark"] .page-focus.error,
 body[data-theme="dark"] .source-map-card,
 body[data-theme="dark"] .source-map-card.compact-source,
 body[data-theme="dark"] .settings-section-card,
+body[data-theme="dark"] .advanced-settings-group,
 body[data-theme="dark"] .settings-roadmap-card,
 body[data-theme="dark"] .state-card,
 body[data-theme="dark"] .daemon-control-panel,
@@ -517,6 +552,7 @@ body[data-theme="dark"] .page-focus-kicker,
 body[data-theme="dark"] .page-focus p,
 body[data-theme="dark"] .source-map-card p,
 body[data-theme="dark"] .settings-section-head p,
+body[data-theme="dark"] .advanced-settings-group > summary small,
 body[data-theme="dark"] .settings-roadmap-card p,
 body[data-theme="dark"] .daemon-control-panel span,
 body[data-theme="dark"] .metric-list span,
@@ -537,6 +573,7 @@ body[data-theme="dark"] .page-focus h2,
 body[data-theme="dark"] .page-focus-metrics strong,
 body[data-theme="dark"] .source-map-card h3,
 body[data-theme="dark"] .settings-section-head h3,
+body[data-theme="dark"] .advanced-settings-group > summary strong,
 body[data-theme="dark"] .settings-roadmap-card h3,
 body[data-theme="dark"] .state-card strong,
 body[data-theme="dark"] .daemon-control-panel strong,

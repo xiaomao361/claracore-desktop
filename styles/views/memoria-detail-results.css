@@ -26,10 +26,30 @@
 }
 
 .memory-item {
-  padding: 12px;
-  border: 1px solid var(--border);
+  position: relative;
+  padding: 14px 12px 14px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+}
+
+.memory-item:first-child {
+  border-top: 1px solid var(--border);
+}
+
+.memory-item:hover,
+.memory-item:focus-visible {
+  background: var(--surface-soft);
+}
+
+.memory-item.selected {
+  border-bottom-color: rgba(40, 116, 90, 0.2);
   border-radius: 8px;
-  background: #fafaf7;
+  background: var(--green-bg);
+  box-shadow: inset 3px 0 0 var(--green);
 }
 
 .memory-item.deleted {
@@ -54,6 +74,10 @@
 .memory-item > p {
   margin-bottom: 10px;
   color: var(--text);
+}
+
+.memory-item.selected > p {
+  color: var(--muted);
 }
 
 .memory-summary {
@@ -195,6 +219,82 @@
   padding: 2px 6px;
   border-radius: 999px;
   background: var(--surface-soft);
+  color: var(--muted);
+}
+
+.memory-detail-content {
+  display: grid;
+  gap: 22px;
+}
+
+.memory-detail-section > span {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.memory-detail-section h3 {
+  margin-bottom: 12px;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.memory-detail-body .markdown-preview {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.72;
+}
+
+.memory-detail-facts {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  border-top: 1px solid var(--border);
+}
+
+.memory-detail-facts > div {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.memory-detail-facts dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.memory-detail-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.memory-detail-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.memory-detail-labels span {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.memory-detail-empty {
+  display: grid;
+  place-content: center;
+  min-height: 340px;
+  text-align: center;
+}
+
+.memory-detail-empty p {
+  max-width: 360px;
+  margin-top: 6px;
   color: var(--muted);
 }
 

@@ -3,6 +3,7 @@ const os = require("os");
 const path = require("path");
 
 const appRoot = path.resolve(__dirname, "..", "..");
+const appVersion = require(path.join(appRoot, "package.json")).version;
 
 async function assertNoStartupLocalStorage() {
   const startupFiles = ["app.js", "app/appearance.js"];
@@ -42,7 +43,7 @@ async function main() {
   try {
     app = await launchApp(electron, electronPath, { dataRoot, userDataRoot });
     let page = await app.firstWindow();
-    await page.waitForFunction(() => document.querySelector("#brandVersion")?.textContent?.includes("v0.2."), null, {
+    await page.waitForFunction((version) => document.querySelector("#brandVersion")?.textContent?.includes(`v${version}`), appVersion, {
       timeout: 15000
     });
 
@@ -96,7 +97,7 @@ async function main() {
     await app.close();
     app = await launchApp(electron, electronPath, { dataRoot, userDataRoot });
     page = await app.firstWindow();
-    await page.waitForFunction(() => document.querySelector("#brandVersion")?.textContent?.includes("v0.2."), null, {
+    await page.waitForFunction((version) => document.querySelector("#brandVersion")?.textContent?.includes(`v${version}`), appVersion, {
       timeout: 15000
     });
     await page.waitForFunction(

@@ -18,6 +18,128 @@
   background: #fafaf7;
 }
 
+.settings-primary-panel {
+  width: min(100%, 900px);
+  margin: 0 auto;
+}
+
+.badge.warn {
+  background: var(--amber-bg);
+  color: var(--amber);
+}
+
+.settings-system-note {
+  margin: 2px 0 0;
+}
+
+.settings-version-line {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.capability-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.capability-card > summary {
+  padding: 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.capability-card > summary::-webkit-details-marker {
+  display: none;
+}
+
+.capability-card[open] > summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.capability-provider {
+  display: block;
+  margin-top: 7px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.capability-summary-action {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 9px;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.capability-form {
+  padding: 14px 16px 16px;
+}
+
+.advanced-settings-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.advanced-settings-group {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.advanced-settings-group > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 58px;
+  padding: 13px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.advanced-settings-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.advanced-settings-group > summary > span:first-child {
+  min-width: 0;
+}
+
+.advanced-settings-group > summary strong,
+.advanced-settings-group > summary small {
+  display: block;
+}
+
+.advanced-settings-group > summary strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.advanced-settings-group > summary small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 450;
+  line-height: 1.4;
+}
+
+.advanced-settings-group[open] > summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.advanced-settings-content {
+  padding: 14px;
+}
+
 .model-config-head {
   display: flex;
   justify-content: space-between;

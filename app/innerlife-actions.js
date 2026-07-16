@@ -2,95 +2,19 @@ function createClaraCoreInnerLifeActions({
   desktop,
   dom,
   state,
-  t,
   getSnapshot,
   renderInnerLife,
-  refresh,
-  refreshRuntimeSnapshotOnly,
-  showCopyNotice,
-  splitListInput,
   itemAgentId
 }) {
-  function numericValue(input, fallback, parser = Number.parseFloat) {
-    const raw = String(input?.value ?? "").trim();
-    if (raw === "") return fallback;
-    const parsed = parser(raw, 10);
-    return Number.isFinite(parsed) ? Math.max(0, parsed) : fallback;
-  }
-
-  async function saveProfile() {
-    const agentId = state.activeInnerLifeAgentFilter || "";
-    if (!agentId || agentId === "all") {
-      if (dom.innerLifeProfileNotice) dom.innerLifeProfileNotice.textContent = t("innerLife.profileSelectAgent");
-      return;
-    }
-    try {
-      const profile = JSON.parse(dom.innerLifeProfileJson.value || "{}");
-      const stateJson = JSON.parse(dom.innerLifeStateJson.value || "{}");
-      const interests = splitListInput(dom.innerLifeProfileInterests.value);
-      const sharePolicy = {
-        default_mode: profile.share_policy?.default_mode || "when_relevant",
-        max_proactive_per_day: numericValue(
-          dom.innerLifeProfileShareMaxDaily,
-          profile.share_policy?.max_proactive_per_day ?? 3,
-          Number.parseInt
-        ),
-        proactive_after_hours: numericValue(dom.innerLifeProfileShareAfterHours, profile.share_policy?.proactive_after_hours ?? 2),
-        repeat_cooldown_hours: numericValue(dom.innerLifeProfileShareCooldownHours, profile.share_policy?.repeat_cooldown_hours ?? 4),
-        max_defer_count: profile.share_policy?.max_defer_count ?? 3,
-        stale_after_days: profile.share_policy?.stale_after_days ?? 7,
-        ...(profile.share_policy || {})
-      };
-      sharePolicy.max_proactive_per_day = numericValue(
-        dom.innerLifeProfileShareMaxDaily,
-        sharePolicy.max_proactive_per_day,
-        Number.parseInt
-      );
-      sharePolicy.proactive_after_hours = numericValue(dom.innerLifeProfileShareAfterHours, sharePolicy.proactive_after_hours);
-      sharePolicy.repeat_cooldown_hours = numericValue(dom.innerLifeProfileShareCooldownHours, sharePolicy.repeat_cooldown_hours);
-      const nextProfile = {
-        ...profile,
-        share_policy: sharePolicy
-      };
-      const nextState = {
-        ...stateJson,
-        current_interests: interests,
-        recent_focus: dom.innerLifeProfileRecentFocus.value.trim() || null
-      };
-      dom.saveInnerLifeProfile.disabled = true;
-      if (dom.innerLifeProfileNotice) {
-        dom.innerLifeProfileNotice.dataset.locked = "true";
-        dom.innerLifeProfileNotice.textContent = t("common.checking");
-      }
-      await desktop.updateInnerLifeProfile({
-        agentId,
-        displayName: dom.innerLifeProfileDisplayName.value.trim() || agentId,
-        profile: nextProfile,
-        state: nextState
-      });
-      await refreshRuntimeSnapshotOnly();
-      if (dom.innerLifeProfileNotice) dom.innerLifeProfileNotice.textContent = t("innerLife.profileSaved");
-    } catch (error) {
-      console.error(error);
-      if (dom.innerLifeProfileNotice) dom.innerLifeProfileNotice.textContent = t("innerLife.profileSaveFailed");
-    } finally {
-      if (dom.saveInnerLifeProfile) dom.saveInnerLifeProfile.disabled = false;
-      if (dom.innerLifeProfileNotice) delete dom.innerLifeProfileNotice.dataset.locked;
-      renderInnerLife();
-    }
-  }
-
   async function loadMoreCollection({ loadingKey, listKey, totalsKey, pageKey, fetchPage }) {
     const snapshot = getSnapshot();
     if (!snapshot?.innerLife || state[loadingKey]) return;
     state[loadingKey] = true;
-    renderInnerLife();
     const agentId = state.activeInnerLifeAgentFilter || "all";
     const currentItems = snapshot.innerLife[listKey] || [];
-    const offset =
-      agentId === "all"
-        ? currentItems.length
-        : currentItems.filter((item) => itemAgentId(item) === agentId).length;
+    const offset = agentId === "all"
+      ? currentItems.length
+      : currentItems.filter((item) => itemAgentId(item) === agentId).length;
     try {
       const page = await fetchPage({ agentId, offset });
       const existingIds = new Set(currentItems.map((item) => item.id));
@@ -120,7 +44,7 @@ function createClaraCoreInnerLifeActions({
       listKey: "sessions",
       totalsKey: "innerLifeSessionTotals",
       pageKey: "sessionsPage",
-      fetchPage: ({ agentId, offset }) => desktop.getInnerLifeSessions({ agentId, limit: 10, offset })
+      fetchPage: ({ agentId, offset }) => desktop.getInnerLifeSessions({ agentId, limit: 50, offset })
     });
   }
 
@@ -130,7 +54,7 @@ function createClaraCoreInnerLifeActions({
       listKey: "digestRuns",
       totalsKey: "innerLifeDigestTotals",
       pageKey: "digestRunsPage",
-      fetchPage: ({ agentId, offset }) => desktop.getInnerLifeDigestRuns({ agentId, limit: 10, offset })
+      fetchPage: ({ agentId, offset }) => desktop.getInnerLifeDigestRuns({ agentId, limit: 50, offset })
     });
   }
 
@@ -140,7 +64,7 @@ function createClaraCoreInnerLifeActions({
       listKey: "inbox",
       totalsKey: "innerLifeInboxTotals",
       pageKey: "inboxPage",
-      fetchPage: ({ agentId, offset }) => desktop.getInnerLifeInbox({ agentId, status: "all", limit: 10, offset })
+      fetchPage: ({ agentId, offset }) => desktop.getInnerLifeInbox({ agentId, status: "all", limit: 50, offset })
     });
   }
 
@@ -149,30 +73,15 @@ function createClaraCoreInnerLifeActions({
     renderInnerLife();
   }
 
-  async function toggleDaemon() {
-    const daemon = getSnapshot()?.innerLife?.daemon || {};
-    const enabled = Boolean(daemon.enabled) && daemon.status !== "paused";
-    dom.innerLifeDaemonToggle.disabled = true;
-    dom.innerLifeDaemonNotice.textContent = t("common.checking");
-    try {
-      await desktop.setInnerLifeDaemon({ action: enabled ? "pause" : "enable" });
-      await refresh();
-      showCopyNotice(enabled ? t("innerLife.daemonPaused") : t("innerLife.daemonEnabled"), dom.innerLifeDaemonNotice);
-    } catch (error) {
-      console.error(error);
-      dom.innerLifeDaemonNotice.textContent = t("innerLife.daemonFailed");
-    } finally {
-      dom.innerLifeDaemonToggle.disabled = false;
-    }
+  async function openAdvancedView() {
+    if (!dom.innerLifeAdvancedDetails?.open || dom.innerLifeAdvancedDetails.dataset.loaded === "true") return;
+    dom.innerLifeAdvancedDetails.dataset.loaded = "true";
+    await Promise.all([loadMoreSessions(), loadMoreDigestRuns(), loadMoreInbox()]);
   }
 
   function bindEvents() {
     dom.innerLifeAgentFilter?.addEventListener("change", changeAgentFilter);
-    dom.innerLifeDaemonToggle?.addEventListener("click", () => toggleDaemon().catch(console.error));
-    dom.saveInnerLifeProfile?.addEventListener("click", () => saveProfile().catch(console.error));
-    dom.loadMoreInnerLifeSessions?.addEventListener("click", () => loadMoreSessions().catch(console.error));
-    dom.loadMoreInnerLifeDigestRuns?.addEventListener("click", () => loadMoreDigestRuns().catch(console.error));
-    dom.loadMoreInnerLifeInbox?.addEventListener("click", () => loadMoreInbox().catch(console.error));
+    dom.innerLifeAdvancedDetails?.addEventListener("toggle", () => openAdvancedView().catch(console.error));
   }
 
   return {
@@ -180,9 +89,7 @@ function createClaraCoreInnerLifeActions({
     changeAgentFilter,
     loadMoreDigestRuns,
     loadMoreInbox,
-    loadMoreSessions,
-    saveProfile,
-    toggleDaemon
+    loadMoreSessions
   };
 }
 

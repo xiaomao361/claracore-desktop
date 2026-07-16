@@ -23,151 +23,185 @@ async function main() {
     const page = await app.firstWindow();
     await page.waitForSelector("[data-view='shared-line']", { timeout: 15000 });
     await page.click("[data-view='shared-line']");
-    await page.waitForFunction(
-      async () => {
-        if (!window.ClaraCoreDesktop) return false;
-        const snapshot = await window.ClaraCoreDesktop.getRuntimeSnapshot();
-        return Boolean(snapshot?.data?.databasePath && document.querySelector("#sharedLineList"));
-      },
-      null,
-      { timeout: 15000 }
-    );
+    await page.waitForFunction(() => Boolean(window.ClaraCoreDesktop && document.querySelector("#sharedLineList")), null, {
+      timeout: 15000
+    });
 
-    // Seed shared line data via IPC
     const seeded = await page.evaluate(async () => {
+      const initial = await window.ClaraCoreDesktop.getRuntimeSnapshot();
+      const activeLineId = initial.sharedLine.lineId;
       await window.ClaraCoreDesktop.saveSharedLine({
-        summary: "UI Shared Line first checkpoint for history.",
-        interpretationStatus: "needs_review"
+        lineId: activeLineId,
+        agentId: "codex",
+        summary: "ACTIVE PAST must stay on the active line.",
+        nextStep: "ACTIVE OLD NEXT",
+        interpretationStatus: "active"
       });
       await window.ClaraCoreDesktop.saveSharedLine({
-        summary: "UI Shared Line confirmed checkpoint.",
-        interpretationStatus: "confirmed"
+        lineId: activeLineId,
+        agentId: "codex",
+        summary: "ACTIVE NOW must never leak into the selected line.",
+        nextStep: "ACTIVE NEXT must never leak.",
+        confirmedGround: "ACTIVE UNDERSTANDING must never leak.",
+        interpretationStatus: "active"
       });
-      await window.ClaraCoreDesktop.saveSharedLine({
-        summary: "UI Shared Line second checkpoint for resume packet.",
-        interpretationStatus: "active",
-        confirmOverwrite: true
-      });
-      const handoffResult = await window.ClaraCoreDesktop.createSharedLineHandoff({
-        summary: "UI Shared Line second checkpoint for resume packet."
-      });
-      const parallelResult = await window.ClaraCoreDesktop.createSharedLine({
-        title: "UI Shared Line parallel line",
+
+      const parallel = await window.ClaraCoreDesktop.createSharedLine({
+        title: "Parallel continuity",
         agentId: "clara",
         makeActive: false
       });
-      return { parallelLineId: parallelResult?.sharedLine?.lineId || parallelResult?.lineId || "" };
+      const parallelLineId = parallel.sharedLine.lineId;
+      await window.ClaraCoreDesktop.saveSharedLine({
+        lineId: parallelLineId,
+        agentId: "clara",
+        summary: "PARALLEL PAST belongs only to the selected line.",
+        nextStep: "PARALLEL OLD NEXT",
+        interpretationStatus: "active"
+      });
+      await window.ClaraCoreDesktop.saveSharedLine({
+        lineId: parallelLineId,
+        agentId: "clara",
+        summary: "PARALLEL NOW belongs only to the selected line.",
+        nextStep: "PARALLEL NEXT belongs only to the selected line.",
+        confirmedGround: "PARALLEL UNDERSTANDING belongs only to the selected line.",
+        provisionalRead: "PARALLEL QUESTION remains unresolved.",
+        interpretationStatus: "needs_review"
+      });
+
+      const sparse = await window.ClaraCoreDesktop.createSharedLine({
+        title: "Sparse continuity",
+        agentId: "lara",
+        makeActive: false
+      });
+      const archived = await window.ClaraCoreDesktop.createSharedLine({
+        title: "Already traveled line",
+        agentId: "clara",
+        makeActive: false
+      });
+      await window.ClaraCoreDesktop.archiveSharedLine(archived.sharedLine.lineId);
+      return { activeLineId, parallelLineId, sparseLineId: sparse.sharedLine.lineId };
     });
 
     await page.evaluate(() => refresh());
     await page.waitForFunction(
-      () => document.querySelector("#sharedLineSummary")?.textContent.includes("UI Shared Line second checkpoint"),
+      () => document.querySelector("#sharedLineSummary")?.textContent.includes("ACTIVE NOW"),
       null,
       { timeout: 15000 }
     );
 
-    // Verify current position displayed
-    const summaryText = await page.textContent("#sharedLineSummary");
-    if (!summaryText.includes("UI Shared Line second checkpoint")) {
-      throw new Error(`Shared Line UI did not display current position: ${summaryText}`);
+    const removedHumanControls = await page.evaluate(() => ({
+      resume: Boolean(document.querySelector("#sharedLineResume")),
+      copy: Boolean(document.querySelector("#copySharedLineResume")),
+      archive: Boolean(document.querySelector("[data-shared-line-action='archive']")),
+      mutationControls: document.querySelectorAll("#sharedLineView button, #sharedLineView input, #sharedLineView textarea").length,
+      advancedOpen: document.querySelector("#sharedLineAdvancedDetails")?.open,
+      archiveOpen: document.querySelector("#sharedLineArchiveDetails")?.open
+    }));
+    if (removedHumanControls.resume || removedHumanControls.copy || removedHumanControls.archive || removedHumanControls.mutationControls) {
+      throw new Error(`Shared Line human mutation/resume controls remain: ${JSON.stringify(removedHumanControls)}`);
+    }
+    if (removedHumanControls.advancedOpen || removedHumanControls.archiveOpen) {
+      throw new Error(`Shared Line disclosures should start closed: ${JSON.stringify(removedHumanControls)}`);
     }
 
-    // Verify history tab shows past positions
-    await page.click("[data-shared-line-tab='history']");
+    await page.click(`[data-shared-line-id='${seeded.parallelLineId}']`);
     await page.waitForFunction(
-      () => document.querySelector("#sharedLineHistoryList")?.textContent.includes("UI Shared Line first checkpoint"),
+      () => document.querySelector("#sharedLineSummary")?.textContent.includes("PARALLEL NOW"),
       null,
       { timeout: 15000 }
     );
-    const historyText = await page.textContent("#sharedLineHistoryList");
-    if (!historyText.includes("UI Shared Line first checkpoint") || !historyText.includes("UI Shared Line second checkpoint")) {
-      throw new Error(`Shared Line history tab missing expected entries: ${historyText}`);
-    }
-
-    // Verify snapshot section (inside history tab) shows confirmed snapshot
-    await page.waitForFunction(
-      () => document.querySelector("#sharedLineSnapshotList")?.textContent.includes("confirmed"),
-      null,
-      { timeout: 15000 }
-    );
-    const snapshotText = await page.textContent("#sharedLineSnapshotList");
-    if (!snapshotText.includes("confirmed")) {
-      throw new Error(`Shared Line snapshots tab missing confirmed snapshot: ${snapshotText}`);
-    }
-
-    // Verify parallel line shows in lines tab
-    await page.click("[data-shared-line-tab='lines']");
-    await page.waitForFunction(
-      () => document.querySelector("#sharedLineList")?.textContent.includes("UI Shared Line parallel line"),
-      null,
-      { timeout: 15000 }
-    );
-    const linesText = await page.textContent("#sharedLineList");
-    if (!linesText.includes("UI Shared Line parallel line")) {
-      throw new Error(`Shared Line lines tab missing parallel line: ${linesText}`);
-    }
-
-    // Test archive action on the parallel line (click archive with confirmation)
-    page.once("dialog", (dialog) => dialog.accept());
-    await page.click("[data-shared-line-action='archive']");
-    // Archived lines now live in the history tab
-    await page.click("[data-shared-line-tab='history']");
-    await page.waitForFunction(
-      () => document.querySelector("#sharedLineArchiveList")?.textContent.includes("UI Shared Line parallel line"),
-      null,
-      { timeout: 15000 }
-    );
-
-    // Verify resume packet text
-    const resumeText = await page.textContent("#sharedLineResume");
-    if (!resumeText.includes("UI Shared Line second checkpoint")) {
-      throw new Error(`Shared Line resume packet missing current position: ${resumeText}`);
-    }
-
-    // Final snapshot assertions
-    const result = await page.evaluate(async () => {
-      const snapshot = await window.ClaraCoreDesktop.getRuntimeSnapshot();
+    const selected = await page.evaluate(async () => {
+      const runtime = await window.ClaraCoreDesktop.getRuntimeSnapshot();
       return {
-        databasePath: snapshot.data.databasePath,
-        lineCount: (snapshot.sharedLine?.lines || []).length,
-        historyCount: (snapshot.sharedLine?.history || []).length,
-        snapshotCount: (snapshot.sharedLine?.snapshots || []).length,
-        archivedCount: (snapshot.sharedLine?.archivedLines || []).length,
-        currentSummary: snapshot.sharedLine?.currentPosition?.summary || ""
+        activeLineId: runtime.sharedLine.lineId,
+        title: document.querySelector("#sharedLineDetailTitle")?.textContent || "",
+        participants: document.querySelector("#sharedLineParticipants")?.textContent || "",
+        past: document.querySelector("#sharedLinePast")?.textContent || "",
+        now: document.querySelector("#sharedLineSummary")?.textContent || "",
+        next: document.querySelector("#sharedLineNext")?.textContent || "",
+        understanding: document.querySelector("#sharedLineUnderstanding")?.textContent || "",
+        unresolved: document.querySelector("#sharedLineUnresolved")?.textContent || "",
+        selectedCount: document.querySelectorAll("#sharedLineList [aria-selected='true']").length
       };
     });
-    if (!result.databasePath.startsWith(dataRoot)) {
-      throw new Error(`Shared Line UI wrote outside product data root: ${result.databasePath}`);
+    if (selected.activeLineId !== seeded.activeLineId) {
+      throw new Error(`Selecting a line activated it for agents: ${JSON.stringify(selected)}`);
     }
-    if (!result.currentSummary.includes("UI Shared Line second checkpoint")) {
-      throw new Error(`Shared Line snapshot current position mismatch: ${result.currentSummary}`);
+    for (const [field, expected] of Object.entries({
+      title: "Parallel continuity",
+      participants: "clara",
+      past: "PARALLEL PAST",
+      now: "PARALLEL NOW",
+      next: "PARALLEL NEXT",
+      understanding: "PARALLEL UNDERSTANDING",
+      unresolved: "PARALLEL QUESTION"
+    })) {
+      if (!selected[field].includes(expected) || selected[field].includes("ACTIVE")) {
+        throw new Error(`Selected-line ${field} leaked or missed scoped data: ${JSON.stringify(selected)}`);
+      }
     }
-    if (result.historyCount < 2) {
-      throw new Error(`Shared Line history count too low: ${result.historyCount}`);
+    if (selected.selectedCount !== 1) throw new Error(`Expected one selected line: ${JSON.stringify(selected)}`);
+
+    await page.click("#sharedLineAdvancedDetails > summary");
+    await page.waitForFunction(() => document.querySelector("#sharedLineAdvancedDetails")?.open === true);
+    const advancedText = await page.textContent("#sharedLineAdvancedDetails");
+    if (!advancedText.includes("PARALLEL PAST") || advancedText.includes("ACTIVE PAST")) {
+      throw new Error(`Advanced evidence leaked across lines: ${advancedText}`);
     }
-    if (result.snapshotCount < 1) {
-      throw new Error(`Shared Line snapshot count too low: ${result.snapshotCount}`);
+    await page.click("#sharedLineAdvancedDetails > summary");
+    if (await page.$eval("#sharedLineAdvancedDetails", (details) => details.open)) {
+      throw new Error("Advanced disclosure did not close again.");
     }
-    if (result.archivedCount < 1) {
-      throw new Error(`Shared Line archived count too low: ${result.archivedCount}`);
+
+    await page.click("#sharedLineArchiveDetails > summary");
+    const archiveText = await page.textContent("#sharedLineArchiveList");
+    if (!archiveText.includes("Already traveled line")) throw new Error(`Archived line not shown read-only: ${archiveText}`);
+
+    await page.evaluate(() => refresh());
+    await page.waitForFunction(
+      () => document.querySelector("#sharedLineSummary")?.textContent.includes("PARALLEL NOW"),
+      null,
+      { timeout: 15000 }
+    );
+    const refreshed = await page.evaluate(async () => ({
+      title: document.querySelector("#sharedLineDetailTitle")?.textContent || "",
+      now: document.querySelector("#sharedLineSummary")?.textContent || "",
+      activeLineId: (await window.ClaraCoreDesktop.getRuntimeSnapshot()).sharedLine.lineId
+    }));
+    if (!refreshed.title.includes("Parallel continuity") || !refreshed.now.includes("PARALLEL NOW") || refreshed.activeLineId !== seeded.activeLineId) {
+      throw new Error(`Runtime refresh did not preserve human selection: ${JSON.stringify(refreshed)}`);
+    }
+
+    await page.click(`[data-shared-line-id='${seeded.sparseLineId}']`);
+    await page.waitForFunction(() => document.querySelector("#sharedLineDetailTitle")?.textContent.includes("Sparse continuity"));
+    const sparse = await page.evaluate(() => ({
+      now: document.querySelector("#sharedLineSummary")?.textContent || "",
+      past: document.querySelector("#sharedLinePast")?.textContent || "",
+      next: document.querySelector("#sharedLineNext")?.textContent || "",
+      understandingHidden: document.querySelector("#sharedLineUnderstandingSection")?.hidden,
+      unresolvedHidden: document.querySelector("#sharedLineUnresolvedSection")?.hidden
+    }));
+    if (!sparse.now || !sparse.past || !sparse.next || !sparse.understandingHidden || !sparse.unresolvedHidden) {
+      throw new Error(`Sparse line did not degrade gracefully: ${JSON.stringify(sparse)}`);
+    }
+
+    const finalSnapshot = await page.evaluate(() => window.ClaraCoreDesktop.getRuntimeSnapshot());
+    if (!finalSnapshot.data.databasePath.startsWith(dataRoot)) {
+      throw new Error(`Shared Line UI escaped isolated data root: ${finalSnapshot.data.databasePath}`);
     }
 
     await app.close();
-    console.log(
-      JSON.stringify(
-        {
-          ok: true,
-          dataRoot,
-          databasePath: result.databasePath,
-          lineCount: result.lineCount,
-          historyCount: result.historyCount,
-          snapshotCount: result.snapshotCount,
-          archivedCount: result.archivedCount
-        },
-        null,
-        2
-      )
-    );
+    console.log(JSON.stringify({
+      ok: true,
+      dataRoot,
+      databasePath: finalSnapshot.data.databasePath,
+      selectedLineLeakage: "passed",
+      selectionDoesNotActivate: "passed",
+      refreshPreservesSelection: "passed",
+      readOnlyHumanSurface: "passed",
+      sparseState: "passed"
+    }, null, 2));
   } catch (error) {
     if (app) await app.close().catch(() => {});
     console.error(error);

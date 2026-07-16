@@ -21,6 +21,20 @@ async function fillExact(page, selector, value) {
   throw new Error(`Could not fill ${selector} with the exact test value.`);
 }
 
+function screenshotVariant(filePath, suffix) {
+  const extension = path.extname(filePath);
+  return `${filePath.slice(0, -extension.length)}-${suffix}${extension}`;
+}
+
+async function stabilizeScreenshot(page) {
+  const viewport = page.viewportSize();
+  if (viewport?.width > 1) {
+    await page.setViewportSize({ width: viewport.width - 1, height: viewport.height });
+    await page.setViewportSize(viewport);
+  }
+  await page.waitForTimeout(150);
+}
+
 async function main() {
   const { _electron: electron } = require("playwright");
   const electronPath = require(path.resolve(__dirname, "..", "..", "node_modules", "electron"));
@@ -40,6 +54,13 @@ async function main() {
       }
     });
     const page = await app.firstWindow();
+    const rendererErrors = [];
+    page.on("console", (message) => {
+      if (message.type() === "error") rendererErrors.push(message.text());
+    });
+    page.on("pageerror", (error) => rendererErrors.push(error?.message || String(error)));
+    const pageTitle = await page.title();
+    if (!pageTitle.includes("ClaraCore Desktop")) throw new Error(`Unexpected Electron page title: ${pageTitle}`);
     await app.evaluate(() => {
       const originalFetch = globalThis.fetch;
       globalThis.fetch = async (url, options) => {
@@ -59,8 +80,42 @@ async function main() {
     page.on("dialog", (dialog) => dialog.accept().catch(() => {}));
     await page.waitForSelector("[data-view='settings']", { timeout: 15000 });
     await page.click("[data-view='settings']");
-    await page.click("[data-settings-tab='models']");
+    await page.waitForFunction(() => document.querySelector(".settings-tab-panel.active")?.dataset.settingsPanel === "common");
+    const commonHierarchy = await page.evaluate(() => ({
+      activePanel: document.querySelector(".settings-tab-panel.active")?.dataset.settingsPanel,
+      timeZoneIsFormField: document.querySelector("#settingsTimeZone")?.matches("input, select, textarea"),
+      gatewayInCommon: Boolean(document.querySelector("[data-settings-panel='common'] #settingsAgentGatewayPort")),
+      visibleCards: [...document.querySelectorAll("[data-settings-panel='common'] .settings-section-card")].map((node) => node.textContent.trim())
+    }));
+    if (commonHierarchy.activePanel !== "common" || commonHierarchy.timeZoneIsFormField || commonHierarchy.gatewayInCommon || commonHierarchy.visibleCards.length !== 3) {
+      throw new Error(`Common settings hierarchy is wrong: ${JSON.stringify(commonHierarchy)}`);
+    }
+    if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
+      await stabilizeScreenshot(page);
+      await page.screenshot({ path: process.env.CLARACORE_UI_SCREENSHOT_PATH });
+    }
+    await page.click("[data-settings-tab='capabilities']");
+    const collapsedCapabilities = await page.evaluate(() => ({
+      memoryOpen: document.querySelector("#memoriaCapabilityDetails").open,
+      innerLifeOpen: document.querySelector("#innerLifeCapabilityDetails").open,
+      runtimeInsideCapabilities: Boolean(document.querySelector("[data-settings-panel='capabilities'] #innerLifePollSeconds"))
+    }));
+    if (collapsedCapabilities.memoryOpen || collapsedCapabilities.innerLifeOpen || collapsedCapabilities.runtimeInsideCapabilities) {
+      throw new Error(`Capabilities should start collapsed and exclude runtime tuning: ${JSON.stringify(collapsedCapabilities)}`);
+    }
+    if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
+      await stabilizeScreenshot(page);
+      await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "capabilities") });
+    }
+    await page.evaluate(() => {
+      document.querySelector("#memoriaCapabilityDetails").open = true;
+      document.querySelector("#innerLifeCapabilityDetails").open = true;
+    });
     await page.waitForFunction(() => document.querySelector("#memoriaEndpoint")?.value, null, { timeout: 15000 });
+    if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
+      await stabilizeScreenshot(page);
+      await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "capabilities-open") });
+    }
 
     const defaults = await page.evaluate(() => ({
       provider: document.querySelector("#memoriaProvider").value,
@@ -70,7 +125,7 @@ async function main() {
       innerlifeEndpoint: document.querySelector("#innerLifeEndpoint").value,
       innerlifeApiKeyReadonly: document.querySelector("#innerLifeApiKey").hasAttribute("readonly"),
       innerlifeLoop: document.querySelector("#innerLifePollSeconds").value,
-      timeZone: document.querySelector("#settingsTimeZone").value,
+      timeZone: document.querySelector("#settingsTimeZone").textContent,
       expectedTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       innerlifeStatus: document.querySelector("#innerLifeModelStatus").textContent,
       memoriaOptions: [...document.querySelectorAll("#memoriaProvider option")].map((option) => option.value),
@@ -98,7 +153,7 @@ async function main() {
     if (!defaults.timeZone.includes(defaults.expectedTimeZone)) {
       throw new Error(`Settings should show the current system time zone: ${JSON.stringify(defaults)}`);
     }
-    if (!["ready", "可用"].some((label) => defaults.innerlifeStatus.toLowerCase().includes(label))) {
+    if (!["configured", "已配置"].some((label) => defaults.innerlifeStatus.toLowerCase().includes(label))) {
       throw new Error(`Unexpected InnerLife status: ${defaults.innerlifeStatus}`);
     }
     if (defaults.memoriaOptions.join(",") !== "claracore-built-in,ollama,disabled") {
@@ -141,9 +196,7 @@ async function main() {
     await fillExact(page, "#memoriaModel", "bge-m3-ui-smoke");
     await page.selectOption("#innerLifeBackend", "ollama");
     await fillExact(page, "#innerLifeEndpoint", "http://127.0.0.1:11438");
-    await fillExact(page, "#innerLifeLightModel", "ui-light");
     await fillExact(page, "#innerLifeDeepModel", "ui-deep");
-    await fillExact(page, "#innerLifePollSeconds", "44");
     const modelFormBeforeSave = await page.evaluate(() => ({
       memoriaProvider: document.querySelector("#memoriaProvider").value,
       memoriaEndpoint: document.querySelector("#memoriaEndpoint").value,
@@ -161,10 +214,8 @@ async function main() {
       || modelFormBeforeSave.memoriaModel !== "bge-m3-ui-smoke"
       || modelFormBeforeSave.innerLifeBackend !== "ollama"
       || modelFormBeforeSave.innerLifeEndpoint !== "http://127.0.0.1:11438"
-      || modelFormBeforeSave.innerLifeLightModel !== "ui-light"
       || modelFormBeforeSave.innerLifeDeepModel !== "ui-deep"
-      || modelFormBeforeSave.innerLifePollSeconds !== "44"
-      || modelFormBeforeSave.activePanel !== "models"
+      || modelFormBeforeSave.activePanel !== "capabilities"
     ) {
       throw new Error(`Settings model form was not ready before save: ${JSON.stringify(modelFormBeforeSave)}`);
     }
@@ -182,6 +233,37 @@ async function main() {
       (snapshot) => (
         snapshot.configuration.memoria.provider === "ollama"
         && snapshot.configuration.memoria.endpoint === "http://127.0.0.1:11437"
+      )
+    );
+
+    await page.click("[data-settings-tab='advanced']");
+    const advancedHierarchy = await page.evaluate(() => ({
+      groups: document.querySelectorAll("[data-settings-panel='advanced'] > .settings-primary-panel > .advanced-settings-list > details").length,
+      openGroups: document.querySelectorAll("[data-settings-panel='advanced'] > .settings-primary-panel > .advanced-settings-list > details[open]").length,
+      copiedAgentConfigPresent: Boolean(document.querySelector("#copyAgentGatewayConfig")),
+      duplicateDataRoot: document.querySelectorAll("#dataRootPath").length
+    }));
+    if (advancedHierarchy.groups !== 5 || advancedHierarchy.openGroups !== 0 || advancedHierarchy.copiedAgentConfigPresent || advancedHierarchy.duplicateDataRoot !== 1) {
+      throw new Error(`Advanced settings hierarchy is wrong: ${JSON.stringify(advancedHierarchy)}`);
+    }
+    if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
+      await page.evaluate(() => {
+        const details = document.querySelector("#advancedDataRecoveryDetails");
+        details.open = true;
+        details.open = false;
+      });
+      await stabilizeScreenshot(page);
+      await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "advanced") });
+    }
+    await page.evaluate(() => { document.querySelector("#advancedModelRuntimeDetails").open = true; });
+    await fillExact(page, "#innerLifeLightModel", "ui-light");
+    await fillExact(page, "#innerLifePollSeconds", "44");
+    await page.click("#saveRuntimeSettings");
+    await waitForRuntimeSnapshot(
+      page,
+      (currentSnapshot) => (
+        currentSnapshot.configuration.innerlife.lightModel === "ui-light"
+        && currentSnapshot.configuration.innerlife.pollSeconds === "2640"
       )
     );
 
@@ -217,7 +299,22 @@ async function main() {
       throw new Error("Settings UI cleared the default InnerLife API key reference.");
     }
 
-    await page.click("[data-settings-tab='general']");
+    await app.evaluate(() => {
+      globalThis.fetch = async () => { throw new Error("visual QA connection failure"); };
+    });
+    await page.click("[data-settings-tab='capabilities']");
+    await page.click("#testInnerLifeConnection");
+    await page.waitForFunction(
+      () => document.querySelector("#innerLifeModelStatus")?.dataset.connectionState === "failed",
+      null,
+      { timeout: 10000 }
+    );
+    if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
+      await stabilizeScreenshot(page);
+      await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "capabilities-error") });
+    }
+
+    await page.click("[data-settings-tab='advanced']");
     await page.evaluate(() => {
       const details = document.querySelector(".settings-gateway-details");
       if (details) details.open = true;
@@ -260,6 +357,24 @@ async function main() {
     }));
     if (renderedGateway.token !== generatedToken || renderedGateway.endpoint !== gatewaySnapshot.endpoint) {
       throw new Error(`Agent Gateway settings fields did not refresh after save: ${JSON.stringify(renderedGateway)}`);
+    }
+
+    await page.setViewportSize({ width: 820, height: 720 });
+    await page.click("[data-settings-tab='common']");
+    const narrowLayout = await page.evaluate(() => ({
+      horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      activePanel: document.querySelector(".settings-tab-panel.active")?.dataset.settingsPanel
+    }));
+    if (narrowLayout.horizontalOverflow || narrowLayout.activePanel !== "common") {
+      throw new Error(`Narrow Settings layout regressed: ${JSON.stringify(narrowLayout)}`);
+    }
+    const unexpectedRendererErrors = rendererErrors.filter((message) => !message.includes("visual QA connection failure"));
+    if (unexpectedRendererErrors.length) {
+      throw new Error(`Unexpected renderer console errors: ${JSON.stringify(unexpectedRendererErrors)}`);
+    }
+    if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
+      await stabilizeScreenshot(page);
+      await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "narrow") });
     }
 
     await app.close();

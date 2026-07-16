@@ -11,14 +11,11 @@ function createClaraCoreMemoriaView(context) {
     setEmbeddingProgress
   } = context;
   const {
-    memorySearchInput, searchMemory, memoryList, memoryAgentFilter, memoryGraphSummary, memoryGraph,
-    deletedMemoryList, restrictedMemoryList, archivedMemoryList, memoryAllLabelList, memoryAllHint, memoryRestrictedHint,
-    memoryActiveCount, memoryDeletedCount, memoryEmbeddedCount, memoryPendingEmbeddingCount, memoryRestrictedCount,
-    memoryArchivedCount, memoryLabelList, processMemoryEmbeddings, memoryEmbeddingNotice, memoryEmbeddingProgressBar,
-    memoryTabs, memoryTabPanels
+    memorySearchInput, searchMemory, memoryList, memoryDetail, memoryAgentFilter, memoryAdvancedDetails,
+    memoryGraphSummary, memoryGraph, memoryAllLabelList, memoryAllHint, memoryTabs, memoryTabPanels
   } = dom;
 
-  let activeMemoryTab = "search";
+  let activeMemoryTab = "labels";
   let memoryGraphZoom = 1;
   let memoryGraphPan = { x: 0, y: 0 };
   let memoryGraphState = null;
@@ -31,8 +28,10 @@ function createClaraCoreMemoriaView(context) {
   let activeMemoryGraphLayer = "primary";
   let memoryEmbeddingBatchRunning = false;
   let activeMemoryAgentFilter = "";
-  const loadedMemoryTabs = { all: false, restricted: false, archive: false, graph: false };
-  const memoryPaging = { pageSize: 20, all: { loaded: 0 }, restricted: { loaded: 0 }, archived: { loaded: 0 }, deleted: { loaded: 0 } };
+  let selectedMemoryId = "";
+  let visibleMemories = [];
+  const loadedMemoryTabs = { all: false, graph: false };
+  const memoryPaging = { pageSize: 20, all: { loaded: 0 } };
   let snapshot = null;
 
   function syncSnapshot() {
@@ -44,24 +43,73 @@ function createClaraCoreMemoriaView(context) {
     t,
     escapeHtml,
     renderMarkdownPreview,
-    formatLocalDateTime,
-    memoryLabelList
+    formatLocalDateTime
   });
   const {
     filterByAgent,
     memoryAgentId,
     renderAgentFilter,
-    renderLabelOverview,
     renderMemoryBody,
     renderMemoryLabelsInline,
-    renderMemoryResults,
     vectorMaintenanceCount
   } = memoryListRenderer;
 
+function selectedMemory() {
+  return visibleMemories.find((memory) => memory.id === selectedMemoryId) || null;
+}
+
+function renderMemoryDetail(memory = selectedMemory()) {
+  if (!memoryDetail) return;
+  if (!memory) {
+    memoryDetail.innerHTML = `<div class="memory-detail-empty"><strong>${escapeHtml(t("memory.detail.emptyTitle"))}</strong><p>${escapeHtml(t("memory.detail.emptyBody"))}</p></div>`;
+    return;
+  }
+  const agentId = memoryAgentId(memory);
+  const labels = (memory.labels || []).filter((label) => {
+    const value = String(label || "");
+    return !value.startsWith("agent-id:") && !value.startsWith("agent:") && !value.startsWith("tool:");
+  });
+  const timestamp = memory.updated_at || memory.created_at;
+  memoryDetail.innerHTML = `
+    <div class="memory-detail-content">
+      <div class="memory-detail-section">
+        <span>${escapeHtml(t("memory.detail.content"))}</span>
+        <h3>${escapeHtml(memory.title || t("memory.form.body"))}</h3>
+        <div class="memory-detail-body">${renderMemoryBody(memory.body || "")}</div>
+      </div>
+      <dl class="memory-detail-facts">
+        ${agentId ? `<div><dt>${escapeHtml(t("memory.detail.agent"))}</dt><dd>${escapeHtml(agentId)}</dd></div>` : ""}
+        ${timestamp ? `<div><dt>${escapeHtml(memory.updated_at && memory.updated_at !== memory.created_at ? t("memory.detail.updated") : t("memory.detail.created"))}</dt><dd>${escapeHtml(formatLocalDateTime(timestamp))}</dd></div>` : ""}
+        ${labels.length ? `<div><dt>${escapeHtml(t("memory.detail.labels"))}</dt><dd class="memory-detail-labels">${renderMemoryLabelsInline(labels)}</dd></div>` : ""}
+      </dl>
+    </div>
+  `;
+}
+
+function renderMemoryResults(memories, target = memoryList, options = {}) {
+  if (target !== memoryList) {
+    memoryListRenderer.renderMemoryResults(memories, target, options);
+    return;
+  }
+  visibleMemories = memories || [];
+  if (!visibleMemories.some((memory) => memory.id === selectedMemoryId)) {
+    selectedMemoryId = visibleMemories[0]?.id || "";
+  }
+  memoryListRenderer.renderMemoryResults(visibleMemories, memoryList, { ...options, selectedId: selectedMemoryId });
+  renderMemoryDetail();
+}
+
 function renderMemoryList() {
   syncSnapshot();
-  const memories = filterByAgent(snapshot?.memories || [], activeMemoryAgentFilter, memoryAgentId);
-  renderMemoryResults(memories, memoryList);
+  renderMemoryResults(filterByAgent(snapshot?.memories || [], activeMemoryAgentFilter, memoryAgentId));
+}
+
+function selectMemory(memoryId, options = {}) {
+  if (!visibleMemories.some((memory) => memory.id === memoryId)) return;
+  selectedMemoryId = memoryId;
+  memoryListRenderer.renderMemoryResults(visibleMemories, memoryList, { selectedId: selectedMemoryId });
+  renderMemoryDetail();
+  if (options.focus) memoryList.querySelector(`[data-memory-id="${CSS.escape(memoryId)}"]`)?.focus();
 }
 
 function renderMemoryTabs() {
@@ -81,29 +129,9 @@ function removeLoadMoreButton(kind) {
 
 function renderLoadMore(kind) {
   syncSnapshot();
-  const totalByKind = {
-    all: snapshot?.memoryStats?.activeCount ?? 0,
-    restricted: snapshot?.memoryStats?.restrictedCount ?? 0,
-    archived: snapshot?.memoryStats?.archivedCount ?? 0,
-    deleted: snapshot?.memoryStats?.deletedCount ?? 0
-  };
-  const loadedByKind = {
-    all: memoryPaging.all.loaded,
-    restricted: memoryPaging.restricted.loaded,
-    archived: memoryPaging.archived.loaded,
-    deleted: memoryPaging.deleted.loaded,
-    archive: Math.max(memoryPaging.archived.loaded, memoryPaging.deleted.loaded)
-  };
-  const total = kind === "archive" ? Math.max(totalByKind.archived, totalByKind.deleted) : totalByKind[kind];
-  const loaded = loadedByKind[kind] || 0;
-  const container =
-    kind === "all"
-      ? memoryList
-      : kind === "restricted"
-        ? restrictedMemoryList
-        : kind === "archive"
-          ? archivedMemoryList.parentElement
-          : null;
+  const total = snapshot?.memoryStats?.activeCount ?? 0;
+  const loaded = memoryPaging.all.loaded;
+  const container = kind === "all" ? memoryList : null;
   if (!container) return;
   removeLoadMoreButton(kind);
   if (loaded >= total) return;
@@ -124,41 +152,12 @@ async function loadMemoryTabData(tabName, options = {}) {
     snapshot.memories = append ? [...(snapshot.memories || []), ...rows] : rows;
     memoryPaging.all.loaded = snapshot.memories.length;
     loadedMemoryTabs.all = true;
-    renderMemoryResults(filterByAgent(snapshot.memories || [], activeMemoryAgentFilter, memoryAgentId), memoryList);
+    renderMemoryResults(filterByAgent(snapshot.memories || [], activeMemoryAgentFilter, memoryAgentId));
     memoryAllHint.textContent = t("memory.list.sample", {
       shown: snapshot?.memories?.length || 0,
       total: snapshot?.memoryStats?.activeCount ?? 0
     });
     renderLoadMore("all");
-  }
-  if (tabName === "archive" && (force || append || !loadedMemoryTabs.restricted)) {
-    const offset = append ? memoryPaging.restricted.loaded : 0;
-    const rows = await window.ClaraCoreDesktop.getRestrictedMemories({ limit: memoryPaging.pageSize, offset, agentId: activeMemoryAgentFilter });
-    snapshot.restrictedMemories = append ? [...(snapshot.restrictedMemories || []), ...rows] : rows;
-    memoryPaging.restricted.loaded = snapshot.restrictedMemories.length;
-    loadedMemoryTabs.restricted = true;
-    if ((rows || []).length > 0) renderMemoryResults(filterByAgent(rows || [], activeMemoryAgentFilter, memoryAgentId), restrictedMemoryList, { append, action: "delete-restricted", itemClass: "restricted" });
-    memoryRestrictedHint.textContent = t("memory.list.sample", {
-      shown: snapshot?.restrictedMemories?.length || 0,
-      total: snapshot?.memoryStats?.restrictedCount ?? 0
-    });
-    renderLoadMore("restricted");
-  }
-  if (tabName === "archive" && (force || append || !loadedMemoryTabs.archive)) {
-    const archivedOffset = append ? memoryPaging.archived.loaded : 0;
-    const deletedOffset = append ? memoryPaging.deleted.loaded : 0;
-    const [archived, deleted] = await Promise.all([
-      window.ClaraCoreDesktop.getArchivedMemories({ limit: memoryPaging.pageSize, offset: archivedOffset, agentId: activeMemoryAgentFilter }),
-      window.ClaraCoreDesktop.getDeletedMemories({ limit: memoryPaging.pageSize, offset: deletedOffset, agentId: activeMemoryAgentFilter })
-    ]);
-    snapshot.archivedMemories = append ? [...(snapshot.archivedMemories || []), ...archived] : archived;
-    snapshot.deletedMemories = append ? [...(snapshot.deletedMemories || []), ...deleted] : deleted;
-    memoryPaging.archived.loaded = snapshot.archivedMemories.length;
-    memoryPaging.deleted.loaded = snapshot.deletedMemories.length;
-    loadedMemoryTabs.archive = true;
-    if ((archived || []).length > 0) renderMemoryResults(filterByAgent(archived || [], activeMemoryAgentFilter, memoryAgentId), archivedMemoryList, { append, action: "restore-archived", itemClass: "archived" });
-    if ((deleted || []).length > 0) renderMemoryResults(filterByAgent(deleted || [], activeMemoryAgentFilter, memoryAgentId), deletedMemoryList, { append, action: "restore", itemClass: "deleted" });
-    renderLoadMore("archive");
   }
   if (tabName === "graph" && (force || !loadedMemoryTabs.graph)) {
     snapshot.memoryGraph = await window.ClaraCoreDesktop.getMemoryGraph({ limit: 400 });
@@ -906,18 +905,6 @@ function renderMemoryOverview() {
     memoryGraphPan = { x: 0, y: 0 };
   }
   const stats = snapshot?.memoryStats || {};
-  memoryActiveCount.textContent = stats.activeCount ?? 0;
-  memoryDeletedCount.textContent = stats.deletedCount ?? 0;
-  memoryEmbeddedCount.textContent = stats.embeddedCount ?? 0;
-  memoryPendingEmbeddingCount.textContent = stats.pendingEmbeddingCount ?? 0;
-  if (!memoryEmbeddingBatchRunning) {
-    const actionableEmbeddings = vectorMaintenanceCount({ stats, maintenance: snapshot?.memoryMaintenance || {} });
-    processMemoryEmbeddings.disabled = actionableEmbeddings <= 0;
-    if (actionableEmbeddings <= 0) memoryEmbeddingNotice.textContent = t("memory.embedding.nonePending");
-    if (actionableEmbeddings <= 0) memoryEmbeddingProgressBar.style.width = "0%";
-  }
-  memoryRestrictedCount.textContent = stats.restrictedCount ?? 0;
-  memoryArchivedCount.textContent = stats.archivedCount ?? 0;
   const labels = stats.labels || [];
   const agentIds = labels
     .map((item) => String(item.label || ""))
@@ -928,30 +915,14 @@ function renderMemoryOverview() {
     .filter((label) => label.startsWith("agent:"))
     .map((label) => label.slice("agent:".length));
   activeMemoryAgentFilter = renderAgentFilter(memoryAgentFilter, agentIds.length ? agentIds : fallbackAgentIds, activeMemoryAgentFilter);
-  renderLabelOverview(labels);
   renderMemoryLabels(labels);
   memoryAllHint.textContent = t("memory.list.sample", {
     shown: snapshot?.memories?.length || 0,
     total: stats.activeCount ?? 0
   });
-  const maintenanceDetails = document.querySelector("#memoryMaintenanceDetails");
-  if (maintenanceDetails) {
-    const vectorIssues = Number(stats.pendingEmbeddingCount || 0) + Number(stats.failedEmbeddingCount || 0);
-    if (vectorIssues > 0) maintenanceDetails.open = true;
-  }
-  memoryRestrictedHint.textContent = t("memory.list.sample", {
-    shown: loadedMemoryTabs.restricted ? snapshot?.restrictedMemories?.length || 0 : 0,
-    total: stats.restrictedCount ?? 0
-  });
-  if (!loadedMemoryTabs.restricted) {
-    restrictedMemoryList.innerHTML = `<div class="endpoint-empty">${t("memory.lazy.openTab")}</div>`;
-  }
-  if (!loadedMemoryTabs.archive) {
-    archivedMemoryList.innerHTML = `<div class="endpoint-empty">${t("memory.lazy.openTab")}</div>`;
-    deletedMemoryList.innerHTML = `<div class="endpoint-empty">${t("memory.lazy.openTab")}</div>`;
-  }
   if (loadedMemoryTabs.graph) renderMemoryGraph();
   renderMemoryTabs();
+  renderMemoryList();
 }
 
 function graphNodeById(nodeId) {
@@ -1262,16 +1233,9 @@ function renderMemoryGraph() {
 
   function resetLoadedTabs() {
     loadedMemoryTabs.all = false;
-    loadedMemoryTabs.restricted = false;
-    loadedMemoryTabs.archive = false;
     loadedMemoryTabs.graph = false;
     memoryPaging.all.loaded = 0;
-    memoryPaging.restricted.loaded = 0;
-    memoryPaging.archived.loaded = 0;
-    memoryPaging.deleted.loaded = 0;
     removeLoadMoreButton("all");
-    removeLoadMoreButton("restricted");
-    removeLoadMoreButton("archive");
   }
 
   function getActiveTab() { return activeMemoryTab; }
@@ -1280,8 +1244,7 @@ function renderMemoryGraph() {
 
   function searchMemoryLabel(label) {
     memorySearchInput.value = String(label || "").trim();
-    activeMemoryTab = "search";
-    renderMemoryTabs();
+    if (memoryAdvancedDetails) memoryAdvancedDetails.open = false;
     searchMemory.click();
   }
 
@@ -1310,7 +1273,7 @@ function renderMemoryGraph() {
   async function processEmbeddings() {
     if (memoryEmbeddingBatchRunning) return;
     memoryEmbeddingBatchRunning = true;
-    processMemoryEmbeddings.disabled = true;
+    if (dom.processMemoryEmbeddings) dom.processMemoryEmbeddings.disabled = true;
     const snapshot = getSnapshot();
     const progress = {
       total: vectorMaintenanceCount({ stats: snapshot?.memoryStats || {}, maintenance: snapshot?.memoryMaintenance || {} }),
@@ -1336,23 +1299,25 @@ function renderMemoryGraph() {
       }
       await refreshRuntimeSnapshotOnly();
       const finalText = progress.failed > 0 ? `${t("memory.embedding.processed", { count: progress.processed })}; ${t("memory.embedding.stopped")}` : t("memory.embedding.processed", { count: progress.processed });
-      memoryEmbeddingNotice.textContent = finalText;
+      if (dom.memoryEmbeddingNotice) dom.memoryEmbeddingNotice.textContent = finalText;
       appendLiveLogLine("memoria", finalText);
     } catch (error) {
       console.error(error);
-      memoryEmbeddingNotice.textContent = t("memory.embedding.processFailed");
+      if (dom.memoryEmbeddingNotice) dom.memoryEmbeddingNotice.textContent = t("memory.embedding.processFailed");
       appendLiveLogLine("memoria", `${t("memory.embedding.processFailed")}: ${error.message || error}`);
     } finally {
       memoryEmbeddingBatchRunning = false;
       const snapshot = getSnapshot();
-      processMemoryEmbeddings.disabled = vectorMaintenanceCount({ stats: snapshot?.memoryStats || {}, maintenance: snapshot?.memoryMaintenance || {} }) <= 0;
+      if (dom.processMemoryEmbeddings) {
+        dom.processMemoryEmbeddings.disabled = vectorMaintenanceCount({ stats: snapshot?.memoryStats || {}, maintenance: snapshot?.memoryMaintenance || {} }) <= 0;
+      }
     }
   }
 
   return {
     beginGraphDrag, endGraphDrag, getActiveTab, loadMemoryTabData, memoryAgentId, moveGraphDrag, processEmbeddings,
     renderMemoryGraph, renderMemoryList, renderMemoryOverview, renderMemoryResults, renderMemoryTabs, resetLoadedTabs,
-    searchMemoryLabel, selectMemoryGraphNode, setActiveAgentFilter, setActiveTab, setMemoryGraphLayer, setMemoryGraphMode,
+    searchMemoryLabel, selectMemory, selectMemoryGraphNode, setActiveAgentFilter, setActiveTab, setMemoryGraphLayer, setMemoryGraphMode,
     setMemoryGraphZoom
   };
 }

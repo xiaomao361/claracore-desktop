@@ -26,12 +26,13 @@ async function main() {
     });
     await page.waitForSelector("[data-view='settings']", { timeout: 15000 });
     await page.click("[data-view='settings']");
-    await page.click("[data-settings-tab='data']");
+    await page.click("[data-settings-tab='advanced']");
+    await page.evaluate(() => { document.querySelector("#advancedDataRecoveryDetails").open = true; });
     await page.waitForFunction(() => window.ClaraCoreDesktop && document.querySelector("#exportProductJson"));
 
     const dataText = await page.textContent("#dataView");
-    if (!dataText.includes("product JSON") && !dataText.includes("产品 JSON")) {
-      throw new Error(`Data page does not expose product JSON: ${dataText}`);
+    if (!(await page.locator("#exportProductJson").isVisible()) || !(await page.locator("#importProductJson").isVisible())) {
+      throw new Error("Advanced data and recovery does not expose product JSON actions.");
     }
     if (dataText.includes("Import old Memoria") || dataText.includes("导入旧 Memoria")) {
       throw new Error("Data page still exposes old-system import as a main UI action.");

@@ -1,274 +1,73 @@
 function createClaraCoreAgentSetupView({ dom, t, getSnapshot, copyValue }) {
-  function buildMarkdown() {
+  function currentConnectionMaterial() {
     const snapshot = getSnapshot();
-    if (!snapshot?.connections) return t("common.checking");
-    const agentIdentity = snapshot.connections.agentIdentity || {};
-    const agentExamples = agentIdentity.examples || ["lara", "clara", "codex"];
+    if (!snapshot?.connections) return null;
     const httpEndpoints = snapshot.connections.httpEndpoints || [];
-    const httpGateway = snapshot.connections.httpGateway || {};
     const streamableEndpoint = httpEndpoints.find((endpoint) => endpoint.id === "streamable-http-mcp");
-    const tokenFile = httpGateway.tokenFile || streamableEndpoint?.tokenFile || "not yet available";
-    const portPolicy = httpGateway.portPolicy === "stable-localhost" ? "stable localhost port" : "runtime-assigned test port";
-    const endpoints =
-      httpEndpoints
-        .map((endpoint) => {
-          const lines = [
-            `- ${t(`connections.endpoint.${endpoint.id}`) || endpoint.id}: ${endpoint.method || "GET"} ${endpoint.url}`
-          ];
-          if (endpoint.authHeader) lines.push(`  - Header: ${endpoint.authHeader}`);
-          if (endpoint.copyUrl) lines.push(`  - Copy URL: ${endpoint.copyUrl}`);
-          return lines.join("\n");
-        })
-        .join("\n") || "- No HTTP endpoints are exposed yet.";
-    return `# ClaraCore Agent Instructions
+    if (!streamableEndpoint?.url || !streamableEndpoint?.authHeader || !snapshot.connections.mcpConfig) return null;
+    return {
+      httpEndpoint: streamableEndpoint.url,
+      httpAuthorization: streamableEndpoint.authHeader,
+      stdioConfig: snapshot.connections.mcpConfig
+    };
+  }
 
-You are an external agent being connected to ClaraCore Desktop. Read this note, install or verify the MCP server config below, then use the listed MCP tools instead of trying to inspect local source files.
+  function buildMarkdown() {
+    const material = currentConnectionMaterial();
+    if (!material) return "";
+    return `# Connect to ClaraCore Desktop
 
-If you cannot edit your own MCP settings, tell the user exactly where to paste the JSON config and ask them to fully restart the agent client. After restart, call \`claracore_connection_test\`, then \`gateway_docs\`, then \`gateway_context\`.
+You are being invited to connect to ClaraCore Desktop. Prefer the current Streamable HTTP MCP setup below when your client supports it. If it does not, use the generated stdio fallback. Decide the transport yourself; do not ask the human to choose.
 
-## Your Immediate Tasks
+## Preferred: Streamable HTTP MCP
 
-1. Prefer the Streamable HTTP MCP endpoint in "Gateway MCP" when your client supports remote/local HTTP MCP.
-2. If your client only supports local stdio MCP, install the JSON fallback below.
-3. Use your own stable agent id. Do not reuse another agent's id.
-4. After MCP tools are available, call \`claracore_connection_test\`.
-5. Call \`gateway_docs\` to learn ClaraCore's product boundary and tool contract.
-6. Call \`gateway_context\` before doing useful work.
+- Endpoint: \`${material.httpEndpoint}\`
+- Authorization: \`${material.httpAuthorization}\`
+- Send \`X-ClaraCore-Agent-ID\` with your own stable persona id.
+- Send \`X-ClaraCore-Client-ID\` with a truthful client id.
+- Send \`X-ClaraCore-Conversation-ID\` when your host provides a stable conversation id.
 
----
-
-# ClaraCore Agent Setup
-
-ClaraCore Desktop is agent-first: this software is built for agents to operate and for humans to inspect. Treat Agent Access as the primary integration surface.
-
-Desktop owns the product Gateway, Memoria, Shared Line, and InnerLife state for this app. Old local ClaraCore services are references and import sources only. Do not stop or mutate them from this setup.
-
-## Agent Use Order
-
-1. Connect to ClaraCore Desktop through Streamable HTTP MCP when your agent client supports it.
-2. Send \`X-ClaraCore-Agent-ID\` with the stable persona id, \`X-ClaraCore-Client-ID\` with the host id, and \`X-ClaraCore-Conversation-ID\` with the current host conversation id.
-3. If HTTP MCP is unavailable, use the stdio MCP JSON fallback and replace its agent/client placeholders before restarting the client.
-4. Call \`gateway_docs\` for the product/tool boundary, then \`gateway_context\` for the current working packet.
-5. Use exposed product Gateway tools for Memory, Shared Line, InnerLife, traces, diagnostics, import/export, and maintenance.
-6. Use CLI fallback only when MCP is unavailable or when a local recovery script needs it.
-
-## Agent Identity Contract
-
-The agent id belongs to the stable persona/data subject. The client id identifies Codex, Claude Code, or Hermes; the conversation id identifies one host conversation. These caller fields never replace domain ids such as an InnerLife \`sessionId\` or Shared Line \`lineId\`. For Streamable HTTP, send all available caller headers. For stdio fallback, set \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\`, \`CLARACORE_CLIENT_ID\`, and only a conversation id that the host can keep current. Do not share one agent id across personas.
-
-Recommended stable ids:
-
-${agentExamples.map((item) => `- \`${item}\``).join("\n")}
-
-If you are a new agent, choose one stable id before writing any data. Keep using it in every ClaraCore MCP call.
-
-Recommended starting pairs:
-
-- Codex persona: \`agentId=codex\`, \`clientId=codex-app\`
-- Claude persona: \`agentId=clara\`, \`clientId=claude-code\`
-- Hermes persona: \`agentId=lara\`, \`clientId=hermes\`
-
-The persona id remains stable if it later moves to another host; only the client id changes.
-
-## Connection Mode
-
-- ClaraCore Desktop should stay open as the local agent service.
-- Preferred MCP path: Streamable HTTP MCP at the current localhost \`/mcp\` endpoint.
-- Compatibility path: stdio MCP, configured in the agent client with the JSON below.
-- Local helper URL: Desktop exposes localhost HTTP endpoints while the app is running. The default port is stable across restarts so long-lived MCP clients do not need manual reconfiguration.
-- Token file: \`${tokenFile}\` (${httpGateway.tokenFileMode || "0600"}). The bearer token persists across app restarts and changes only when rotated.
-- Port policy: ${portPolicy}. If the configured port is occupied, fix the conflict rather than silently switching clients to a different port.
-- Human copy step: this brief is for an agent to read and install itself. The MCP config is a fallback for manual setup.
-- LAN path: intentionally disabled by default. Do not bind this beyond localhost unless the user explicitly enables a token-protected LAN mode.
-
-## Gateway MCP
-
-### Streamable HTTP
-
-- Endpoint: \`${streamableEndpoint?.url || "not yet available"}\`
-- Header: \`${streamableEndpoint?.authHeader || "Authorization: Bearer <token>"}\`
-- Agent header: \`X-ClaraCore-Agent-ID: <agent-stable-id>\`
-- Client header: \`X-ClaraCore-Client-ID: <codex-app|claude-code|hermes>\`
-- Conversation header: \`X-ClaraCore-Conversation-ID: <host-conversation-id>\` (\`X-ClaraCore-Session-ID\` remains a compatibility alias)
-- Token file: \`${tokenFile}\`
-
-Use this mode when your MCP client supports Streamable HTTP. It lets Desktop remain the single local Gateway while multiple agents and sessions connect through request-level identity.
-
-### stdio fallback
+## Fallback: stdio MCP
 
 \`\`\`json
-${snapshot.connections.mcpConfig}
+${material.stdioConfig}
 \`\`\`
 
-Replace \`<agent-stable-id>\` and \`<codex-app|claude-code|hermes>\` before use. Keep \`CLARACORE_CONVERSATION_ID\` only when the client refreshes or relaunches its stdio MCP process for each host conversation; otherwise remove that environment entry to avoid tracing a stale conversation id.
+Replace the identity placeholders with your own stable persona id and truthful client id. Never reuse another agent's id.
 
-## Claude Desktop Setup
+If you can update and reload your own MCP configuration, do so now. If you cannot, tell the human the exact client settings screen or file to open and give them the single exact config block to paste. Do not answer only "please configure MCP".
 
-Claude Desktop newer builds may show MCP entry points under Settings -> Extensions. If your build supports Streamable HTTP MCP, use the endpoint and bearer header above. If it only supports custom local servers, use the generated stdio fallback config. If Claude Desktop offers a custom extension install flow, use it only after ClaraCore ships an explicit \`.mcpb\` package.
+After tools appear, follow this sequence exactly:
 
-Manual stdio fallback setup:
+1. Call \`claracore_connection_test\`.
+2. Call \`gateway_docs\` and read **First Connection** and **What ClaraCore Lets You Do**.
+3. Call \`shared_line_list\` with \`status=active\`.
+4. Call \`gateway_context\`, passing an explicit \`lineId\` when selection is required.
+5. In the user's current language, proactively report the truthful connection result, explain ClaraCore's Memory, Shared Line, InnerLife, and Gateway/diagnostics capabilities, summarize only the useful current context you actually found, offer 3-5 natural-language example requests, and suggest one evidence-backed next action when appropriate.
 
-1. Open Claude Desktop settings and find the MCP or Extensions developer config entry.
-2. Add or replace the \`claracore-desktop\` server with the JSON above.
-3. Set \`${agentIdentity.envKey || "CLARACORE_AGENT_ID"}\` to this Claude persona's stable id, for example \`clara\`, and set \`CLARACORE_CLIENT_ID=claude-code\`.
-4. Keep \`CLARACORE_CONVERSATION_ID\` only if Claude relaunches or refreshes the MCP process for the current conversation; otherwise remove it.
-5. Fully quit and restart Claude Desktop so the stdio process is relaunched with the new environment.
-6. In Claude, call \`claracore_connection_test\` once, then call \`gateway_docs\`, then call \`gateway_context\`.
-
-If tools do not appear after a Claude Desktop update, verify the JSON is valid, confirm the command path still exists, and fully restart the app rather than only closing its window.
-
-## First Context Call
-
-After installing, call \`gateway_docs\`, then \`gateway_context\`.
-
-\`gateway_docs\` explains the agent-facing product boundary without requiring source access. \`gateway_context\` returns the current Shared Line, recent Memory, InnerLife state, Doctor guidance, and recovery advice in one packet.
-Any successful MCP call appears in Agent Access as recent agent activity.
-
-Do not invent tool names. If you are uncertain, call \`gateway_docs\` and use the names in its Available Tools list.
-
-## Common MCP Recipes
-
-### Resume work
-
-1. Call \`gateway_context\`.
-2. Read the current Shared Line and recent Memory.
-3. Continue from the current state instead of starting a new thread of work.
-
-### Record a durable fact or decision
-
-1. Call \`memoria_search\` with the topic first.
-2. If an existing memory is the same fact, call \`memoria_update\`.
-3. For a confirmed changed state, call \`memoria_create\` for the new fact, then \`memoria_supersede\` with new → old IDs.
-4. If the conflict is unresolved, use a \`contradicts\` link instead of superseding either fact.
-5. If it is independent and new, call \`memoria_create\`. Add stable labels.
-
-### Connect related memories
-
-1. Call \`memoria_link_list\` before adding more links.
-2. Call \`memoria_link_create\` with \`kind\` set to \`related\`, \`causes\`, \`evolved-from\`, \`contradicts\`, or \`part-of\`. Use \`memoria_supersede\` for confirmed replacement.
-3. Add a short \`note\` explaining why the link exists.
-
-### Update the current Shared Line
-
-1. Call \`shared_line_get\` or \`gateway_context\`.
-2. Call \`shared_line_update\` after meaningful progress, handoff, or a changed interpretation.
-3. Use \`interpretationStatus: "needs_review"\` when the state is uncertain.
-
-### Diagnose Gateway state
-
-1. Call \`claracore_status\` for product health and configuration.
-2. Call \`gateway_trace_list\` to inspect recent tool calls.
-3. Do not mutate SQLite directly.
-
-## Module Playbook
-
-### Memory / Memoria
-
-- Always search first with \`memoria_search\` before creating a new memory.
-- Use \`memoria_create\` only for durable, factual, reviewable information. Keep one memory focused on one fact or decision.
-- Add useful labels at write time, especially \`agent-id:<your-agent-id>\`, project/module labels, and stable topic labels.
-- Use \`memoria_update\` when correcting or refining the same fact. For a confirmed changed state, create the new fact and call \`memoria_supersede\`.
-- \`memoria_supersede\` direction is \`currentMemoryId\` (new/current) → \`historicalMemoryId\` (old). It preserves history instead of deleting or archiving it.
-- \`memoria_search\` defaults to \`timeView: "current"\`; use \`historical\` for prior state and \`all\` only to compare both.
-- Use \`memoria_link_create\` after creating or finding related memories. Prefer:
-  - \`related\` for loose association
-  - \`causes\` when one fact caused another
-  - \`evolved-from\` for lineage that does not make the older memory non-current
-  - \`contradicts\` when two memories conflict and need review
-  - \`part-of\` when one memory belongs inside a broader topic
-- Give links a short \`note\` explaining why the connection exists, and set \`strength\` only when you have a reason.
-- Use \`memoria_link_list\` to inspect a memory neighborhood before adding more links.
-- Use \`memoria_record_create\` for structured recurring logs or metrics, not prose facts. Include \`recordType\`, \`value\`, \`occurredAt\`, and a stable \`dedupeKey\` when the event might be imported or written again.
-
-### Shared Line
-
-- Treat Shared Line as the current resumable working position, not as long-term fact storage.
-- Read \`shared_line_get\` or \`gateway_context\` before updating.
-- Use \`shared_line_update\` after meaningful progress, handoff, or a changed interpretation. Keep \`summary\` concise and actionable.
-- Use \`interpretationStatus: "needs_review"\` when the state is uncertain and the next agent should be cautious.
-- Use \`shared_line_handoff\` when explicitly handing work to another agent or future session.
-
-### InnerLife
-
-- Use \`innerlife_session_start\` at the beginning of a real work session when you want session-aware afterthoughts and share timing.
-- Use \`innerlife_session_end\` with a short summary when the work session ends.
-- Use \`innerlife_submit_inbox\`, \`innerlife_submit_fact\`, or \`innerlife_submit_continuity\` for material that should be digested later, not for immediate factual recall.
-- Use \`innerlife_pending_shares\` and \`innerlife_share_check\` before surfacing a waiting share to the user. Do not force a share into the conversation if timing does not fit.
-- Use \`innerlife_doctor\` when InnerLife seems idle, paused, or misconfigured.
-
-### Gateway / Diagnostics
-
-- Use \`claracore_status\` for product health and \`gateway_trace_list\` to inspect recent tool calls.
-- Keep tool calls bounded. The operator can see Gateway traces.
-- Never mutate SQLite directly; use MCP tools.
-
-## CLI Fallback
-
-Run these from the app root when MCP is unavailable:
-
-\`\`\`bash
-cd "${snapshot.appRoot}"
-node core/cli.js stats
-node core/cli.js recall --query "what should I know before continuing?"
-node core/cli.js shared-line get
-node core/cli.js innerlife status
-node core/cli.js innerlife doctor --agent <agent-id>
-\`\`\`
-
-For writes, keep content factual and agent-scoped:
-
-\`\`\`bash
-node core/cli.js store --body "observable fact" --labels agent-id:<agent-id>
-node core/cli.js shared-line update --summary "current resumable position"
-node core/cli.js innerlife inbox --agent <agent-id> --body "material to digest later"
-\`\`\`
-
-## Runtime Paths
-
-- App root: ${snapshot.appRoot}
-- Data root: ${snapshot.data.root}
-- Product database: ${snapshot.data.databasePath}
-- Gateway command: ${snapshot.connections.mcpCommand}
-- Desktop Gateway runtime: ${snapshot.connections.pythonSource}
-- Desktop Gateway Python: ${snapshot.connections.python}
-- Gateway env: ${snapshot.connections.gatewayEnvPath}
-
-## Runtime Boundary
-
-- Current Desktop product core: Node/Electron + Desktop-owned SQLite.
-- Current Desktop Gateway: Node/Electron Streamable HTTP MCP with stdio MCP fallback.
-- Legacy/reference Memoria service: Python CLI, FastAPI, MCP stdio, usually conda env \`zhouwei\`.
-- Legacy/reference Continuity service: Python CLI, FastAPI, MCP stdio, usually conda env \`zhouwei\`.
-- Legacy/reference InnerLife service: Python package/CLI, FastAPI, MCP stdio, daemon scripts; Python 3.10+ or project venv.
-- Hidden migration helpers can read old service databases as one-off migration sources. Normal product use should not start or depend on those Python services.
-
-## HTTP Management Endpoints
-
-${endpoints}
-
-Use \`Authorization: Bearer <token>\` for HTTP requests. \`/mcp\` is the Streamable HTTP MCP endpoint; \`/agent/setup\` returns this setup as JSON; \`/gateway/context\` returns the first context packet an agent should read for non-MCP clients.
-
-## Product Surface
-
-- Gateway: available for status, unified context, Memory tools, Shared Line tools, and InnerLife tools
-- Memoria: available for fact storage, search, update, labels, archives, records, and maintenance
-- Shared Line: available for latest progress, active line, archived lines, compressed records, and resume packet
-- InnerLife: available for session lifecycle, inbox, digest, share timing, daemon controls, and Doctor guidance
-
-## Troubleshooting
-
-- If MCP tools are missing, confirm the command above uses the same Data root as Desktop.
-- If an old local Gateway is running, leave it alone during this product-core development phase.
-- If you need a custom data directory, set CLARACORE_DESKTOP_DATA_DIR before launching Desktop.
-`;
+Do not claim connection success before the test succeeds. Connecting or reading onboarding material must not create user content in Memory, Shared Line, or InnerLife.`;
   }
 
   function render() {
-    dom.agentSetupMarkdown.textContent = buildMarkdown();
+    const ready = Boolean(currentConnectionMaterial());
+    dom.copyAgentSetup.disabled = !ready;
+    dom.agentSetupStatus.textContent = ready ? t("agentSetup.ready") : t("agentSetup.starting");
   }
 
-  function copy() {
-    return copyValue(buildMarkdown(), t("agentSetup.copied"), dom.agentSetupNotice);
+  async function copy() {
+    const markdown = buildMarkdown();
+    if (!markdown) {
+      dom.agentSetupNotice.textContent = t("agentSetup.starting");
+      return false;
+    }
+    try {
+      const copied = await copyValue(markdown, t("agentSetup.copied"), dom.agentSetupNotice);
+      if (!copied) dom.agentSetupNotice.textContent = t("agentSetup.copyFailed");
+      return copied;
+    } catch (error) {
+      dom.agentSetupNotice.textContent = t("agentSetup.copyFailed");
+      return false;
+    }
   }
 
   return {

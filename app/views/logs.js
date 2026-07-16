@@ -43,17 +43,15 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
       .map((entry) => entry.line);
 
     dom.logTerminal.textContent = lines.length ? lines.join("\n") : t("logs.empty");
-    dom.logRuntimeCount.textContent = String(runtimeSource.length);
-    dom.logGatewayCount.textContent = String(gatewaySource.length);
-    if (dom.logDecayStatus) dom.logDecayStatus.textContent = decayAudit.status || "-";
+    renderStatus(snapshot, runtimeSource, gatewaySource);
     if (dom.logDecayIssueCount) {
       dom.logDecayIssueCount.textContent = decayAudit.counts?.issues
         ? t("logs.decayIssueCount", { count: String(decayAudit.counts.issues) })
         : t("logs.decayClear");
     }
-    if (dom.logTimeFlowCount) dom.logTimeFlowCount.textContent = String(timeFlow.length);
-    dom.logLineCount.textContent = String(lines.length);
-    dom.logLastRefresh.textContent = new Date().toLocaleTimeString();
+    if (dom.logLastRefresh) {
+      dom.logLastRefresh.textContent = t("logs.lastRefreshAt", { time: new Date().toLocaleTimeString() });
+    }
     if (dom.logFilter) dom.logFilter.value = activeFilter;
     dom.toggleLogFollow.classList.toggle("active", followEnabled);
     renderDecayAudit(decayAudit);
@@ -61,6 +59,23 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
     if (followEnabled) {
       dom.logTerminal.scrollTop = dom.logTerminal.scrollHeight;
     }
+  }
+
+  function renderStatus(snapshot, runtimeEvents, gatewayTraces) {
+    if (!dom.logStatusSummary) return;
+    const statusLine = dom.logStatusSummary.closest(".log-status-line");
+    statusLine?.classList.remove("ok", "error", "unavailable");
+    if (!snapshot) {
+      dom.logStatusSummary.textContent = t("logs.statusUnavailable");
+      statusLine?.classList.add("unavailable");
+      return;
+    }
+    const errorCount = runtimeEvents.filter((event) => event.level === "error").length
+      + gatewayTraces.filter((trace) => trace.status === "error").length;
+    dom.logStatusSummary.textContent = errorCount
+      ? t("logs.statusErrors", { count: String(errorCount) })
+      : t("logs.statusOk");
+    statusLine?.classList.add(errorCount ? "error" : "ok");
   }
 
   function renderDecayAudit(decayAudit = {}) {
@@ -316,6 +331,10 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
     render();
   }
 
+  function closeAdvancedDiagnostics() {
+    if (dom.logAdvancedDiagnostics) dom.logAdvancedDiagnostics.open = false;
+  }
+
   function refreshNow() {
     dom.refreshLogs.disabled = true;
     appendLiveLine("logs", t("logs.refreshing"));
@@ -332,32 +351,9 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
       });
   }
 
-  function clear() {
-    if (!window.confirm(t("logs.clearConfirm"))) return;
-    dom.clearLogs.disabled = true;
-    window.ClaraCoreDesktop.clearLogs()
-      .then((result) => {
-        liveLines.length = 0;
-        return refreshSnapshot().then(() => result);
-      })
-      .then((result) => {
-        appendLiveLine("logs", t("logs.cleared", {
-          runtime: result?.runtimeEventsDeleted || 0,
-          gateway: result?.gatewayTracesDeleted || 0
-        }));
-      })
-      .catch((error) => {
-        console.error(error);
-        appendLiveLine("logs", `${t("logs.clearFailed")}: ${error.message || String(error)}`);
-      })
-      .finally(() => {
-        dom.clearLogs.disabled = false;
-      });
-  }
-
   return {
     appendLiveLine,
-    clear,
+    closeAdvancedDiagnostics,
     refreshNow,
     render,
     setFilter,

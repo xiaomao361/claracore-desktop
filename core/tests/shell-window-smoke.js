@@ -22,7 +22,7 @@ async function main() {
     });
     const page = await app.firstWindow();
     await page.waitForSelector(".topbar", { timeout: 15000 });
-    await page.waitForSelector("#homeView > .page-focus", { timeout: 15000 });
+    await page.waitForFunction(() => window.ClaraCoreTestHooks?.homeVision && document.querySelector("#homePresenceEmptyAction")?.hidden === false, null, { timeout: 15000 });
 
     const result = await page.evaluate(async () => {
       const shellState = await window.ClaraCoreDesktop.getShellState();
@@ -38,10 +38,11 @@ async function main() {
         sidebarRegion,
         navRegion,
         homeTruth: {
-          attentionItems: document.querySelectorAll("#homeAttentionList .attention-item").length,
-          focusTone: document.querySelector("#homeView > .page-focus")?.className || "",
+          presenceAgents: document.querySelectorAll("#homePresenceAgents .home-presence-agent").length,
+          emptyActionVisible: document.querySelector("#homePresenceEmptyAction")?.hidden === false,
+          focusBlockPresent: Boolean(document.querySelector("#homeView > .page-focus")),
           healthTone: document.querySelector("#topbarHealthIcon")?.className || "",
-          runtimeExpanded: Boolean(document.querySelector("#homeRuntimeDetails")?.open)
+          scheduler: window.ClaraCoreTestHooks.homeVision()
         },
         text: document.body.textContent
       };
@@ -69,10 +70,11 @@ async function main() {
       throw new Error(`Interactive controls are not excluded from drag regions: ${JSON.stringify(result)}`);
     }
     if (
-      result.homeTruth.attentionItems !== 0 ||
-      !result.homeTruth.focusTone.includes("ok") ||
+      result.homeTruth.presenceAgents !== 0 ||
+      !result.homeTruth.emptyActionVisible ||
+      result.homeTruth.focusBlockPresent ||
       !result.homeTruth.healthTone.includes("ok-dot") ||
-      result.homeTruth.runtimeExpanded
+      result.homeTruth.scheduler.agentCount !== 0
     ) {
       throw new Error(`Fresh-install Home truth is inconsistent: ${JSON.stringify(result.homeTruth)}`);
     }

@@ -25,22 +25,11 @@ const {
   cancelRestoreBackup,
   memoryStore,
   memoryStoreShort,
-  mcpCommand,
-  mcpConfig,
-  copyNotice,
-  agentIdentityList,
   gatewayHandshakeList,
-  httpEndpointList,
   gatewayTraceList,
   logTerminal,
   refreshLogs,
   toggleLogFollow,
-  clearLogs,
-  logRuntimeCount,
-  logGatewayCount,
-  logLineCount,
-  logLastRefresh,
-  openGatewayFolder,
   eventList,
   healthSummary,
   healthList,
@@ -53,10 +42,9 @@ const {
   monitorRam,
   monitorProcess,
   monitorDisk,
-  agentSetupMarkdown,
   agentSetupNotice,
+  agentSetupStatus,
   copyAgentSetup,
-  rotateAgentGatewayToken,
   memoriaProvider,
   memoriaEndpoint,
   memoriaModel,
@@ -82,39 +70,14 @@ const {
   innerLifeApiKeySummary,
   copyInnerLifeApiKey,
   innerLifeModelStatus,
-  innerLifeAgentFilter,
-  innerLifeSessionList,
-  loadMoreInnerLifeSessions,
-  innerLifeDigestList,
-  loadMoreInnerLifeDigestRuns,
-  innerLifeInboxList,
-  loadMoreInnerLifeInbox,
-  innerLifeShareCheckList,
-  innerLifeShareList,
-  innerLifeDaemonStatus,
-  innerLifeDaemonToggle,
-  innerLifeDaemonToggleLabel,
-  innerLifeDaemonNotice,
-  innerLifeNextRun,
-  innerLifeLastResult,
-  innerLifeRecovery,
-  innerLifeDoctorStatus,
-  innerLifeDoctorList,
-  innerLifePendingCount,
-  innerLifeProfileDisplayName,
-  innerLifeProfileRecentFocus,
-  innerLifeProfileInterests,
-  innerLifeProfileShareAfterHours,
-  innerLifeProfileShareCooldownHours,
-  innerLifeProfileShareMaxDaily,
-  innerLifeProfileJson,
-  innerLifeStateJson,
-  saveInnerLifeProfile,
-  innerLifeProfileNotice,
   saveSettings,
+  saveRuntimeSettings,
+  runtimeSettingsNotice,
   settingsNotice,
   saveAppearanceSettings,
   appearanceSettingsNotice,
+  saveDataRootSettings,
+  storageSettingsNotice,
   settingsAgentGatewayToken,
   generateAgentGatewayToken,
   copyAgentGatewayToken,
@@ -145,20 +108,28 @@ const {
   memoryTabs,
   memoryTabPanels,
   sharedLineSummary,
+  sharedLinePast,
+  sharedLineNext,
   sharedLineUpdated,
   sharedLineList,
+  sharedLineActiveCount,
   sharedLineAgentFilter,
-  sharedLineDetailStatus,
+  sharedLineDetailTitle,
+  sharedLineParticipants,
+  sharedLineSelectionNotice,
+  sharedLineContinuityPath,
+  sharedLineUnderstandingSection,
+  sharedLineUnderstanding,
+  sharedLineUnresolvedSection,
+  sharedLineUnresolved,
   sharedLineNotice,
   sharedLineAgentStatePanel,
   sharedLineMetadataPanel,
-  sharedLineResume,
   sharedLineHistoryList,
   sharedLineSnapshotList,
   sharedLineArchiveList,
-  copySharedLineResume,
-  sharedLineTabs,
-  sharedLineTabPanels,
+  sharedLineAdvancedDetails,
+  sharedLineArchiveDetails,
   loadDemoData,
   clearDemoData,
   demoDataNotice
@@ -206,6 +177,7 @@ const rendererState = {
   innerLifeInboxLoading: false,
   innerLifeInboxTotals: {},
   selectedSharedLineId: "",
+  selectedSharedLinePacket: null,
   dataRootPreference: null
 };
 let runtimeRefreshTimer = null;
@@ -306,12 +278,7 @@ const sharedLineActions = window.createClaraCoreSharedLineActions({
   dom: window.ClaraCoreDom,
   state: rendererState,
   t,
-  setSharedLineSnapshot: (sharedLine) => {
-    snapshot.sharedLine = sharedLine;
-  },
-  renderSharedLine,
-  copyValue,
-  showCopyNotice
+  renderSharedLine
 });
 const innerLifeActions = window.createClaraCoreInnerLifeActions({
   desktop: window.ClaraCoreDesktop,
@@ -362,8 +329,8 @@ function appendLiveLogLine(source, message) {
 }
 
 function setEmbeddingProgress(stats, progress) {
-  memoryEmbeddedCount.textContent = stats.embeddedCount ?? 0;
-  memoryPendingEmbeddingCount.textContent = stats.pendingEmbeddingCount ?? 0;
+  if (memoryEmbeddedCount) memoryEmbeddedCount.textContent = stats.embeddedCount ?? 0;
+  if (memoryPendingEmbeddingCount) memoryPendingEmbeddingCount.textContent = stats.pendingEmbeddingCount ?? 0;
   const pending = Number(stats.pendingEmbeddingCount || 0);
   const text = t("memory.embedding.progress", {
     processed: progress.processed,
@@ -372,9 +339,9 @@ function setEmbeddingProgress(stats, progress) {
     failed: progress.failed,
     pending
   });
-  memoryEmbeddingNotice.textContent = text;
+  if (memoryEmbeddingNotice) memoryEmbeddingNotice.textContent = text;
   const percent = progress.total > 0 ? Math.min(100, Math.round((progress.processed / progress.total) * 100)) : 0;
-  memoryEmbeddingProgressBar.style.width = `${percent}%`;
+  if (memoryEmbeddingProgressBar) memoryEmbeddingProgressBar.style.width = `${percent}%`;
   appendLiveLogLine("memoria", text);
 }
 
@@ -523,7 +490,6 @@ function renderPageFocus() {
   if (!snapshot) return;
   const healthStatus = snapshot.health?.status || "warn";
   const stats = snapshot.memoryStats || {};
-  const maintenance = snapshot.memoryMaintenance || {};
   const gatewayTraces = snapshot.gatewayTraces || [];
   const gatewayErrors = homeView.actionableGatewayErrorCount();
   const sharedLine = snapshot.sharedLine || {};
@@ -555,93 +521,21 @@ function renderPageFocus() {
       : "shared-line"
   });
 
-  const vectorIssues = Number(stats.pendingEmbeddingCount || 0) + Number(stats.failedEmbeddingCount || 0);
-  renderFocusBlock("memory", {
-    tone: vectorIssues ? "warn" : maintenance.status && maintenance.status !== "ok" ? "warn" : "ok",
-    title: vectorIssues ? t("focus.memory.vectors", { count: String(vectorIssues) }) : t("focus.memory.ok"),
-    body: t("focus.memory.body"),
-    metrics: [
-      focusMetric(t("memory.stats.active"), stats.activeCount || 0),
-      focusMetric(t("memory.stats.pending"), stats.pendingEmbeddingCount || 0),
-      focusMetric(t("memory.stats.restricted"), stats.restrictedCount || 0)
-    ],
-    actionLabel: vectorIssues ? t("focus.action.openMemory") : t("focus.action.searchMemory"),
-    actionTarget: "memory"
-  });
+  // Home owns its own calm presence hierarchy; the generic metric focus block
+  // would turn it back into a dashboard.
+  views.home?.panel?.querySelector(":scope > .page-focus")?.remove();
 
-  const activeLines = (sharedLine.lines || []).filter((line) => line.status !== "archived");
-  renderFocusBlock("shared-line", {
-    tone: currentLine.summary ? "ok" : "warn",
-    title: currentLine.summary ? t("focus.sharedLine.ok") : t("focus.sharedLine.empty"),
-    body: currentLine.summary || t("sharedLine.currentEmpty"),
-    metrics: [
-      focusMetric(t("sharedLine.stats.lines"), activeLines.length),
-      focusMetric(t("sharedLine.stats.history"), (sharedLine.history || []).length),
-      focusMetric(t("sharedLine.stats.archived"), (sharedLine.archivedLines || []).length)
-    ],
-    actionLabel: t("focus.action.openSharedLine"),
-    actionTarget: "shared-line"
-  });
+  views.memory?.panel?.querySelector(":scope > .page-focus")?.remove();
 
-  renderFocusBlock("innerlife", {
-    tone: daemon.status === "error" ? "error" : "ok",
-    title: innerCounts.pending_shares_count
-      ? t("focus.innerLife.pending", { count: String(innerCounts.pending_shares_count) })
-      : daemon.enabled
-        ? t("focus.innerLife.running")
-        : t("focus.innerLife.paused"),
-    body: t("focus.innerLife.body"),
-    metrics: [
-      focusMetric(t("innerLife.daemonStatus"), daemon.enabled ? daemon.status || t("common.ready") : t("common.paused")),
-      focusMetric(t("innerLife.pendingShares"), innerCounts.pending_shares_count || 0),
-      focusMetric(t("innerLife.thoughts"), innerCounts.thoughts_count || 0)
-    ],
-    actionLabel: t("focus.action.openInnerLife"),
-    actionTarget: "innerlife"
-  });
+  views["shared-line"]?.panel?.querySelector(":scope > .page-focus")?.remove();
 
-  const agents = new Set(gatewayTraces.map((trace) => trace.agentId).filter(Boolean));
-  renderFocusBlock("agent-setup", {
-    tone: gatewayErrors ? "error" : "ok",
-    title: gatewayTraces.length ? t("focus.agent.active") : t("focus.agent.ready"),
-    body: t("focus.agent.body"),
-    metrics: [
-      focusMetric(t("focus.metric.agents"), agents.size),
-      focusMetric(t("home.gateway.calls"), gatewayTraces.length),
-      focusMetric(t("home.gateway.errors"), gatewayErrors)
-    ],
-    actionLabel: t("focus.action.openAgentAccess"),
-    actionTarget: "agent-setup"
-  });
+  views.innerlife?.panel?.querySelector(":scope > .page-focus")?.remove();
 
-  renderFocusBlock("logs", {
-    tone: gatewayErrors ? "error" : "ok",
-    title: gatewayErrors ? t("focus.logs.errors", { count: String(gatewayErrors) }) : t("focus.logs.ok"),
-    body: t("focus.logs.body"),
-    metrics: [
-      focusMetric(t("logs.runtimeEvents"), (snapshot.runtimeEvents || []).length),
-      focusMetric(t("logs.gatewayTraces"), gatewayTraces.length),
-      focusMetric(t("logs.filterErrors"), gatewayErrors)
-    ],
-    actionLabel: t("focus.action.openLogs"),
-    actionTarget: "logs"
-  });
+  views["agent-setup"]?.panel?.querySelector(":scope > .page-focus")?.remove();
 
-  const config = snapshot.configuration || {};
-  const memoria = config.memoria || {};
-  const innerlife = config.innerlife || {};
-  renderFocusBlock("settings", {
-    tone: innerlife.backend === "disabled" ? "warn" : "ok",
-    title: innerlife.backend === "disabled" ? t("focus.models.needsInnerLife") : t("focus.settings.ready"),
-    body: t("focus.settings.body"),
-    metrics: [
-      focusMetric(t("settings.appVersion"), snapshot.productVersion || "-"),
-      focusMetric(t("settings.memoryRole"), memoria.provider || "-"),
-      focusMetric(t("settings.innerLifeRole"), innerlife.backend || "-")
-    ],
-    actionLabel: t("focus.action.openSettings"),
-    actionTarget: "settings"
-  });
+  views.logs?.panel?.querySelector(":scope > .page-focus")?.remove();
+
+  views.settings?.panel?.querySelector(":scope > .page-focus")?.remove();
 }
 
 function renderSnapshot() {
@@ -722,6 +616,7 @@ function applyStaticTranslations() {
 
 function setView(viewName) {
   const nextView = views[viewName] ? viewName : "home";
+  const enteringLogs = nextView === "logs" && activeView !== "logs";
   activeView = nextView;
   Object.entries(views).forEach(([name, view]) => {
     view.panel.classList.toggle("active-view", name === nextView);
@@ -731,6 +626,8 @@ function setView(viewName) {
   });
   viewTitle.textContent = t(views[nextView].titleKey);
   viewSubtitle.textContent = t(views[nextView].subtitleKey);
+  homeView.setActive(nextView === "home");
+  if (enteringLogs) logsView.closeAdvancedDiagnostics();
   syncLogRefreshTimer();
 }
 
@@ -767,6 +664,7 @@ async function refresh() {
     window.ClaraCoreDesktop.getRuntimeSnapshot(),
     window.ClaraCoreDesktop.getDataRootPreference()
   ]);
+  await sharedLineActions.syncSelectedLine(snapshot.sharedLine);
   memoriaView.resetLoadedTabs();
   renderSnapshot();
   loadMemoryTabData(memoriaView.getActiveTab()).catch(console.error);
@@ -786,6 +684,7 @@ async function refreshRuntimeSnapshotOnly() {
   }
   snapshot = nextSnapshot;
   rendererState.dataRootPreference = dataRootPreference;
+  await sharedLineActions.syncSelectedLine(snapshot.sharedLine);
   renderSnapshot();
 }
 
@@ -821,7 +720,7 @@ const settingsTabButtons = window.ClaraCoreDom.settingsTabs || [];
 const settingsTabPanelList = window.ClaraCoreDom.settingsTabPanels || [];
 
 function setSettingsTab(tabName) {
-  const next = settingsTabPanelList.some((panel) => panel.dataset.settingsPanel === tabName) ? tabName : "general";
+  const next = settingsTabPanelList.some((panel) => panel.dataset.settingsPanel === tabName) ? tabName : "common";
   settingsTabButtons.forEach((button) => {
     button.classList.toggle("active", button.dataset.settingsTab === next);
     button.setAttribute("aria-selected", button.dataset.settingsTab === next ? "true" : "false");
@@ -886,23 +785,8 @@ clearDemoData?.addEventListener("click", () => {
   runDemoDataAction(clearDemoData, () => window.ClaraCoreDesktop.clearDemoData(), "home.onboarding.demo.clearing");
 });
 
-copyAgentSetup.addEventListener("click", () => {
+copyAgentSetup?.addEventListener("click", () => {
   agentSetupView.copy().catch(console.error);
-});
-
-rotateAgentGatewayToken?.addEventListener("click", async () => {
-  if (!window.confirm(t("agentSetup.rotateTokenConfirm"))) return;
-  rotateAgentGatewayToken.disabled = true;
-  agentSetupNotice.textContent = t("common.checking");
-  try {
-    await window.ClaraCoreDesktop.rotateAgentGatewayToken();
-    await refreshRuntimeSnapshotOnly();
-    agentSetupNotice.textContent = t("agentSetup.rotateTokenDone");
-  } catch (error) {
-    agentSetupNotice.textContent = t("agentSetup.rotateTokenFailed", { error: error?.message || String(error) });
-  } finally {
-    rotateAgentGatewayToken.disabled = false;
-  }
 });
 
 generateAgentGatewayToken?.addEventListener("click", () => {
@@ -932,28 +816,38 @@ saveAgentGatewayConfig?.addEventListener("click", async () => {
   }
 });
 
-saveSettings.addEventListener("click", async () => {
-  const form = collectSettingsForm();
+async function saveModelSettings(button, notice, form, { confirmEmbedding = false, successKey = "settings.saved", failureKey = "settings.saveFailed" } = {}) {
   const validationError = settingsView.settingsValidationError(form);
   if (validationError) {
-    settingsNotice.textContent = t(validationError);
+    notice.textContent = t(validationError);
     return;
   }
-  if (settingsView.embeddingConfigChanged(form) && !window.confirm(t("settings.embedding.rebuildConfirm"))) {
+  if (confirmEmbedding && settingsView.embeddingConfigChanged(form) && !window.confirm(t("settings.embedding.rebuildConfirm"))) {
     return;
   }
-  saveSettings.disabled = true;
-  settingsNotice.textContent = t("common.checking");
+  button.disabled = true;
+  notice.textContent = t("common.checking");
   try {
     await window.ClaraCoreDesktop.saveSettings(form);
     await refresh();
-    showCopyNotice(t("settings.saved"), settingsNotice);
+    showCopyNotice(t(successKey), notice);
   } catch (error) {
     console.error(error);
-    settingsNotice.textContent = t("settings.saveFailed");
+    notice.textContent = t(failureKey);
   } finally {
-    saveSettings.disabled = false;
+    button.disabled = false;
   }
+}
+
+saveSettings.addEventListener("click", () => {
+  saveModelSettings(saveSettings, settingsNotice, collectSettingsForm(), { confirmEmbedding: true });
+});
+
+saveRuntimeSettings?.addEventListener("click", () => {
+  saveModelSettings(saveRuntimeSettings, runtimeSettingsNotice, settingsView.collectRuntimeSettingsForm(), {
+    successKey: "settings.runtimeSaved",
+    failureKey: "settings.runtimeSaveFailed"
+  });
 });
 
 copyMemoriaApiKey.addEventListener("click", () => {
@@ -995,6 +889,7 @@ memoriaEndpoint?.addEventListener("blur", () => {
 });
 
 memoriaProvider?.addEventListener("change", () => {
+  if (memoriaModelStatus) delete memoriaModelStatus.dataset.connectionState;
   settingsView.updateModelFieldVisibility();
   loadModelOptions("memoria", { silent: true }).catch(console.error);
 });
@@ -1004,6 +899,7 @@ innerLifeEndpoint?.addEventListener("blur", () => {
 });
 
 innerLifeBackend?.addEventListener("change", () => {
+  if (innerLifeModelStatus) delete innerLifeModelStatus.dataset.connectionState;
   settingsView.updateModelFieldVisibility();
   loadModelOptions("innerlife", { silent: true }).catch(console.error);
 });
@@ -1017,33 +913,40 @@ saveAppearanceSettings?.addEventListener("click", async () => {
     setTheme(preferences.theme);
     setMotion(preferences.motion);
     setWindowCloseBehavior(preferences.closeBehavior);
-    if (window.ClaraCoreDom.settingsDataRootOverride) {
-      const result = await window.ClaraCoreDesktop.saveDataRootPreference(window.ClaraCoreDom.settingsDataRootOverride.value);
-      rendererState.dataRootPreference = result;
-      if (result.envOverride) {
-        appearanceSettingsNotice.textContent = t("settings.dataRootEnvOverride");
-      }
-    }
     renderSettings();
-    if (
-      rendererState.dataRootPreference?.restartRequired &&
-      rendererState.dataRootPreference?.canRelaunch &&
-      window.ClaraCoreDom.relaunchForDataRoot
-    ) {
-      window.ClaraCoreDom.relaunchForDataRoot.hidden = false;
-    }
-    if (!appearanceSettingsNotice.textContent || appearanceSettingsNotice.textContent === t("common.checking")) {
-      showCopyNotice(t("settings.appearanceSaved"), appearanceSettingsNotice);
-    } else if (rendererState.dataRootPreference?.restartRequired) {
-      appearanceSettingsNotice.textContent = rendererState.dataRootPreference?.canRelaunch
-        ? t("settings.dataRootRestartRequired")
-        : t("settings.dataRootManualRestartRequired");
-    }
+    showCopyNotice(t("settings.appearanceSaved"), appearanceSettingsNotice);
   } catch (error) {
     console.error(error);
     appearanceSettingsNotice.textContent = t("settings.appearanceSaveFailed");
   } finally {
     saveAppearanceSettings.disabled = false;
+  }
+});
+
+saveDataRootSettings?.addEventListener("click", async () => {
+  saveDataRootSettings.disabled = true;
+  storageSettingsNotice.textContent = t("common.checking");
+  try {
+    const result = await window.ClaraCoreDesktop.saveDataRootPreference(window.ClaraCoreDom.settingsDataRootOverride.value);
+    rendererState.dataRootPreference = result;
+    settingsView.renderAppearanceSettings();
+    if (result.envOverride) {
+      storageSettingsNotice.textContent = t("settings.dataRootEnvOverride");
+    } else if (result.restartRequired) {
+      storageSettingsNotice.textContent = result.canRelaunch
+        ? t("settings.dataRootRestartRequired")
+        : t("settings.dataRootManualRestartRequired");
+      if (result.canRelaunch && window.ClaraCoreDom.relaunchForDataRoot) {
+        window.ClaraCoreDom.relaunchForDataRoot.hidden = false;
+      }
+    } else {
+      showCopyNotice(t("settings.storageSaved"), storageSettingsNotice);
+    }
+  } catch (error) {
+    console.error(error);
+    storageSettingsNotice.textContent = t("settings.storageSaveFailed");
+  } finally {
+    saveDataRootSettings.disabled = false;
   }
 });
 
@@ -1063,7 +966,7 @@ window.ClaraCoreDom.resetSettingsDataRoot?.addEventListener("click", () => {
 window.ClaraCoreDom.relaunchForDataRoot?.addEventListener("click", () => {
   window.ClaraCoreDesktop.relaunch().then((result) => {
     if (result?.relaunched === false) {
-      appearanceSettingsNotice.textContent = t("settings.dataRootManualRestartRequired");
+      storageSettingsNotice.textContent = t("settings.dataRootManualRestartRequired");
     }
   });
 });
@@ -1089,21 +992,11 @@ toggleLogFollow.addEventListener("click", () => {
   logsView.toggleFollow(activeView);
 });
 
-clearLogs.addEventListener("click", () => {
-  logsView.clear();
-});
-
 window.ClaraCoreDom.logFilter?.addEventListener("change", (event) => {
   logsView.setFilter(event.target.value);
 });
 
-openGatewayFolder.addEventListener("click", () => {
-  if (snapshot?.data?.runtimeDir) {
-    window.ClaraCoreDesktop.openPath(snapshot.data.runtimeDir);
-  }
-});
-
-function showCopyNotice(label, target = copyNotice) {
+function showCopyNotice(label, target = null) {
   if (!target) return;
   target.textContent = label;
   window.setTimeout(() => {
@@ -1119,46 +1012,12 @@ function randomAgentGatewayToken() {
     .join("");
 }
 
-async function copyValue(value, label, target = copyNotice) {
-  if (!value) return;
+async function copyValue(value, label, target = null) {
+  if (!value) return false;
   const ok = await window.ClaraCoreDesktop.copyText(value);
   if (ok) showCopyNotice(label, target);
+  return ok;
 }
-
-document.querySelectorAll("[data-copy]").forEach((button) => {
-  button.addEventListener("click", () => {
-    if (!snapshot?.connections) return;
-    if (button.dataset.copy === "mcp-command") {
-      copyValue(snapshot.connections.mcpCommand, t("connections.copied.mcpCommand")).catch(console.error);
-    }
-    if (button.dataset.copy === "mcp-config") {
-      copyValue(snapshot.connections.mcpConfig, t("connections.copied.mcpConfig")).catch(console.error);
-    }
-  });
-});
-
-httpEndpointList.addEventListener("click", (event) => {
-  const button = event.target.closest("button");
-  if (!button) return;
-  if (button.dataset.openUrl) {
-    window.ClaraCoreDesktop.openExternal(button.dataset.openUrl).catch(console.error);
-  }
-  if (button.dataset.copyEndpointId) {
-    const endpoint = (snapshot?.connections?.httpEndpoints || []).find((item) => item.id === button.dataset.copyEndpointId);
-    if (!endpoint) return;
-    const gateway = snapshot?.connections?.httpGateway || {};
-    const copyBlock = [
-      `ClaraCore Desktop ${t(`connections.endpoint.${endpoint.id}`) || endpoint.id}`,
-      `Endpoint: ${endpoint.url}`,
-      endpoint.authHeader || "",
-      "X-ClaraCore-Agent-ID: <agent-stable-id>",
-      "X-ClaraCore-Session-ID: <conversation-or-session-id>",
-      endpoint.tokenFile ? `${t("connections.tokenFile")}: ${endpoint.tokenFile}` : "",
-      gateway.port ? `Port: ${gateway.port}` : ""
-    ].filter(Boolean).join("\n");
-    copyValue(copyBlock, t("connections.copied.endpoint")).catch(console.error);
-  }
-});
 
 openDevelopmentPlan?.addEventListener("click", () => {
   if (snapshot?.plans?.productReset) {
@@ -1174,7 +1033,8 @@ openDesignPlan?.addEventListener("click", () => {
 
 window.ClaraCoreTestHooks = {
   refresh: () => refresh(),
-  handleRuntimeChanged: (payload = {}) => scheduleRuntimeRefresh(Array.isArray(payload.scopes) ? payload.scopes : ["snapshot"])
+  handleRuntimeChanged: (payload = {}) => scheduleRuntimeRefresh(Array.isArray(payload.scopes) ? payload.scopes : ["snapshot"]),
+  homeVision: () => homeView.getVisionDebugState()
 };
 
 refresh().catch((error) => {

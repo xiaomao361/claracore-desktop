@@ -15,7 +15,7 @@ function createClaraCoreSettingsView(context) {
     innerLifeBackend, innerLifeEndpointField, innerLifeEndpoint, innerLifeLightModelField, innerLifeLightModel,
     innerLifeDeepModelField, innerLifeDeepModel, innerLifePollField, innerLifePollSeconds, innerLifeApiKeyField, innerLifeApiKey,
     innerLifeConnectionRow,
-    innerLifeApiKeySummary, innerLifeModelStatus,
+    innerLifeApiKeySummary, innerLifeModelStatus, memoriaCapabilityProvider, innerLifeCapabilityProvider,
     settingsLanguage, settingsTheme, settingsMotion, settingsTimeZone, settingsCloseBehavior, settingsCloseBehaviorSummary, settingsTrayStatus,
     settingsThemeSummary, settingsMotionSummary, settingsDataStatus, settingsDataRoot, settingsPathSummary, settingsPathDetails,
     settingsDataRootOverride, relaunchForDataRoot,
@@ -29,15 +29,35 @@ function createClaraCoreSettingsView(context) {
     formatMode
   } = context;
 
-function modelStatus(provider, hasModel = true) {
+function modelStatus(provider, hasModel = true, builtIn = false) {
   if (provider === "disabled") {
     return { label: t("settings.status.disabled"), className: "badge warn", note: "" };
   }
   return {
-    label: hasModel ? t("settings.status.ready") : t("common.needsAttention"),
+    label: hasModel ? t(builtIn ? "settings.status.ready" : "settings.status.configured") : t("common.needsAttention"),
     className: hasModel ? "badge ok" : "badge warn",
     note: ""
   };
+}
+
+function providerSummary(provider, model = "") {
+  if (provider === "claracore-built-in") return t("settings.provider.builtIn");
+  if (provider === "ollama") return t("settings.provider.external", { provider: "Ollama", model: model || "-" });
+  if (provider === "openai-compatible") return t("settings.provider.external", { provider: t("settings.openaiCompatible"), model: model || "-" });
+  if (provider === "disabled") return t("settings.provider.disabled");
+  return t("common.needsAttention");
+}
+
+function applyModelStatus(element, fallback) {
+  const tested = element?.dataset?.connectionState;
+  const status = tested === "connected"
+    ? { label: t("settings.status.connected"), className: "badge ok", note: "" }
+    : tested === "failed"
+      ? { label: t("settings.status.testFailed"), className: "badge warn", note: "" }
+      : fallback;
+  element.textContent = status.label;
+  element.className = status.className;
+  element.title = status.note;
 }
 
 function maskMiddle(value) {
@@ -281,21 +301,25 @@ function renderSettings() {
   innerLifeDeepModel.value = innerlife.deepModel;
   innerLifePollSeconds.value = secondsToDisplayMinutes(innerlife.pollSeconds);
   setSecretInput(innerLifeApiKey, innerlife.apiKeyRef || "");
-  innerLifeApiKeySummary.textContent = maskMiddle(innerlife.apiKeyRef);
+  if (innerLifeApiKeySummary) innerLifeApiKeySummary.textContent = maskMiddle(innerlife.apiKeyRef);
   const memoriaStatus = memoria.providerSupported === false
     ? { label: t("common.needsAttention"), className: "badge warn", note: t("settings.liteUnsupportedProvider") }
-    : modelStatus(memoria.provider, Boolean(memoria.model));
-  memoriaModelStatus.textContent = memoriaStatus.label;
-  memoriaModelStatus.className = memoriaStatus.className;
-  memoriaModelStatus.title = memoriaStatus.note;
+    : modelStatus(memoria.provider, Boolean(memoria.model), memoria.provider === "claracore-built-in");
+  applyModelStatus(memoriaModelStatus, memoriaStatus);
   if (memoriaProviderNotice) {
     memoriaProviderNotice.hidden = memoria.providerSupported !== false;
     memoriaProviderNotice.textContent = memoria.providerSupported === false ? t("settings.liteUnsupportedProvider") : "";
   }
+  if (memoriaCapabilityProvider) {
+    memoriaCapabilityProvider.textContent = memoria.providerSupported === false
+      ? t("settings.provider.needsSetup")
+      : providerSummary(memoria.provider, memoria.model);
+  }
   const innerLifeStatus = modelStatus(innerlife.backend, Boolean(innerlife.lightModel || innerlife.deepModel));
-  innerLifeModelStatus.textContent = innerLifeStatus.label;
-  innerLifeModelStatus.className = innerLifeStatus.className;
-  innerLifeModelStatus.title = innerLifeStatus.note;
+  applyModelStatus(innerLifeModelStatus, innerLifeStatus);
+  if (innerLifeCapabilityProvider) {
+    innerLifeCapabilityProvider.textContent = providerSummary(innerlife.backend, innerlife.deepModel || innerlife.lightModel);
+  }
   updateModelFieldVisibility();
 }
 
@@ -305,7 +329,7 @@ function renderAppearanceSettings() {
   setInputValue(settingsLanguage, preferences.language);
   setInputValue(settingsTheme, preferences.theme);
   setInputValue(settingsMotion, preferences.motion);
-  setInputValue(settingsTimeZone, t("settings.timeZoneSystemValue", { zone: getSystemTimeZone() }));
+  if (settingsTimeZone) settingsTimeZone.textContent = t("settings.timeZoneSystemValue", { zone: getSystemTimeZone() });
   setInputValue(settingsCloseBehavior, preferences.closeBehavior);
   if (settingsCloseBehaviorSummary) {
     settingsCloseBehaviorSummary.textContent =
@@ -342,9 +366,7 @@ function collectSettingsForm() {
     "memory.embedding.model": memoryProvider === "claracore-built-in" ? BUILT_IN_EMBEDDING_MODEL : memoriaModel.value,
     "innerlife.provider": innerLifeProvider,
     "innerlife.base_url": innerLifeEndpoint.value,
-    "innerlife.light_model": innerLifeLightModel.value,
-    "innerlife.deep_model": innerLifeDeepModel.value,
-    "innerlife.loop_seconds": displayMinutesToSeconds(innerLifePollSeconds.value)
+    "innerlife.deep_model": innerLifeDeepModel.value
   };
   if (innerLifeProvider === "openai-compatible") {
     form["innerlife.llm.api_key_ref"] = getSecretInputValue(innerLifeApiKey);
@@ -352,7 +374,15 @@ function collectSettingsForm() {
   return form;
 }
 
+function collectRuntimeSettingsForm() {
+  return {
+    "innerlife.light_model": innerLifeLightModel.value,
+    "innerlife.loop_seconds": displayMinutesToSeconds(innerLifePollSeconds.value)
+  };
+}
+
 function settingsValidationError(form) {
+  if (!Object.prototype.hasOwnProperty.call(form || {}, "memory.embedding.provider")) return "";
   const provider = String(form?.["memory.embedding.provider"] || "").trim();
   const model = String(form?.["memory.embedding.model"] || "").trim();
   if (!provider) return "settings.embedding.providerRequired";
@@ -402,6 +432,7 @@ function agentGatewayCopyBlock() {
     bindEvents,
     collectAppearanceSettingsForm,
     collectAgentGatewayConfigForm,
+    collectRuntimeSettingsForm,
     collectSettingsForm,
     settingsValidationError,
     embeddingConfigChanged,

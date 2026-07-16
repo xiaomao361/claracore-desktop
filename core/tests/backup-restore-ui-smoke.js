@@ -42,7 +42,8 @@ async function main() {
       }), before.id);
 
     await page.click("[data-view='settings']");
-    await page.click("[data-settings-tab='data']");
+    await page.click("[data-settings-tab='advanced']");
+    await page.evaluate(() => { document.querySelector("#advancedDataRecoveryDetails").open = true; });
     await page.click("#exportBackup");
     await page.waitForSelector("[data-backup-action='restore']", { timeout: 15000 });
     const backupText = await page.textContent("#backupList");

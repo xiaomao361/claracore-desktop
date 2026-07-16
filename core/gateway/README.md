@@ -48,8 +48,10 @@ fallback when MCP is unavailable.
   stdio Gateway process. Restart the agent client, or stop stale packaged
   `--gateway` processes, before trusting new traces.
 - Use `agent_identity_merge` to consolidate data after renaming an agent id.
-- Agent setup should tell agents to call `gateway_context` first. The old
-  `claracore_connection_test` is only a lightweight status probe.
+- First connection order is `claracore_connection_test` -> `gateway_docs` ->
+  `shared_line_list(status=active)` -> `gateway_context(lineId when needed)`.
+  After reading context, the agent proactively explains ClaraCore's useful
+  capabilities and the actual resumable context to the user.
 
 ## Streamable HTTP
 
@@ -103,7 +105,8 @@ fallback config from Agent Access.
   the current conversation.
 - Fully quit and restart Claude Desktop after config or identity changes so the
   stdio Gateway process is relaunched.
-- Verify with `claracore_connection_test`, then read `gateway_context`.
+- Verify with `claracore_connection_test`, read `gateway_docs`, list active
+  Shared Lines, then read `gateway_context` with `lineId` when needed.
 
 ## Shared Line Rules
 

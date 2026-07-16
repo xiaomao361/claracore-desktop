@@ -89,6 +89,7 @@ function createClaraCoreModelOptions({ dom, t, getSecretInputValue }) {
     const isMemoria = kind === "memoria";
     const button = isMemoria ? dom.testMemoriaConnection : dom.testInnerLifeConnection;
     const notice = isMemoria ? dom.memoriaConnectionNotice : dom.innerLifeConnectionNotice;
+    const status = isMemoria ? dom.memoriaModelStatus : dom.innerLifeModelStatus;
     if (!window.ClaraCoreDesktop?.testModelConnection) return;
     if (button) button.disabled = true;
     if (notice) {
@@ -104,6 +105,11 @@ function createClaraCoreModelOptions({ dom, t, getSecretInputValue }) {
           ? t("settings.connectionOk", { time, model: result.resolvedModel || result.model || "-" })
           : t("settings.connectionFailed", { time, error: result?.error || t("settings.connectionUnknownError") });
       }
+      if (status) {
+        status.dataset.connectionState = result?.ok ? "connected" : "failed";
+        status.textContent = t(result?.ok ? "settings.status.connected" : "settings.status.testFailed");
+        status.className = result?.ok ? "badge ok" : "badge warn";
+      }
       return result;
     } catch (error) {
       console.error(error);
@@ -113,6 +119,11 @@ function createClaraCoreModelOptions({ dom, t, getSecretInputValue }) {
           time: formatCheckedAt(new Date().toISOString()),
           error: error?.message || t("settings.connectionUnknownError")
         });
+      }
+      if (status) {
+        status.dataset.connectionState = "failed";
+        status.textContent = t("settings.status.testFailed");
+        status.className = "badge warn";
       }
       return null;
     } finally {

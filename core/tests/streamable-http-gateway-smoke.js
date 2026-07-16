@@ -122,7 +122,14 @@ async function main() {
     });
     assert.strictEqual(setupResponse.status, 200, "Agent setup should be readable with the bearer token");
     const setup = await setupResponse.json();
-    assert(setup.firstCalls?.some((item) => item.includes("gateway_docs")), "Agent setup should direct new agents to gateway_docs");
+    assert.deepStrictEqual(
+      setup.firstCalls.map((item) => item.match(/claracore_connection_test|gateway_docs|shared_line_list|gateway_context/)?.[0]),
+      ["claracore_connection_test", "gateway_docs", "shared_line_list", "gateway_context"],
+      "Agent setup should expose the canonical first-connection sequence"
+    );
+    assert.deepStrictEqual(Object.keys(setup.capabilities), ["memory", "sharedLine", "innerLife", "gateway"]);
+    assert(setup.afterConnect?.includes("proactively"), "Agent setup should require a proactive user handoff");
+    assert.strictEqual(setup.userIntroductionRequirements?.length, 5);
     assert(setup.memoriaUsage?.confirmedChange?.includes("memoria_supersede"), "Agent setup should explain confirmed Memory replacement");
     assert(setup.memoriaUsage?.unresolvedConflict?.includes("contradicts"), "Agent setup should preserve unresolved conflicts");
     assert(setup.memoriaUsage?.recall?.includes("timeView=current"), "Agent setup should explain current and historical recall");
@@ -142,6 +149,35 @@ async function main() {
       }
     });
     assert(called.result.content[0].text.includes("claracore-desktop"), "tool response should mention product");
+    const connectionPacket = JSON.parse(called.result.content[0].text);
+    assert.deepStrictEqual(connectionPacket.nextCalls, ["gateway_docs", "shared_line_list", "gateway_context"]);
+    assert(connectionPacket.afterOnboarding.includes("Tell the user"));
+    const contentBeforeOnboarding = await database.getSummary();
+    const docsCall = await postMcp({
+      jsonrpc: "2.0",
+      id: 31,
+      method: "tools/call",
+      params: { name: "gateway_docs", arguments: {} }
+    });
+    assert(docsCall.result.content[0].text.includes("## What ClaraCore Lets You Do"));
+    const linesCall = await postMcp({
+      jsonrpc: "2.0",
+      id: 32,
+      method: "tools/call",
+      params: { name: "shared_line_list", arguments: { status: "active" } }
+    });
+    assert(Array.isArray(JSON.parse(linesCall.result.content[0].text).lines));
+    const contextCall = await postMcp({
+      jsonrpc: "2.0",
+      id: 33,
+      method: "tools/call",
+      params: { name: "gateway_context", arguments: {} }
+    });
+    const contextPacket = JSON.parse(contextCall.result.content[0].text);
+    assert(contextPacket.sharedLine || contextPacket.shared_line || contextPacket.continuity, "First onboarding should return context truth");
+    const contentAfterOnboarding = await database.getSummary();
+    assert.strictEqual(contentAfterOnboarding.memories_count, contentBeforeOnboarding.memories_count);
+    assert.strictEqual(contentAfterOnboarding.continuity_lines_count, contentBeforeOnboarding.continuity_lines_count);
     const traces = await database.listGatewayTraces({ limit: 5 });
     const trace = traces.find((item) => item.toolName === "claracore_connection_test");
     assert(trace, "Streamable HTTP tools/call should record a Gateway trace");

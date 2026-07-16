@@ -4,7 +4,8 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- The current release version is `0.5.6`.
+- The current development version is `0.5.7`.
+- The current public release is `0.5.6`.
 - Historical `0.1.x` and `0.2.x` planning notes are archived under
   `docs/archive/`.
 

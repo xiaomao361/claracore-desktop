@@ -154,6 +154,15 @@ async function main() {
     if (!docsText.includes("stale id")) {
       throw new Error("Gateway docs do not explain the process-scoped stdio conversation limitation.");
     }
+    const firstConnectionIndex = docsText.indexOf("## First Connection");
+    const capabilityIndex = docsText.indexOf("## What ClaraCore Lets You Do");
+    const detailIndex = docsText.indexOf("## MCP Config");
+    if (firstConnectionIndex < 0 || capabilityIndex < firstConnectionIndex || detailIndex < capabilityIndex) {
+      throw new Error("Gateway docs do not front-load first connection and product capabilities.");
+    }
+    if (!docsText.toLowerCase().includes("proactively") || !docsText.includes("user's current language")) {
+      throw new Error("Gateway docs do not require the first-connection user introduction.");
+    }
     if (docsText.includes(`${path.sep}.claracore${path.sep}gateway`) || docsText.includes(`${path.sep}.claracore${path.sep}memoria`)) {
       throw new Error("Gateway docs reference old service data.");
     }
@@ -163,6 +172,13 @@ async function main() {
     if (!status.database?.initialized) throw new Error("Gateway status did not initialize the product database.");
     if (status.configuration?.gateway?.transport !== "stdio") {
       throw new Error("Gateway status did not expose stdio transport.");
+    }
+    const connection = parseTextResult(await client.callTool("claracore_connection_test"));
+    if (
+      JSON.stringify(connection.nextCalls) !== JSON.stringify(["gateway_docs", "shared_line_list", "gateway_context"]) ||
+      !connection.afterOnboarding?.includes("Tell the user")
+    ) {
+      throw new Error(`Connection test onboarding contract drifted: ${JSON.stringify(connection)}`);
     }
     const contextMemory = parseTextResult(
       await client.callTool("memoria_create", {

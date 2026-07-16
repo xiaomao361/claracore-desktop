@@ -21,7 +21,8 @@ async function launch(electron, executablePath, dataRoot, userDataRoot, flavor, 
 async function openModels(page) {
   await page.waitForSelector("[data-view='settings']", { timeout: 15000 });
   await page.click("[data-view='settings']");
-  await page.click("[data-settings-tab='models']");
+  await page.click("[data-settings-tab='capabilities']");
+  await page.evaluate(() => { document.querySelector("#memoriaCapabilityDetails").open = true; });
 }
 
 async function main() {

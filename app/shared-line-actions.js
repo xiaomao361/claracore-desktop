@@ -3,78 +3,96 @@ function createClaraCoreSharedLineActions({
   dom,
   state,
   t,
-  setSharedLineSnapshot,
-  renderSharedLine,
-  copyValue,
-  showCopyNotice
+  renderSharedLine
 }) {
-  function setTab(tabName) {
-    dom.sharedLineTabs?.forEach((tab) => tab.classList.toggle("active", tab.dataset.sharedLineTab === tabName));
-    dom.sharedLineTabPanels?.forEach((panel) => panel.classList.toggle("active", panel.dataset.sharedLinePanel === tabName));
+  function activeLines(packet = {}) {
+    return (packet.lines || []).filter((line) => line.status !== "archived");
+  }
+
+  function fallbackLine(packet = {}) {
+    const lines = activeLines(packet);
+    return lines.find((line) => line.active) || lines[0] || null;
+  }
+
+  async function readSelectedLine(lineId, catalogPacket = {}) {
+    if (!lineId) return null;
+    if (catalogPacket.lineId === lineId) return catalogPacket;
+    return desktop.getSharedLine({ lineId });
+  }
+
+  async function syncSelectedLine(catalogPacket = {}) {
+    const lines = activeLines(catalogPacket);
+    const selectedStillExists = lines.some((line) => line.id === state.selectedSharedLineId);
+    const fallback = fallbackLine(catalogPacket);
+    const nextLineId = selectedStillExists ? state.selectedSharedLineId : fallback?.id || "";
+
+    if (!nextLineId) {
+      state.selectedSharedLineId = "";
+      state.selectedSharedLinePacket = null;
+      return;
+    }
+
+    const didFallBack = Boolean(state.selectedSharedLineId && !selectedStillExists);
+    state.selectedSharedLineId = nextLineId;
+    try {
+      state.selectedSharedLinePacket = await readSelectedLine(nextLineId, catalogPacket);
+      if (dom.sharedLineSelectionNotice) {
+        dom.sharedLineSelectionNotice.textContent = didFallBack ? t("sharedLine.selectionFallback") : "";
+      }
+    } catch (error) {
+      console.error(error);
+      const fallbackId = fallback?.id || "";
+      state.selectedSharedLineId = fallbackId;
+      state.selectedSharedLinePacket = fallbackId ? await readSelectedLine(fallbackId, catalogPacket).catch(() => catalogPacket) : null;
+      if (dom.sharedLineSelectionNotice) dom.sharedLineSelectionNotice.textContent = t("sharedLine.selectionFallback");
+    }
   }
 
   function changeAgentFilter() {
-    state.activeSharedLineAgentFilter = dom.sharedLineAgentFilter.value || "";
+    state.activeSharedLineAgentFilter = dom.sharedLineAgentFilter?.value || "";
     renderSharedLine();
   }
 
-  async function activateLine(button) {
-    const action = button.dataset.sharedLineAction;
-    const lineId = button.dataset.sharedLineId;
-    button.setAttribute("aria-busy", "true");
-    if (action !== "select") dom.sharedLineNotice.textContent = t("common.checking");
+  async function selectLine(card) {
+    const lineId = card.dataset.sharedLineId;
+    if (!lineId || lineId === state.selectedSharedLineId) return;
+    card.setAttribute("aria-busy", "true");
     try {
-      let result;
-      if (action === "select") {
-        state.selectedSharedLineId = lineId;
-        result = { sharedLine: await desktop.getSharedLine({ lineId }) };
-        dom.sharedLineNotice.textContent = "";
-      } else if (action === "archive") {
-        if (!window.confirm(t("sharedLine.archiveConfirm"))) {
-          dom.sharedLineNotice.textContent = "";
-          return;
-        }
-        result = await desktop.archiveSharedLine(lineId);
-        showCopyNotice(t("sharedLine.lineArchived"), dom.sharedLineNotice);
-      }
-      if (!result?.sharedLine) return;
-      setSharedLineSnapshot(result.sharedLine);
+      const packet = await desktop.getSharedLine({ lineId });
+      state.selectedSharedLineId = lineId;
+      state.selectedSharedLinePacket = packet;
+      if (dom.sharedLineSelectionNotice) dom.sharedLineSelectionNotice.textContent = "";
+      if (dom.sharedLineNotice) dom.sharedLineNotice.textContent = "";
       renderSharedLine();
     } catch (error) {
       console.error(error);
-      dom.sharedLineNotice.textContent = t("sharedLine.lineFailed");
+      if (dom.sharedLineNotice) dom.sharedLineNotice.textContent = t("sharedLine.lineFailed");
     } finally {
-      button.removeAttribute("aria-busy");
+      card.removeAttribute("aria-busy");
     }
   }
 
   function bindEvents() {
-    dom.sharedLineTabs?.forEach((tab) => {
-      tab.addEventListener("click", () => setTab(tab.dataset.sharedLineTab || "lines"));
-    });
     dom.sharedLineAgentFilter?.addEventListener("change", changeAgentFilter);
     dom.sharedLineList?.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-shared-line-action]");
-      if (!button) return;
-      activateLine(button).catch(console.error);
+      const card = event.target.closest("[data-shared-line-action='select']");
+      if (!card) return;
+      selectLine(card).catch(console.error);
     });
     dom.sharedLineList?.addEventListener("keydown", (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
-      const card = event.target.closest("[data-shared-line-action]");
+      const card = event.target.closest("[data-shared-line-action='select']");
       if (!card) return;
       event.preventDefault();
       card.click();
     });
-    dom.copySharedLineResume?.addEventListener("click", () => {
-      copyValue(dom.sharedLineResume.textContent, t("sharedLine.resumeCopied"), dom.sharedLineNotice).catch(console.error);
-    });
   }
 
   return {
-    activateLine,
     bindEvents,
     changeAgentFilter,
-    setTab
+    selectLine,
+    syncSelectedLine
   };
 }
 

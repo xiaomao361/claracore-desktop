@@ -379,3 +379,335 @@
   font-size: 12px;
   overflow-wrap: anywhere;
 }
+
+.shared-line-page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 24px;
+  margin: 2px 0 16px;
+}
+
+.shared-line-readonly-badge {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--green-bg);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.shared-line-readonly-badge i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.shared-line-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.7fr) minmax(500px, 1.55fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.shared-line-list-panel,
+.shared-line-detail-panel {
+  padding: 22px;
+}
+
+.shared-line-list-heading {
+  align-items: baseline;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.shared-line-list-heading h2 {
+  font-size: 18px;
+}
+
+.shared-line-list {
+  display: grid;
+  gap: 10px;
+}
+
+.shared-line-card {
+  position: relative;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 3px 10px;
+  padding: 16px 14px;
+  background: var(--surface);
+}
+
+.shared-line-card:hover {
+  background: var(--surface-soft);
+}
+
+.shared-line-card.active-line {
+  border-color: rgba(40, 116, 90, 0.35);
+  background: var(--green-bg);
+  box-shadow: inset 3px 0 0 var(--green);
+}
+
+.shared-line-card-marker {
+  grid-row: 1 / span 3;
+  width: 11px;
+  height: 11px;
+  margin-top: 4px;
+  border: 2px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.shared-line-card.active-line .shared-line-card-marker {
+  border-color: var(--green);
+  background: var(--green);
+  box-shadow: 0 0 0 3px var(--green-bg);
+}
+
+.shared-line-card-head,
+.shared-line-card p,
+.shared-line-card time {
+  grid-column: 2;
+}
+
+.shared-line-card-head strong {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.shared-line-card p {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  color: var(--text);
+}
+
+.shared-line-card p span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.shared-line-card time,
+.shared-line-archive-item time {
+  color: var(--faint);
+  font-size: 11px;
+}
+
+.shared-line-archive-details {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.shared-line-archive-details > summary {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.shared-line-archive-list {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+}
+
+.shared-line-archive-item {
+  display: grid;
+  gap: 5px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.shared-line-archive-item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.shared-line-maintained-note {
+  margin-top: 28px;
+  color: var(--faint);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.shared-line-detail-panel {
+  max-height: calc(100vh - 178px);
+}
+
+.shared-line-detail-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.shared-line-detail-heading h2 {
+  margin: 0 0 6px;
+  font-size: 19px;
+  line-height: 1.35;
+}
+
+.shared-line-detail-heading p {
+  margin: 0;
+}
+
+.shared-line-continuity-path {
+  position: relative;
+  display: grid;
+  gap: 0;
+  padding: 24px 0 14px;
+}
+
+.shared-line-continuity-path::before {
+  content: "";
+  position: absolute;
+  top: 38px;
+  bottom: 48px;
+  left: 13px;
+  width: 2px;
+  background: linear-gradient(var(--border-strong), var(--amber), var(--green));
+  opacity: 0.72;
+}
+
+.shared-line-stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 20px;
+  min-height: 96px;
+  padding-bottom: 18px;
+}
+
+.shared-line-stage-node {
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  margin: 5px 0 0 7px;
+  border: 3px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.stage-now .shared-line-stage-node {
+  border-color: var(--amber);
+  box-shadow: inset 0 0 0 2px var(--surface), 0 0 0 1px var(--amber);
+  background: var(--amber);
+}
+
+.stage-next .shared-line-stage-node {
+  border-color: var(--green);
+}
+
+.shared-line-stage-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.shared-line-stage-content {
+  display: grid;
+  gap: 5px;
+}
+
+.shared-line-stage-content p {
+  margin: 0;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 620;
+  line-height: 1.5;
+}
+
+.shared-line-stage-content p.quiet {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 450;
+}
+
+.shared-line-understanding-section {
+  padding: 18px 0 4px;
+  border-top: 1px solid var(--border);
+}
+
+.shared-line-understanding-section h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+.shared-line-understanding-list {
+  display: grid;
+  gap: 6px;
+}
+
+.shared-line-understanding-list p {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.shared-line-unresolved-section {
+  display: grid;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(145, 101, 31, 0.24);
+  border-radius: 8px;
+  background: var(--surface-warm);
+}
+
+.shared-line-unresolved-section > span {
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.shared-line-unresolved-section p {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.shared-line-detail-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.shared-line-advanced-details {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.shared-line-advanced-details > summary span {
+  display: inline-grid;
+  gap: 3px;
+}
+
+.shared-line-advanced-details > summary small {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.shared-line-advanced-body {
+  display: grid;
+  gap: 18px;
+  padding-top: 16px;
+}
+
+.shared-line-advanced-body > section > h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.shared-line-advanced-body .shared-line-filter {
+  justify-content: flex-end;
+}
