@@ -2,9 +2,10 @@
 
 Date: 2026-07-16
 
-Status: `v0.5.5` release candidate prepared with Full/Lite macOS packages and a
-generic GitHub Release-page update flow; live `v0.5.4 -> v0.5.5` testing follows
-publication.
+Status: `v0.5.5` published with Full/Lite macOS packages, Windows Full, and a
+generic GitHub Release-page update flow. The live API reports `v0.5.5` to a
+simulated `v0.5.4` client; physical old-package replacement remains for user
+acceptance.
 
 ## User Need
 
@@ -28,9 +29,9 @@ or usage-history ideas in this implementation slice.
 - Current macOS targets: `dmg` and unpacked `dir`
 - Current Windows target: x64 NSIS installer and unpacked `dir`
 - Current package identity is `null`; the app is not yet signed or notarized
-- GitHub Release `v0.5.4` is public with macOS arm64, Windows x64, and SHA-256
-  checksum assets
-- A local arm64 `0.5.4` DMG exists at approximately 199 MB
+- GitHub Release `v0.5.5` is public with macOS Full/Lite, Windows Full, and
+  SHA-256 checksum assets
+- The Full and Lite macOS DMGs both pass `hdiutil verify`
 
 The working tree was already substantially dirty before this handoff was
 created. It contains active changes across Memory, InnerLife, Gateway, UI,
@@ -75,10 +76,11 @@ does not remove the signing/notarization constraint on silent installation.
 
 ## Local Implementation Checkpoint
 
-The local Stage 1 implementation now includes:
+The published Stage 1 implementation includes:
 
 - `core/update/github-release-client.js`: timeout, stable-version comparison,
-  structured errors, exact platform asset selection, and repository URL checks
+  structured errors, flavor-neutral Release-page routing, and repository URL
+  checks
 - narrow `checkForUpdates` and `openUpdateUrl` IPC/preload methods
 - bilingual manual update controls in Settings > General > About
 - deterministic Windows NSIS naming with an explicit `x64` marker
@@ -186,10 +188,9 @@ The API call should set a short timeout and an explicit user agent. Four clients
 checking no more than daily are well inside normal unauthenticated GitHub API
 usage. Do not put a GitHub token in the app.
 
-The public `v0.5.4` Release now contains both supported assets and release
-notes. Live API validation confirms that `0.5.4` reports up to date and that a
-synthetic `0.5.3` client selects the correct macOS or Windows asset. A future
-`v0.5.5` is still required to validate the complete packaged old-to-new flow.
+The public `v0.5.5` Release contains macOS Full/Lite, Windows Full, checksums,
+and release notes. Live API validation confirms that a synthetic `0.5.4` client
+reports `0.5.5` as available and receives the validated Release page URL.
 
 ## Smallest Useful Implementation Loop
 

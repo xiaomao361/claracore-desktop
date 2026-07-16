@@ -11,7 +11,8 @@ It is enough for:
 - Verifying the packaged Gateway MCP entry.
 - Testing agent setup before code signing and notarization.
 
-It is not yet a public release artifact.
+The unsigned packages are suitable for the current small tester group but not a
+signed/notarized general-public distribution.
 
 ## Commands
 
@@ -61,11 +62,11 @@ install anything.
 Run `npm run test:update` for mocked release and Settings UI coverage before
 performing a live published-Release check.
 
-`v0.5.4` is published at
-`https://github.com/xiaomao361/claracore-desktop/releases/tag/v0.5.4` with both
-installer assets and `SHA256SUMS.txt`. The live Release API returns `0.5.4` as
-up to date and selects the correct asset for simulated older macOS arm64 and
-Windows x64 clients.
+`v0.5.5` is published at
+`https://github.com/xiaomao361/claracore-desktop/releases/tag/v0.5.5` with Full
+and Lite macOS DMGs, the Windows installer, and `SHA256SUMS.txt`. The live
+Release API reports `0.5.5` as available to a simulated `0.5.4` client and
+returns the validated Release page URL.
 
 ## Gateway In Packaged Mode
 

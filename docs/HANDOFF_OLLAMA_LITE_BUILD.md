@@ -2,8 +2,8 @@
 
 Date: 2026-07-16
 
-Status: macOS arm64 Full/Lite implementation completed and promoted into the
-`v0.5.5` release candidate.
+Status: macOS arm64 Full/Lite implementation completed and published in
+`v0.5.5`.
 
 ## Decision
 
@@ -26,22 +26,14 @@ back to the bundled model.
 - Repository: `/Users/zhouwei/Documents/ClaraCore/apps/claracore-desktop`
 - Remote: `git@github.com:xiaomao361/claracore-desktop.git`
 - Branch at handoff: `main`
-- HEAD at handoff: `7956715` (`Document v0.5.4 published release`)
+- Release commit/tag: `86fa30d` / `v0.5.5`
 - Current product version: `0.5.5`
-- Release candidate: `v0.5.5`
+- Current release: public GitHub Release `v0.5.5`
 - Build stack: Electron `43`, `electron-builder` `26.15.3`
 
-The working tree is not clean. It still contains the pre-existing version-update
-work in:
-
-```text
-M core/tests/update-settings-ui-smoke.js
-M docs/HANDOFF_VERSION_UPDATE.md
-M index.html
-```
-
-Those changes remain mixed in the working tree with the new Lite implementation.
-Preserve their content and review commit scope carefully before closeout.
+The Full/Lite, update-check, and concurrent InnerLife delivery-evidence changes
+were reviewed and committed together for `v0.5.5`. Generated packages remain
+ignored build artifacts.
 
 Start by running:
 
