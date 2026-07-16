@@ -1,7 +1,7 @@
 const CHANNEL_NAMES = Object.freeze([
   "activateSharedLine", "applyInnerLifeShareToMemory", "applyInnerLifeShareToSharedLine",
   "archiveDormantMemories", "archiveMemory", "archiveSharedLine", "checkForUpdates", "checkInnerLifeShareTiming",
-  "chooseDataRoot", "clearLogs", "copyText", "createBackup", "createMemory",
+  "chooseDataRoot", "clearDemoData", "clearLogs", "copyText", "createBackup", "createMemory",
   "createMemoryLabelAlias", "createMemoryRecord", "createSharedLine", "createSharedLineHandoff",
   "deleteBackup", "deleteMemory", "deleteMemoryLabelAlias", "embedMemory", "endInnerLifeSession",
   "exportMemoryArchive", "exportProductJson", "getArchivedMemories", "getDataRootPreference",
@@ -16,7 +16,7 @@ const CHANNEL_NAMES = Object.freeze([
   "restoreArchivedMemory", "restoreBackup", "restoreMemory", "restoreSharedLine", "restrictMemory",
   "reviewInnerLifeShare", "rotateAgentGatewayToken", "runInnerLifeDigest", "runMemoryMaintenance",
   "runtimeChanged", "saveDataRootPreference", "saveSettings", "saveSharedLine", "saveUiPreferences",
-  "searchMemories", "setInnerLifeDaemon", "setLanguage", "setWindowPreferences",
+  "searchMemories", "seedDemoData", "setInnerLifeDaemon", "setLanguage", "setWindowPreferences",
   "startInnerLifeSession", "submitInnerLifeInbox", "testModelConnection", "tickInnerLifeDaemon",
   "unrestrictMemory", "updateAgentGatewayConfig", "updateInnerLifeProfile", "updateMemory"
 ]);

@@ -94,7 +94,10 @@ use the names listed there.
 
 1. Call `shared_line_list` with `status: "active"`.
 2. When your agent owns multiple active lines, choose one and pass its explicit
-   `lineId` to `shared_line_get` or `gateway_context`.
+   `lineId` to `shared_line_get` or `gateway_context`. Treat
+   `shared_line_list` as the line catalog and `shared_line_get` as the scoped
+   content read; `shared_line_get` intentionally does not repeat active or
+   archived catalogs or other agents' states.
 3. Pass the same `lineId` to `shared_line_update` after meaningful progress, a
    handoff, or a changed interpretation.
 4. If a call returns `SHARED_LINE_ID_REQUIRED`, no line was changed. Select one

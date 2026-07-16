@@ -3,7 +3,8 @@
 Date: 2026-07-16
 
 Status: macOS arm64 Full/Lite implementation completed and published in
-`v0.5.5`.
+`v0.5.5`; Windows Lite packaging is implemented and locally inspected for the
+`0.5.6` test checkpoint, with physical Windows acceptance still pending.
 
 ## Decision
 
@@ -27,7 +28,8 @@ back to the bundled model.
 - Remote: `git@github.com:xiaomao361/claracore-desktop.git`
 - Branch at handoff: `main`
 - Release commit/tag: `86fa30d` / `v0.5.5`
-- Current product version: `0.5.5`
+- Product version at the published release handoff: `0.5.5`
+- Current local test version: `0.5.6`
 - Current release: public GitHub Release `v0.5.5`
 - Build stack: Electron `43`, `electron-builder` `26.15.3`
 
@@ -338,8 +340,16 @@ Release notes should state clearly:
 - Switching builds does not delete Memory data, but switching embedding
   providers may require rebuilding vectors.
 
-Windows Lite packaging is a follow-up after the macOS size and behavior gates
-pass.
+Windows Lite packaging now reuses the same runtime guards and build-flavor
+contract through `npm run pack:win:lite` and `npm run dist:win:lite`. Its package
+contents can be checked with `npm run test:package:win:lite`. Real Windows x64
+installation and Ollama behavior still require acceptance on a Windows device.
+
+The first local Windows x64 A/B package check measured Full at 645.3 MiB and
+Lite at 388.9 MiB, saving 256.4 MiB. The Lite NSIS installer is approximately
+103.4 MiB versus 162.9 MiB for Full. Inspection confirmed the Lite ASAR has the
+`lite` marker and no models, Xenova, ONNX, Sharp, production `node_modules`, or
+unpacked runtime dependency directory.
 
 ## Risks To Watch
 

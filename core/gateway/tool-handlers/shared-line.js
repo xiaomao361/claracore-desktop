@@ -4,7 +4,10 @@ async function handleSharedLineTool(name, args, context) {
   const { core, currentMcpAgentId, textResult } = context;
 
   if (name === "shared_line_get") {
-    return textResult(await continuity.get(core, args));
+    // A single-line read should not repeat every active/archived line and
+    // every agent state. Those collections belong to shared_line_list and the
+    // Desktop UI snapshot; keep this MCP response scoped to the selected line.
+    return textResult(await continuity.get(core, { ...(args || {}), lite: true }));
   }
 
   if (name === "shared_line_list") {

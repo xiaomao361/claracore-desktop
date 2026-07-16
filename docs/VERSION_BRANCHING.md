@@ -4,7 +4,7 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- The current local version is `0.5.5`.
+- The current local version is `0.5.6`.
 - Historical `0.1.x` and `0.2.x` planning notes are archived under
   `docs/archive/`.
 
@@ -40,6 +40,44 @@ npm run dist:win
 
 Only install or replace the daily-use app after the target build passes the
 focused smoke gates for its changed surface.
+
+## v0.5.6 Local Test Checkpoint
+
+`0.5.6` is a local test checkpoint after the published `v0.5.5`; it is not yet
+a public release. It combines the following bounded changes for user testing:
+
+- `shared_line_get` now returns a lite resume packet scoped to the selected
+  line instead of repeating every active line, archived line, and other
+  agent's state.
+- `shared_line_list` remains the explicit catalog API for active, archived, or
+  all lines. The Desktop Continuity UI still uses the full runtime snapshot.
+- The response keeps `lines`, `archivedLines`, and `agentStates` as empty
+  arrays for shape compatibility while preserving the selected line's current
+  position, recent history, snapshots, handoffs, shared reality, agent state,
+  and managed arcs.
+- Empty-data Home shows a short onboarding path and can load or clear fixture-
+  owned demo data. Both mutations create a product backup first.
+- Settings moves Agent Gateway port/token editing behind an advanced disclosure
+  and keeps Agent Access as the primary connection surface.
+- Full's built-in Memory embedding provider no longer renders external endpoint,
+  model, API-key, fetch, or connection-test controls. Ollama still exposes them.
+- Windows Lite packaging uses the same flavor marker and dependency-removal
+  checks as macOS Lite; physical Windows installation remains unverified.
+
+Validation for this local checkpoint:
+
+```bash
+npm run check
+npm run test:onboarding
+npm run test:phase1:ui
+npm run test:lite
+node core/tests/phase3-gateway-smoke.js
+node core/tests/phase3-shared-line-smoke.js
+git diff --check
+```
+
+See `docs/RELEASE_NOTES_V0.5.6.md` for the test handoff and remaining manual
+acceptance items.
 
 ## v0.5.5 Full/Lite Builds And Release-Page Updates
 

@@ -8,6 +8,7 @@ const {
   archiveProductDormantMemories,
   archiveProductMemory,
   archiveProductSharedLine,
+  clearProductDemoData,
   clearProductLogs,
   createProductBackup,
   createProductMemory,
@@ -62,6 +63,7 @@ const {
   saveProductSettings,
   saveProductSharedLine,
   searchProductMemories,
+  seedProductDemoData,
   submitProductInnerLifeInbox,
   tickProductInnerLifeDaemon,
   startProductInnerLifeSession,
@@ -108,6 +110,16 @@ function registerIpcHandlers({
   ipcMain.handle(ipcChannel("clearLogs"), async () => {
     const result = await clearProductLogs(app);
     notifyRuntimeChanged("logs-clear");
+    return result;
+  });
+  ipcMain.handle(ipcChannel("seedDemoData"), async () => {
+    const result = await seedProductDemoData(app);
+    notifyRuntimeChanged("demo-data");
+    return result;
+  });
+  ipcMain.handle(ipcChannel("clearDemoData"), async () => {
+    const result = await clearProductDemoData(app);
+    notifyRuntimeChanged("demo-data");
     return result;
   });
   ipcMain.handle(ipcChannel("saveSettings"), async (_event, updates) => {

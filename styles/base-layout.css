@@ -97,6 +97,7 @@ button {
   cursor: pointer;
 }
 
+[hidden],
 .hidden {
   display: none !important;
 }

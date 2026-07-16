@@ -2,7 +2,7 @@ const sharedLineToolDefinitions = [
   {
     "name": "shared_line_get",
     "title": "Get Shared Line",
-    "description": "Read a ClaraCore Desktop Shared Line. Pass lineId to select an exact line. Without lineId, an identified agent may default only when it owns zero or one active non-default line; multiple active lines return SHARED_LINE_ID_REQUIRED, so call shared_line_list and retry with lineId. Unidentified callers use the global active fallback. By default the affective trace and position history are truncated to the most recent nodes plus protected (needs-review) nodes; pass fullArc to get the complete arc.",
+    "description": "Read one ClaraCore Desktop Shared Line without repeating the cross-line catalog or other agents' states; use shared_line_list for active or archived line catalogs. Pass lineId to select an exact line. Without lineId, an identified agent may default only when it owns zero or one active non-default line; multiple active lines return SHARED_LINE_ID_REQUIRED, so call shared_line_list and retry with lineId. Unidentified callers use the global active fallback. By default the affective trace and position history are truncated to the most recent nodes plus protected (needs-review) nodes; pass fullArc to get the complete arc.",
     "inputSchema": {
       "type": "object",
       "properties": {

@@ -35,24 +35,27 @@ dist/mac-arm64/ClaraCore Desktop.app
 dist/ClaraCore-Desktop-0.5.5-arm64.dmg
 dist-lite/ClaraCore-Desktop-0.5.5-lite-arm64.dmg
 dist/ClaraCore-Desktop-0.5.5-x64-Setup.exe
+dist-lite/ClaraCore-Desktop-0.5.5-lite-x64-Setup.exe
 ```
 
-The `0.5.5` Full/Lite arm64 DMGs and Windows x64 NSIS installer have been
-produced locally. Windows runtime installation still requires acceptance on a
-real Windows x64 computer.
+The `0.5.5` Full/Lite arm64 DMGs and Full Windows x64 NSIS installer were
+published. The Windows Lite package has since been produced and inspected
+locally for the `0.5.6` test checkpoint. Windows runtime installation still
+requires acceptance on a real Windows x64 computer.
 
 ## Manual Release Update Channel
 
 The manual update check reads the latest public stable GitHub Release, then
 opens or copies the generic Release page so the user chooses Full/Lite and the
 correct platform. Build publishable assets with `npm run dist:mac`,
-`npm run dist:mac:lite`, and `npm run dist:win`, then upload them to the same
-`v<version>` GitHub Release. Use these names:
+`npm run dist:mac:lite`, `npm run dist:win`, and `npm run dist:win:lite`, then
+upload them to the same `v<version>` GitHub Release. Use these names:
 
 ```text
 ClaraCore-Desktop-<version>-arm64.dmg
 ClaraCore-Desktop-<version>-lite-arm64.dmg
 ClaraCore-Desktop-<version>-x64-Setup.exe
+ClaraCore-Desktop-<version>-lite-x64-Setup.exe
 ```
 
 The app opens the validated GitHub Release URL in the system browser. If the API

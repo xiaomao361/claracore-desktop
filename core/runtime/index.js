@@ -6,6 +6,7 @@ const { createImportRuntime } = require("./imports");
 const { createSnapshotRuntime } = require("./snapshot");
 const { createMemoryRuntime } = require("./memoria");
 const { createDecayRuntime } = require("./decay");
+const { seedDemoFixture, clearDemoFixture } = require("./demo-data");
 const { PRODUCT_VERSION } = require("../version");
 const continuity = require("../continuity");
 const innerlife = require("../innerlife");
@@ -124,6 +125,20 @@ async function saveProductSettings(app, updates) {
 async function clearProductLogs(app) {
   const { database } = await ensureProductCore(app);
   return database.clearLogs();
+}
+
+async function seedProductDemoData(app) {
+  const backup = await createProductBackup(app);
+  const { paths, database } = await ensureProductCore(app);
+  await seedDemoFixture(database, { dataRoot: paths.dataRoot });
+  return { ok: true, backupId: backup?.id || null };
+}
+
+async function clearProductDemoData(app) {
+  const backup = await createProductBackup(app);
+  const { database } = await ensureProductCore(app);
+  await clearDemoFixture(database);
+  return { ok: true, backupId: backup?.id || null };
 }
 
 async function exportProductMemoryArchive(app, input = {}) {
@@ -361,6 +376,8 @@ module.exports = {
   saveProductSettings,
   saveProductSharedLine,
   searchProductMemories,
+  seedProductDemoData,
+  clearProductDemoData,
   submitProductInnerLifeInbox,
   tickProductInnerLifeDaemon,
   startProductInnerLifeSession,

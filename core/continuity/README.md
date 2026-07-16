@@ -96,11 +96,12 @@ always `position_${lineId}`. The write path must:
 - append to `continuity_snapshots`,
 - return a resume packet for the line that was actually written.
 
-MCP write tools (`shared_line_update`, `create`, `activate`, `rename`,
-`archive`, `restore`, `handoff_create`) return a lite resume packet: the saved
-position, recent history/snapshots/handoffs, shared reality, and the text
-packet, with `lines`, `archivedLines`, and `agentStates` empty. Full packets
-come from `shared_line_get`; full line lists come from `shared_line_list`.
+MCP single-line tools (`shared_line_get`, `shared_line_update`, `create`,
+`activate`, `rename`, `archive`, `restore`, `handoff_create`) return a lite
+resume packet: the selected position, recent history/snapshots/handoffs,
+shared reality, and the text packet, with `lines`, `archivedLines`, and
+`agentStates` empty. Full line lists come from `shared_line_list`; the Desktop
+UI snapshot still uses a full resume packet for its Continuity views.
 
 For session startup, agents should not call `shared_line_list` /
 `shared_line_activate` / `shared_line_get` as separate steps:
