@@ -153,9 +153,7 @@
               <div class="memory-graph-section">
                 <strong data-i18n="memory.graph.title">Memory graph</strong>
                 <div class="graph-legend">
-                  <span data-i18n="memory.graph.legendMemory">Small points are memories</span>
-                  <span data-i18n="memory.graph.legendLabels">Larger nodes are labels</span>
-                  <span data-i18n="memory.graph.legendClick">Click a node to inspect related records</span>
+                  <span data-i18n="memory.graph.intro">Explore relationships, then switch to State Chain to see what changed.</span>
                 </div>
                 <div id="memoryGraphSummary" class="graph-summary"></div>
                 <div id="memoryGraph" class="memory-graph"></div>
@@ -706,6 +704,12 @@
               <div><span data-i18n="settings.electronVersion">Electron</span><strong id="settingsElectronVersion">-</strong></div>
               <div><span data-i18n="settings.nodeVersion">Node</span><strong id="settingsNodeVersion">-</strong></div>
             </div>
+            <div class="settings-actions compact-actions">
+              <button id="checkForUpdates" data-i18n="settings.update.check">Check for updates</button>
+              <button id="downloadUpdate" class="primary" data-i18n="settings.update.download" hidden>Download update</button>
+              <button id="viewUpdateNotes" data-i18n="settings.update.notes" hidden>View release notes</button>
+            </div>
+            <p id="updateCheckStatus" class="quiet" data-i18n="settings.update.ready">Checks public GitHub Releases. Installation stays manual.</p>
             <section class="source-map-card settings-source-card">
               <h3 data-i18n="settings.docsSourceTitle">Agent guide</h3>
               <p data-i18n="settings.docsSourceBody">Agents read product guidance through MCP tools, not packaged source files.</p>

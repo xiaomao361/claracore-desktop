@@ -31,12 +31,30 @@ Current output:
 
 ```text
 dist/mac-arm64/ClaraCore Desktop.app
-dist/ClaraCore-Desktop-0.5.2-arm64.dmg
+dist/ClaraCore-Desktop-0.5.4-arm64.dmg
+dist/ClaraCore-Desktop-0.5.4-x64-Setup.exe
 ```
 
-The unpacked `0.5.2` `.app` has been built and tested locally. A `0.5.2` DMG
-has not been produced in this checkpoint; the most recent DMG verification
-record below remains for `0.5.1`.
+The unpacked `0.5.4` `.app`, arm64 DMG, and Windows x64 NSIS installer have
+been produced locally. Windows runtime installation still requires acceptance
+on a real Windows x64 computer.
+
+## Manual Release Update Channel
+
+The manual update check reads the latest public stable GitHub Release and
+selects an exact asset for `darwin-arm64` or `win32-x64`. Build publishable
+assets with `npm run dist:mac` and `npm run dist:win`, then upload both files to
+the same `v<version>` GitHub Release. Use these names:
+
+```text
+ClaraCore-Desktop-<version>-arm64.dmg
+ClaraCore-Desktop-<version>-x64-Setup.exe
+```
+
+The app opens the validated GitHub download URL in the system browser. It does
+not download, execute, mount, replace, relaunch, or silently install anything.
+Run `npm run test:update` for mocked release and Settings UI coverage before
+performing a live published-Release check.
 
 ## Gateway In Packaged Mode
 
@@ -78,18 +96,23 @@ node core/gateway/mcp-server.js
 
 ## Validation Status
 
-Validated locally for `0.5.2`:
+Validated locally for `0.5.4`:
 
-- packaged application reports version `0.5.2`
+- packaged application reports version `0.5.4`
 - `npm run check`
+- `npm run test:update`
+- packaged macOS update UI smoke with mocked `0.5.5` and up-to-date states
 - `npm run pack:mac`
-- full `npm run test:smoke`
+- `npm run dist:mac` and a valid `hdiutil verify` result for the `0.5.4` DMG
+- `npm run dist:win` produced the deterministic x64 NSIS installer; real
+  Windows installation remains pending
+- focused Memory-link and Memory UI smoke tests
 - Streamable HTTP Gateway smoke, including machine-readable `/agent/setup`
   guidance for current/historical Memory writes
 - focused Memory and Gateway smoke tests cover `memoria_supersede` plus
   current/historical recall semantics before packaging
 - packaged Gateway smoke passes from `dist/mac-arm64/ClaraCore Desktop.app`
-- packaged Gateway initialize reports server version `0.5.2`
+- packaged Gateway initialize reports server version `0.5.4`
 
 Previously validated packaging behavior retained by this build:
 
@@ -112,4 +135,8 @@ Known remaining release work:
 
 - Add code signing.
 - Add notarization.
-- Add update/release channel only after the product data model is stable.
+- Complete real Windows x64 installation acceptance.
+- Validate the first live old-to-new flow when a version newer than `0.5.4` is
+  published.
+- Consider automatic update installation only after signing and the release
+  workflow are stable.

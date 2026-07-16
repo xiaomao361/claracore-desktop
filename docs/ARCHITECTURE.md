@@ -42,6 +42,12 @@ local token file with `0600` permissions and changes only when explicitly
 rotated from Agent Access or Settings. If the configured port is occupied, Desktop should
 surface that conflict instead of silently moving MCP clients to a different
 port.
+On packaged macOS builds, Desktop also synchronizes the current token into the
+user launch environment expected by Codex. Codex must be restarted after a
+rotation so a new MCP connection inherits the synchronized value. MCP
+`initialize` returns a selective-use protocol: read prior context when relevant,
+check waiting InnerLife shares per user message, and keep Memoria writes
+explicit and restrained.
 
 The HTTP Agent Gateway is a localhost setup surface, not a browser API. It does
 not emit permissive CORS headers, and token checks use the same comparison path

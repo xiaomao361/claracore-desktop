@@ -140,6 +140,37 @@ async function main() {
     throw new Error(`All-state recall did not preserve both states: ${JSON.stringify(allSearch.results)}`);
   }
 
+  const chainOldest = await runtime.createProductMemory(app, {
+    title: "State chain oldest",
+    body: "The project used its first state model.",
+    labels: "state-chain-closure"
+  });
+  const chainMiddle = await runtime.createProductMemory(app, {
+    title: "State chain middle",
+    body: "The project used its second state model.",
+    labels: "state-chain-closure"
+  });
+  const chainCurrent = await runtime.createProductMemory(app, {
+    title: "State chain current",
+    body: "The project uses its current state model.",
+    labels: "state-chain-closure"
+  });
+  await database.supersedeMemory({ currentMemoryId: chainMiddle.id, historicalMemoryId: chainOldest.id });
+  await database.supersedeMemory({ currentMemoryId: chainCurrent.id, historicalMemoryId: chainMiddle.id });
+  const chainGraph = await database.getMemoryGraph({ limit: 100 });
+  const chainEdges = chainGraph.edges.filter((edge) => edge.kind === "link:supersedes" && [
+    `memory:${chainOldest.id}`,
+    `memory:${chainMiddle.id}`,
+    `memory:${chainCurrent.id}`
+  ].includes(edge.from));
+  if (chainEdges.length !== 2) {
+    throw new Error(`Graph should preserve the complete three-state supersession chain: ${JSON.stringify(chainEdges)}`);
+  }
+  const chainNodeIds = new Set(chainGraph.nodes.map((node) => node.id));
+  if (![chainOldest.id, chainMiddle.id, chainCurrent.id].every((id) => chainNodeIds.has(`memory:${id}`))) {
+    throw new Error(`Graph should include every state in a supersession chain: ${JSON.stringify([...chainNodeIds])}`);
+  }
+
   await database.archiveMemory(second.id);
   const searchAfterArchive = await database.searchMemories("First memory for link smoke", 10);
   if ((searchAfterArchive.related || []).some((entry) => entry.memory.id === second.id)) {

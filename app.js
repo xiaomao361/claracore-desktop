@@ -275,6 +275,7 @@ const homeView = window.createClaraCoreHomeView({
 });
 const settingsView = window.createClaraCoreSettingsView({
   dom: window.ClaraCoreDom,
+  desktop: window.ClaraCoreDesktop,
   t,
   getSnapshot: () => snapshot,
   getAppearancePreferences,
@@ -769,10 +770,19 @@ async function refresh() {
 }
 
 async function refreshRuntimeSnapshotOnly() {
-  [snapshot, rendererState.dataRootPreference] = await Promise.all([
+  const previousSnapshot = snapshot;
+  const [nextSnapshot, dataRootPreference] = await Promise.all([
     window.ClaraCoreDesktop.getRuntimeSnapshot(),
     window.ClaraCoreDesktop.getDataRootPreference()
   ]);
+  if (previousSnapshot?.memoryGraph && !nextSnapshot.memoryGraph) {
+    nextSnapshot.memoryGraph = previousSnapshot.memoryGraph;
+  }
+  if (previousSnapshot?.restrictedMemoryGraph && !nextSnapshot.restrictedMemoryGraph) {
+    nextSnapshot.restrictedMemoryGraph = previousSnapshot.restrictedMemoryGraph;
+  }
+  snapshot = nextSnapshot;
+  rendererState.dataRootPreference = dataRootPreference;
   renderSnapshot();
 }
 
@@ -1036,6 +1046,7 @@ window.ClaraCoreDom.openSettingsDataRoot?.addEventListener("click", () => {
 innerLifeActions.bindEvents();
 memoriaActions.bindEvents();
 sharedLineActions.bindEvents();
+settingsView.bindEvents();
 
 dataView.bindEvents();
 

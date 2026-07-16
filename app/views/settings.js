@@ -3,6 +3,7 @@ function createClaraCoreSettingsView(context) {
   const BUILT_IN_EMBEDDING_ENDPOINT = "http://127.0.0.1:11434";
   const {
     dom,
+    desktop,
     t,
     getSnapshot,
     getSystemTimeZone,
@@ -19,7 +20,8 @@ function createClaraCoreSettingsView(context) {
     settingsThemeSummary, settingsMotionSummary, settingsDataStatus, settingsDataRoot, settingsPathSummary, settingsPathDetails,
     settingsDataRootOverride, relaunchForDataRoot,
     settingsAgentGatewayStatus, settingsAgentGatewayPort, settingsAgentGatewayToken, settingsAgentGatewayEndpoint, settingsAgentGatewayTokenFile,
-    settingsAppVersion, settingsRuntimeMode, settingsDatabaseState, settingsElectronVersion, settingsNodeVersion,
+    settingsAppVersion, checkForUpdates, downloadUpdate, viewUpdateNotes, updateCheckStatus,
+    settingsRuntimeMode, settingsDatabaseState, settingsElectronVersion, settingsNodeVersion,
     settingsAppRoot, settingsChromeVersion
   } = dom;
   const {
@@ -163,6 +165,7 @@ function renderDataPaths() {
 function renderAbout() {
   const snapshot = getSnapshot();
   if (settingsAppVersion) settingsAppVersion.textContent = snapshot?.productVersion || "-";
+  if (state.updateCheckResult) renderUpdateResult(state.updateCheckResult);
   if (settingsRuntimeMode) settingsRuntimeMode.textContent = snapshot?.mode ? formatMode(snapshot.mode) : "-";
   if (settingsDatabaseState) {
     settingsDatabaseState.textContent = snapshot?.data?.databasePresent ? t("status.databaseReady") : t("status.databaseMissing");
@@ -171,6 +174,63 @@ function renderAbout() {
   if (settingsNodeVersion) settingsNodeVersion.textContent = snapshot?.runtime?.node || "-";
   if (settingsAppRoot) settingsAppRoot.textContent = snapshot?.appRoot || snapshot?.root || "-";
   if (settingsChromeVersion) settingsChromeVersion.textContent = snapshot?.runtime?.chrome || "-";
+}
+
+function updateStatusKey(status) {
+  const keys = {
+    "up-to-date": "settings.update.upToDate",
+    "update-available": "settings.update.available",
+    "asset-unavailable": "settings.update.assetUnavailable",
+    "unsupported-platform": "settings.update.unsupportedPlatform",
+    "no-release": "settings.update.noRelease",
+    "rate-limited": "settings.update.rateLimited",
+    timeout: "settings.update.timeout",
+    "network-error": "settings.update.networkError",
+    "invalid-response": "settings.update.invalidResponse",
+    "invalid-current-version": "settings.update.invalidCurrentVersion"
+  };
+  return keys[status] || "settings.update.invalidResponse";
+}
+
+function renderUpdateResult(result) {
+  state.updateCheckResult = result || null;
+  const canDownload = result?.status === "update-available" && Boolean(result.assetUrl);
+  const canViewNotes = Boolean(result?.releaseUrl);
+  if (downloadUpdate) downloadUpdate.hidden = !canDownload;
+  if (viewUpdateNotes) viewUpdateNotes.hidden = !canViewNotes;
+  if (updateCheckStatus) {
+    updateCheckStatus.textContent = t(updateStatusKey(result?.status), {
+      version: result?.latestVersion || "",
+      platform: `${result?.platform || "unknown"}-${result?.arch || "unknown"}`
+    });
+  }
+}
+
+async function runUpdateCheck() {
+  if (!checkForUpdates || !desktop?.checkForUpdates) return;
+  checkForUpdates.disabled = true;
+  if (downloadUpdate) downloadUpdate.hidden = true;
+  if (viewUpdateNotes) viewUpdateNotes.hidden = true;
+  if (updateCheckStatus) updateCheckStatus.textContent = t("settings.update.checking");
+  try {
+    renderUpdateResult(await desktop.checkForUpdates());
+  } catch (_error) {
+    renderUpdateResult({ status: "network-error" });
+  } finally {
+    checkForUpdates.disabled = false;
+  }
+}
+
+function bindEvents() {
+  checkForUpdates?.addEventListener("click", () => runUpdateCheck());
+  downloadUpdate?.addEventListener("click", () => {
+    const url = state.updateCheckResult?.assetUrl;
+    if (url) desktop.openUpdateUrl(url).catch(console.error);
+  });
+  viewUpdateNotes?.addEventListener("click", () => {
+    const url = state.updateCheckResult?.releaseUrl;
+    if (url) desktop.openUpdateUrl(url).catch(console.error);
+  });
 }
 
 function renderAgentGatewaySettings() {
@@ -306,6 +366,7 @@ function agentGatewayCopyBlock() {
 
   return {
     agentGatewayCopyBlock,
+    bindEvents,
     collectAppearanceSettingsForm,
     collectAgentGatewayConfigForm,
     collectSettingsForm,
@@ -313,6 +374,8 @@ function agentGatewayCopyBlock() {
     getSecretInputValue,
     renderAppearanceSettings,
     renderSettings,
+    renderUpdateResult,
+    runUpdateCheck,
     updateModelFieldVisibility
   };
 }

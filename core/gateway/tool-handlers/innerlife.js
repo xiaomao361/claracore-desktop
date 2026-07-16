@@ -50,7 +50,7 @@ async function handleInnerLifeTool(name, args, context) {
 
   if (name === "innerlife_session_end") {
     return textResult(
-      await innerlife.endSession(core, args.sessionId, {
+      await innerlife.endSession(core, args.sessionId || args.session_id, {
         ...args,
         ...(args.agentId || args.agent_id ? { agentId: currentMcpAgentId(args) } : {})
       })

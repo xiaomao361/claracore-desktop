@@ -4,7 +4,7 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- The current local version is `0.5.2`.
+- The current local version is `0.5.4`.
 - Historical `0.1.x` and `0.2.x` planning notes are archived under
   `docs/archive/`.
 
@@ -34,10 +34,50 @@ For packaged release checks, keep using:
 ```bash
 npm run pack:mac
 npm run dist:mac
+npm run pack:win
+npm run dist:win
 ```
 
 Only install or replace the daily-use app after the target build passes the
 focused smoke gates for its changed surface.
+
+## v0.5.4 Manual Updates And Graph Reopen Reliability
+
+Settings > General > About now checks the latest public stable GitHub Release
+only when the user asks. The main process compares the package version and
+selects one exact installer contract for the current computer:
+
+- `darwin-arm64`: `ClaraCore-Desktop-<version>-arm64.dmg`
+- `win32-x64`: `ClaraCore-Desktop-<version>-x64-Setup.exe`
+
+The renderer receives structured release metadata through narrow IPC methods;
+only validated HTTPS URLs under this repository's GitHub Release path may be
+opened. Download and installation remain user-directed. Signing, notarization,
+automatic startup checks, automatic installation, and telemetry remain deferred.
+
+Run `npm run test:update` before packaging either platform. See
+`docs/RELEASE_NOTES_V0.5.4.md` for the complete release notes and supported
+installer names.
+
+`0.5.4` keeps lazily loaded Memory graph data when the renderer refreshes its
+lightweight runtime snapshot. Closing and reopening the Memory view therefore
+renders the same graph instead of replacing it with an empty snapshot.
+
+The focused UI smoke covers both the lightweight refresh path and a full app
+close/reopen cycle, alongside the existing Memory-link repository smoke.
+
+## v0.5.3 State-Chain Graph
+
+`0.5.3` separates three graph-reading tasks instead of mixing them in one
+view. **Memory map** preserves the Obsidian-style memory-and-label overview,
+**Relationship network** focuses on memory-to-memory context, and **State
+chain** lays `supersedes` facts out from historical to current while keeping
+unresolved `contradicts` branches visible. Selecting a state opens a compact
+timeline, replacement reason, and conflict inspector.
+
+Graph queries recursively retain the complete supersession chain, including
+states that are no longer active. The graph toolbar, cards, inspector, light
+theme, and dark theme were redesigned together.
 
 ## v0.5.2 Current And Historical Memory
 

@@ -254,6 +254,12 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   getUiPreferences() {
     return ipcRenderer.invoke(ipcChannel("getUiPreferences"));
   },
+  checkForUpdates() {
+    return ipcRenderer.invoke(ipcChannel("checkForUpdates"));
+  },
+  openUpdateUrl(targetUrl) {
+    return ipcRenderer.invoke(ipcChannel("openUpdateUrl"), targetUrl);
+  },
   saveUiPreferences(updates) {
     return ipcRenderer.invoke(ipcChannel("saveUiPreferences"), updates);
   },

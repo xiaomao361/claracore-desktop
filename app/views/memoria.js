@@ -25,7 +25,7 @@ function createClaraCoreMemoriaView(context) {
   let memoryGraphAnimation = null;
   let memoryGraphDrag = null;
   let memoryGraphDragMoved = false;
-  let memoryGraphMode = "network";
+  let memoryGraphMode = "all";
   let memoryGraphSelection = null;
   let memoryGraphHover = null;
   let activeMemoryGraphLayer = "primary";
@@ -238,11 +238,31 @@ function buildGraphModel(graph, mode) {
   const allNodes = graph.nodes || [];
   const allEdges = graph.edges || [];
   const linkEdges = allEdges.filter(isLinkEdge);
-  const effectiveMode = mode === "network" && linkEdges.length > 0 ? "network" : "all";
+  const stateEdges = linkEdges.filter((edge) => linkKindOf(edge) === "supersedes");
+  const effectiveMode = mode === "state"
+    ? "state"
+    : mode === "network" && linkEdges.length > 0
+      ? "network"
+      : "all";
 
   let nodes;
   let edges;
-  if (effectiveMode === "network") {
+  if (effectiveMode === "state") {
+    const keep = new Set();
+    for (const edge of stateEdges) {
+      keep.add(edge.from);
+      keep.add(edge.to);
+    }
+    const contradictionEdges = linkEdges.filter(
+      (edge) => linkKindOf(edge) === "contradicts" && (keep.has(edge.from) || keep.has(edge.to))
+    );
+    for (const edge of contradictionEdges) {
+      keep.add(edge.from);
+      keep.add(edge.to);
+    }
+    nodes = allNodes.filter((node) => keep.has(node.id) && node.kind === "memory");
+    edges = [...stateEdges, ...contradictionEdges].filter((edge) => keep.has(edge.from) && keep.has(edge.to));
+  } else if (effectiveMode === "network") {
     const keep = new Set();
     for (const edge of linkEdges) {
       keep.add(edge.from);
@@ -287,7 +307,74 @@ function buildGraphModel(graph, mode) {
     addNeighbor(edge.from, edge.to);
     addNeighbor(edge.to, edge.from);
   }
-  return { nodes, edges, degree, linkDegree, neighborhood, effectiveMode, linkEdgeCount: linkEdges.length };
+  return {
+    nodes,
+    edges,
+    degree,
+    linkDegree,
+    neighborhood,
+    effectiveMode,
+    linkEdgeCount: linkEdges.length,
+    stateEdgeCount: stateEdges.length
+  };
+}
+
+function createStateChainLayout(model) {
+  const bodies = new Map();
+  const supersedes = model.edges.filter((edge) => linkKindOf(edge) === "supersedes");
+  const contradictions = model.edges.filter((edge) => linkKindOf(edge) === "contradicts");
+  const outgoing = new Map();
+  for (const edge of supersedes) {
+    if (!outgoing.has(edge.from)) outgoing.set(edge.from, []);
+    outgoing.get(edge.from).push(edge.to);
+  }
+  const depthMemo = new Map();
+  const depthFor = (id, visiting = new Set()) => {
+    if (depthMemo.has(id)) return depthMemo.get(id);
+    if (visiting.has(id)) return 0;
+    const nextVisiting = new Set(visiting).add(id);
+    const targets = outgoing.get(id) || [];
+    const depth = targets.length ? Math.max(...targets.map((target) => depthFor(target, nextVisiting) + 1)) : 0;
+    depthMemo.set(id, depth);
+    return depth;
+  };
+  const chainIds = new Set(supersedes.flatMap((edge) => [edge.from, edge.to]));
+  const maxDepth = Math.max(0, ...[...chainIds].map((id) => depthFor(id)));
+  const chainNodesByDepth = new Map();
+  for (const node of model.nodes.filter((item) => chainIds.has(item.id))) {
+    const depth = depthFor(node.id);
+    if (!chainNodesByDepth.has(depth)) chainNodesByDepth.set(depth, []);
+    chainNodesByDepth.get(depth).push(node);
+  }
+  for (const [depth, nodes] of chainNodesByDepth) {
+    nodes.sort((left, right) => String(left.label).localeCompare(String(right.label)));
+    nodes.forEach((node, index) => {
+      bodies.set(node.id, {
+        node,
+        x: (depth - maxDepth / 2) * 230,
+        y: (index - (nodes.length - 1) / 2) * 130,
+        vx: 0,
+        vy: 0,
+        size: node.status === "superseded" ? 8 : 10
+      });
+    });
+  }
+  const contradictionIds = new Set(contradictions.flatMap((edge) => [edge.from, edge.to]));
+  for (const node of model.nodes.filter((item) => contradictionIds.has(item.id) && !bodies.has(item.id))) {
+    const edge = contradictions.find((item) => item.from === node.id || item.to === node.id);
+    const anchorId = edge?.from === node.id ? edge?.to : edge?.from;
+    const anchor = bodies.get(anchorId);
+    bodies.set(node.id, {
+      node,
+      x: anchor?.x || 0,
+      y: (anchor?.y || 0) + 150,
+      vx: 0,
+      vy: 0,
+      size: 8,
+      contradiction: true
+    });
+  }
+  return { bodies, step: () => false, isSettled: () => true };
 }
 
 function createForceLayout(model) {
@@ -406,7 +493,7 @@ async function setMemoryGraphLayer(layer) {
 }
 
 function setMemoryGraphMode(mode) {
-  const next = mode === "all" ? "all" : "network";
+  const next = ["all", "network", "state"].includes(mode) ? mode : "all";
   if (next === memoryGraphMode) return;
   memoryGraphMode = next;
   memoryGraphZoom = 1;
@@ -419,6 +506,9 @@ function selectMemoryGraphNode(nodeId) {
   memoryGraphSelection = nodeId || null;
   renderGraphSidePanel();
   drawMemoryGraphCanvas();
+  if (memoryGraphState?.model.effectiveMode === "state") {
+    requestAnimationFrame(() => drawMemoryGraphCanvas());
+  }
 }
 
 function stopMemoryGraphAnimation() {
@@ -521,7 +611,8 @@ function drawMemoryGraphCanvas() {
   const boundsHeight = Math.max(60, maxY - minY);
   const boundsCenterX = (minX + maxX) / 2;
   const boundsCenterY = (minY + maxY) / 2;
-  const fitScale = Math.min((rect.width * 0.84) / boundsWidth, (rect.height * 0.82) / boundsHeight, 2.6);
+  const stateMode = model.effectiveMode === "state";
+  const fitScale = Math.min((rect.width * (stateMode ? 0.72 : 0.84)) / boundsWidth, (rect.height * (stateMode ? 0.62 : 0.82)) / boundsHeight, stateMode ? 1.25 : 2.6);
   const scale = fitScale * memoryGraphZoom;
   const centerX = rect.width / 2 + memoryGraphPan.x;
   const centerY = rect.height / 2 + memoryGraphPan.y;
@@ -541,12 +632,23 @@ function drawMemoryGraphCanvas() {
   const selectionNeighbors = selection ? model.neighborhood.get(selection) || new Set() : null;
   const nodeVisible = (nodeId) => !selection || nodeId === selection || selectionNeighbors.has(nodeId);
 
-  const background = ctx.createRadialGradient(rect.width * 0.55, rect.height * 0.44, 40, rect.width * 0.55, rect.height * 0.44, Math.max(rect.width, rect.height) * 0.72);
-  for (const [stop, color] of theme.backgroundStops) {
-    background.addColorStop(stop, color);
-  }
-  ctx.fillStyle = background;
+  ctx.fillStyle = isDarkTheme ? "#171d1a" : "#fbfcf9";
   ctx.fillRect(0, 0, rect.width, rect.height);
+  ctx.strokeStyle = isDarkTheme ? "rgba(255,255,255,0.025)" : "rgba(35,60,48,0.035)";
+  ctx.lineWidth = 1;
+  const grid = 36;
+  for (let x = grid; x < rect.width; x += grid) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, rect.height);
+    ctx.stroke();
+  }
+  for (let y = grid; y < rect.height; y += grid) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(rect.width, y);
+    ctx.stroke();
+  }
 
   const hitEdges = [];
   const hitNodes = [];
@@ -557,10 +659,23 @@ function drawMemoryGraphCanvas() {
     const a = sim.bodies.get(edge.from);
     const b = sim.bodies.get(edge.to);
     if (!a || !b) continue;
-    const pa = project(a);
-    const pb = project(b);
+    let pa = project(a);
+    let pb = project(b);
     const link = isLinkEdge(edge);
     const kind = link ? linkKindOf(edge) : edge.kind;
+    if (stateMode && kind === "supersedes") {
+      [pa, pb] = [pb, pa];
+    }
+    if (stateMode) {
+      const dx = pb.x - pa.x;
+      const dy = pb.y - pa.y;
+      const distance = Math.max(1, Math.hypot(dx, dy));
+      const inset = Math.min(52, distance * 0.32);
+      const ux = dx / distance;
+      const uy = dy / distance;
+      pa = { x: pa.x + ux * inset, y: pa.y + uy * inset };
+      pb = { x: pb.x - ux * inset, y: pb.y - uy * inset };
+    }
     const strength = Math.max(0.05, Math.min(1, Number(edge.strength) || 0.5));
     let color = theme.edge;
     let alpha = isDarkTheme ? 0.1 : 0.08;
@@ -569,8 +684,8 @@ function drawMemoryGraphCanvas() {
     let arrow = false;
     if (link) {
       color = theme.linkKinds[kind] || theme.memory;
-      alpha = 0.38 + strength * 0.4;
-      width = 1 + strength * 2.1;
+      alpha = stateMode ? 0.78 : 0.38 + strength * 0.4;
+      width = stateMode ? 2.2 : 1 + strength * 2.1;
       dashed = kind === "contradicts";
       arrow = kind === "causes" || kind === "evolved-from" || kind === "part-of" || kind === "supersedes";
     } else if (edge.kind === "uses") {
@@ -619,9 +734,50 @@ function drawMemoryGraphCanvas() {
     return `rgb(${theme.memory})`;
   };
 
+  const stateRoundRect = (x, y, w, h, r) => {
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, r);
+  };
+
   for (const body of bodies) {
     const node = body.node;
     const p = project(body);
+    if (stateMode) {
+      const cardWidth = 110;
+      const cardHeight = 62;
+      const x = p.x - cardWidth / 2;
+      const y = p.y - cardHeight / 2;
+      const historical = node.status === "superseded";
+      const contradiction = Boolean(body.contradiction);
+      stateRoundRect(x, y, cardWidth, cardHeight, 12);
+      ctx.fillStyle = isDarkTheme
+        ? historical ? "rgba(29,38,34,0.92)" : "rgba(28,65,51,0.96)"
+        : historical ? "rgba(255,255,252,0.96)" : "rgba(232,245,238,0.98)";
+      ctx.fill();
+      ctx.strokeStyle = contradiction
+        ? `rgba(${theme.linkKinds.contradicts}, 0.9)`
+        : historical ? (isDarkTheme ? "rgba(160,177,168,0.46)" : "rgba(80,105,94,0.3)") : `rgba(${theme.core}, 0.9)`;
+      ctx.lineWidth = node.id === selection ? 2.4 : historical ? 1.2 : 1.8;
+      ctx.setLineDash(contradiction ? [5, 4] : []);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const role = contradiction
+        ? t("memory.graph.role.contradiction")
+        : historical ? t("memory.graph.role.historical") : t("memory.graph.role.current");
+      ctx.font = "700 9px Inter, ui-sans-serif, system-ui, sans-serif";
+      ctx.fillStyle = contradiction
+        ? `rgb(${theme.linkKinds.contradicts})`
+        : historical ? (isDarkTheme ? "#9eaea5" : "#65776e") : `rgb(${theme.core})`;
+      ctx.textBaseline = "middle";
+      ctx.fillText(role.toUpperCase(), x + 12, y + 17);
+      ctx.font = "650 12px Inter, ui-sans-serif, system-ui, sans-serif";
+      ctx.fillStyle = theme.pillText;
+      const title = String(node.label || node.id || "");
+      const clippedTitle = title.length > 14 ? `${title.slice(0, 14)}…` : title;
+      ctx.fillText(clippedTitle, x + 12, y + 40);
+      hitNodes.push({ id: node.id, x, y, w: cardWidth, h: cardHeight });
+      continue;
+    }
     const phase = ((now / 1000) + (graphHash(node.id) % 900) / 1000) * Math.PI * 2 / 2.8;
     const pulse = reducedMotion ? 1 : 1 + Math.sin(phase) * 0.045;
     const hasLinks = (model.linkDegree.get(node.id) || 0) > 0;
@@ -656,6 +812,12 @@ function drawMemoryGraphCanvas() {
     }
     ctx.globalAlpha = 1;
     hitNodes.push({ id: node.id, x: p.x, y: p.y, r: Math.max(radius + 3, 7) });
+  }
+
+  if (stateMode) {
+    memoryGraphState.hitEdges = hitEdges;
+    memoryGraphState.hitNodes = hitNodes;
+    return;
   }
 
   ctx.font = "620 10.5px Inter, ui-sans-serif, system-ui, sans-serif";
@@ -808,6 +970,90 @@ function renderGraphSidePanel() {
   if (!panel || !memoryGraphState) return;
   const { model } = memoryGraphState;
   const selection = memoryGraphSelection ? graphNodeById(memoryGraphSelection) : null;
+  if (model.effectiveMode === "state") {
+    const supersedes = model.edges.filter((edge) => linkKindOf(edge) === "supersedes");
+    const contradictions = model.edges.filter((edge) => linkKindOf(edge) === "contradicts");
+    if (!selection) {
+      panel.innerHTML = `
+        <div class="graph-panel-kicker">${escapeHtml(t("memory.graph.statePanel.kicker"))}</div>
+        <div class="graph-panel-title">${escapeHtml(t("memory.graph.statePanel.title"))}</div>
+        <div class="graph-panel-hint">${escapeHtml(t("memory.graph.statePanel.empty"))}</div>
+        <div class="state-legend">
+          <div><span class="state-symbol current"></span><span>${escapeHtml(t("memory.graph.role.current"))}</span></div>
+          <div><span class="state-symbol historical"></span><span>${escapeHtml(t("memory.graph.role.historical"))}</span></div>
+          <div><span class="state-symbol contradiction"></span><span>${escapeHtml(t("memory.graph.role.contradiction"))}</span></div>
+        </div>
+        <div class="state-panel-count">${escapeHtml(t("memory.graph.statePanel.count", { count: supersedes.length }))}</div>
+      `;
+      return;
+    }
+    const chainIds = new Set([selection.id]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const edge of supersedes) {
+        if (chainIds.has(edge.from) || chainIds.has(edge.to)) {
+          if (!chainIds.has(edge.from)) { chainIds.add(edge.from); changed = true; }
+          if (!chainIds.has(edge.to)) { chainIds.add(edge.to); changed = true; }
+        }
+      }
+    }
+    const outgoing = new Map();
+    for (const edge of supersedes) {
+      if (!outgoing.has(edge.from)) outgoing.set(edge.from, []);
+      outgoing.get(edge.from).push(edge.to);
+    }
+    const depthMemo = new Map();
+    const depthFor = (id, visiting = new Set()) => {
+      if (depthMemo.has(id)) return depthMemo.get(id);
+      if (visiting.has(id)) return 0;
+      const targets = outgoing.get(id) || [];
+      const next = new Set(visiting).add(id);
+      const depth = targets.length ? Math.max(...targets.map((target) => depthFor(target, next) + 1)) : 0;
+      depthMemo.set(id, depth);
+      return depth;
+    };
+    const ordered = [...chainIds]
+      .map((id) => graphNodeById(id))
+      .filter(Boolean)
+      .sort((left, right) => depthFor(left.id) - depthFor(right.id));
+    const timeline = ordered.map((node) => `
+      <button class="state-timeline-item ${node.id === selection.id ? "selected" : ""} ${node.status === "superseded" ? "historical" : "current"}" data-graph-select="${escapeHtml(node.id)}">
+        <span class="state-timeline-marker"></span>
+        <span>
+          <small>${escapeHtml(node.status === "superseded" ? t("memory.graph.role.historical") : t("memory.graph.role.current"))}</small>
+          <strong>${escapeHtml(node.label || node.id)}</strong>
+        </span>
+      </button>
+    `).join("");
+    const replacement = supersedes.find((edge) => edge.from === selection.id || edge.to === selection.id);
+    const conflictRows = contradictions
+      .filter((edge) => edge.from === selection.id || edge.to === selection.id)
+      .map((edge) => {
+        const otherId = edge.from === selection.id ? edge.to : edge.from;
+        const other = graphNodeById(otherId);
+        return `<button class="state-conflict" data-graph-select="${escapeHtml(otherId)}"><span></span><strong>${escapeHtml(other?.label || otherId)}</strong></button>`;
+      })
+      .join("");
+    panel.innerHTML = `
+      <div class="graph-panel-kicker">${escapeHtml(t("memory.graph.statePanel.kicker"))}</div>
+      <div class="graph-panel-title">${escapeHtml(selection.label || selection.id)}</div>
+      ${selection.excerpt ? `<div class="state-panel-excerpt">${escapeHtml(selection.excerpt)}</div>` : ""}
+      <div class="state-panel-section-label">${escapeHtml(t("memory.graph.statePanel.timeline"))}</div>
+      <div class="state-timeline">${timeline}</div>
+      ${replacement?.note ? `
+        <div class="state-reason">
+          <small>${escapeHtml(t("memory.graph.statePanel.reason"))}</small>
+          <p>${escapeHtml(replacement.note)}</p>
+        </div>
+      ` : ""}
+      ${conflictRows ? `
+        <div class="state-panel-section-label danger">${escapeHtml(t("memory.graph.statePanel.conflicts"))}</div>
+        <div class="state-conflicts">${conflictRows}</div>
+      ` : ""}
+    `;
+    return;
+  }
   if (!selection) {
     const kindCounts = new Map();
     for (const edge of model.edges) {
@@ -830,7 +1076,7 @@ function renderGraphSidePanel() {
     panel.innerHTML = `
       <div class="graph-panel-hint">${escapeHtml(t("memory.graph.panel.empty"))}</div>
       ${legendRows ? `<div class="graph-legend">${legendRows}</div>` : ""}
-      ${model.effectiveMode === "all" && memoryGraphMode === "network" ? `<div class="graph-panel-hint subtle">${escapeHtml(t("memory.graph.networkEmpty"))}</div>` : ""}
+      ${model.effectiveMode === "all" ? `<div class="graph-panel-hint subtle">${escapeHtml(t("memory.graph.networkEmpty"))}</div>` : ""}
     `;
     return;
   }
@@ -869,6 +1115,12 @@ function graphHitTest(clientX, clientY) {
   const x = clientX - rect.left;
   const y = clientY - rect.top;
   for (const hit of memoryGraphState.hitNodes || []) {
+    if (hit.w && hit.h) {
+      if (x >= hit.x && x <= hit.x + hit.w && y >= hit.y && y <= hit.y + hit.h) {
+        return { type: "node", key: hit.id };
+      }
+      continue;
+    }
     const dx = x - hit.x;
     const dy = y - hit.y;
     if (dx * dx + dy * dy <= hit.r * hit.r) return { type: "node", key: hit.id };
@@ -959,13 +1211,15 @@ function renderMemoryGraph() {
     memoryGraphSelection = null;
   }
   stopMemoryGraphAnimation();
+  const stateEmpty = model.effectiveMode === "state" && model.nodes.length === 0;
   memoryGraph.innerHTML = `
     <div class="graph-toolbar">
-      <div>
-        <button class="graph-layer ${memoryGraphMode === "network" ? "active" : ""}" data-graph-mode="network">${escapeHtml(t("memory.graph.mode.network"))}</button>
+      <div class="graph-view-switch" aria-label="${escapeHtml(t("memory.graph.viewLabel"))}">
         <button class="graph-layer ${memoryGraphMode === "all" ? "active" : ""}" data-graph-mode="all">${escapeHtml(t("memory.graph.mode.all"))}</button>
+        <button class="graph-layer ${memoryGraphMode === "network" ? "active" : ""}" data-graph-mode="network">${escapeHtml(t("memory.graph.mode.network"))}</button>
+        <button class="graph-layer ${memoryGraphMode === "state" ? "active" : ""}" data-graph-mode="state">${escapeHtml(t("memory.graph.mode.state"))}</button>
       </div>
-      <div>
+      <div class="graph-layer-switch">
         <button class="graph-layer ${activeMemoryGraphLayer === "primary" ? "active" : ""}" data-graph-layer="primary">${escapeHtml(t("memory.graph.primaryLayer"))}</button>
         <button class="graph-layer ${activeMemoryGraphLayer === "restricted" ? "active restricted" : ""}" data-graph-layer="restricted">${escapeHtml(t("memory.graph.restrictedLayer"))}</button>
       </div>
@@ -974,13 +1228,21 @@ function renderMemoryGraph() {
         <button class="secondary" data-graph-zoom="fit">${escapeHtml(t("memory.graph.fit"))}</button>
         <button class="secondary" data-graph-zoom="in" aria-label="${escapeHtml(t("memory.graph.zoomIn"))}">+</button>
       </div>
-      <strong>${escapeHtml(t("memory.graph.summary", { nodes: model.nodes.length, edges: model.edges.length }))}</strong>
+      <strong class="graph-toolbar-summary">${escapeHtml(t("memory.graph.summary", { nodes: model.nodes.length, edges: model.edges.length }))}</strong>
     </div>
     <div class="graph-body">
-      <div class="graph-canvas">
-        <canvas id="memoryGraphCanvas" data-mode="${escapeHtml(model.effectiveMode)}" data-node-count="${model.nodes.length}" data-edge-count="${model.edges.length}" data-link-count="${model.linkEdgeCount}" data-restricted-count="${model.nodes.filter((node) => node.sensitivity === "restricted").length}" aria-label="${escapeHtml(t("memory.graph.title"))}"></canvas>
-        <div id="memoryGraphTooltip" class="graph-tooltip"></div>
-      </div>
+      ${stateEmpty ? `
+        <div class="graph-state-empty">
+          <span class="state-empty-line"></span>
+          <strong>${escapeHtml(t("memory.graph.stateEmpty.title"))}</strong>
+          <p>${escapeHtml(t("memory.graph.stateEmpty.body"))}</p>
+        </div>
+      ` : `
+        <div class="graph-canvas">
+          <canvas id="memoryGraphCanvas" data-mode="${escapeHtml(model.effectiveMode)}" data-node-count="${model.nodes.length}" data-edge-count="${model.edges.length}" data-label-count="${model.nodes.filter((node) => node.kind === "label").length}" data-link-count="${model.linkEdgeCount}" data-state-edge-count="${model.stateEdgeCount}" data-restricted-count="${model.nodes.filter((node) => node.sensitivity === "restricted").length}" aria-label="${escapeHtml(t("memory.graph.title"))}"></canvas>
+          <div id="memoryGraphTooltip" class="graph-tooltip"></div>
+        </div>
+      `}
       <aside id="memoryGraphPanel" class="graph-side-panel"></aside>
     </div>
   `;
@@ -988,12 +1250,13 @@ function renderMemoryGraph() {
   memoryGraphState = {
     canvas,
     model,
-    sim: createForceLayout(model),
+    sim: model.effectiveMode === "state" ? createStateChainLayout(model) : createForceLayout(model),
     hitEdges: [],
     hitNodes: []
   };
-  bindGraphCanvasEvents(canvas);
   renderGraphSidePanel();
+  if (!canvas) return;
+  bindGraphCanvasEvents(canvas);
   drawMemoryGraphCanvas();
 }
 

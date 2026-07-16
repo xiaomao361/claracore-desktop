@@ -53,7 +53,7 @@ Read these before adding new features:
 
 ## Current Status
 
-The current version is `0.5.2`. It is a working desktop shell with a
+The current version is `0.5.4`. It is a working desktop shell with a
 product-owned local data store, Desktop-native Memoria, Shared Line, InnerLife,
 a Desktop-owned Gateway, with model configuration merged into the Settings
 surface.
@@ -78,7 +78,7 @@ Included:
 - The built-in Memory embedding model stays lazy-loaded; Ollama and OpenAI-compatible providers do not load it.
 - Memoria CLI for store, recall, get, update, tag, delete, restore, archive, import/export, records, and maintenance audit/run
 - View-focused Memoria UI with four tabs: Memories (empty search lists all, with paging), Labels, Graph, and Archive & restricted (restricted, archived, and deleted review plus delete/restore)
-- Lazy-loaded Memoria list tabs and cached spherical canvas graph with primary/restricted layers, depth-based links, selected label callouts, and reduced-motion fallback
+- Lazy-loaded Memoria list tabs and canvas graph with Obsidian-style memory map, relationship-network, and historical-to-current state-chain views, primary/restricted layers, state/conflict inspection, zoom/pan, and reduced-motion fallback
 - Vector maintenance behind a disclosure that auto-opens only when pending or failed vectors exist, plus daily small-batch Memoria database maintenance
 - Default local Memory embeddings use the bundled ClaraCore built-in `Xenova/bge-small-zh-v1.5` model with 512-dimensional vectors
 - Shared Line CLI and Desktop-owned Gateway MCP tools for agent-driven line create/list/get/activate/rename/archive/restore/update/handoff, agent state, model adjustments, and arc compaction
@@ -102,6 +102,7 @@ Included:
 - Shared Line `agent_id` is the stable owner. An explicit cross-agent update records `writerAgentId` provenance and never transfers ownership implicitly
 - Agent-facing InnerLife status, pending shares, and share actions are scoped to the calling agent; Desktop UI snapshots may still request the all-agent view
 - Settings page with General (language, theme, motion, close-window behavior, data paths, runtime facts), Models, and Data tabs
+- Manual GitHub Release update check for macOS arm64 DMG and Windows x64 EXE installers, with user-directed download and installation
 - Terminal-style runtime log view for maintenance and Gateway traces, plus a
   read-only time flow across Memory, Shared Line, InnerLife, Gateway, and runtime
   events
@@ -117,7 +118,7 @@ Not included yet:
 
 - LAN Agent Gateway mode and HTTP management console for the Desktop-owned Gateway
 - Signed and notarized public macOS release artifact
-- Windows package
+- Signed public Windows release artifact
 - Old Memoria REST API compatibility
 
 ## Development Mode

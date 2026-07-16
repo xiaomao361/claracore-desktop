@@ -38,18 +38,36 @@ const innerlifeSessionToolDefinitions = [
   {
     "name": "innerlife_session_end",
     "title": "End InnerLife Session",
-    "description": "End a Desktop-owned InnerLife session and create a waiting share afterthought. sessionId is a domain session reference (the inner_session id returned by start, or its registered externalSessionId); Gateway caller conversation headers never replace it. Hooks may pass bestEffort=true when a missing session should be a safe no-op.",
+    "description": "End a Desktop-owned InnerLife session and create a waiting share afterthought. sessionId is the canonical domain session reference (the inner_session id returned by start, or its registered externalSessionId); session_id is accepted as a compatibility alias. Gateway caller conversation headers never replace it. Hooks may pass bestEffort=true when a missing session should be a safe no-op.",
     "inputSchema": {
       "type": "object",
-      "required": [
-        "sessionId"
+      "anyOf": [
+        {
+          "required": ["sessionId"]
+        },
+        {
+          "required": ["session_id"]
+        }
       ],
       "properties": {
         "sessionId": {
           "type": "string"
         },
+        "session_id": {
+          "type": "string",
+          "description": "Compatibility alias for sessionId. Prefer sessionId in new integrations."
+        },
         "summary": {
-          "type": "string"
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "object",
+              "additionalProperties": true
+            }
+          ],
+          "description": "Short text or a JSON object describing the completed session. Structured objects are stored as readable JSON text."
         },
         "transcript": {
           "type": "string"

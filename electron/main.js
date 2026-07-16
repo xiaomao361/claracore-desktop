@@ -5,6 +5,7 @@ const os = require("os");
 const { execFile, spawnSync } = require("child_process");
 const { promisify } = require("util");
 const { PRODUCT_VERSION } = require("../core/version");
+const { checkForUpdates, isAllowedUpdateUrl } = require("../core/update/github-release-client");
 const { createHttpAgentGateway } = require("./http-agent-gateway");
 const { createSchedulers } = require("./schedulers");
 const { ipcChannel } = require("./ipc-contracts");
@@ -760,6 +761,7 @@ if (!isGatewayMode && hasSingleInstanceLock) {
   registerIpcHandlers({
     app,
     clipboard,
+    checkForUpdates: () => checkForUpdates({ currentVersion: PRODUCT_VERSION }),
     currentDataRootPreference,
     dialog,
     getMainWindow: () => mainWindow,
@@ -794,6 +796,7 @@ if (!isGatewayMode && hasSingleInstanceLock) {
       return { closeBehavior: windowCloseBehavior };
     },
     shell,
+    isAllowedUpdateUrl,
     updateTrayMenu
   });
 

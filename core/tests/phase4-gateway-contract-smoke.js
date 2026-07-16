@@ -122,9 +122,18 @@ async function main() {
     }
 
     const tools = await client.request("tools/list");
-    const toolNames = new Set((tools.result?.tools || []).map((tool) => tool.name));
+    const listedTools = tools.result?.tools || [];
+    const toolNames = new Set(listedTools.map((tool) => tool.name));
     for (const tool of EXPECTED_TOOLS) {
       if (!toolNames.has(tool)) throw new Error(`Gateway is missing expected tool: ${tool}`);
+    }
+    const sessionEndSchema = listedTools.find((tool) => tool.name === "innerlife_session_end")?.inputSchema;
+    if (
+      !sessionEndSchema?.properties?.sessionId ||
+      !sessionEndSchema?.properties?.session_id ||
+      !sessionEndSchema?.properties?.summary?.oneOf?.some((entry) => entry.type === "object")
+    ) {
+      throw new Error("Gateway innerlife_session_end schema does not expose the session_id alias and structured summaries.");
     }
 
     const docsResponse = await client.callTool("gateway_docs");
@@ -260,14 +269,39 @@ async function main() {
     if (!startedWithLines.shared_line_error?.includes("SHARED_LINE_ID_REQUIRED")) {
       throw new Error(`Gateway innerlife_session_start should report Shared Line ambiguity without failing: ${JSON.stringify(startedWithLines)}`);
     }
+    const structuredSummary = {
+      outcome: "Phase4 Gateway session ended.",
+      completed: ["Gateway contract validation", "Shared Line ambiguity handling"]
+    };
     const ended = parseTextResult(
       await client.callTool("innerlife_session_end", {
         sessionId: started.session.id,
-        summary: "Phase4 Gateway session ended."
+        summary: structuredSummary
       })
     );
     if (ended.session.status !== "ended" || ended.share?.status !== "pending" || !ended.share?.body) {
       throw new Error("Gateway innerlife_session_end did not create a reviewable afterthought.");
+    }
+    const expectedStructuredSummary = JSON.stringify(structuredSummary, null, 2);
+    if (ended.session.summary !== expectedStructuredSummary || ended.session.summary.includes("[object Object]")) {
+      throw new Error(`Gateway innerlife_session_end did not preserve a structured summary: ${ended.session.summary}`);
+    }
+    const aliasStarted = parseTextResult(
+      await client.callTool("innerlife_session_start", {
+        agentId: "my-agent",
+        userId: "phase4-user",
+        host: "phase4-gateway",
+        externalSessionId: "phase4-session-snake-alias"
+      })
+    );
+    const aliasEnded = parseTextResult(
+      await client.callTool("innerlife_session_end", {
+        session_id: aliasStarted.session.id,
+        summary: "Ended through the session_id compatibility alias."
+      })
+    );
+    if (aliasEnded.session.id !== aliasStarted.session.id || aliasEnded.session.status !== "ended") {
+      throw new Error("Gateway innerlife_session_end did not accept the session_id compatibility alias.");
     }
     const briefing = parseTextResult(await client.callTool("innerlife_briefing", { agentId: "my-agent" }));
     if (!briefing.text.includes("Pending shares") || briefing.sharedLineContext?.status !== "ambiguous") {
@@ -322,6 +356,31 @@ async function main() {
       throw new Error(`Gateway innerlife_status detail=true did not return full snapshot fields: ${JSON.stringify(Object.keys(fullStatus))}`);
     }
     const { database } = await runtime.ensureProductCore(app);
+    const persistedSession = (await database.query(`
+      SELECT summary
+      FROM innerlife_sessions
+      WHERE id = '${ended.session.id}'
+      LIMIT 1;
+    `))[0];
+    const persistedInbox = (await database.query(`
+      SELECT body
+      FROM innerlife_inbox
+      WHERE id = '${ended.inboxId}'
+      LIMIT 1;
+    `))[0];
+    const persistedEvent = (await database.query(`
+      SELECT body
+      FROM innerlife_events
+      WHERE id = '${ended.eventId}'
+      LIMIT 1;
+    `))[0];
+    if (
+      persistedSession?.summary !== expectedStructuredSummary ||
+      persistedInbox?.body !== expectedStructuredSummary ||
+      persistedEvent?.body !== expectedStructuredSummary
+    ) {
+      throw new Error("Gateway innerlife_session_end did not preserve structured summary text across session, inbox, and event rows.");
+    }
     await database.ensureInnerLifeProfile("retention-agent");
     for (let index = 0; index < 205; index += 1) {
       await database.exec(`

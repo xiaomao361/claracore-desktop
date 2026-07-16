@@ -484,8 +484,10 @@ function installMemoriaRepository(ProductDatabase, helpers) {
         addNode({
           id: memoryNodeId,
           kind: "memory",
+          status: memory.status || "active",
           sensitivity: memory.sensitivity || "normal",
           label: memory.title || memory.body.slice(0, 48) || memory.id,
+          excerpt: memory.body || "",
           refId: memory.id
         });
         for (const label of memory.labels || []) {
@@ -508,14 +510,16 @@ function installMemoriaRepository(ProductDatabase, helpers) {
       const memoryIdSetForLinks = new Set(memoryIds);
       for (const link of linkEdges) {
         for (const endpoint of [
-          { id: link.fromMemoryId, title: link.fromTitle },
-          { id: link.toMemoryId, title: link.toTitle }
+          { id: link.fromMemoryId, title: link.fromTitle, body: link.fromBody, status: link.fromStatus },
+          { id: link.toMemoryId, title: link.toTitle, body: link.toBody, status: link.toStatus }
         ]) {
           if (memoryIdSetForLinks.has(endpoint.id)) continue;
           addNode({
             id: `memory:${endpoint.id}`,
             kind: "memory",
+            status: endpoint.status || "active",
             label: endpoint.title || endpoint.id,
+            excerpt: endpoint.body || "",
             refId: endpoint.id
           });
         }

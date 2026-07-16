@@ -96,6 +96,11 @@ End the session with that returned id:
 }
 ```
 
+`sessionId` remains the canonical argument name. Desktop also accepts
+`session_id` as a compatibility alias for callers that use snake_case domain
+arguments. `summary` may be a short string or a structured JSON object; objects
+are persisted as readable JSON text in the session, inbox, and event records.
+
 Rules:
 
 - Do not pass the current Claude or Hermes conversation id as

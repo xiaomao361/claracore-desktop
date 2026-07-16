@@ -1,6 +1,6 @@
 const CHANNEL_NAMES = Object.freeze([
   "activateSharedLine", "applyInnerLifeShareToMemory", "applyInnerLifeShareToSharedLine",
-  "archiveDormantMemories", "archiveMemory", "archiveSharedLine", "checkInnerLifeShareTiming",
+  "archiveDormantMemories", "archiveMemory", "archiveSharedLine", "checkForUpdates", "checkInnerLifeShareTiming",
   "chooseDataRoot", "clearLogs", "copyText", "createBackup", "createMemory",
   "createMemoryLabelAlias", "createMemoryRecord", "createSharedLine", "createSharedLineHandoff",
   "deleteBackup", "deleteMemory", "deleteMemoryLabelAlias", "embedMemory", "endInnerLifeSession",
@@ -11,7 +11,7 @@ const CHANNEL_NAMES = Object.freeze([
   "getMemoryRecords", "getMemoryStats", "getResourceSnapshot", "getRestrictedMemories",
   "getRuntimeSnapshot", "getSharedLine", "getShellState", "getUiPreferences", "importMemoryArchive",
   "importOldContinuity", "importOldInnerLife", "importOldMemoria", "importProductJson", "listModels",
-  "markInnerLifeShare", "mergeMemories", "openExternal", "openPath", "previewRestore",
+  "markInnerLifeShare", "mergeMemories", "openExternal", "openPath", "openUpdateUrl", "previewRestore",
   "processInnerLifeOnce", "processMemoryEmbeddings", "relaunch", "renameSharedLine",
   "restoreArchivedMemory", "restoreBackup", "restoreMemory", "restoreSharedLine", "restrictMemory",
   "reviewInnerLifeShare", "rotateAgentGatewayToken", "runInnerLifeDigest", "runMemoryMaintenance",

@@ -5,6 +5,7 @@ const { initializeProductDatabase } = require("../db/database");
 const { defaultUserDataPath: defaultPlatformUserDataPath } = require("../platform-paths");
 const { PRODUCT_VERSION } = require("../version");
 const { createGatewayTools } = require("./tools");
+const { MCP_SERVER_INSTRUCTIONS } = require("./server-instructions");
 
 const PROTOCOL_VERSION = "2025-06-18";
 const SERVER_INFO = {
@@ -258,7 +259,8 @@ async function handleRequest(message) {
       capabilities: {
         tools: {}
       },
-      serverInfo: SERVER_INFO
+      serverInfo: SERVER_INFO,
+      instructions: MCP_SERVER_INSTRUCTIONS
     };
   }
   if (message.method === "tools/list") {

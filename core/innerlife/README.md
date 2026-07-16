@@ -92,8 +92,10 @@ Useful MCP tools include:
   `lineId` to activate a line in the same call — no separate
   `shared_line_list` / `shared_line_activate` / `shared_line_get` startup
   round trips needed)
-- `innerlife_session_end` (returns a compact acknowledgement: closed session,
-  created ids, afterthought share, converged/reason; full state comes from
+- `innerlife_session_end` (`sessionId` is canonical and `session_id` is a
+  compatibility alias; `summary` accepts text or a structured JSON object;
+  returns a compact acknowledgement with the closed session, created ids,
+  afterthought share, and converged/reason; full state comes from
   `innerlife_status` / `innerlife_briefing`)
 - `innerlife_submit_inbox`
 - `innerlife_submit_fact`

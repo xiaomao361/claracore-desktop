@@ -42,6 +42,10 @@ function createMemoriaLinkRepository(helpers) {
       toMemoryId: row.to_memory_id,
       fromTitle: row.from_title || "",
       toTitle: row.to_title || "",
+      fromBody: row.from_body || "",
+      toBody: row.to_body || "",
+      fromStatus: row.from_status || "active",
+      toStatus: row.to_status || "active",
       kind: row.kind,
       strength: row.strength,
       source: row.source,
@@ -97,7 +101,11 @@ function createMemoriaLinkRepository(helpers) {
         SELECT
           k.*,
           f.title AS from_title,
-          t.title AS to_title
+          f.body AS from_body,
+          f.status AS from_status,
+          t.title AS to_title,
+          t.body AS to_body,
+          t.status AS to_status
         FROM memory_links k
         JOIN memories f ON f.id = k.from_memory_id
         JOIN memories t ON t.id = k.to_memory_id
@@ -203,7 +211,11 @@ function createMemoriaLinkRepository(helpers) {
         SELECT
           k.*,
           f.title AS from_title,
-          t.title AS to_title
+          f.body AS from_body,
+          f.status AS from_status,
+          t.title AS to_title,
+          t.body AS to_body,
+          t.status AS to_status
         FROM memory_links k
         JOIN memories f ON f.id = k.from_memory_id
         JOIN memories t ON t.id = k.to_memory_id
@@ -289,12 +301,38 @@ function createMemoriaLinkRepository(helpers) {
       if (ids.length === 0) return [];
       const idList = ids.map(sqlString).join(", ");
       const rows = await this.query(`
-        SELECT k.*, f.title AS from_title, t.title AS to_title
+        WITH RECURSIVE state_ids(id) AS (
+          SELECT id FROM memories WHERE id IN (${idList})
+          UNION
+          SELECT CASE
+            WHEN k.from_memory_id = s.id THEN k.to_memory_id
+            ELSE k.from_memory_id
+          END
+          FROM memory_links k
+          JOIN state_ids s
+            ON k.kind = 'supersedes'
+           AND (k.from_memory_id = s.id OR k.to_memory_id = s.id)
+        )
+        SELECT
+          k.*,
+          f.title AS from_title,
+          f.body AS from_body,
+          f.status AS from_status,
+          t.title AS to_title,
+          t.body AS to_body,
+          t.status AS to_status
         FROM memory_links k
         JOIN memories f ON f.id = k.from_memory_id
         JOIN memories t ON t.id = k.to_memory_id
         WHERE k.from_memory_id IN (${idList})
-           OR k.to_memory_id IN (${idList});
+           OR k.to_memory_id IN (${idList})
+           OR (
+             k.kind IN ('supersedes', 'contradicts')
+             AND (
+               k.from_memory_id IN (SELECT id FROM state_ids)
+               OR k.to_memory_id IN (SELECT id FROM state_ids)
+             )
+           );
       `);
       return rows.map(normalizeLinkRow);
     }

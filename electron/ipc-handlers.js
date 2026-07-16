@@ -79,6 +79,7 @@ function isPlainObject(value) {
 function registerIpcHandlers({
   app,
   clipboard,
+  checkForUpdates,
   dialog,
   getMainWindow,
   getResourceSnapshot,
@@ -98,6 +99,7 @@ function registerIpcHandlers({
   saveUiPreferences,
   setWindowCloseBehavior,
   shell,
+  isAllowedUpdateUrl,
   updateTrayMenu
 }) {
   ipcMain.handle(ipcChannel("getRuntimeSnapshot"), () => getRuntimeSnapshot());
@@ -490,6 +492,12 @@ function registerIpcHandlers({
   });
   ipcMain.handle(ipcChannel("openExternal"), async (_event, targetUrl) => {
     if (typeof targetUrl !== "string" || !targetUrl.startsWith("http://127.0.0.1:")) return false;
+    await shell.openExternal(targetUrl);
+    return true;
+  });
+  ipcMain.handle(ipcChannel("checkForUpdates"), async () => checkForUpdates());
+  ipcMain.handle(ipcChannel("openUpdateUrl"), async (_event, targetUrl) => {
+    if (!isAllowedUpdateUrl(targetUrl)) return false;
     await shell.openExternal(targetUrl);
     return true;
   });

@@ -1,13 +1,16 @@
 const crypto = require("crypto");
+const { spawnSync } = require("child_process");
 const fs = require("fs/promises");
 const http = require("http");
 const path = require("path");
 const { PRODUCT_VERSION } = require("../core/version");
 const { createGatewayTools } = require("../core/gateway/tools");
+const { MCP_SERVER_INSTRUCTIONS } = require("../core/gateway/server-instructions");
 
 const PROTOCOL_VERSION = "2025-06-18";
 const DEFAULT_HTTP_PORT = 50668;
 const GATEWAY_CONFIG_FILE = "agent-gateway.json";
+const CODEX_MCP_TOKEN_ENV_VAR = "CLARACORE_DESKTOP_MCP_TOKEN";
 const SERVER_INFO = {
   name: "claracore-desktop",
   version: PRODUCT_VERSION
@@ -51,6 +54,18 @@ async function writeGatewayConfig(configPath, config) {
   await fs.chmod(configPath, 0o600);
 }
 
+function syncCodexMcpToken(token, { platform = process.platform, spawn = spawnSync } = {}) {
+  if (platform !== "darwin" || !tokenLooksValid(token)) return { ok: false, skipped: true };
+  const result = spawn("/bin/launchctl", ["setenv", CODEX_MCP_TOKEN_ENV_VAR, token], {
+    encoding: "utf8",
+    timeout: 3000
+  });
+  return {
+    ok: result.status === 0,
+    error: result.status === 0 ? "" : String(result.stderr || result.error?.message || "launchctl setenv failed").trim()
+  };
+}
+
 function publicGatewayConfig(configPath, config, baseUrl) {
   return {
     path: configPath,
@@ -82,6 +97,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
     tokenFile: gatewayConfigPath(app),
     tokenCreatedAt: "",
     tokenRotatedAt: "",
+    codexTokenSync: { ok: false, skipped: true },
     lastError: null
   };
 
@@ -155,6 +171,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
       authHeader: state.token ? `Authorization: Bearer ${state.token}` : "",
       tokenCreatedAt: state.tokenCreatedAt,
       tokenRotatedAt: state.tokenRotatedAt,
+      codexTokenSync: state.codexTokenSync,
       error: state.lastError
     };
   }
@@ -305,6 +322,9 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
       ]
     };
     await writeGatewayConfig(state.tokenFile, nextConfig);
+    state.codexTokenSync = app.isPackaged
+      ? syncCodexMcpToken(nextToken)
+      : { ok: false, skipped: true };
     state.token = nextToken;
     state.tokenCreatedAt = nextConfig.tokenCreatedAt;
     state.tokenRotatedAt = nextConfig.tokenRotatedAt;
@@ -373,6 +393,9 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
       ]
     };
     await writeGatewayConfig(state.tokenFile, nextConfig);
+    state.codexTokenSync = app.isPackaged
+      ? syncCodexMcpToken(nextToken)
+      : { ok: false, skipped: true };
     const restartNeeded = state.server && nextPort !== state.configuredPort;
     if (restartNeeded) stop();
     state.configuredPort = nextPort;
@@ -501,7 +524,8 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
         sendJson(response, 200, jsonRpcResult(message.id, {
           protocolVersion: message.params?.protocolVersion || PROTOCOL_VERSION,
           capabilities: { tools: {} },
-          serverInfo: SERVER_INFO
+          serverInfo: SERVER_INFO,
+          instructions: MCP_SERVER_INSTRUCTIONS
         }));
         return;
       }
@@ -704,6 +728,8 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
 }
 
 module.exports = {
+  CODEX_MCP_TOKEN_ENV_VAR,
   DEFAULT_HTTP_PORT,
-  createHttpAgentGateway
+  createHttpAgentGateway,
+  syncCodexMcpToken
 };

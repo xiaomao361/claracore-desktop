@@ -328,11 +328,37 @@ body[data-theme="dark"] .label-mini-card,
 body[data-theme="dark"] .label-overview-row,
 body[data-theme="dark"] .memory-graph,
 body[data-theme="dark"] .graph-layer,
-body[data-theme="dark"] .graph-canvas {
+body[data-theme="dark"] .graph-canvas,
+body[data-theme="dark"] .graph-toolbar,
+body[data-theme="dark"] .graph-view-switch,
+body[data-theme="dark"] .graph-layer-switch,
+body[data-theme="dark"] .graph-side-panel,
+body[data-theme="dark"] .graph-state-empty {
   border-color: var(--border);
   background: var(--control-bg-soft);
   color: var(--text);
   box-shadow: none;
+}
+
+body[data-theme="dark"] .graph-toolbar {
+  background: rgba(30, 35, 32, 0.96);
+}
+
+body[data-theme="dark"] .graph-side-panel {
+  background: rgba(34, 40, 36, 0.96);
+}
+
+body[data-theme="dark"] .state-timeline-marker,
+body[data-theme="dark"] .state-empty-line::before {
+  background: var(--control-bg-soft);
+}
+
+body[data-theme="dark"] .state-reason {
+  background: rgba(196, 82, 43, 0.11);
+}
+
+body[data-theme="dark"] .state-conflict {
+  background: rgba(166, 64, 54, 0.1);
 }
 
 body[data-theme="dark"] .memory-item.restricted {
@@ -413,7 +439,9 @@ body[data-theme="dark"] .label-overview-row strong {
 
 body[data-theme="dark"] .memoria-tabs button.active,
 body[data-theme="dark"] .active-line,
-body[data-theme="dark"] .graph-layer.active {
+body[data-theme="dark"] .graph-layer.active,
+body[data-theme="dark"] .state-timeline-item:hover,
+body[data-theme="dark"] .state-timeline-item.selected {
   border-color: var(--green);
   background: var(--green-bg);
   color: var(--green);

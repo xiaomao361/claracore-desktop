@@ -57,6 +57,9 @@ The Desktop app exposes a local `/mcp` endpoint while it is running. It is bound
 to `127.0.0.1`, uses stable default port `50668`, requires bearer-token authorization,
 and rejects non-local `Origin` headers. The token is persisted in the local
 `agent-gateway.json` file with `0600` permissions and changes only when rotated.
+Packaged macOS builds also sync that token into the user launch environment used
+by Codex. After a token rotation, restart Codex so its MCP connection inherits
+the new credential.
 Do not expose this endpoint beyond localhost without a separate security review.
 Users can change the port, save a custom token, generate a random token, and
 copy a complete agent config from Settings > General > Agent Gateway.
@@ -76,6 +79,10 @@ conflict is unresolved. `memoria_search` defaults to current facts and accepts
 - `tools/list`
 - `tools/call`
 - `ping`
+
+`initialize` includes short server instructions: read Memoria and Shared Line
+only when prior context matters, review pending InnerLife selectively, and write
+Memoria only for explicit durable decisions or an explicit request to remember.
 
 Server-initiated event streams are not used in this local checkpoint.
 

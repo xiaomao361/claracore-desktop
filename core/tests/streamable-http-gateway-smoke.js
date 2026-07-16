@@ -3,7 +3,11 @@ const os = require("os");
 const path = require("path");
 const assert = require("assert");
 const { initializeProductDatabase } = require("../db/database");
-const { createHttpAgentGateway } = require("../../electron/http-agent-gateway");
+const {
+  CODEX_MCP_TOKEN_ENV_VAR,
+  createHttpAgentGateway,
+  syncCodexMcpToken
+} = require("../../electron/http-agent-gateway");
 
 async function reservePort() {
   const server = require("http").createServer();
@@ -27,6 +31,18 @@ async function withOccupiedPort(port, fn) {
 }
 
 async function main() {
+  let syncCall = null;
+  const syncResult = syncCodexMcpToken("s".repeat(64), {
+    platform: "darwin",
+    spawn(command, args) {
+      syncCall = { command, args };
+      return { status: 0, stderr: "" };
+    }
+  });
+  assert(syncResult.ok, "Codex token sync should accept a valid token on macOS");
+  assert.strictEqual(syncCall.command, "/bin/launchctl");
+  assert.deepStrictEqual(syncCall.args, ["setenv", CODEX_MCP_TOKEN_ENV_VAR, "s".repeat(64)]);
+
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "claracore-http-mcp-"));
   const databasePath = path.join(tempRoot, "claracore.db");
   const database = await initializeProductDatabase(databasePath);
@@ -68,6 +84,7 @@ async function main() {
   try {
     await gateway.start();
     assert.strictEqual(gateway.status().port, port, "Gateway should bind the configured stable port");
+    assert(gateway.status().codexTokenSync.skipped, "Non-packaged test Gateway should not modify the user launch environment");
     const endpoint = gateway.buildEndpoints().find((item) => item.id === "streamable-http-mcp");
     assert(endpoint, "Streamable HTTP MCP endpoint should be exposed");
     assert(endpoint.url.includes(`:${port}/mcp`), "Streamable HTTP endpoint should use the configured port");
@@ -111,6 +128,8 @@ async function main() {
     assert(setup.memoriaUsage?.recall?.includes("timeView=current"), "Agent setup should explain current and historical recall");
     const initialized = await postMcp({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} });
     assert.strictEqual(initialized.result.serverInfo.name, "claracore-desktop");
+    assert(initialized.result.instructions.includes("Search Memoria and Shared Line"), "initialize should describe selective context reads");
+    assert(initialized.result.instructions.includes("Write Memoria only"), "initialize should describe restrained Memory writes");
     const tools = await postMcp({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} });
     assert(tools.result.tools.some((tool) => tool.name === "claracore_connection_test"), "tools/list should include connection test");
     const called = await postMcp({

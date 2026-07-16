@@ -5,6 +5,23 @@ const {
   generateOrTemplate
 } = require("../../../innerlife/policy");
 
+function normalizeSessionSummary(value) {
+  if (typeof value === "string") return value.trim();
+  if (value && typeof value === "object") {
+    let serialized;
+    try {
+      serialized = JSON.stringify(value, null, 2);
+    } catch (_error) {
+      throw new Error("InnerLife session summary must be JSON-serializable.");
+    }
+    if (typeof serialized !== "string") {
+      throw new Error("InnerLife session summary must be JSON-serializable.");
+    }
+    return serialized.trim();
+  }
+  return String(value || "").trim();
+}
+
 function createInnerLifeSessionRepository(helpers) {
   const {
     DEFAULT_AGENT_ID,
@@ -218,7 +235,8 @@ function createInnerLifeSessionRepository(helpers) {
           repeated: true
         };
       }
-      const summary = String(input.summary || input.transcript || "").trim();
+      const summarySource = input.summary || input.transcript || "";
+      const summary = normalizeSessionSummary(summarySource);
       const eventId = newId("inner_event");
       const thoughtId = newId("inner_thought");
       const shareId = newId("inner_share");
