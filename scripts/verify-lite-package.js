@@ -38,8 +38,8 @@ function packagedMetadata(appPath) {
 assert(fs.existsSync(fullApp), `Full package is missing: ${fullApp}`);
 assert(fs.existsSync(liteApp), `Lite package is missing: ${liteApp}`);
 
-const fullEntries = asarEntries(fullApp);
-const liteEntries = asarEntries(liteApp);
+const fullEntries = asarEntries(fullApp).map((entry) => entry.replaceAll("\\", "/"));
+const liteEntries = asarEntries(liteApp).map((entry) => entry.replaceAll("\\", "/"));
 const fullResources = resourcesPath(fullApp);
 const liteResources = resourcesPath(liteApp);
 const forbidden = ["@xenova", "onnxruntime", "/sharp/", "/node_modules/"];

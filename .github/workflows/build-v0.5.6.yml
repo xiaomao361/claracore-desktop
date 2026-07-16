@@ -28,10 +28,10 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -67,7 +67,7 @@ jobs:
           $lines | Set-Content -Encoding ascii SHA256SUMS-windows.txt
 
       - name: Upload Windows installers
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: claracore-desktop-v0.5.6-windows-x64
           path: |
