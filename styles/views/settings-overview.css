@@ -289,3 +289,20 @@
   justify-content: flex-start;
   margin-top: 10px;
 }
+
+.settings-gateway-details > summary.settings-section-head {
+  cursor: pointer;
+  list-style: none;
+}
+
+.settings-gateway-details > summary.settings-section-head::-webkit-details-marker {
+  display: none;
+}
+
+.settings-gateway-details[open] > summary.settings-section-head {
+  margin-bottom: 10px;
+}
+
+.settings-gateway-details > .link-button {
+  margin-bottom: 10px;
+}

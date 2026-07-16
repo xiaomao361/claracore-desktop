@@ -24,7 +24,7 @@ async function main() {
     const fixture = await app.evaluate(async ({ app, clipboard, shell }) => {
       const platform = process.platform;
       const arch = process.arch;
-      const version = "0.5.6";
+      const version = "0.5.7";
       const assetName = platform === "darwin"
         ? `ClaraCore-Desktop-${version}-arm64.dmg`
         : `ClaraCore-Desktop-${version}-x64-Setup.exe`;
@@ -65,7 +65,7 @@ async function main() {
     await page.click("[data-settings-tab='general']");
     await page.click("#checkForUpdates");
     await page.waitForFunction(
-      () => document.querySelector("#updateCheckStatus")?.textContent.includes("0.5.6"),
+      () => document.querySelector("#updateCheckStatus")?.textContent.includes("0.5.7"),
       null,
       { timeout: 10000 }
     );
@@ -120,7 +120,7 @@ async function main() {
     });
     await page.click("#checkForUpdates");
     await page.waitForFunction(
-      () => !document.querySelector("#updateCheckStatus")?.textContent.includes("0.5.6"),
+      () => !document.querySelector("#updateCheckStatus")?.textContent.includes("0.5.7"),
       null,
       { timeout: 10000 }
     );

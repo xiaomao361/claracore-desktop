@@ -158,7 +158,10 @@ const {
   sharedLineArchiveList,
   copySharedLineResume,
   sharedLineTabs,
-  sharedLineTabPanels
+  sharedLineTabPanels,
+  loadDemoData,
+  clearDemoData,
+  demoDataNotice
 } = window.ClaraCoreDom;
 
 const translations = window.ClaraCoreTranslations || { en: {} };
@@ -858,6 +861,29 @@ document.addEventListener("click", (event) => {
         target.textContent = previousText;
       });
   }
+});
+
+async function runDemoDataAction(button, action, busyKey) {
+  if (!button) return;
+  button.disabled = true;
+  if (demoDataNotice) demoDataNotice.textContent = t(busyKey);
+  try {
+    await action();
+    await refreshRuntimeSnapshotOnly();
+  } catch (error) {
+    console.error(error);
+    if (demoDataNotice) demoDataNotice.textContent = t("home.onboarding.demo.failed");
+  } finally {
+    button.disabled = false;
+  }
+}
+
+loadDemoData?.addEventListener("click", () => {
+  runDemoDataAction(loadDemoData, () => window.ClaraCoreDesktop.seedDemoData(), "home.onboarding.demo.loading");
+});
+
+clearDemoData?.addEventListener("click", () => {
+  runDemoDataAction(clearDemoData, () => window.ClaraCoreDesktop.clearDemoData(), "home.onboarding.demo.clearing");
 });
 
 copyAgentSetup.addEventListener("click", () => {

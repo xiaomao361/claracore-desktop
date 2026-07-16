@@ -2,6 +2,21 @@
 
 Date: 2026-07-01
 
+## v0.5.6 Local Test Checkpoint
+
+Updated: 2026-07-16
+
+- Added a compact Home onboarding panel only for an empty data root or while
+  fixture-owned demo data is active.
+- Added backup-first demo seed/clear actions so a new user can inspect populated
+  pages without mixing fixture identifiers into normal product records.
+- Moved Agent Gateway port and token editing behind an advanced Settings
+  disclosure; Agent Access remains the normal connection and copy surface.
+- Fixed the Full built-in embedding form so external provider controls are not
+  rendered, and strengthened the smoke test to check computed visibility.
+- Kept the existing agent-first Home and module hierarchy; this is onboarding
+  and configuration reduction, not another dashboard redesign.
+
 ## v0.2.0 Implementation Status
 
 Updated: 2026-07-02
@@ -178,9 +193,12 @@ Updated: 2026-07-06
   `innerlife_session_end` returns a compact acknowledgement (~1KB instead of
   ~730KB of full InnerLife snapshot), and Shared Line write tools return lite
   resume packets (~2KB instead of ~68KB with every line's metadata). Read
-  tools (`shared_line_get`, `innerlife_status`/`briefing`) and the Desktop UI
-  keep full payloads. Also fixed an unescaped template backtick in the Agent
-  Access install brief before it shipped.
+  tools for InnerLife (`innerlife_status`/`briefing`) and the Desktop UI keep
+  their full payload paths. A later post-v0.5.5 fix also moved
+  `shared_line_get` to the lite resume packet: line catalogs now belong to
+  `shared_line_list`, while a single-line read no longer repeats active and
+  archived line bodies or other agents' states. Also fixed an unescaped
+  template backtick in the Agent Access install brief before it shipped.
 - v0.2.7: agent session startup collapsed to one MCP round trip.
   `innerlife_session_start` now bundles the active Shared Line lite resume
   packet (`shared_line`) and a compact `shared_lines` summary, and accepts an

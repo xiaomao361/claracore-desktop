@@ -39,6 +39,8 @@ Read these before adding new features:
   pagination, resource ownership, memory telemetry, and long-run checks.
 - [macOS Packaging](docs/mac-packaging.md): current local packaging and packaged
   Gateway validation notes.
+- [v0.5.6 local test notes](docs/RELEASE_NOTES_V0.5.6.md): first-run onboarding,
+  demo data, scoped Shared Line reads, Full model-form cleanup, and Windows Lite.
 - [Multi-Agent Client Migration v0.5.0](docs/MULTI_AGENT_CLIENT_MIGRATION_V0_5.md):
   Codex, Claude, and Hermes identity, conversation, InnerLife session, and
   Shared Line integration rules.
@@ -53,7 +55,7 @@ Read these before adding new features:
 
 ## Current Status
 
-The current version is `0.5.5`. It is a working desktop shell with a
+The current local test version is `0.5.6`. It is a working desktop shell with a
 product-owned local data store, Desktop-native Memoria, Shared Line, InnerLife,
 a Desktop-owned Gateway, with model configuration merged into the Settings
 surface.
@@ -64,6 +66,9 @@ remain stored as UTC, while structured records preserve their event time zone.
 Included:
 
 - Electron desktop app
+- Empty-data Home onboarding with direct Agent Access / model-setting entry
+  points and removable demo data; seed and clear actions create a backup first
+  and remove only fixture-owned records.
 - ClaraCore root detection
 - Product-owned SQLite data root under Desktop user data
 - Home, Memoria, Shared Line, InnerLife, Agent Access, Logs, and Settings pages (model and data management live inside Settings tabs)
@@ -93,7 +98,9 @@ Included:
   chooses whether to use or defer a share
 - Settings > Models keeps provider flows explicit: Full exposes ClaraCore
   built-in, Ollama, or Disabled for Memory embedding; Lite exposes only Ollama
-  or Disabled. InnerLife exposes Disabled, Ollama, or OpenAI-compatible in both.
+  or Disabled. Selecting the Full built-in provider hides endpoint, model, key,
+  fetch, and connection-test controls because no external wiring is required.
+  InnerLife exposes Disabled, Ollama, or OpenAI-compatible in both.
 - InnerLife runtime panel for daemon enable/pause/tick and doctor status; sessions, digests, inbox, and timing checks sit behind a collapsed Pipeline evidence section
 - Verified SQLite product backups with restore preview and safety-backup restore
 - Full product JSON export/import for portable ClaraCore Desktop data
@@ -176,6 +183,9 @@ npm run pack:mac          # Full unpacked app under dist/
 npm run pack:mac:lite     # Lite unpacked app under dist-lite/
 npm run test:package:lite # compare and inspect both packages
 npm run dist:mac:lite     # Lite DMG under dist-lite/
+npm run pack:win:lite     # Lite unpacked Windows app under dist-lite/
+npm run dist:win:lite     # Lite Windows installer under dist-lite/
+npm run test:package:win:lite # inspect Full/Lite Windows package contents
 ```
 
 `npm run test:lite:ollama` is an opt-in real-runtime gate and requires Ollama at

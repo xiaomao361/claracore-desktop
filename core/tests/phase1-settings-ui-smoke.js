@@ -79,6 +79,10 @@ async function main() {
       memoriaModelHidden: document.querySelector("#memoriaModelField").hidden,
       memoriaApiKeyHidden: document.querySelector("#memoriaApiKeyField").hidden,
       memoriaConnectionHidden: document.querySelector("#memoriaConnectionRow").hidden,
+      memoriaEndpointDisplay: getComputedStyle(document.querySelector("#memoriaEndpointField")).display,
+      memoriaModelDisplay: getComputedStyle(document.querySelector("#memoriaModelField")).display,
+      memoriaApiKeyDisplay: getComputedStyle(document.querySelector("#memoriaApiKeyField")).display,
+      memoriaConnectionDisplay: getComputedStyle(document.querySelector("#memoriaConnectionRow")).display,
       innerlifeApiKeyHidden: document.querySelector("#innerLifeApiKeyField").hidden,
       hasDimensionField: Boolean(document.querySelector("#memoriaDimension")),
       hasMemoriaSourceField: Boolean(document.querySelector("#memoriaSource")),
@@ -105,6 +109,9 @@ async function main() {
     }
     if (!defaults.memoriaEndpointHidden || !defaults.memoriaModelHidden || !defaults.memoriaApiKeyHidden || !defaults.memoriaConnectionHidden) {
       throw new Error(`Built-in Memoria fields should be hidden: ${JSON.stringify(defaults)}`);
+    }
+    if ([defaults.memoriaEndpointDisplay, defaults.memoriaModelDisplay, defaults.memoriaApiKeyDisplay, defaults.memoriaConnectionDisplay].some((display) => display !== "none")) {
+      throw new Error(`Built-in Memoria fields should not be rendered: ${JSON.stringify(defaults)}`);
     }
     if (defaults.innerlifeApiKeyHidden) {
       throw new Error("OpenAI-compatible InnerLife API key field should be visible.");
@@ -211,6 +218,10 @@ async function main() {
     }
 
     await page.click("[data-settings-tab='general']");
+    await page.evaluate(() => {
+      const details = document.querySelector(".settings-gateway-details");
+      if (details) details.open = true;
+    });
     await page.waitForFunction(() => document.querySelector("#settingsAgentGatewayPort")?.value, null, { timeout: 15000 });
     const gatewayDefaults = await page.evaluate(() => ({
       port: document.querySelector("#settingsAgentGatewayPort").value,

@@ -61,6 +61,9 @@ async function main() {
     if (initial.currentPosition.summary !== "") {
       throw new Error("Fresh Gateway Shared Line should be empty.");
     }
+    if (initial.lines.length || initial.archivedLines.length || initial.agentStates.length) {
+      throw new Error("Gateway shared_line_get should not repeat cross-line catalogs or other agent states.");
+    }
 
     const updatedResponse = await client.callTool("shared_line_update", {
       summary: "Gateway Phase 3 position: agents should resume from this Desktop-owned line.",

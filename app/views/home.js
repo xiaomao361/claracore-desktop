@@ -12,6 +12,10 @@ function createClaraCoreHomeView(context) {
   const {
     moduleGrid,
     eventList,
+    homeOnboarding,
+    homeOnboardingSteps,
+    clearDemoData,
+    demoDataNotice,
     homeRuntimeStatus,
     homeRuntimeDetail,
     homeRuntimeStrip,
@@ -525,9 +529,54 @@ function createClaraCoreHomeView(context) {
       .join("");
   }
 
+  function demoDataActive() {
+    const snapshot = getSnapshot();
+    const traces = snapshot?.gatewayTraces || [];
+    const memories = snapshot?.recentMemories || snapshot?.memories || [];
+    const lines = snapshot?.sharedLine?.lines || [];
+    return (
+      traces.some((trace) => String(trace.id || "").startsWith("ux_trace_")) ||
+      memories.some((memory) => String(memory.id || "").startsWith("ux_mem_")) ||
+      lines.some((line) => String(line.id || "").startsWith("ux_line_"))
+    );
+  }
+
+  function coreDataEmpty() {
+    const snapshot = getSnapshot();
+    const stats = snapshot?.memoryStats || {};
+    const totalMemories = Number(stats.totalCount ?? stats.activeCount ?? 0);
+    const lines = (snapshot?.sharedLine?.lines || []).filter((line) => line.id !== "line_default");
+    const traces = snapshot?.gatewayTraces || [];
+    return totalMemories === 0 && lines.length === 0 && traces.length === 0;
+  }
+
+  function renderOnboarding() {
+    if (!homeOnboarding) return;
+    const snapshot = getSnapshot();
+    if (!snapshot) return;
+    const demoActive = demoDataActive();
+    const showPanel = demoActive || coreDataEmpty();
+    homeOnboarding.hidden = !showPanel;
+    if (!showPanel) return;
+    const stepState = {
+      connect: !demoActive && (snapshot.gatewayTraces || []).length > 0,
+      models: (snapshot.configuration?.memoria?.provider || "disabled") !== "disabled"
+    };
+    (homeOnboardingSteps || []).forEach((step) => {
+      const done = Boolean(stepState[step.dataset.onboardingStep]);
+      step.classList.toggle("is-done", done);
+      const doneBadge = step.querySelector(".home-onboarding-step-done");
+      if (doneBadge) doneBadge.hidden = !done;
+    });
+    if (dom.loadDemoData) dom.loadDemoData.hidden = demoActive;
+    if (clearDemoData) clearDemoData.hidden = !demoActive;
+    if (demoDataNotice) demoDataNotice.textContent = demoActive ? t("home.onboarding.demo.active") : "";
+  }
+
   function renderHomeDashboard() {
     const snapshot = getSnapshot();
     if (!snapshot) return;
+    renderOnboarding();
     renderRuntimeOverview();
     renderAttentionQueue();
     renderAgentActivity();

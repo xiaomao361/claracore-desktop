@@ -45,6 +45,50 @@
       </header>
 
       <section id="homeView" class="view active-view">
+        <section id="homeOnboarding" class="panel home-onboarding" aria-label="Getting started" hidden>
+          <div class="panel-heading">
+            <div>
+              <h2 data-i18n="home.onboarding.title">Get started</h2>
+              <p class="quiet" data-i18n="home.onboarding.body">ClaraCore Desktop keeps your agents' long-term state in a local SQLite database on this machine.</p>
+            </div>
+          </div>
+          <ul class="home-onboarding-model">
+            <li data-i18n="home.onboarding.model.memoria">Memoria — long-term facts your agents decide to keep.</li>
+            <li data-i18n="home.onboarding.model.sharedLine">Shared Line — where each agent's work position lives between sessions.</li>
+            <li data-i18n="home.onboarding.model.innerLife">InnerLife — what an agent notices and wants to bring up on its own.</li>
+          </ul>
+          <div class="home-onboarding-steps">
+            <article class="home-onboarding-step" data-onboarding-step="connect">
+              <span class="home-onboarding-step-index">1</span>
+              <div>
+                <strong data-i18n="home.onboarding.step1.title">Connect an agent</strong>
+                <small data-i18n="home.onboarding.step1.body">Copy the MCP config from Agent Access into Claude Code, Codex, or any MCP client.</small>
+                <button class="link-button" data-view-target="agent-setup" data-i18n="home.onboarding.step1.action">Open Agent Access</button>
+              </div>
+              <span class="home-onboarding-step-done" data-i18n="home.onboarding.stepDone" hidden>Done</span>
+            </article>
+            <article class="home-onboarding-step" data-onboarding-step="models">
+              <span class="home-onboarding-step-index">2</span>
+              <div>
+                <strong data-i18n="home.onboarding.step2.title">Optional: configure models</strong>
+                <small data-i18n="home.onboarding.step2.body">Semantic memory search needs an embedding model; the built-in default already works.</small>
+                <button class="link-button" data-view-target="settings" data-settings-target="models" data-i18n="home.onboarding.step2.action">Open Models</button>
+              </div>
+              <span class="home-onboarding-step-done" data-i18n="home.onboarding.stepDone" hidden>Done</span>
+            </article>
+          </div>
+          <div class="home-onboarding-demo">
+            <div>
+              <strong data-i18n="home.onboarding.demo.title">Just looking around?</strong>
+              <small data-i18n="home.onboarding.demo.body">Load sample data to see every page with realistic content, then clear it with one click. A backup is created first.</small>
+            </div>
+            <div class="home-onboarding-demo-actions">
+              <button id="loadDemoData" class="secondary" data-i18n="home.onboarding.demo.load">Load demo data</button>
+              <button id="clearDemoData" class="secondary" data-i18n="home.onboarding.demo.clear" hidden>Clear demo data</button>
+            </div>
+            <span id="demoDataNotice" class="quiet" aria-live="polite"></span>
+          </div>
+        </section>
         <section class="home-command-grid" aria-label="Home priority">
           <article class="panel home-agent-panel">
             <div class="panel-heading">
@@ -619,14 +663,15 @@
                 </div>
               </section>
 
-              <section class="settings-section-card">
-                <div class="settings-section-head">
+              <details class="settings-section-card settings-gateway-details">
+                <summary class="settings-section-head">
                   <div>
-                    <h3 data-i18n="settings.agentGatewayTitle">Agent Gateway</h3>
-                    <p data-i18n="settings.agentGatewayBody">Stable Streamable HTTP MCP endpoint and local bearer token.</p>
+                    <h3 data-i18n="settings.agentGatewayAdvanced">Agent Gateway (advanced)</h3>
+                    <p data-i18n="settings.agentGatewayAdvancedHint">Port and token editing. Agents connect and copy config in Agent Access.</p>
                   </div>
                   <span id="settingsAgentGatewayStatus" class="badge ok">ready</span>
-                </div>
+                </summary>
+                <button class="link-button" data-view-target="agent-setup" data-i18n="settings.agentGatewayGoToAccess">Open Agent Access</button>
                 <div class="settings-grid">
                   <label class="field">
                     <span data-i18n="settings.agentGatewayPort">Port</span>
@@ -650,7 +695,7 @@
                   <button id="saveAgentGatewayConfig" class="primary" type="button" data-i18n="settings.saveAgentGateway">Save Gateway</button>
                 </div>
                 <p class="quiet" data-i18n="settings.agentGatewayHint">Changing the port updates the local MCP server and every Agent Access copy block. Rotating the token requires connected agents to update their bearer token.</p>
-              </section>
+              </details>
 
               <section class="settings-section-card">
                 <div class="settings-section-head">
@@ -693,6 +738,7 @@
           <article class="panel">
             <h2 data-i18n="settings.aboutTitle">About</h2>
             <p class="quiet" data-i18n="settings.aboutBody">Read-only application and runtime information.</p>
+            <p class="quiet" data-i18n="settings.privacyNote">Core state stays in local SQLite. Network requests occur only for features you invoke, such as external models or update checks.</p>
             <div class="metric-list">
               <div><span data-i18n="settings.appVersion">App version</span><strong id="settingsAppVersion">-</strong></div>
               <div><span data-i18n="settings.buildFlavor">Build flavor</span><strong id="settingsBuildFlavor">-</strong></div>

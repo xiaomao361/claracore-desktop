@@ -17,6 +17,12 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   clearLogs() {
     return ipcRenderer.invoke(ipcChannel("clearLogs"));
   },
+  seedDemoData() {
+    return ipcRenderer.invoke(ipcChannel("seedDemoData"));
+  },
+  clearDemoData() {
+    return ipcRenderer.invoke(ipcChannel("clearDemoData"));
+  },
   saveSettings(updates) {
     return ipcRenderer.invoke(ipcChannel("saveSettings"), updates);
   },
