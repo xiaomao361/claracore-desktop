@@ -2,7 +2,9 @@
 
 ## Current Target
 
-The current macOS package is an unsigned local build for product-core validation.
+The current public package line is `v0.5.6`; the `0.5.7` source line is a local
+development checkpoint and has not been packaged as part of the current work.
+macOS artifacts remain unsigned.
 
 It is enough for:
 
@@ -11,8 +13,8 @@ It is enough for:
 - Verifying the packaged Gateway MCP entry.
 - Testing agent setup before code signing and notarization.
 
-The unsigned packages are suitable for the current small tester group but not a
-signed/notarized general-public distribution.
+The published unsigned packages are suitable for the current small tester group
+but not a signed/notarized general-public distribution.
 
 ## Commands
 

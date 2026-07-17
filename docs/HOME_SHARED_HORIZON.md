@@ -1,8 +1,9 @@
-# ClaraCore Desktop v0.5.7 Home / Shared Horizon Handoff
+# Home Shared Horizon
 
 Date: 2026-07-17
 
-Status: implemented and validated as the current v0.5.7 development checkpoint.
+Status: current Home product and performance contract for the `0.5.7`
+development line.
 
 ## Current Result
 
@@ -207,15 +208,3 @@ handler now reads the existing Memory and preserves omitted `title`, `labels`,
 and `sensitivity`; fields explicitly present in the call still replace their
 stored values. The focused Phase 2 Gateway smoke covers body replacement plus
 title/label preservation.
-
-## Continuation Prompt
-
-```text
-继续 ClaraCore Desktop v0.5.7 首页。先阅读
-docs/HANDOFF_V0.5.7_HOME_CLARAVISION.md，确认 Desktop 子仓库、git 状态并保护
-未提交工作。当前设计方向已经从脑核/球/天气场切换为 shared-horizon：共同线是
-空间地平线，最近 Agent 只以最多三枚真实到访涟漪出现，Shared Line 与 InnerLife
-保持代码原生文字。不要恢复粒子、雾、球体、卡片或 dashboard。先查看当前 Electron
-实机截图和真实数据状态，再做一个小的视觉精修闭环。性能边界保持 720k Canvas、
-静态 0 FPS、安静 12 FPS、活跃最多 24 FPS、离开 Home 立即停止。
-```

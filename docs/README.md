@@ -1,37 +1,46 @@
-# ClaraCore Desktop Docs
+# ClaraCore Desktop Documentation
 
-Current docs are the files a developer should read before changing runtime,
-packaging, data, or agent behavior.
+This directory contains current product and engineering contracts. Start here;
+documents under `archive/` are historical evidence and are not active
+instructions.
 
-- `ARCHITECTURE.md`: current Electron, runtime, database, Gateway, packaging
-  resource, and validation boundaries.
-- `CODE_MAP.md`: source-first map for agents and developers debugging or
-  repairing Desktop behavior.
-- `CLEANUP_PLAN.md`: active debt rules and remaining refactor targets.
-- `RUNTIME_MEMORY_POLICY.md`: bounded snapshot, pagination, resource ownership,
-  and long-run memory rules.
-- `UI_UX_POLISH_BACKLOG.md`: next-version UI/UX direction and staged polish
-  backlog for the current Desktop surface.
-- `HANDOFF_V0.5.7_MEMORY_PAGE.md`: confirmed Agent First, read-only Memory page
-  direction and the implementation/validation boundary for the next session.
-- `HANDOFF_V0.5.7_SHARED_LINE_PAGE.md`: confirmed line-first, read-only Shared
-  Line continuity design and the selected-line correctness boundary.
-- `HANDOFF_V0.5.7_INNERLIFE_PAGE.md`: implemented human-readable InnerLife
-  checkpoint, including full unshared-thought visibility, verified-delivery
-  history, and read-does-not-write proof.
-- `HANDOFF_V0.5.7_LOGS_PAGE.md`: implemented read-only Logs checkpoint, with a
-  primary evidence stream, closed Advanced Diagnostics, and preserved backend
-  clear-log contracts.
-- `HANDOFF_V0.5.7_SETTINGS_PAGE.md`: implemented Agent First Settings checkpoint
-  with Common / Capabilities / Advanced hierarchy and isolated Electron QA.
-- `HANDOFF_V0.5.7_AGENT_ACCESS_PAGE.md`: implemented one-action Agent Access
-  checkpoint and external-client onboarding contract.
-- `HANDOFF_V0.5.7_HOME_CLARAVISION.md`: implemented shared-consciousness Home
-  presence surface using the Shared Horizon direction, truthful Agent activity
-  semantics, measured Canvas lifecycle/performance, isolated test Gateway, and
-  the adjacent partial `memoria_update` contract.
-- `mac-packaging.md`: current local macOS packaging and packaged Gateway notes.
+## Start Here
 
-Historical notes and completed bugfix reports live under `docs/archive/`.
-Archived files are useful evidence, but they are not active implementation
-instructions unless a current doc links to them.
+- [Positioning](POSITIONING.md): product boundary and north star.
+- [Architecture](ARCHITECTURE.md): runtime, renderer, database, Gateway,
+  packaging, validation, and documentation boundaries.
+- [Code Map](CODE_MAP.md): shortest source-reading paths by task.
+- [Version and Branching](VERSION_BRANCHING.md): current version truth,
+  isolated development, checkpoint, and release rules.
+
+## Product Contracts
+
+- [Agent MCP Playbook](AGENT_MCP_PLAYBOOK.md): agent-facing tool workflow.
+- [Multi-Agent Clients](MULTI_AGENT_CLIENTS.md): caller identity, session, and
+  Shared Line contracts for Codex, Claude, and Hermes.
+- [Runtime Memory Policy](RUNTIME_MEMORY_POLICY.md): bounded snapshots,
+  pagination, resource ownership, and long-run behavior.
+- [Home Shared Horizon](HOME_SHARED_HORIZON.md): current Home presence and
+  performance contract.
+
+## Build And Release
+
+- [macOS Packaging](mac-packaging.md): current Full/Lite packaging commands and
+  packaged Gateway checks.
+- [v0.5.6 Release Notes](RELEASE_NOTES_V0.5.6.md): current public release.
+
+## Module Notes
+
+- [Renderer modules](../app/README.md)
+- [Runtime](../core/runtime/README.md)
+- [Database repositories](../core/db/repositories/README.md)
+- [Memoria](../core/memoria/README.md)
+- [Continuity / Shared Line](../core/continuity/README.md)
+- [InnerLife](../core/innerlife/README.md)
+- [Gateway](../core/gateway/README.md)
+
+## Historical Material
+
+See [archive/README.md](archive/README.md) for completed handoffs, superseded
+plans, old release notes, and research that is not part of the current product
+direction.

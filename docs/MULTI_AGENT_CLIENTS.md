@@ -1,10 +1,10 @@
-# Multi-Agent Client Migration for v0.5.0
+# Multi-Agent Client Contract
 
 This guide is for Codex, Claude, and Hermes clients that connect to ClaraCore
-Desktop through MCP. Version 0.5.0 separates the stable agent persona, the host
-client, the host conversation, and domain object ids. The goal is to let several
-agents use one Desktop database without overwriting each other's identity,
-Shared Line ownership, or InnerLife lifecycle.
+Desktop through MCP. Since version 0.5.0, the contract separates the stable
+agent persona, the host client, the host conversation, and domain object ids.
+The goal is to let several agents use one Desktop database without overwriting
+each other's identity, Shared Line ownership, or InnerLife lifecycle.
 
 ## Identity Contract
 

@@ -26,6 +26,7 @@ Make one tiny closed-loop change at a time. Prefer deleting or simplifying over 
 For Gateway, InnerLife, or runtime polish, avoid disturbing the live app. Use isolated roots such as:
 
 - `CLARACORE_DESKTOP_DATA_DIR=/tmp/...`
+- `CLARACORE_DESKTOP_USER_DATA_DIR=/tmp/...`
 - `CLARACORE_DESKTOP_TEST_INSTANCE=1`
 
 The Gateway uses stable localhost port `50668` by default. Tests may request a

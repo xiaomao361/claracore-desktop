@@ -224,7 +224,7 @@ function createSnapshotRuntime({ ensureProductCore }) {
       modules: productModules({ innerLife }),
       plans: {
         productReset: path.join(paths.appRoot, "docs", "ARCHITECTURE.md"),
-        v02Legacy: path.join(paths.appRoot, "docs", "CLEANUP_PLAN.md")
+        v02Legacy: path.join(paths.appRoot, "docs", "CODE_MAP.md")
       }
     };
   }

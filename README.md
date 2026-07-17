@@ -2,7 +2,7 @@
 
 ## Agent-First Principle
 
-For the next development window, ClaraCore Desktop should be treated as software
+ClaraCore Desktop is software
 for agents to use and for humans to inspect. Human-facing UI exists to make
 agent state, data, runtime health, backups, and recovery understandable and
 controllable; the primary operational path should be friendly to connected
@@ -33,8 +33,9 @@ Read these before adding new features:
 
 - [Architecture](docs/ARCHITECTURE.md): current runtime, renderer, core, database,
   Gateway, and documentation boundaries.
-- [Cleanup Plan](docs/CLEANUP_PLAN.md): active technical-debt cleanup order before
-  feature expansion.
+- [Code Map](docs/CODE_MAP.md): shortest source-reading paths by task.
+- [Version and Branching](docs/VERSION_BRANCHING.md): current development,
+  isolation, checkpoint, and release rules.
 - [Runtime Memory Policy](docs/RUNTIME_MEMORY_POLICY.md): small snapshot,
   pagination, resource ownership, memory telemetry, and long-run checks.
 - [macOS Packaging](docs/mac-packaging.md): current local packaging and packaged
@@ -42,11 +43,13 @@ Read these before adding new features:
 - [v0.5.6 release notes](docs/RELEASE_NOTES_V0.5.6.md): first-run onboarding,
   demo data, scoped Shared Line reads, Full model-form cleanup, and validated
   Windows Full/Lite packaging.
-- [v0.5.7 Home / Shared Horizon handoff](docs/HANDOFF_V0.5.7_HOME_CLARAVISION.md):
-  current Home presence, performance, test-isolation, and local-checkpoint truth.
-- [Multi-Agent Client Migration v0.5.0](docs/MULTI_AGENT_CLIENT_MIGRATION_V0_5.md):
+- [Home Shared Horizon](docs/HOME_SHARED_HORIZON.md): current Home presence,
+  performance, and test-isolation contract.
+- [Multi-Agent Clients](docs/MULTI_AGENT_CLIENTS.md):
   Codex, Claude, and Hermes identity, conversation, InnerLife session, and
   Shared Line integration rules.
+- [Docs index](docs/README.md): current contracts versus archived historical
+  material.
 - Module boundary notes:
   - [Renderer modules](app/README.md)
   - [Runtime](core/runtime/README.md)
@@ -155,8 +158,12 @@ From this directory:
 
 ```bash
 npm install
-npm run start
+npm run start:next
 ```
+
+`start:next` isolates both product data and Electron user data from the
+daily-use Desktop app. Use `npm run start:product` only when intentionally
+opening the normal product instance.
 
 During development the app detects the existing ClaraCore checkout two directories above this app:
 

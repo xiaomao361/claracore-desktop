@@ -433,8 +433,9 @@ Use these gates for current development:
 
 ## Documentation Boundary
 
-Keep current, build-relevant docs in `docs/`. Move superseded plans to
-`docs/archive/` so agents do not treat old phase plans as active instructions.
+Keep current, build-relevant docs in `docs/`. Move completed handoffs,
+superseded plans, old release notes, and unapproved research to `docs/archive/`
+so agents do not treat historical phase material as active instructions.
 
 Current docs should answer:
 
@@ -445,4 +446,6 @@ Current docs should answer:
 - how to continue development safely
 
 See `docs/README.md` for the current docs index. Completed bugfix notes and
-single-run polish logs belong in `docs/archive/`.
+single-run polish logs belong in `docs/archive/`. Product UI/source-map links
+must resolve to active docs; archive paths must never be presented as the next
+development plan.

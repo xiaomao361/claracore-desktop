@@ -15,8 +15,8 @@ persists in the local `agent-gateway.json` token file until the user rotates it.
 Users can change the port, generate a new token, and copy a complete agent
 config from Settings > General > Agent Gateway.
 
-For the complete Codex, Claude, and Hermes migration checklist, see
-[Multi-Agent Client Migration for v0.5.0](MULTI_AGENT_CLIENT_MIGRATION_V0_5.md).
+For the complete Codex, Claude, and Hermes caller checklist, see
+[Multi-Agent Clients](MULTI_AGENT_CLIENTS.md).
 
 The generated stdio fallback config includes three caller fields:
 
