@@ -5,13 +5,12 @@
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
 - Current development version: `0.5.8`.
-- Current public release: `0.5.6`.
-- The current `0.5.8` work is a local development checkpoint, not a public
-  release.
+- Current public release: `0.5.8`.
+- Tag `v0.5.8` is the current stable GitHub Release.
 
-The checkpoint adds the read-only Trace page and its bounded aggregate snapshot
-to the existing Agent First page set, Home Shared Horizon, strict test-instance
-isolation, and partial MCP `memoria_update` semantics. See
+The release adds the read-only Trace page and its bounded aggregate snapshot to
+the Agent First page set, Home Shared Horizon, strict test-instance isolation,
+and partial MCP `memoria_update` semantics. See
 [Trace Page](TRACE_PAGE.md), [Home Shared Horizon](HOME_SHARED_HORIZON.md), and
 the current architecture/code-map docs for the maintained contract.
 
@@ -55,7 +54,7 @@ through to the daily-use Application Support directory.
 
 Current packaging commands and artifact checks live in
 [macOS Packaging](mac-packaging.md). Current public-release details live in
-[v0.5.6 Release Notes](RELEASE_NOTES_V0.5.6.md).
+[v0.5.8 Release Notes](RELEASE_NOTES_V0.5.8.md).
 
 ## History
 

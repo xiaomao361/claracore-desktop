@@ -29,7 +29,7 @@ instructions.
 
 - [macOS Packaging](mac-packaging.md): current Full/Lite packaging commands and
   packaged Gateway checks.
-- [v0.5.6 Release Notes](RELEASE_NOTES_V0.5.6.md): current public release.
+- [v0.5.8 Release Notes](RELEASE_NOTES_V0.5.8.md): current public release.
 
 ## Module Notes
 

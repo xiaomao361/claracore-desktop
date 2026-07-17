@@ -31,10 +31,10 @@ look biological or decorative instead of expressing continuity.
 - Remote: `git@github.com:xiaomao361/claracore-desktop.git`
 - Branch: `main`
 - Current development version: `0.5.8`
-- Public baseline: `v0.5.6`
+- Public baseline: `v0.5.8`
 
-The Desktop repository may contain other uncommitted v0.5.8 work. Preserve it.
-Do not revert, bulk-stage, commit, or push unless the user explicitly asks.
+The Desktop repository may contain unrelated uncommitted work. Preserve it. Do
+not revert, bulk-stage, commit, or push unless the user explicitly asks.
 
 ## Product Contract
 

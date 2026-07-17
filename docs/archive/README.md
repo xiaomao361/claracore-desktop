@@ -23,9 +23,10 @@ active as `../HOME_SHARED_HORIZON.md`.
 - `HANDOFF_OLLAMA_LITE_BUILD.md`
 - `RELEASE_NOTES_V0.5.4.md`
 - `RELEASE_NOTES_V0.5.5.md`
+- `RELEASE_NOTES_V0.5.6.md`
 - `VERSION_HISTORY_PRE_V0.5.7.md`
 
-The current public release is documented in `../RELEASE_NOTES_V0.5.6.md` and
+The current public release is documented in `../RELEASE_NOTES_V0.5.8.md` and
 current package commands remain in `../mac-packaging.md`.
 
 ## Superseded Plans And Research
