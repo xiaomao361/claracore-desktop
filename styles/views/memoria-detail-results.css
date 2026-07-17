@@ -27,27 +27,25 @@
 
 .memory-item {
   position: relative;
+  min-width: 0;
   padding: 14px 12px 14px 16px;
-  border: 0;
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
-  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
   cursor: pointer;
   outline: none;
-}
-
-.memory-item:first-child {
-  border-top: 1px solid var(--border);
+  overflow-wrap: anywhere;
+  transition: border-color 120ms ease, background 120ms ease;
 }
 
 .memory-item:hover,
 .memory-item:focus-visible {
+  border-color: rgba(40, 116, 90, 0.4);
   background: var(--surface-soft);
 }
 
 .memory-item.selected {
-  border-bottom-color: rgba(40, 116, 90, 0.2);
-  border-radius: 8px;
+  border-color: var(--green);
   background: var(--green-bg);
   box-shadow: inset 3px 0 0 var(--green);
 }
@@ -225,6 +223,8 @@
 .memory-detail-content {
   display: grid;
   gap: 22px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .memory-detail-section > span {

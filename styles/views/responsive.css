@@ -216,13 +216,19 @@
     min-width: 0;
   }
 
-  .shared-line-filter {
+  .agent-filter {
+    width: 100%;
     justify-content: space-between;
   }
 
-  .shared-line-filter select {
+  .agent-filter select {
     flex: 1;
     min-width: 0;
+    max-width: none;
+  }
+
+  .shared-line-heading-filter {
+    margin-left: 0;
   }
 
   .memory-label-alias-section .memory-search {
@@ -250,15 +256,6 @@
   .innerlife-panel-heading {
     align-items: stretch;
     grid-template-columns: 1fr;
-  }
-
-  .innerlife-agent-filter {
-    justify-self: stretch;
-    width: 100%;
-  }
-
-  .innerlife-agent-filter select {
-    width: 100%;
   }
 
   .innerlife-reader {
@@ -321,7 +318,7 @@
   }
 
   .memory-agent-filter {
-    grid-template-columns: 1fr;
+    justify-self: stretch;
   }
 
   .shared-line-list-panel,

@@ -84,7 +84,7 @@
               <input id="memorySearchInput" data-i18n-placeholder="memory.search.placeholder" placeholder="Search what agents remembered" />
               <button id="searchMemory" class="secondary" data-i18n="actions.search">Search</button>
             </div>
-            <label class="memory-agent-filter">
+            <label class="agent-filter memory-agent-filter">
               <span data-i18n="sharedLine.filter.agent">Agent</span>
               <select id="memoryAgentFilter"></select>
             </label>
@@ -148,6 +148,10 @@
             <div class="panel-heading shared-line-list-heading">
               <h2 data-i18n="sharedLine.activeLines">In progress</h2>
               <span id="sharedLineActiveCount" class="quiet"></span>
+              <label class="agent-filter shared-line-heading-filter">
+                <span data-i18n="sharedLine.filter.agent">Agent</span>
+                <select id="sharedLineAgentFilter"></select>
+              </label>
             </div>
             <div id="sharedLineList" class="shared-line-list" role="listbox" data-i18n-aria-label="sharedLine.listLabel"></div>
             <details id="sharedLineArchiveDetails" class="shared-line-archive-details">
@@ -211,10 +215,6 @@
                 </span>
               </summary>
               <div class="shared-line-advanced-body">
-                <label class="shared-line-filter">
-                  <span data-i18n="sharedLine.filter.agent">Agent</span>
-                  <select id="sharedLineAgentFilter"></select>
-                </label>
                 <section>
                   <h3 data-i18n="sharedLine.history">Recent history</h3>
                   <div id="sharedLineHistoryList" class="shared-line-history-list"></div>
@@ -240,7 +240,7 @@
 
           <article class="panel innerlife-reader">
             <div class="innerlife-agent-row">
-              <label class="innerlife-agent-filter">
+              <label class="agent-filter">
                 <span data-i18n="innerLife.agentLabel">Agent</span>
                 <select id="innerLifeAgentFilter"></select>
               </label>

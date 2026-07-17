@@ -44,16 +44,7 @@
 }
 
 .memory-agent-filter {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.memory-agent-filter select {
-  min-width: 0;
+  justify-self: end;
 }
 
 .memory-reader-grid {
@@ -82,9 +73,11 @@
 .memory-list {
   display: grid;
   align-content: start;
-  gap: 0;
+  gap: 10px;
+  min-width: 0;
   max-height: min(560px, calc(100vh - 360px));
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding-right: 4px;
 }
 
