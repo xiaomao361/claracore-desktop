@@ -99,8 +99,16 @@ function createInnerLifeProfileRepository(helpers) {
     ,
 
     async deleteInnerLifeProfile(input = {}) {
-      const agentId = resolveAgentIdentity(input || {}).id;
-      if (!agentId || agentId === "all") throw new Error("InnerLife agent id is required.");
+      // Destructive: never resolve the target through identity fallbacks
+      // (env vars, DEFAULT_AGENT_ID) — an empty input must fail, not delete
+      // the default agent.
+      const explicit = typeof input === "string"
+        ? input
+        : input?.agentId || input?.agent_id || input?.targetAgentId || "";
+      const requested = String(explicit || "").trim();
+      if (!requested || requested === "all") throw new Error("InnerLife agent id is required.");
+      const agentId = resolveAgentIdentity(requested).id;
+      if (!agentId || agentId !== requested) throw new Error(`InnerLife agent id "${requested}" is not a valid stable agent id.`);
       const existingRows = await this.query(`
         SELECT agent_id, display_name, enabled, profile_json, state_json, created_at, updated_at
         FROM innerlife_profiles

@@ -47,21 +47,16 @@ const innerlifeProfileToolDefinitions = [
   {
     "name": "innerlife_profile_delete",
     "title": "Delete InnerLife Profile",
-    "description": "Delete one agent's Desktop-owned InnerLife profile and all InnerLife data for that agent.",
+    "description": "Delete one agent's Desktop-owned InnerLife profile and all InnerLife data for that agent. targetAgentId names the profile to delete; it is never inferred from the caller's identity, so deleting your own profile also requires passing it explicitly.",
     "inputSchema": {
       "type": "object",
       "required": [
-        "agentId"
+        "targetAgentId"
       ],
       "properties": {
-        "agentId": {
-          "type": "string"
-        },
-        "agentTool": {
-          "type": "string"
-        },
-        "agentName": {
-          "type": "string"
+        "targetAgentId": {
+          "type": "string",
+          "minLength": 1
         }
       },
       "additionalProperties": false

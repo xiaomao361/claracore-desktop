@@ -89,7 +89,14 @@ async function handleInnerLifeTool(name, args, context) {
   }
 
   if (name === "innerlife_profile_delete") {
-    return textResult(await innerlife.deleteProfile(core, args));
+    // The HTTP gateway overwrites args.agentId with the caller's identity
+    // header, so the delete target must come from a field the gateway never
+    // touches. Falling back to agentId here would delete the caller instead.
+    const targetAgentId = String(args.targetAgentId || "").trim();
+    if (!targetAgentId) {
+      throw new Error("innerlife_profile_delete requires targetAgentId naming the profile to delete.");
+    }
+    return textResult(await innerlife.deleteProfile(core, { agentId: targetAgentId }));
   }
 
   if (name === "innerlife_digest") {
