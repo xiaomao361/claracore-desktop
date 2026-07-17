@@ -46,6 +46,15 @@ function createSystemRepository(helpers) {
     };
   }
 
+  function inclusiveLocalSpanDays(firstAt) {
+    const firstDate = new Date(firstAt);
+    if (Number.isNaN(firstDate.getTime())) return 0;
+    const today = new Date();
+    const firstLocalDay = Date.UTC(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate());
+    const currentLocalDay = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+    return Math.max(1, Math.round((currentLocalDay - firstLocalDay) / 86400000) + 1);
+  }
+
   return {
     async ensureGatewayTraceCompatibility() {
       const columns = new Set((await this.query("PRAGMA table_info(gateway_traces);")).map((row) => row.name));
@@ -606,6 +615,205 @@ function createSystemRepository(helpers) {
         prompt: input.prompt,
         timeoutMs: input.timeoutMs
       });
+    },
+
+    async getTraceSnapshot() {
+      const [spanRows, semanticRows, milestoneRows, participantRows, memoryStats, innerLifeCounts] = await Promise.all([
+        this.query(`
+          WITH meaningful_dates AS (
+            SELECT created_at AS occurred_at FROM memories WHERE status = 'active'
+            UNION ALL
+            SELECT created_at AS occurred_at FROM continuity_position_history
+            UNION ALL
+            SELECT created_at AS occurred_at FROM innerlife_events
+            UNION ALL
+            SELECT created_at AS occurred_at FROM innerlife_shares
+          ), normalized_dates AS (
+            SELECT
+              occurred_at,
+              CASE
+                WHEN occurred_at GLOB '*+[0-9][0-9][0-9][0-9]'
+                  OR occurred_at GLOB '*-[0-9][0-9][0-9][0-9]'
+                THEN substr(occurred_at, 1, length(occurred_at) - 2) || ':' || substr(occurred_at, -2)
+                ELSE occurred_at
+              END AS normalized_at
+            FROM meaningful_dates
+          )
+          SELECT occurred_at AS first_at
+          FROM normalized_dates
+          WHERE julianday(normalized_at) IS NOT NULL
+          ORDER BY julianday(normalized_at) ASC
+          LIMIT 1;
+        `),
+        this.query(`
+          SELECT
+            (SELECT COUNT(DISTINCT m.id)
+             FROM memories m
+             JOIN memory_labels l ON l.memory_id = m.id
+             WHERE m.status = 'active'
+               AND (
+                 lower(l.label) IN ('decision', 'product-decision', 'design-decision')
+                 OR lower(l.label) LIKE 'decision:%'
+                 OR l.label IN ('决定', '决策', '设计决定', '产品决定')
+               )) AS decisions_count,
+            (SELECT COUNT(*)
+             FROM continuity_lines l
+             WHERE l.status = 'active'
+               AND EXISTS (
+                 SELECT 1
+                 FROM current_positions p
+                 WHERE p.line_id = l.id
+                   AND trim(COALESCE(p.summary, '')) != ''
+               )) AS active_lines_count,
+            (SELECT COUNT(*)
+             FROM (
+               SELECT DISTINCT h.id AS history_id, refs.value AS memory_id
+               FROM continuity_position_history h, json_each(
+                 CASE WHEN json_valid(h.facts_used_json) THEN h.facts_used_json ELSE '[]' END
+               ) refs
+               JOIN memories m ON m.id = refs.value
+             )) AS reused_memories_count,
+            (SELECT COUNT(DISTINCT a.share_id)
+             FROM innerlife_share_actions a
+             WHERE a.action = 'used'
+               AND json_valid(a.metadata_json)
+               AND COALESCE(json_extract(a.metadata_json, '$.deliveryEvidence.conversationId'), '') != ''
+               AND COALESCE(json_extract(a.metadata_json, '$.deliveryEvidence.responseExcerpt'), '') != ''
+               AND COALESCE(json_extract(a.metadata_json, '$.deliveryEvidence.sharedAt'), '') != '') AS verified_shares_count,
+            (SELECT COUNT(*) FROM continuity_position_history) AS line_updates_count,
+            (SELECT COUNT(*) FROM continuity_snapshots) AS line_snapshots_count,
+            (SELECT COUNT(*) FROM continuity_lines WHERE status = 'archived') AS archived_lines_count,
+            (SELECT COUNT(*) FROM continuity_handoffs) AS handoffs_count;
+        `),
+        this.query(`
+          SELECT
+            m.id,
+            COALESCE(NULLIF(m.title, ''), substr(m.body, 1, 120)) AS title,
+            m.created_at,
+            m.updated_at,
+            group_concat(DISTINCT l.label) AS labels
+          FROM memories m
+          JOIN memory_labels marker ON marker.memory_id = m.id
+          LEFT JOIN memory_labels l ON l.memory_id = m.id
+          WHERE m.status = 'active'
+            AND (
+              lower(marker.label) IN ('milestone', 'release', 'product-decision', 'design-decision')
+              OR lower(marker.label) LIKE 'release:%'
+              OR marker.label IN ('里程碑', '发布', '项目进展', '产品决定', '设计决定')
+            )
+          GROUP BY m.id
+          ORDER BY datetime(m.updated_at) DESC, datetime(m.created_at) DESC, m.id DESC
+          LIMIT 5;
+        `),
+        Promise.all([
+          this.query(`
+            SELECT m.id AS item_id, l.label AS agent_label, 'memory' AS kind
+            FROM memories m
+            JOIN memory_labels l ON l.memory_id = m.id
+            WHERE m.status != 'deleted'
+              AND (l.label LIKE 'agent-id:%' OR l.label LIKE 'agent:%');
+          `),
+          this.query(`
+            SELECT id AS item_id, agent_id AS agent_label, 'sharedLine' AS kind
+            FROM continuity_lines;
+          `),
+          this.query(`
+            SELECT id AS item_id, agent_id AS agent_label, 'innerLife' AS kind
+            FROM innerlife_events
+            UNION ALL
+            SELECT id AS item_id, agent_id AS agent_label, 'innerLife' AS kind
+            FROM innerlife_shares;
+          `),
+          this.query(`
+            SELECT a.id, a.label, p.display_name
+            FROM agents a
+            LEFT JOIN innerlife_profiles p ON p.agent_id = a.id;
+          `)
+        ]),
+        this.getMemoryStats(),
+        this.getInnerLifeCounts("all")
+      ]);
+
+      const [memoryParticipantRows, lineParticipantRows, innerLifeParticipantRows, agentRows] = participantRows;
+      const agentNames = new Map(
+        agentRows.map((row) => [String(row.id || "").trim(), row.display_name || row.label || row.id])
+      );
+      const participantMap = new Map();
+      const normalizeParticipantId = (value = "") => {
+        const label = String(value || "").trim();
+        if (label.startsWith("agent-id:")) return label.slice("agent-id:".length);
+        if (label.startsWith("agent:")) return label.slice("agent:".length);
+        return label;
+      };
+      const addParticipant = (row) => {
+        const agentId = normalizeParticipantId(row.agent_label);
+        if (!agentId || !row.item_id) return;
+        if (!participantMap.has(agentId)) {
+          participantMap.set(agentId, {
+            agentId,
+            displayName: agentNames.get(agentId) || agentId,
+            memories: new Set(),
+            sharedLines: new Set(),
+            innerLife: new Set()
+          });
+        }
+        const participant = participantMap.get(agentId);
+        if (row.kind === "memory") participant.memories.add(row.item_id);
+        if (row.kind === "sharedLine") participant.sharedLines.add(row.item_id);
+        if (row.kind === "innerLife") participant.innerLife.add(row.item_id);
+      };
+      [...memoryParticipantRows, ...lineParticipantRows, ...innerLifeParticipantRows].forEach(addParticipant);
+
+      const firstAt = spanRows[0]?.first_at || null;
+      const semantic = semanticRows[0] || {};
+      const counts = innerLifeCounts || {};
+      return {
+        firstAt,
+        spanDays: firstAt ? inclusiveLocalSpanDays(firstAt) : 0,
+        semantic: {
+          decisions: Number(semantic.decisions_count || 0),
+          activeLines: Number(semantic.active_lines_count || 0),
+          reusedMemories: Number(semantic.reused_memories_count || 0),
+          verifiedShares: Number(semantic.verified_shares_count || 0)
+        },
+        milestones: milestoneRows.map((row) => ({
+          id: row.id,
+          title: row.title || row.id,
+          labels: String(row.labels || "").split(",").filter(Boolean),
+          createdAt: row.created_at,
+          updatedAt: row.updated_at
+        })),
+        participants: Array.from(participantMap.values())
+          .map((participant) => ({
+            agentId: participant.agentId,
+            displayName: participant.displayName,
+            memoryCount: participant.memories.size,
+            sharedLineCount: participant.sharedLines.size,
+            innerLifeCount: participant.innerLife.size
+          }))
+          .sort((left, right) => left.displayName.localeCompare(right.displayName)),
+        memory: memoryStats,
+        sharedLine: {
+          activeCount: Number(semantic.active_lines_count || 0),
+          archivedCount: Number(semantic.archived_lines_count || 0),
+          historyCount: Number(semantic.line_updates_count || 0),
+          snapshotCount: Number(semantic.line_snapshots_count || 0),
+          handoffCount: Number(semantic.handoffs_count || 0)
+        },
+        innerLife: {
+          profilesCount: Number(agentRows.filter((row) => row.display_name).length),
+          thoughtsCount: Number(counts.thoughts_count || 0),
+          pendingSharesCount: Number(counts.pending_shares_count || 0),
+          approvedSharesCount: Number(counts.approved_shares_count || 0),
+          usedSharesCount: Number(counts.used_shares_count || 0),
+          verifiedSharesCount: Number(semantic.verified_shares_count || 0),
+          deferredSharesCount: Number(counts.deferred_shares_count || 0),
+          discardedSharesCount: Number(counts.discarded_shares_count || 0),
+          sessionsCount: Number(counts.active_sessions_count || 0) + Number(counts.ended_sessions_count || 0),
+          digestRunsCount: Number(counts.digest_runs_count || 0),
+          inboxCount: Number(counts.pending_inbox_count || 0) + Number(counts.processed_inbox_count || 0)
+        }
+      };
     },
 
     async getSummary() {

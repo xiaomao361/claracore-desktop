@@ -2,8 +2,8 @@
 
 ## Current Target
 
-The current public package line is `v0.5.6`; the `0.5.7` source line is a local
-development checkpoint and has not been packaged as part of the current work.
+The current public package line is `v0.5.6`; the `0.5.8` source line is the
+active release candidate until its final tag and GitHub Release are verified.
 macOS artifacts remain unsigned.
 
 It is enough for:
@@ -60,9 +60,9 @@ ClaraCore-Desktop-<version>-x64-Setup.exe
 ClaraCore-Desktop-<version>-lite-x64-Setup.exe
 ```
 
-For `v0.5.6`, macOS artifacts are built and validated locally. Windows Full and
-Lite artifacts are built by the manually triggered
-`.github/workflows/build-v0.5.6.yml` workflow on `windows-latest`. The workflow
+macOS artifacts are built and validated locally. Windows Full and Lite
+artifacts are built by the manually triggered
+`.github/workflows/build-windows-release.yml` workflow on `windows-latest`. The workflow
 must run the packaged Full built-in embedding smoke before its installers are
 accepted, so incomplete `sharp`/libvips native DLL packaging fails in CI instead
 of on a tester's machine.

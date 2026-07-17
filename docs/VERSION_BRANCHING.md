@@ -4,15 +4,16 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- Current development version: `0.5.7`.
+- Current development version: `0.5.8`.
 - Current public release: `0.5.6`.
-- The current `0.5.7` work is a local development checkpoint, not a public
+- The current `0.5.8` work is a local development checkpoint, not a public
   release.
 
-The checkpoint includes the read-only Agent First page set, Home Shared
-Horizon, strict test-instance isolation, and partial MCP `memoria_update`
-semantics. See [Home Shared Horizon](HOME_SHARED_HORIZON.md) and the current
-architecture/code-map docs for the maintained contract.
+The checkpoint adds the read-only Trace page and its bounded aggregate snapshot
+to the existing Agent First page set, Home Shared Horizon, strict test-instance
+isolation, and partial MCP `memoria_update` semantics. See
+[Trace Page](TRACE_PAGE.md), [Home Shared Horizon](HOME_SHARED_HORIZON.md), and
+the current architecture/code-map docs for the maintained contract.
 
 ## Isolated Development
 

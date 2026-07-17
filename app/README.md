@@ -18,13 +18,19 @@ expanding `app.js`.
 
 ## Current View Modules
 
-- `views/home.js`: dashboard, module state, agent views, health, and Gateway traces.
-- `views/memoria.js`: Memoria tabs, search, labels, graph, archive/delete, and embedding actions.
-- `views/shared-innerlife.js`: Shared Line and InnerLife rendering.
+- `views/home.js`: Home presence copy, current Shared Line and eligible
+  InnerLife text, recent Agent markers, and one actionable issue.
+- `views/home-presence.js`: bounded Home presence model.
+- `views/home-vision.js`: Shared Horizon Canvas and animation lifecycle.
+- `views/memoria.js`: read-only Memoria tabs, search, detail, labels, and graph.
+- `views/memoria-list.js`: Memory list, label overview, and Agent-filter helpers.
+- `views/shared-innerlife.js`: read-only Shared Line and InnerLife rendering.
+- `views/trace.js`: read-only Trace narrative, milestones, Agent participation,
+  domain counts, and advanced statistics.
 - `views/data.js`: SQLite backups, restore confirmation, and full product JSON import/export.
-- `views/logs.js`: runtime log rendering, follow mode, and periodic refresh.
-- `views/settings.js`: Models and settings form rendering/collection.
-- `views/agent-setup.js`: agent MCP/CLI setup guide.
+- `views/logs.js`: runtime logs, follow mode, decay audit, and time flow.
+- `views/settings.js`: Settings and model configuration rendering/collection.
+- `views/agent-setup.js`: focused Agent Access setup and copy surface.
 
 Event handlers still live mostly in `app.js`. Move them only when the target
 view module can own the whole interaction without adding hidden cross-view

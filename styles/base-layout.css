@@ -262,6 +262,22 @@ nav {
   background: currentColor;
 }
 
+.nav-icon-trace::before {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: -6px 4px 0 -1px currentColor, 6px -4px 0 1px currentColor;
+}
+
+.nav-icon-trace::after {
+  width: 14px;
+  height: 8px;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  transform: rotate(-28deg);
+}
+
 .nav-icon-data::before {
   width: 12px;
   height: 14px;

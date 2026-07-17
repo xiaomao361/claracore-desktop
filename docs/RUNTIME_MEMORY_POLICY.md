@@ -20,6 +20,8 @@ Current global snapshot allowances:
 - `runtimeEvents`: recent events only, limit 50.
 - `innerLife`: compact snapshot with paged sessions, inbox, digest runs, and
   recent shares only.
+- `trace`: read-only aggregate counts, at most five milestones, and one compact
+  participation row per attributable Agent; it never carries full domain rows.
 
 ## Pagination And Lazy Loading
 

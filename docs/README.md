@@ -22,6 +22,8 @@ instructions.
   pagination, resource ownership, and long-run behavior.
 - [Home Shared Horizon](HOME_SHARED_HORIZON.md): current Home presence and
   performance contract.
+- [Trace Page](TRACE_PAGE.md): read-only narrative hierarchy and maintained
+  definitions for accumulated statistics.
 
 ## Build And Release
 

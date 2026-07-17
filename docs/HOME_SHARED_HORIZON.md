@@ -2,7 +2,7 @@
 
 Date: 2026-07-17
 
-Status: current Home product and performance contract for the `0.5.7`
+Status: current Home product and performance contract for the `0.5.8`
 development line.
 
 ## Current Result
@@ -30,10 +30,10 @@ look biological or decorative instead of expressing continuity.
 - Repository: `/Users/zhouwei/Documents/ClaraCore/apps/claracore-desktop`
 - Remote: `git@github.com:xiaomao361/claracore-desktop.git`
 - Branch: `main`
-- Current development version: `0.5.7`
+- Current development version: `0.5.8`
 - Public baseline: `v0.5.6`
 
-The Desktop repository may contain other uncommitted v0.5.7 work. Preserve it.
+The Desktop repository may contain other uncommitted v0.5.8 work. Preserve it.
 Do not revert, bulk-stage, commit, or push unless the user explicitly asks.
 
 ## Product Contract

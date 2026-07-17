@@ -21,7 +21,7 @@ Do not add new feature logic here when it belongs to a domain module.
 
 - `index.js`: public facade imported as `core/runtime`.
 - `paths.js`: ClaraCore root and product data path resolution.
-- `snapshot.js`: bounded Home/Logs/status snapshot assembly.
+- `snapshot.js`: bounded Home/Trace/Logs/status snapshot assembly.
 - `decay.js`: read-only audit of dormant, stale, waiting, or error state across
   Memory, Shared Line, and InnerLife.
 - `backup.js`: product backup, restore, restore preview, and backup listing.

@@ -111,6 +111,8 @@ Focused renderer modules live under `app/`:
   memory item render helpers
 - `app/views/settings.js`: model configuration collection plus Settings-page appearance, window, data-path, and about rendering
 - `app/views/shared-innerlife.js`: Shared Line and InnerLife views
+- `app/views/trace.js`: read-only Trace narrative, milestones, Agent
+  participation, and cross-domain detail counts
 
 New renderer work should go into a focused module, not into `app.js`.
 
@@ -200,8 +202,8 @@ snapshots, backup-gated imports, archive export, or read-only decay audits. They
 should not become the home for new domain rules.
 
 Runtime snapshots must stay bounded. `buildProductSnapshot()` is the Home,
-Logs, and status snapshot, so it should carry counts, summaries, recent samples,
-and compact read-only inspection results only. Full Memory lists, InnerLife
+Trace, Logs, and status snapshot, so it should carry counts, summaries, recent
+samples, and compact read-only inspection results only. Full Memory lists, InnerLife
 history, Gateway trace browsing, and graph data must be fetched through focused
 paged or lazy-loaded IPC calls. The detailed resource rules live in
 [Runtime Memory Policy](RUNTIME_MEMORY_POLICY.md).

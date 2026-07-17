@@ -273,6 +273,13 @@ const sharedInnerLifeView = window.createClaraCoreSharedInnerLifeView({
   renderMemoryResults,
   memoryAgentId
 });
+const traceView = window.createClaraCoreTraceView({
+  dom: window.ClaraCoreDom,
+  t,
+  getSnapshot: () => snapshot,
+  escapeHtml,
+  formatLocalDateTime
+});
 const sharedLineActions = window.createClaraCoreSharedLineActions({
   desktop: window.ClaraCoreDesktop,
   dom: window.ClaraCoreDom,
@@ -531,6 +538,8 @@ function renderPageFocus() {
 
   views.innerlife?.panel?.querySelector(":scope > .page-focus")?.remove();
 
+  views.trace?.panel?.querySelector(":scope > .page-focus")?.remove();
+
   views["agent-setup"]?.panel?.querySelector(":scope > .page-focus")?.remove();
 
   views.logs?.panel?.querySelector(":scope > .page-focus")?.remove();
@@ -561,6 +570,7 @@ function renderSnapshot() {
   renderMemoryList();
   renderSharedLine();
   renderInnerLife();
+  traceView.render();
   renderBackups();
 }
 

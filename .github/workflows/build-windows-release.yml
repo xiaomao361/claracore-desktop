@@ -1,10 +1,10 @@
-name: Build v0.5.6 Windows
+name: Build Windows Release
 
 on:
   workflow_dispatch:
   pull_request:
     paths:
-      - ".github/workflows/build-v0.5.6.yml"
+      - ".github/workflows/build-windows-release.yml"
       - "package.json"
       - "package-lock.json"
       - "scripts/**"
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: build-v0.5.6-windows-${{ github.ref }}
+  group: build-windows-release-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -69,7 +69,7 @@ jobs:
       - name: Upload Windows installers
         uses: actions/upload-artifact@v7
         with:
-          name: claracore-desktop-v0.5.6-windows-x64
+          name: claracore-desktop-windows-x64
           path: |
             dist/*-Setup.exe
             dist-lite/*-Setup.exe

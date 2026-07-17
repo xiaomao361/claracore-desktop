@@ -45,6 +45,8 @@ Read these before adding new features:
   Windows Full/Lite packaging.
 - [Home Shared Horizon](docs/HOME_SHARED_HORIZON.md): current Home presence,
   performance, and test-isolation contract.
+- [Trace page](docs/TRACE_PAGE.md): read-only narrative, metric definitions,
+  milestones, and Agent participation contract.
 - [Multi-Agent Clients](docs/MULTI_AGENT_CLIENTS.md):
   Codex, Claude, and Hermes identity, conversation, InnerLife session, and
   Shared Line integration rules.
@@ -61,7 +63,7 @@ Read these before adding new features:
 
 ## Current Status
 
-The current development version is `0.5.7`; the current public release is
+The current development version is `0.5.8`; the current public release is
 `0.5.6`. It is a working desktop shell with a
 product-owned local data store, Desktop-native Memoria, Shared Line, InnerLife,
 a Desktop-owned Gateway, with model configuration merged into the Settings
@@ -77,7 +79,7 @@ Included:
   Access entry; configured-only Agents are never presented as recently active.
 - ClaraCore root detection
 - Product-owned SQLite data root under Desktop user data
-- Home, Memoria, Shared Line, InnerLife, Agent Access, Logs, and Settings pages (model and data management live inside Settings tabs)
+- Home, Memoria, Shared Line, InnerLife, Trace, Agent Access, Logs, and Settings pages (model and data management live inside Settings tabs)
 - Home presence surface with a layered shared-line horizon representing the
   shared consciousness space, at most three recently observed Agent ripples, stable
   identity colors, reduced-motion fallback, and strict
@@ -123,6 +125,10 @@ Included:
   full unshared thoughts, and verified shared history. A thought appears as
   shared only after a `used` action with conversational delivery evidence;
   daemon/pipeline controls and raw diagnostics are not primary human UI.
+- Read-only Trace page that first tells the accumulated story in plain language,
+  then shows recent confirmed milestones, non-ranked Agent participation, and
+  detailed Memoria, Shared Line, and InnerLife statistics. Advanced raw counts
+  remain collapsed by default.
 - Verified SQLite product backups with restore preview and safety-backup restore
 - Full product JSON export/import for portable ClaraCore Desktop data
 - Agent identity is stable per calling agent: Streamable HTTP uses `X-ClaraCore-Agent-ID`, stdio fallback uses `CLARACORE_AGENT_ID`; preferred stable ids are `lara`, `clara`, and `codex`, while legacy tool-prefixed ids can be consolidated with `agent_identity_merge`

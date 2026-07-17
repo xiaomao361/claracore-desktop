@@ -82,6 +82,8 @@ Current view owners:
 - `app/views/memoria-list.js`: Memoria list cards, inline labels, label
   overview, agent filter, and maintenance count helpers.
 - `app/views/shared-innerlife.js`: Shared Line and InnerLife rendering.
+- `app/views/trace.js`: read-only Trace narrative, milestones, Agent
+  participation, domain detail cards, and collapsed advanced metrics.
 - `app/views/data.js`: backups, restore preview/confirmation, import/export,
   and import preview.
 - `app/views/logs.js`: runtime log view, follow mode, read-only decay audit,
@@ -144,7 +146,8 @@ Repository ownership:
   label/value normalization, vector math, and JSON HTTP calls.
 - `core/db/repositories/system.js`: settings, secrets, configuration,
   runtime events, Gateway traces with agent/client/conversation identity,
-  backup records, LLM calls, and database summary persistence.
+  backup records, LLM calls, database summary persistence, and the bounded
+  cross-domain Trace aggregate.
 - `core/db/migrations/003_multi_agent_caller_context.js`: additive v0.5
   migration for Gateway trace `client_id` / `conversation_id` columns and
   legacy `session_id` backfill.
@@ -289,6 +292,21 @@ Memory, Shared Line, InnerLife, Gateway, and runtime events from the current
 snapshot. Decay audit cards must stay read-only; automatic archive, share
 review, or daemon recovery belongs in explicit agent or human actions.
 
+### Trace Page
+
+Start here:
+
+1. `core/db/repositories/system.js`
+2. `core/runtime/snapshot.js`
+3. `app/views/trace.js`
+4. `styles/views/trace.css`
+5. `core/tests/trace-ui-smoke.js`
+
+Use this path for the separate product page named Trace / 痕迹. Its aggregate
+is read-only and bounded; it does not add a schema, write path, ranking, streak,
+or synthetic identifier. Maintained metric definitions live in
+`docs/TRACE_PAGE.md`.
+
 ## Change Placement Rules
 
 - New UI rendering: `app/views/*` plus `styles/views/*`.
@@ -323,6 +341,7 @@ rg -n "listGatewayTraces|recordGatewayTrace|runtimeEvents" core
 Choose the smallest validation that matches the changed surface.
 
 - Syntax-only JavaScript change: `npm run check`
+- Trace snapshot or page change: `npm run test:trace`
 - Shell/window change: `npm run test:shell`
 - Memoria CLI or domain change: `npm run test:memoria:cli` or
   `npm run test:phase2`

@@ -21,15 +21,11 @@ function createClaraCoreSharedInnerLifeView(context) {
     sharedLineAgentStatePanel, sharedLineMetadataPanel, sharedLineHistoryList, sharedLineSnapshotList, sharedLineArchiveList,
     innerLifeAgentFilter, innerLifeProfileName, innerLifeFocus, innerLifeInterests,
     innerLifeUnsharedList, innerLifeSharedList, innerLifeSharedDetails, innerLifeAdvancedDetails,
-    innerLifeSessionList,
-    loadMoreInnerLifeSessions, innerLifeDigestList, loadMoreInnerLifeDigestRuns, innerLifeInboxList, loadMoreInnerLifeInbox,
-    innerLifeShareCheckList, innerLifeShareList, innerLifeDaemonStatus,
-    innerLifeHistoryList, innerLifeExperienceList, innerLifeSummaryList, innerLifeContextBar,
-    innerLifeDaemonToggle, innerLifeDaemonToggleLabel, innerLifeNextRun, innerLifeLastResult, innerLifeRecovery,
-    innerLifeDoctorStatus, innerLifeDoctorList, innerLifePendingCount,
-    innerLifeProfileDisplayName, innerLifeProfileRecentFocus, innerLifeProfileInterests,
-    innerLifeProfileShareAfterHours, innerLifeProfileShareCooldownHours, innerLifeProfileShareMaxDaily,
-    innerLifeProfileJson, innerLifeStateJson, saveInnerLifeProfile, innerLifeProfileNotice,
+    innerLifeSessionList, innerLifeDigestList, innerLifeInboxList,
+    innerLifeShareCheckList, innerLifeDaemonStatus,
+    innerLifeHistoryList, innerLifeExperienceList, innerLifeSummaryList,
+    innerLifeNextRun, innerLifeLastResult, innerLifeRecovery,
+    innerLifeDoctorStatus, innerLifeDoctorList,
     innerLifeProfileJsonView, innerLifeStateJsonView
   } = dom;
 

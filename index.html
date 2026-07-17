@@ -26,6 +26,7 @@
         <button class="nav-item" data-view="memory"><span class="nav-icon nav-icon-memory"></span><span data-i18n="nav.memory">Memoria</span></button>
         <button class="nav-item" data-view="shared-line"><span class="nav-icon nav-icon-shared-line"></span><span data-i18n="nav.sharedLine">Shared Line</span></button>
         <button class="nav-item" data-view="innerlife"><span class="nav-icon nav-icon-innerlife"></span><span data-i18n="nav.innerLife">InnerLife</span></button>
+        <button class="nav-item" data-view="trace"><span class="nav-icon nav-icon-trace"></span><span data-i18n="nav.trace">Trace</span></button>
         <button class="nav-item" data-view="logs"><span class="nav-icon nav-icon-logs"></span><span data-i18n="nav.logs">Logs</span></button>
         <button class="nav-item" data-view="agent-setup"><span class="nav-icon nav-icon-agent"></span><span data-i18n="nav.agentSetup">Agent Access</span></button>
         <button class="nav-item" data-view="settings"><span class="nav-icon nav-icon-settings"></span><span data-i18n="nav.settings">Settings</span></button>
@@ -268,7 +269,7 @@
               <summary>
                 <span>
                   <strong data-i18n="innerLife.shared">Shared before</strong>
-                  <small data-i18n="innerLife.sharedHint">Only thoughts with verified conversational delivery appear here.</small>
+                  <small data-i18n="innerLife.sharedHint">Verified deliveries and legacy shares with unverified delivery appear here.</small>
                 </span>
               </summary>
               <div id="innerLifeSharedList" class="innerlife-thought-list innerlife-shared-list"></div>
@@ -314,6 +315,76 @@
               </div>
             </details>
           </article>
+        </div>
+      </section>
+
+      <section id="traceView" class="view">
+        <div class="trace-page">
+          <header class="trace-page-heading">
+            <span class="trace-readonly-badge"><i aria-hidden="true"></i><span data-i18n="trace.readOnly">Read only</span></span>
+          </header>
+
+          <article class="panel trace-hero" aria-labelledby="traceSpanTitle">
+            <span class="trace-kicker" data-i18n="trace.kicker">Accumulated here</span>
+            <h2 id="traceSpanTitle" data-i18n="trace.emptySpan">No trace has formed here yet</h2>
+            <p id="traceSpanDetail" class="quiet"></p>
+            <div id="traceStatements" class="trace-statements"></div>
+          </article>
+
+          <div class="trace-story-grid">
+            <article class="panel trace-milestone-panel">
+              <div class="panel-heading trace-section-heading">
+                <div>
+                  <span class="trace-kicker" data-i18n="trace.milestones.kicker">What took shape</span>
+                  <h2 data-i18n="trace.milestones.title">Recent milestones</h2>
+                </div>
+              </div>
+              <div id="traceMilestoneList" class="trace-milestone-list"></div>
+            </article>
+
+            <article class="panel trace-participant-panel">
+              <div class="panel-heading trace-section-heading">
+                <div>
+                  <span class="trace-kicker" data-i18n="trace.participants.kicker">Shared across agents</span>
+                  <h2 data-i18n="trace.participants.title">Left together</h2>
+                </div>
+              </div>
+              <div id="traceParticipantList" class="trace-participant-list"></div>
+            </article>
+          </div>
+
+          <section class="trace-data-section" aria-labelledby="traceDataTitle">
+            <div class="trace-data-heading">
+              <div>
+                <span class="trace-kicker" data-i18n="trace.data.kicker">The complete counts</span>
+                <h2 id="traceDataTitle" data-i18n="trace.data.title">Data overview</h2>
+              </div>
+            </div>
+            <div class="trace-data-grid">
+              <article class="panel trace-data-card trace-data-memory">
+                <div class="trace-data-card-head"><span class="trace-data-mark">M</span><h3 data-i18n="trace.memory.title">Memory</h3></div>
+                <div id="traceMemoryMetrics" class="trace-metric-list"></div>
+              </article>
+              <article class="panel trace-data-card trace-data-line">
+                <div class="trace-data-card-head"><span class="trace-data-mark">L</span><h3 data-i18n="trace.sharedLine.title">Shared Line</h3></div>
+                <div id="traceSharedLineMetrics" class="trace-metric-list"></div>
+              </article>
+              <article class="panel trace-data-card trace-data-innerlife">
+                <div class="trace-data-card-head"><span class="trace-data-mark">I</span><h3 data-i18n="trace.innerLife.title">InnerLife</h3></div>
+                <div id="traceInnerLifeMetrics" class="trace-metric-list"></div>
+              </article>
+            </div>
+          </section>
+
+          <details id="traceAdvancedDetails" class="panel trace-advanced-details">
+            <summary>
+              <span>
+                <strong data-i18n="trace.advanced.title">Advanced data</strong>
+                <small data-i18n="trace.advanced.body">Read technical and lifecycle counts without mixing them into the main trace.</small>
+              </span>
+            </summary>
+            <div id="traceAdvancedMetrics" class="trace-advanced-grid"></div>
+          </details>
         </div>
       </section>
 
@@ -758,6 +829,7 @@
     <script src="./app/views/memoria.js"></script>
     <script src="./app/views/settings.js"></script>
     <script src="./app/views/shared-innerlife.js"></script>
+    <script src="./app/views/trace.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>
