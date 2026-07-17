@@ -56,12 +56,12 @@
     "test:smoke": "npm run check && npm run test:timezone && npm run test:sqlite-binary && npm run test:shell && npm run test:phase1 && npm run test:phase2 && npm run test:phase3 && npm run test:phase4 && npm run test:phase5 && npm run test:backup && npm run test:import-preview",
     "pack:mac": "electron-builder --mac --dir",
     "pack:mac:lite": "electron-builder --mac --dir --config scripts/lite-builder-config.js",
-    "dist:mac": "electron-builder --mac",
-    "dist:mac:lite": "electron-builder --mac --config scripts/lite-builder-config.js",
+    "dist:mac": "electron-builder --mac --publish never",
+    "dist:mac:lite": "electron-builder --mac --config scripts/lite-builder-config.js --publish never",
     "pack:win": "electron-builder --win --x64 --dir",
     "pack:win:lite": "electron-builder --win --x64 --dir --config scripts/lite-builder-config.js",
-    "dist:win": "electron-builder --win --x64",
-    "dist:win:lite": "electron-builder --win --x64 --config scripts/lite-builder-config.js",
+    "dist:win": "electron-builder --win --x64 --publish never",
+    "dist:win:lite": "electron-builder --win --x64 --config scripts/lite-builder-config.js --publish never",
     "test:embedding:lazy": "node core/tests/builtin-embedding-lazy-smoke.js"
   },
   "build": {
