@@ -70,6 +70,11 @@ async function main() {
     });
     const page = await app.firstWindow();
     await page.waitForFunction(() => window.ClaraCoreTestHooks?.homeVision()?.agentCount === 1, null, { timeout: 15000 });
+    await page.click("[data-view='home']");
+    await page.waitForFunction(() => {
+      const vision = window.ClaraCoreTestHooks?.homeVision?.();
+      return vision?.active && vision?.scheduled === 1;
+    });
 
     await page.evaluate(() => {
       document.body.dataset.motionPreference = "off";
@@ -95,7 +100,7 @@ async function main() {
       cpuDelta: animated.totalCpu - staticBaseline.totalCpu,
       rendererMemoryDeltaMb: animated.rendererPrivateMb - staticBaseline.rendererPrivateMb
     };
-    if (animated.fps > 12.8 || animated.scheduler.particleCount > 160 || animated.scheduler.canvasPixels > 900000) {
+    if (animated.fps > 12.8 || animated.scheduler.particleCount !== 0 || animated.scheduler.horizonLayers !== 3 || animated.scheduler.canvasPixels > 720000) {
       throw new Error(`Home scene budget failed: ${JSON.stringify(result)}`);
     }
     if (away.frames !== 0 || away.scheduler.scheduled !== 0) {

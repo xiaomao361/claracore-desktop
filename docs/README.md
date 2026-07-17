@@ -27,8 +27,9 @@ packaging, data, or agent behavior.
 - `HANDOFF_V0.5.7_AGENT_ACCESS_PAGE.md`: implemented one-action Agent Access
   checkpoint and external-client onboarding contract.
 - `HANDOFF_V0.5.7_HOME_CLARAVISION.md`: implemented shared-consciousness Home
-  presence surface, truthful Agent activity semantics, and measured Canvas
-  lifecycle/performance contract.
+  presence surface using the Shared Horizon direction, truthful Agent activity
+  semantics, measured Canvas lifecycle/performance, isolated test Gateway, and
+  the adjacent partial `memoria_update` contract.
 - `mac-packaging.md`: current local macOS packaging and packaged Gateway notes.
 
 Historical notes and completed bugfix reports live under `docs/archive/`.

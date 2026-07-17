@@ -71,8 +71,12 @@ Start here:
 
 Current view owners:
 
-- `app/views/home.js`: Home agent view, attention queue, compact status board
-  (runtime strip plus module cards), health, and Gateway trace summaries.
+- `app/views/home.js`: Home presence copy, Shared Line and InnerLife text,
+  recent Agent markers, and one actionable issue.
+- `app/views/home-presence.js`: bounded presence model derived from recent
+  Gateway truth, current Shared Line, and eligible InnerLife material.
+- `app/views/home-vision.js`: Shared Horizon Canvas rendering, Agent ripples,
+  pixel/FPS budgets, reduced motion, and inactive-view scheduling.
 - `app/views/memoria.js`: Memoria tabs (Memories / Labels / Graph / Archive &
   restricted), search, paging, and embedding maintenance actions.
 - `app/views/memoria-list.js`: Memoria list cards, inline labels, label
@@ -90,19 +94,21 @@ Current view owners:
 New renderer behavior should usually go into a focused `app/views/*` module or
 another focused `app/*` module, not directly into `app.js`.
 
-### Runtime Snapshot And Home Status Truth
+### Runtime Snapshot And Home Presence Truth
 
 Start here:
 
 1. `core/runtime/snapshot.js`
 2. `core/runtime/index.js`
 3. `electron/main.js`
-4. `app/views/home.js`
+4. `app/views/home-presence.js`
+5. `app/views/home.js`
+6. `app/views/home-vision.js`
 
-Use this path when Home says a module is missing, paused, ready, or unhealthy.
-`buildProductSnapshot()` is the bounded Home/status packet. Keep it to counts,
-summaries, and recent samples. Full lists should be fetched through focused
-IPC/runtime calls.
+Use this path when Home shows the wrong current line, thought, Agent presence,
+arrival state, or visual cadence. `buildProductSnapshot()` remains bounded;
+Home derives its presence model from compact recent samples and does not add a
+second poll or database query. Full lists stay behind focused IPC/runtime calls.
 
 Decay audit is part of the bounded snapshot, but it remains read-only. Start at
 `core/runtime/decay.js` when dormant Memory, stale Shared Line, old InnerLife
@@ -194,6 +200,10 @@ Start here:
 Use this path for memory create/update/delete/archive/restore/restrict,
 records, labels, graph, search, and embedding maintenance.
 
+For MCP `memoria_update`, inspect the handler before the repository: the
+handler preserves omitted `title`, `labels`, and `sensitivity`, while the
+repository remains a full-record update primitive.
+
 ### Shared Line Behavior
 
 Start here:
@@ -240,6 +250,11 @@ Start here:
 
 Gateway tools should call runtime or domain facades. Avoid adding Gateway
 behavior that bypasses a domain facade into database internals.
+
+For test launches, read `electron/main.js` and
+`electron/http-agent-gateway.js` together. A test instance must set both
+`CLARACORE_DESKTOP_DATA_DIR` and `CLARACORE_DESKTOP_USER_DATA_DIR`; random port
+`0` is test-only and must never persist into the live Gateway token file.
 
 ### Data, Backup, Restore, Import, And Export
 

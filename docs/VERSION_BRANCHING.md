@@ -21,14 +21,35 @@ That command sets:
 
 ```text
 CLARACORE_DESKTOP_DATA_DIR=~/Library/Application Support/claracore-desktop-next/data
+CLARACORE_DESKTOP_USER_DATA_DIR=~/Library/Application Support/claracore-desktop-next
 CLARACORE_DESKTOP_TEST_INSTANCE=1
 ```
 
-The separate data root keeps development builds from writing the daily-use
-product database. The test-instance flag also avoids colliding with the normal
-app's single-instance lock while the stable app is open.
+The separate product-data and Electron user-data roots keep development builds
+from writing either the daily-use database or `agent-gateway.json`. The
+test-instance flag also avoids colliding with the normal app's single-instance
+lock while the stable app is open. Desktop rejects a test instance without an
+explicit `CLARACORE_DESKTOP_USER_DATA_DIR`; random-port Gateway tests enforce
+the same rule.
 
-Automated smoke tests already create temporary data roots under `/tmp` through `CLARACORE_DESKTOP_DATA_DIR`. Keep new tests on the same pattern unless the test is explicitly checking migration from a real backup.
+Automated UI and Gateway smoke tests create temporary roots and must pass both
+variables. Keep new tests on the same pattern unless a test explicitly checks
+migration from a real backup.
+
+## Unreleased v0.5.7 Local Checkpoint
+
+The current local checkpoint keeps the product version at `0.5.7` and includes:
+
+- the Home Shared Horizon direction with truthful recent-Agent ripples,
+  code-native Shared Line / InnerLife text, and bounded Canvas lifecycle;
+- isolated test-instance user data so random-port Gateway validation cannot
+  overwrite the daily-use token/port configuration;
+- partial MCP `memoria_update`, preserving omitted `title`, `labels`, and
+  `sensitivity` during body-only refinements;
+- synchronized Home, architecture, code-map, MCP, versioning, and handoff docs.
+
+This is a local development checkpoint, not a public release. Do not add a tag,
+release entry, package, or remote push until explicitly requested.
 
 For packaged release checks, keep using:
 

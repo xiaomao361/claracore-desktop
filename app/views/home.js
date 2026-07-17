@@ -34,6 +34,7 @@ function createClaraCoreHomeView(context) {
     homeEmergingText,
     homeActionableIssue,
     homeVisionField,
+    homeHorizonLabel,
     homeVisionCanvas,
     homeVisionFallback,
     homePresenceAgents,
@@ -598,6 +599,9 @@ function createClaraCoreHomeView(context) {
     homePresenceTitle.textContent = model.title;
     homePresenceDetail.textContent = model.detail;
     homePresenceEmptyAction.hidden = model.agents.length > 0;
+    homeHorizonLabel.textContent = model.core.currentLineTitle
+      ? `${t("home.presence.horizon")} · ${model.core.currentLineTitle}`
+      : t("home.presence.horizon");
     homeSharedLineSection.hidden = !model.core.currentSummary;
     homeSharedLineText.textContent = model.core.currentLineTitle
       ? `${model.core.currentLineTitle} · ${model.core.currentSummary}`

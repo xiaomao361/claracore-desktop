@@ -66,6 +66,15 @@ async function main() {
     const initial = await page.evaluate(() => ({
       title: document.querySelector("#homePresenceTitle")?.textContent || "",
       sharedLine: document.querySelector("#homeSharedLineText")?.textContent || "",
+      container: (() => {
+        const style = getComputedStyle(document.querySelector(".home-presence"));
+        return {
+          borderRadius: style.borderRadius,
+          borderTopWidth: style.borderTopWidth,
+          borderTopStyle: style.borderTopStyle,
+          backgroundImage: style.backgroundImage
+        };
+      })(),
       agents: [...document.querySelectorAll("#homePresenceAgents .home-presence-agent")].map((node) => ({
         label: node.textContent.trim(),
         color: node.style.getPropertyValue("--agent-color")
@@ -83,9 +92,16 @@ async function main() {
       initial.legacyModules ||
       initial.legacyRuntime ||
       initial.focusBlock ||
-      initial.vision.particleCount !== 96 ||
+      initial.container.borderRadius !== "8px" ||
+      initial.container.borderTopWidth !== "1px" ||
+      initial.container.borderTopStyle !== "solid" ||
+      !initial.container.backgroundImage.includes("linear-gradient") ||
+      initial.vision.particleCount !== 0 ||
+      initial.vision.horizonLayers !== 3 ||
+      initial.vision.visualMode !== "shared-horizon" ||
+      initial.vision.atmosphereCachePixels !== 0 ||
       initial.vision.agentCount !== 3 ||
-      initial.vision.canvasPixels > 900000
+      initial.vision.canvasPixels > 720000
     ) {
       throw new Error(`Initial Home presence contract failed: ${JSON.stringify(initial)}`);
     }
@@ -143,6 +159,8 @@ async function main() {
     if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
       await page.screenshot({ path: process.env.CLARACORE_UI_SCREENSHOT_PATH });
       await page.setViewportSize({ width: 900, height: 720 });
+      await page.click("[data-view='home']");
+      await page.waitForFunction(() => document.querySelector("#homeView")?.classList.contains("active-view"));
       await page.evaluate(() => {
         document.body.dataset.theme = "dark";
         document.body.dataset.themePreference = "dark";

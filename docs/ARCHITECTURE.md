@@ -100,7 +100,10 @@ Focused renderer modules live under `app/`:
 - `app/utils.js`: pure formatting and HTML helpers
 - `app/views/agent-setup.js`: Agent Access view
 - `app/views/data.js`: Data, backup, import, export, and restore view
-- `app/views/home.js`: overview, modules, health, and trace summary view
+- `app/views/home.js`: code-native Home presence copy, Shared Line and InnerLife
+  text, recent Agent markers, and one actionable issue
+- `app/views/home-vision.js`: bounded Shared Horizon Canvas renderer and
+  animation lifecycle
 - `app/views/home-trace.js`: Home Gateway trace and agent activity helpers
 - `app/views/logs.js`: Logs view, read-only decay audit, and time flow
 - `app/views/memoria.js`: Memoria workbench, tabs, graph, labels, and embedding
@@ -119,31 +122,31 @@ is active.
 `styles.css` is an import entry. Shared and view-specific styles live under
 `styles/`; add new CSS near the view or component it serves instead of growing a
 single stylesheet again.
-`styles/views/home.css` is a Home style entry that imports focused Home files
-for base, runtime, module, dashboard, and event/motion styling.
+`styles/views/home.css` is a Home style entry that imports focused Home files;
+`styles/views/home-presence.css` owns the current Shared Horizon presence field.
 `styles/views/innerlife.css` is an InnerLife style entry that imports focused
 layout, runtime, profile, and record/share styling.
 `styles/views/memoria-detail.css` is a Memoria detail style entry that imports
 focused base, graph, label, and result styling.
 
-The Home page is the operational board for the local agent runtime. It should
-make runtime state inspectable at a glance without becoming a generic settings
-page:
+The Home page is a quiet presence surface, not an operational dashboard:
 
-- The Home status board is a compact runtime strip plus module readiness rail;
-  state tones (ok, warn, error) derive from the current snapshot.
-- Healthy runtime/module diagnostics stay collapsed below the human/agent work
-  surfaces. Actionable warnings or errors expand that diagnostic section.
-- Home attention only counts human-actionable signals: missing required
-  modules, embedding failures, daemon errors, and Gateway errors from the last
-  30 minutes. Agent-owned waiting state such as pending InnerLife shares is
-  ambient information, never an attention item.
-- Motion must respect the Settings motion preference and system reduced-motion
-  preference. Disabling motion should leave a readable static state.
-- The Gateway trace panel should show one expanded priority call chain and keep
-  repeated calls compact. Priority is error first, then newest call. Additional
-  calls belong in a compressed recent list with overflow review through Agent
-  Access, not as repeated expanded JSON cards.
+- one Shared Horizon represents the current shared world and continuity;
+- up to three Agent ripples come only from recent Gateway traces, never saved
+  configuration or an inferred permanent online state;
+- the current Shared Line position and one eligible InnerLife thought remain
+  readable DOM text rather than Canvas text;
+- one actionable issue may be disclosed, while normal runtime diagnostics and
+  trace inspection remain in Logs, Agent Access, and Settings;
+- Canvas work is bounded to 720,000 pixels, zero particles, three horizon
+  layers, 12 FPS quiet cadence, 24 FPS active cap, and zero continuous frames
+  under reduced motion, hidden documents, or inactive Home;
+- the empty state retains the same horizon without Agent signals and offers one
+  direct Agent Access action.
+
+Home must not reintroduce the old brain core, particle field, statistics,
+module cards, runtime board, Agent administration, or permanent onboarding.
+Motion must respect both the Settings preference and system reduced-motion.
 - Chinese UI copy should stay Chinese except for protocol, format, runtime, or
   actual tool names such as MCP, CLI, HTTP, JSON, SQLite, localhost, token,
   Electron, Node, Chrome, and real agent/tool identifiers.
@@ -313,6 +316,12 @@ Gateway behavior is split by responsibility:
 Gateway should expose stable product tools and call domain/runtime facades. New
 Gateway behavior should not bypass a domain facade into database internals.
 
+`memoria_update` is partial at the MCP boundary. `id` and `body` are required;
+omitted `title`, `labels`, and `sensitivity` are read from the existing Memory
+before the domain update, while explicitly supplied fields retain replacement
+semantics. This prevents a body-only refinement from clearing metadata without
+changing the lower-level full-record update used by Desktop UI and CLI paths.
+
 Agent Setup shows both the current Streamable HTTP endpoint and the generated
 stdio fallback config. Gateway is part of the product runtime, while the Logs
 view and Gateway trace tables are inspection surfaces for what agents are doing.
@@ -329,6 +338,12 @@ database writes must therefore remain correct under SQLite's cross-process WAL
 and busy-timeout rules. The Desktop UI's quit path best-effort stops packaged
 sibling Gateway processes so replacing `/Applications/ClaraCore Desktop.app` is
 not blocked by a stale `--gateway` process.
+
+Test instances must isolate both product data and Electron user data. When
+`CLARACORE_DESKTOP_TEST_INSTANCE=1`, `electron/main.js` requires
+`CLARACORE_DESKTOP_USER_DATA_DIR`; random-port HTTP Gateway tests require it as
+well so `agent-gateway.json` cannot fall through to the daily-use Application
+Support directory. `npm run start:next` supplies both isolated roots.
 
 Agent identity belongs to the caller. Streamable HTTP treats
 `X-ClaraCore-Agent-ID` as authoritative for the request. Stdio fallback treats

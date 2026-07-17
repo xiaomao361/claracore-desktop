@@ -65,6 +65,7 @@ window.ClaraCoreDom = {
   homeEmergingText: document.querySelector("#homeEmergingText"),
   homeActionableIssue: document.querySelector("#homeActionableIssue"),
   homeVisionField: document.querySelector("#homeVisionField"),
+  homeHorizonLabel: document.querySelector("#homeHorizonLabel"),
   homeVisionCanvas: document.querySelector("#homeVisionCanvas"),
   homeVisionFallback: document.querySelector("#homeVisionFallback"),
   homePresenceAgents: document.querySelector("#homePresenceAgents"),

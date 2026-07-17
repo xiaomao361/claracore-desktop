@@ -67,7 +67,9 @@ use the names listed there.
 ### Record A Durable Fact Or Decision
 
 1. Call `memoria_search` with the topic first.
-2. If an existing memory is the same fact, call `memoria_update`.
+2. If an existing memory is the same fact, call `memoria_update`. `id` and
+   `body` are required. Omit `title`, `labels`, or `sensitivity` to preserve
+   their current values; pass one explicitly only when replacing that field.
 3. If a confirmed new state replaces an old fact, call `memoria_create` for
    the new fact, then `memoria_supersede` with `currentMemoryId` = new and
    `historicalMemoryId` = old.

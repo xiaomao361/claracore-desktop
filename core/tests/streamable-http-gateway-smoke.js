@@ -31,6 +31,23 @@ async function withOccupiedPort(port, fn) {
 }
 
 async function main() {
+  const previousTestInstance = process.env.CLARACORE_DESKTOP_TEST_INSTANCE;
+  const previousUserDataDir = process.env.CLARACORE_DESKTOP_USER_DATA_DIR;
+  try {
+    process.env.CLARACORE_DESKTOP_TEST_INSTANCE = "1";
+    delete process.env.CLARACORE_DESKTOP_USER_DATA_DIR;
+    assert.throws(
+      () => createHttpAgentGateway({ app: { getPath: () => "/should-not-be-used" }, port: 0 }),
+      /random-port test Gateway requires CLARACORE_DESKTOP_USER_DATA_DIR/,
+      "A random-port test Gateway must not fall through to the live userData path"
+    );
+  } finally {
+    if (previousTestInstance === undefined) delete process.env.CLARACORE_DESKTOP_TEST_INSTANCE;
+    else process.env.CLARACORE_DESKTOP_TEST_INSTANCE = previousTestInstance;
+    if (previousUserDataDir === undefined) delete process.env.CLARACORE_DESKTOP_USER_DATA_DIR;
+    else process.env.CLARACORE_DESKTOP_USER_DATA_DIR = previousUserDataDir;
+  }
+
   let syncCall = null;
   const syncResult = syncCodexMcpToken("s".repeat(64), {
     platform: "darwin",

@@ -102,7 +102,7 @@ const memoriaCoreToolDefinitions = [
   {
     "name": "memoria_update",
     "title": "Update Memory",
-    "description": "Update an existing active Memory only when correcting or refining the same fact. When a confirmed new state replaces an old fact, create a new Memory and call memoria_supersede instead.",
+    "description": "Update an existing active Memory only when correcting or refining the same fact. Omitted title, labels, and sensitivity are preserved. When a confirmed new state replaces an old fact, create a new Memory and call memoria_supersede instead.",
     "inputSchema": {
       "type": "object",
       "required": [

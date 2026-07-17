@@ -6,6 +6,13 @@ Date: 2026-07-01
 
 Updated: 2026-07-16
 
+Current result (2026-07-17): the supporting pages remain Agent First, and Home
+is now implemented as the Shared Horizon presence surface. The old brain-core,
+particle, module-card, runtime-board, and dashboard directions are closed. Home
+keeps one readable current state, truthful recent-Agent ripples, code-native
+Shared Line / InnerLife text, and one quiet actionable issue. See
+`HANDOFF_V0.5.7_HOME_CLARAVISION.md` for the measured contract.
+
 - Review each page from a new user's perspective before changing Home.
 - Preserve the product rule: agents create, update, organize, and maintain
   product data; the human Desktop surface is for reading and verification, not
@@ -31,8 +38,8 @@ Updated: 2026-07-16
   preferences and updates on the first screen, reveal external-provider forms
   only on request, and close technical, storage, Gateway, and recovery groups
   by default. Completed locally for v0.5.7 with isolated Electron QA.
-- Discuss Home last, after every supporting page has one clear human-readable
-  purpose.
+- Home was discussed and implemented last, after every supporting page had one
+  clear human-readable purpose.
 
 ## v0.5.6 Release Checkpoint
 

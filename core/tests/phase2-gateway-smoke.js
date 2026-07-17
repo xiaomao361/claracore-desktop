@@ -227,6 +227,21 @@ async function main() {
     if (!updated.labels.includes("gateway") || updated.labels.includes("gw")) {
       throw new Error(`Gateway memoria_update did not canonicalize alias labels: ${JSON.stringify(updated.labels)}`);
     }
+    const bodyOnlyUpdated = parseTextResult(
+      await client.callTool("memoria_update", {
+        id: created.id,
+        body: "Gateway body-only Memory update should preserve omitted metadata."
+      })
+    ).memory;
+    if (bodyOnlyUpdated.title !== updated.title) {
+      throw new Error(`Gateway body-only memoria_update cleared the title: ${JSON.stringify(bodyOnlyUpdated)}`);
+    }
+    if (JSON.stringify(bodyOnlyUpdated.labels) !== JSON.stringify(updated.labels)) {
+      throw new Error(`Gateway body-only memoria_update cleared labels: ${JSON.stringify(bodyOnlyUpdated)}`);
+    }
+    if (bodyOnlyUpdated.body !== "Gateway body-only Memory update should preserve omitted metadata.") {
+      throw new Error(`Gateway body-only memoria_update did not persist the body: ${JSON.stringify(bodyOnlyUpdated)}`);
+    }
     const tagged = parseTextResult(await client.callTool("memoria_tag", { id: created.id, add: "agent-facing", remove: "updated" }));
     if (!tagged.memory.labels.includes("agent-facing") || tagged.memory.labels.includes("updated")) {
       throw new Error(`Gateway memoria_tag did not add/remove labels incrementally: ${JSON.stringify(tagged)}`);

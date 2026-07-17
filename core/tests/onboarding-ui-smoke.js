@@ -41,10 +41,18 @@ async function main() {
       emptyState.checklistPresent ||
       emptyState.legacyDashboardPresent ||
       emptyState.vision.agentCount !== 0 ||
-      emptyState.vision.particleCount !== 96
+      emptyState.vision.particleCount !== 0 ||
+      emptyState.vision.horizonLayers !== 3 ||
+      emptyState.vision.visualMode !== "shared-horizon" ||
+      emptyState.vision.atmosphereCachePixels !== 0
     ) {
       throw new Error(`Empty Home rendered incorrectly: ${JSON.stringify(emptyState)}`);
     }
+    if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
+      await page.screenshot({ path: process.env.CLARACORE_UI_SCREENSHOT_PATH });
+    }
+    await page.click("#homePresenceEmptyAction");
+    await page.waitForFunction(() => document.querySelector("#agentSetupView")?.classList.contains("active-view"));
     console.log(JSON.stringify({ ok: true, emptyState }, null, 2));
   } finally {
     if (app) await app.close();

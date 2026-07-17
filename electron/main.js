@@ -48,8 +48,14 @@ function applyCliEnvArgs(argv = process.argv) {
 applyCliEnvArgs();
 
 const isGatewayMode = process.argv.includes("--gateway");
-if (!isGatewayMode && process.env.CLARACORE_DESKTOP_TEST_INSTANCE === "1" && process.env.CLARACORE_DESKTOP_USER_DATA_DIR) {
-  app.setPath("userData", path.resolve(process.env.CLARACORE_DESKTOP_USER_DATA_DIR));
+if (!isGatewayMode && process.env.CLARACORE_DESKTOP_TEST_INSTANCE === "1") {
+  const isolatedUserDataDir = String(process.env.CLARACORE_DESKTOP_USER_DATA_DIR || "").trim();
+  if (!isolatedUserDataDir) {
+    throw new Error(
+      "CLARACORE_DESKTOP_TEST_INSTANCE requires CLARACORE_DESKTOP_USER_DATA_DIR so tests cannot overwrite live Desktop configuration."
+    );
+  }
+  app.setPath("userData", path.resolve(isolatedUserDataDir));
 }
 let mainWindow = null;
 let tray = null;

@@ -42,6 +42,8 @@ Read these before adding new features:
 - [v0.5.6 release notes](docs/RELEASE_NOTES_V0.5.6.md): first-run onboarding,
   demo data, scoped Shared Line reads, Full model-form cleanup, and validated
   Windows Full/Lite packaging.
+- [v0.5.7 Home / Shared Horizon handoff](docs/HANDOFF_V0.5.7_HOME_CLARAVISION.md):
+  current Home presence, performance, test-isolation, and local-checkpoint truth.
 - [Multi-Agent Client Migration v0.5.0](docs/MULTI_AGENT_CLIENT_MIGRATION_V0_5.md):
   Codex, Claude, and Hermes identity, conversation, InnerLife session, and
   Shared Line integration rules.
@@ -68,14 +70,14 @@ remain stored as UTC, while structured records preserve their event time zone.
 Included:
 
 - Electron desktop app
-- Empty-data Home with one quiet shared-consciousness core and a direct Agent
+- Empty-data Home with one quiet shared-line horizon and a direct Agent
   Access entry; configured-only Agents are never presented as recently active.
 - ClaraCore root detection
 - Product-owned SQLite data root under Desktop user data
 - Home, Memoria, Shared Line, InnerLife, Agent Access, Logs, and Settings pages (model and data management live inside Settings tabs)
-- Home presence surface with one bounded Canvas core representing the shared
-  consciousness space, at most three recently observed Agent lights, stable
-  identity colors, capped signal flows, reduced-motion fallback, and strict
+- Home presence surface with a layered shared-line horizon representing the
+  shared consciousness space, at most three recently observed Agent ripples, stable
+  identity colors, reduced-motion fallback, and strict
   animation/pixel budgets. It uses recent Gateway activity as presence truth
   and keeps Shared Line / eligible InnerLife text readable without Canvas.
 - Agent Access page with connected-agent/recent-activity evidence and one
@@ -84,6 +86,9 @@ Included:
   stdio fallback without duplicating a technical manual in the human UI.
 - Streamable HTTP MCP uses stable localhost port `50668` by default and persisted local token file; port/token edits, random token generation, and copyable agent config live in Settings > General > Agent Gateway
 - Desktop-owned Gateway Streamable HTTP endpoint for Gateway context, Memoria, Shared Line, and InnerLife MCP tools; stdio remains available for clients that do not support HTTP MCP yet
+- Gateway `memoria_update` requires `id` and `body`; omitted `title`, `labels`,
+  and `sensitivity` preserve their current values, while explicitly supplied
+  fields replace them.
 - Shared Line defaults are agent-scoped for Gateway callers: without an explicit `lineId`, `X-ClaraCore-Agent-ID` / `CLARACORE_AGENT_ID` reads and writes the agent's own line only when that choice is unambiguous. Multiple active lines fail closed with `SHARED_LINE_ID_REQUIRED`; the agent must list lines and retry with an explicit `lineId`. InnerLife shared-line context follows the same agent scope.
 - The Full build's built-in Memory embedding model stays lazy-loaded; Ollama and OpenAI-compatible providers do not load it. Lite excludes that runtime entirely.
 - Memoria CLI for store, recall, get, update, tag, delete, restore, archive, import/export, records, and maintenance audit/run

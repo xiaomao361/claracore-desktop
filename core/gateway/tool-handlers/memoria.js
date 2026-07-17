@@ -8,6 +8,16 @@ function withoutAgentFilter(args = {}) {
   return input;
 }
 
+function preserveMissingMemoryFields(memory, args = {}) {
+  const input = { ...args };
+  for (const field of ["title", "labels", "sensitivity"]) {
+    if (!Object.prototype.hasOwnProperty.call(input, field)) {
+      input[field] = memory?.[field];
+    }
+  }
+  return input;
+}
+
 async function handleMemoriaTool(name, args, context) {
   const { core, runtimeAppForGateway, textResult } = context;
 
@@ -33,7 +43,8 @@ async function handleMemoriaTool(name, args, context) {
   }
 
   if (name === "memoria_update") {
-    const memory = await memoria.update(core, args.id, args);
+    const existing = await memoria.get(core, args.id);
+    const memory = await memoria.update(core, args.id, preserveMissingMemoryFields(existing, args));
     await memoria.processEmbeddings(core, 1);
     return textResult({ memory });
   }

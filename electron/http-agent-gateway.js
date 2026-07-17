@@ -86,12 +86,23 @@ function tokenLooksValid(value) {
 
 function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, getProductGatewayContext, port }) {
   const explicitPort = Boolean(process.env.CLARACORE_DESKTOP_HTTP_PORT || port !== undefined);
+  const configuredPort = normalizePort(process.env.CLARACORE_DESKTOP_HTTP_PORT || port, DEFAULT_HTTP_PORT);
+  if (
+    process.env.CLARACORE_DESKTOP_TEST_INSTANCE === "1" &&
+    explicitPort &&
+    configuredPort === 0 &&
+    !String(process.env.CLARACORE_DESKTOP_USER_DATA_DIR || "").trim()
+  ) {
+    throw new Error(
+      "A random-port test Gateway requires CLARACORE_DESKTOP_USER_DATA_DIR so agent-gateway.json stays isolated."
+    );
+  }
   const state = {
     host: "127.0.0.1",
     server: null,
     sockets: new Set(),
     port: null,
-    configuredPort: normalizePort(process.env.CLARACORE_DESKTOP_HTTP_PORT || port, DEFAULT_HTTP_PORT),
+    configuredPort,
     explicitPort,
     token: null,
     tokenFile: gatewayConfigPath(app),
