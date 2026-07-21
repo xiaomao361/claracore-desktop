@@ -264,12 +264,10 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
     return text.length > 500 ? `${text.slice(0, 497)}...` : text;
   }
 
-  function currentHttpAgentId(request, requestUrl, args = {}) {
+  function currentHttpAgentId(request, requestUrl) {
     return String(
       request.headers["x-claracore-agent-id"] ||
         requestUrl.searchParams.get("agentId") ||
-        args.agentId ||
-        args.agent_id ||
         "http-agent"
     ).trim() || "http-agent";
   }
@@ -436,7 +434,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
   async function callMcpTool({ request, requestUrl, name, args }) {
     const startedAt = Date.now();
     const { paths, database } = await ensureProductCore(app);
-    const agentId = currentHttpAgentId(request, requestUrl, args);
+    const agentId = currentHttpAgentId(request, requestUrl);
     const clientId = currentHttpClientId(request, requestUrl);
     const conversationId = currentHttpConversationId(request, requestUrl);
     const caller = { agentId, clientId, conversationId, transport: "streamable-http" };

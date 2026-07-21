@@ -24,6 +24,32 @@ async function main() {
     interpretationStatus: "confirmed",
     factsUsed: [before.id]
   });
+  await runtime.saveProductSettings(app, { "memory.controller.mode": "observe" });
+  const sourceDatabase = (await runtime.ensureProductCore(app)).database;
+  const controllerDecision = await sourceDatabase.recordMemoryControlEvent({
+    policyVersion: "v0.6.0-backup-smoke",
+    policyMode: "observe",
+    agentId: "codex",
+    clientId: "backup-smoke",
+    conversationId: "backup-controller",
+    queryHash: "backup-controller",
+    queryPreview: "还记得备份里的 Controller 决策吗",
+    stageAAction: "RETRIEVE",
+    stageAReason: "prior_context",
+    stageBAction: "INJECT_TOP1",
+    stageBReason: "top_candidate",
+    candidates: [{ id: before.id, score: 0.9 }],
+    resultStatus: "completed",
+    totalLatencyMs: 8
+  });
+  await sourceDatabase.recordMemoryControlFeedback({
+    decisionId: controllerDecision.id,
+    feedbackType: "outcome_unknown",
+    source: "backup-smoke",
+    conversationId: "backup-controller",
+    memoryIds: [before.id],
+    idempotencyKey: "backup-controller-feedback"
+  });
 
   const backup = await runtime.createProductBackup(app);
   if (backup.status !== "verified") throw new Error(`Backup was not verified: ${backup.status}`);
@@ -41,6 +67,10 @@ async function main() {
   const backupMemories = await backupDatabase.listMemories(20);
   if (!backupMemories.some((memory) => memory.id === before.id)) {
     throw new Error("Backup database does not contain the checkpoint Memory.");
+  }
+  const backupController = await backupDatabase.getMemoryControlObservationSnapshot({ limit: 5 });
+  if (backupController.eventCount !== 1 || backupController.feedbackCount !== 1 || backupController.recent[0]?.id !== controllerDecision.id) {
+    throw new Error(`Backup database does not contain Controller evidence: ${JSON.stringify(backupController)}`);
   }
 
   await runtime.deleteProductMemory(app, before.id);
@@ -84,6 +114,9 @@ async function main() {
   if (snapshot.sharedLine.currentPosition.summary !== "Backup restore shared line checkpoint.") {
     throw new Error("Restore did not recover the Shared Line checkpoint.");
   }
+  if (snapshot.memoryController.mode !== "observe" || snapshot.memoryController.eventCount !== 1 || snapshot.memoryController.feedbackCount !== 1) {
+    throw new Error(`Restore did not recover Memory Controller state: ${JSON.stringify(snapshot.memoryController)}`);
+  }
 
   const productJson = await runtime.exportProductDataJson(app, {});
   await fs.access(productJson.path);
@@ -94,10 +127,29 @@ async function main() {
   if (!productJsonPayload.tables?.memories?.some((memory) => memory.id === before.id)) {
     throw new Error("Product JSON export did not include the restored Memory.");
   }
+  if (!productJsonPayload.tables?.memory_control_events?.some((event) => event.id === controllerDecision.id)) {
+    throw new Error("Product JSON export did not include Memory Controller decisions.");
+  }
+  if (productJsonPayload.tables?.memory_control_feedback?.length !== 1) {
+    throw new Error("Product JSON export did not include Memory Controller feedback.");
+  }
   const afterJson = await runtime.createProductMemory(app, {
     title: "Product JSON after C",
     body: "This record should disappear after product JSON import.",
     labels: "json, restore"
+  });
+  const preImportDatabase = (await runtime.ensureProductCore(app)).database;
+  await preImportDatabase.recordMemoryControlEvent({
+    policyVersion: "v0.6.0-backup-smoke",
+    policyMode: "observe",
+    agentId: "codex",
+    clientId: "backup-smoke",
+    conversationId: "post-export-controller",
+    queryHash: "post-export-controller",
+    queryPreview: "This decision should disappear after JSON import.",
+    stageAAction: "NOOP",
+    stageAReason: "ordinary_task",
+    resultStatus: "completed"
   });
   const jsonImported = await runtime.importProductDataJson(app, { filePath: productJson.path });
   if (!jsonImported.imported || jsonImported.quickCheck !== "ok") {
@@ -110,6 +162,10 @@ async function main() {
   const jsonRemovedSearch = await runtime.searchProductMemories(app, "Product JSON after C");
   if (jsonRemovedSearch.results.some((memory) => memory.id === afterJson.id)) {
     throw new Error("Product JSON import did not replace post-export Memory.");
+  }
+  const importedController = (await runtime.buildProductSnapshot(app)).memoryController;
+  if (importedController.eventCount !== 1 || importedController.feedbackCount !== 1 || importedController.recent[0]?.id !== controllerDecision.id) {
+    throw new Error(`Product JSON import did not restore Controller evidence exactly: ${JSON.stringify(importedController)}`);
   }
 
   const disposableBackup = await runtime.createProductBackup(app);

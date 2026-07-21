@@ -240,10 +240,11 @@ async function main() {
     const advancedHierarchy = await page.evaluate(() => ({
       groups: document.querySelectorAll("[data-settings-panel='advanced'] > .settings-primary-panel > .advanced-settings-list > details").length,
       openGroups: document.querySelectorAll("[data-settings-panel='advanced'] > .settings-primary-panel > .advanced-settings-list > details[open]").length,
+      memoryControllerGroups: document.querySelectorAll("#advancedMemoryControllerDetails").length,
       copiedAgentConfigPresent: Boolean(document.querySelector("#copyAgentGatewayConfig")),
       duplicateDataRoot: document.querySelectorAll("#dataRootPath").length
     }));
-    if (advancedHierarchy.groups !== 5 || advancedHierarchy.openGroups !== 0 || advancedHierarchy.copiedAgentConfigPresent || advancedHierarchy.duplicateDataRoot !== 1) {
+    if (advancedHierarchy.groups !== 6 || advancedHierarchy.openGroups !== 0 || advancedHierarchy.memoryControllerGroups !== 1 || advancedHierarchy.copiedAgentConfigPresent || advancedHierarchy.duplicateDataRoot !== 1) {
       throw new Error(`Advanced settings hierarchy is wrong: ${JSON.stringify(advancedHierarchy)}`);
     }
     if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {

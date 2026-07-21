@@ -8,7 +8,10 @@ function createClaraCoreTraceView({ dom, t, getSnapshot, escapeHtml, formatLocal
     traceMemoryMetrics,
     traceSharedLineMetrics,
     traceInnerLifeMetrics,
-    traceAdvancedMetrics
+    traceAdvancedMetrics,
+    traceMemoryControllerStatus,
+    traceMemoryControllerMetrics,
+    traceMemoryControllerList
   } = dom;
 
   function metricRows(target, rows) {
@@ -124,6 +127,45 @@ function createClaraCoreTraceView({ dom, t, getSnapshot, escapeHtml, formatLocal
     ]);
   }
 
+  function renderMemoryController() {
+    const controller = getSnapshot()?.memoryController || {};
+    const observe = controller.mode === "observe";
+    if (traceMemoryControllerStatus) {
+      traceMemoryControllerStatus.textContent = observe ? t("settings.memoryControllerObserve") : t("settings.memoryControllerOff");
+      traceMemoryControllerStatus.className = observe ? "badge ok" : "badge warn";
+    }
+    metricRows(traceMemoryControllerMetrics, [
+      ["trace.controller.events", controller.eventCount],
+      ["trace.controller.retrievals", controller.stageA?.RETRIEVE],
+      ["trace.controller.noops", controller.stageA?.NOOP],
+      ["trace.controller.errors", Number(controller.results?.error || 0) + Number(controller.results?.timeout || 0)]
+    ]);
+    const recent = Array.isArray(controller.recent) ? controller.recent : [];
+    if (!traceMemoryControllerList) return;
+    if (!recent.length) {
+      traceMemoryControllerList.innerHTML = `<p class="trace-empty">${escapeHtml(t("trace.controller.empty"))}</p>`;
+      return;
+    }
+    traceMemoryControllerList.innerHTML = recent.map((event) => {
+      const action = event.stageA?.action === "RETRIEVE"
+        ? event.stageB?.action || event.stageA.action
+        : event.stageA?.action || event.resultStatus || "-";
+      return `
+        <article class="trace-controller-event">
+          <div>
+            <strong>${escapeHtml(t("trace.controller.decision", {
+              agent: event.agentId || "-",
+              action,
+              latency: String(event.totalLatencyMs || 0)
+            }))}</strong>
+            <p>${escapeHtml(event.queryPreview || event.stageA?.reason || "-")}</p>
+          </div>
+          <time>${escapeHtml(formatLocalDateTime(event.createdAt))}</time>
+        </article>
+      `;
+    }).join("");
+  }
+
   function render() {
     const trace = getSnapshot()?.trace || {};
     const spanDays = Number(trace.spanDays || 0);
@@ -137,6 +179,7 @@ function createClaraCoreTraceView({ dom, t, getSnapshot, escapeHtml, formatLocal
     renderMilestones(trace);
     renderParticipants(trace);
     renderDetails(trace);
+    renderMemoryController();
   }
 
   return { render };

@@ -83,6 +83,9 @@ const {
   copyAgentGatewayToken,
   copyAgentGatewayConfig,
   saveAgentGatewayConfig,
+  settingsMemoryControllerMode,
+  saveMemoryControllerMode,
+  memoryControllerSettingsNotice,
   memorySearchInput,
   searchMemory,
   memoryList,
@@ -823,6 +826,21 @@ saveAgentGatewayConfig?.addEventListener("click", async () => {
     appearanceSettingsNotice.textContent = t("settings.agentGatewaySaveFailed", { error: error?.message || String(error) });
   } finally {
     saveAgentGatewayConfig.disabled = false;
+  }
+});
+
+saveMemoryControllerMode?.addEventListener("click", async () => {
+  saveMemoryControllerMode.disabled = true;
+  if (memoryControllerSettingsNotice) memoryControllerSettingsNotice.textContent = t("common.checking");
+  try {
+    await window.ClaraCoreDesktop.saveSettings(settingsView.collectMemoryControllerSettingsForm());
+    await refreshRuntimeSnapshotOnly();
+    if (memoryControllerSettingsNotice) memoryControllerSettingsNotice.textContent = t("settings.memoryControllerSaved");
+  } catch (error) {
+    console.error(error);
+    if (memoryControllerSettingsNotice) memoryControllerSettingsNotice.textContent = t("settings.memoryControllerSaveFailed");
+  } finally {
+    saveMemoryControllerMode.disabled = false;
   }
 });
 

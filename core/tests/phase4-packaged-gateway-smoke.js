@@ -3,6 +3,7 @@ const os = require("os");
 const path = require("path");
 const { createGatewayClient, parseTextResult } = require("./gateway-client");
 const packageJson = require("../../package.json");
+const runtime = require("../runtime");
 
 async function main() {
   if (process.platform !== "darwin") {
@@ -11,7 +12,7 @@ async function main() {
   }
 
   const dataRoot = await fs.mkdtemp(path.join(os.tmpdir(), "claracore-phase4-packaged-gateway-"));
-  const executablePath = path.resolve(
+  const executablePath = path.resolve(String(process.env.CLARACORE_DESKTOP_TEST_EXECUTABLE || path.join(
     __dirname,
     "..",
     "..",
@@ -21,7 +22,7 @@ async function main() {
     "Contents",
     "MacOS",
     "ClaraCore Desktop"
-  );
+  )).trim());
   await fs.access(executablePath);
 
   const gatewayScript = path.join(
@@ -35,7 +36,12 @@ async function main() {
   const client = createGatewayClient(dataRoot, {
     command: executablePath,
     args: [gatewayScript],
-    env: { ELECTRON_RUN_AS_NODE: "1" }
+    env: {
+      ELECTRON_RUN_AS_NODE: "1",
+      CLARACORE_AGENT_ID: "codex",
+      CLARACORE_CLIENT_ID: "packaged-gateway-smoke",
+      CLARACORE_CONVERSATION_ID: "packaged-controller"
+    }
   });
   try {
     const initialized = await client.request("initialize", {
@@ -66,6 +72,34 @@ async function main() {
       })
     ).memory;
     if (!created?.id) throw new Error("Packaged Gateway memoria_create did not return a Memory id.");
+
+    const controllerPrompt = "还记得我们之前决定的 packaged Gateway Controller 范围吗";
+    const controllerMemory = parseTextResult(
+      await client.callTool("memoria_create", {
+        title: "Packaged Memory Controller smoke",
+        body: controllerPrompt,
+        labels: ["packaged", "controller"]
+      })
+    ).memory;
+    const disabledController = parseTextResult(await client.callTool("memory_context", { prompt: controllerPrompt }));
+    if (disabledController.reason !== "controller_disabled" || disabledController.decisionId) {
+      throw new Error(`Packaged Gateway controller did not default off: ${JSON.stringify(disabledController)}`);
+    }
+    const runtimeApp = {
+      getPath(name) {
+        return path.join(dataRoot, name);
+      },
+      isPackaged: false
+    };
+    process.env.CLARACORE_DESKTOP_DATA_DIR = dataRoot;
+    await runtime.saveProductSettings(runtimeApp, { "memory.controller.mode": "observe" });
+    const observedController = parseTextResult(await client.callTool("memory_context", { prompt: controllerPrompt }));
+    if (observedController.action !== "RETRIEVE" || observedController.context !== "" || !observedController.decisionId) {
+      throw new Error(`Packaged Gateway controller did not observe retrieval: ${JSON.stringify(observedController)}`);
+    }
+    if (!observedController.candidates.some((candidate) => candidate.id === controllerMemory.id)) {
+      throw new Error(`Packaged Gateway controller did not preserve Agent scope: ${JSON.stringify(observedController)}`);
+    }
 
     const aliasResult = parseTextResult(
       await client.callTool("memoria_label_alias_create", {
@@ -213,6 +247,8 @@ async function main() {
           dataRoot,
           executablePath,
           version: initialized.result.serverInfo.version,
+          controllerDecisionId: observedController.decisionId,
+          controllerDefaultOff: true,
           memoryId: created.id,
           sharedLineId: sharedLine.lineId,
           handoffId: handoffResult.handoff.id
@@ -223,6 +259,7 @@ async function main() {
     );
   } finally {
     await client.close();
+    runtime.resetCachedDatabase();
   }
 }
 

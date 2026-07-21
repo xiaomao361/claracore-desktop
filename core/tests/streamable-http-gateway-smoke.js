@@ -63,6 +63,7 @@ async function main() {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "claracore-http-mcp-"));
   const databasePath = path.join(tempRoot, "claracore.db");
   const database = await initializeProductDatabase(databasePath);
+  await database.updateSettings({ "memory.controller.mode": "observe" });
   const port = await reservePort();
   const app = {
     isPackaged: false,
@@ -156,6 +157,49 @@ async function main() {
     assert(initialized.result.instructions.includes("Write Memoria only"), "initialize should describe restrained Memory writes");
     const tools = await postMcp({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} });
     assert(tools.result.tools.some((tool) => tool.name === "claracore_connection_test"), "tools/list should include connection test");
+    assert(tools.result.tools.some((tool) => tool.name === "memory_context"), "tools/list should include observe-only memory_context");
+    const controllerPrompt = "还记得我们之前决定的 HTTP Gateway Controller smoke 吗";
+    const controllerMemory = await database.createMemory({
+      title: "HTTP Gateway Controller",
+      body: controllerPrompt,
+      agentId: "clara"
+    });
+    const controllerCall = await postMcp({
+      jsonrpc: "2.0",
+      id: 21,
+      method: "tools/call",
+      params: {
+        name: "memory_context",
+        arguments: { prompt: controllerPrompt, agentId: "lara" }
+      }
+    });
+    const controllerPacket = JSON.parse(controllerCall.result.content[0].text);
+    assert.strictEqual(controllerPacket.action, "RETRIEVE");
+    assert.strictEqual(controllerPacket.context, "", "HTTP memory_context must remain observe-only");
+    assert(controllerPacket.candidates.some((candidate) => candidate.id === controllerMemory.id));
+    const controllerEvent = await database.getMemoryControlEvent(controllerPacket.decisionId);
+    assert.strictEqual(controllerEvent.agentId, "clara", "HTTP body Agent id overrode the authenticated caller header");
+    assert.strictEqual(controllerEvent.clientId, "claude-code");
+    assert.strictEqual(controllerEvent.conversationId, "session-smoke");
+
+    const unidentifiedResponse = await fetch(endpoint.url, {
+      method: "POST",
+      headers: {
+        Accept: headers.Accept,
+        "Content-Type": headers["Content-Type"],
+        Authorization: headers.Authorization
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 22,
+        method: "tools/call",
+        params: { name: "memory_context", arguments: { prompt: controllerPrompt, agentId: "clara" } }
+      })
+    });
+    const unidentifiedCall = await unidentifiedResponse.json();
+    const unidentifiedPacket = JSON.parse(unidentifiedCall.result.content[0].text);
+    assert.strictEqual(unidentifiedPacket.reason, "caller_identity_required", "HTTP memory_context trusted a body Agent id");
+    assert.strictEqual(unidentifiedPacket.decisionId, "");
     const called = await postMcp({
       jsonrpc: "2.0",
       id: 3,

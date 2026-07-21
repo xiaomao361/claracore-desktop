@@ -20,6 +20,7 @@ function createClaraCoreSettingsView(context) {
     settingsThemeSummary, settingsMotionSummary, settingsDataStatus, settingsDataRoot, settingsPathSummary, settingsPathDetails,
     settingsDataRootOverride, relaunchForDataRoot,
     settingsAgentGatewayStatus, settingsAgentGatewayPort, settingsAgentGatewayToken, settingsAgentGatewayEndpoint, settingsAgentGatewayTokenFile,
+    settingsMemoryControllerMode, settingsMemoryControllerStatus,
     settingsAppVersion, settingsBuildFlavor, checkForUpdates, downloadUpdate, copyUpdateUrl, updateCheckStatus,
     settingsRuntimeMode, settingsDatabaseState, settingsElectronVersion, settingsNodeVersion,
     settingsAppRoot, settingsChromeVersion
@@ -274,6 +275,7 @@ function renderSettings() {
   if (!snapshot?.configuration) return;
   const memoria = snapshot.configuration.memoria;
   const innerlife = snapshot.configuration.innerlife;
+  const memoryController = snapshot.configuration.memoryController || { mode: "off" };
   const lite = snapshot?.build?.flavor === "lite";
   const builtInOption = memoriaProvider.querySelector("option[value='claracore-built-in']");
   if (lite && builtInOption) builtInOption.remove();
@@ -300,6 +302,12 @@ function renderSettings() {
   innerLifeLightModel.value = innerlife.lightModel;
   innerLifeDeepModel.value = innerlife.deepModel;
   innerLifePollSeconds.value = secondsToDisplayMinutes(innerlife.pollSeconds);
+  setInputValue(settingsMemoryControllerMode, memoryController.mode || "off");
+  if (settingsMemoryControllerStatus) {
+    const observe = memoryController.mode === "observe";
+    settingsMemoryControllerStatus.textContent = t(observe ? "settings.memoryControllerObserve" : "settings.memoryControllerOff");
+    settingsMemoryControllerStatus.className = observe ? "badge ok" : "badge warn";
+  }
   setSecretInput(innerLifeApiKey, innerlife.apiKeyRef || "");
   if (innerLifeApiKeySummary) innerLifeApiKeySummary.textContent = maskMiddle(innerlife.apiKeyRef);
   const memoriaStatus = memoria.providerSupported === false
@@ -381,6 +389,12 @@ function collectRuntimeSettingsForm() {
   };
 }
 
+function collectMemoryControllerSettingsForm() {
+  return {
+    "memory.controller.mode": settingsMemoryControllerMode?.value === "observe" ? "observe" : "off"
+  };
+}
+
 function settingsValidationError(form) {
   if (!Object.prototype.hasOwnProperty.call(form || {}, "memory.embedding.provider")) return "";
   const provider = String(form?.["memory.embedding.provider"] || "").trim();
@@ -433,6 +447,7 @@ function agentGatewayCopyBlock() {
     collectAppearanceSettingsForm,
     collectAgentGatewayConfigForm,
     collectRuntimeSettingsForm,
+    collectMemoryControllerSettingsForm,
     collectSettingsForm,
     settingsValidationError,
     embeddingConfigChanged,

@@ -8,6 +8,7 @@ const { installInnerLifeRepository } = require("./repositories/innerlife");
 const { installMemoriaRepository } = require("./repositories/memoria");
 const { installContinuityRepository } = require("./repositories/continuity");
 const { createSystemRepository } = require("./repositories/system");
+const { createMemoryControllerRepository } = require("./repositories/memory-controller");
 const { recordMigration, runMigrations } = require("./migrations");
 const {
   cosineSimilarity,
@@ -350,6 +351,14 @@ Object.assign(ProductDatabase.prototype, createSystemRepository({
   normalizeSettingValue,
   parseJson,
   postJson,
+  resolveAgentIdentity,
+  sqlString
+}));
+
+Object.assign(ProductDatabase.prototype, createMemoryControllerRepository({
+  jsonSql,
+  newId,
+  parseJson,
   resolveAgentIdentity,
   sqlString
 }));

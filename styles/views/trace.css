@@ -321,6 +321,70 @@
   border-top: 1px solid var(--border);
 }
 
+.trace-controller-evidence {
+  padding: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.trace-controller-heading,
+.trace-controller-event {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.trace-controller-heading h3,
+.trace-controller-heading p,
+.trace-controller-event p {
+  margin: 0;
+}
+
+.trace-controller-heading h3 {
+  font-size: 15px;
+}
+
+.trace-controller-heading p,
+.trace-controller-event p,
+.trace-controller-event time {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.trace-controller-metrics {
+  padding: 14px 0 0;
+  border-top: 0;
+}
+
+.trace-controller-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.trace-controller-event {
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.trace-controller-event > div {
+  min-width: 0;
+}
+
+.trace-controller-event strong,
+.trace-controller-event p {
+  overflow-wrap: anywhere;
+}
+
+.trace-controller-event time {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 @media (max-width: 1120px) {
   .trace-statements,
   .trace-data-grid {

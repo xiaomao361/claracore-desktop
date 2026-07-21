@@ -13,10 +13,11 @@ fallback when MCP is unavailable.
 
 ## Boundary
 
-- Gateway exposes product tools for Gateway context, Memoria, Shared Line, and
-  InnerLife.
-- Gateway calls `core/runtime`; it should not bypass runtime into database
-  internals.
+- Gateway exposes product tools for Gateway context, Memory Controller,
+  Memoria, Shared Line, and InnerLife.
+- Gateway calls product domain facades such as `core/runtime` and
+  `core/memory-controller`; it should not implement policy or edit database
+  state directly.
 - Gateway writes trace records so Desktop can show recent agent activity.
 - Gateway is not the old ClaraCore Python/web Gateway service.
 
@@ -37,9 +38,8 @@ fallback when MCP is unavailable.
   one id across multiple agents.
 - HTTP agent identity is request-scoped through `X-ClaraCore-Agent-ID`.
 - `CLARACORE_AGENT_ID` is the authoritative stdio Gateway process identity.
-  Gateway uses it before any `agentId` or `agent_id` tool argument and rewrites
-  trace request metadata to that process identity. Tool arguments should not be
-  used to override the caller identity.
+  Gateway rewrites tool-call metadata to the transport identity. Body-supplied
+  `agentId` or `agent_id` values cannot override the caller identity.
 - Generated stdio configs also include `CLARACORE_CLIENT_ID` and an optional
   `CLARACORE_CONVERSATION_ID` placeholder. Replace the client placeholder before
   use. Remove the conversation entry when a long-lived stdio process spans
@@ -85,6 +85,13 @@ conflict is unresolved. `memoria_search` defaults to current facts and accepts
 `initialize` includes short server instructions: read Memoria and Shared Line
 only when prior context matters, review pending InnerLife selectively, and write
 Memoria only for explicit durable decisions or an explicit request to remember.
+
+`memory_context` is the Memory Controller entry point. It requires an identified
+transport caller. The operator mode defaults to `off`, which returns
+`controller_disabled` without retrieval or a ledger write. `observe` records a
+bounded decision for that caller and returns an empty `context` even when Stage
+B recommends a candidate. Explicit `memoria_search` and mutation tools remain
+separate operations.
 
 Server-initiated event streams are not used in this local checkpoint.
 

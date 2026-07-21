@@ -1,0 +1,27 @@
+{
+  "memories": [
+    { "key": "knowledgeCard", "title": "Knowledge card pointer: SQLite retry playbook", "body": "Card path knowledge/cards/sqlite-retry.md preserves the bounded retry and busy-timeout steps.", "labels": ["knowledge-card", "sqlite"] },
+    { "key": "preferenceOld", "title": "Historical deploy preference", "body": "Deploy preference used to allow automatic publishing.", "labels": ["preference"] },
+    { "key": "preferenceCurrent", "title": "Current deploy preference", "body": "Deploy preference requires publish never unless release is explicit.", "labels": ["preference"] },
+    { "key": "restrictedSecret", "title": "Restricted deployment secret", "body": "Restricted secret material must never cross ordinary retrieval.", "labels": ["private"], "sensitivity": "restricted" },
+    { "key": "conflictA", "title": "Conflicting port observation A", "body": "The observed candidate port was 50001 and remains unverified.", "labels": ["conflict"] },
+    { "key": "conflictB", "title": "Conflicting port observation B", "body": "The observed candidate port was 50002 and remains unverified.", "labels": ["conflict"] },
+    { "key": "linkedPrimary", "title": "Gateway timeout symptom", "body": "Gateway timeout symptom appears after a stale persisted port.", "labels": ["gateway"] },
+    { "key": "linkedNeighbor", "title": "Gateway timeout recovery", "body": "Recovery checks the live port before changing configuration.", "labels": ["gateway"] },
+    { "key": "archivedNote", "title": "Archived obsolete setup", "body": "Archived obsolete setup should not appear in current search.", "labels": ["archive"] }
+  ],
+  "relations": [
+    { "from": "linkedPrimary", "to": "linkedNeighbor", "kind": "causes", "strength": 0.9 },
+    { "current": "preferenceCurrent", "historical": "preferenceOld", "kind": "supersedes" }
+  ],
+  "archive": ["archivedNote"],
+  "cases": [
+    { "id": "knowledge-card-pointer", "query": "SQLite retry playbook", "timeView": "current", "expectedDirect": ["knowledgeCard"], "excluded": [] },
+    { "id": "current-not-stale", "query": "Deploy preference", "timeView": "current", "expectedDirect": ["preferenceCurrent"], "excludedDirect": ["preferenceOld"] },
+    { "id": "historical-explicit", "query": "Deploy preference", "timeView": "historical", "expectedDirect": ["preferenceOld"], "excludedDirect": ["preferenceCurrent"] },
+    { "id": "restricted-excluded", "query": "Restricted deployment secret", "timeView": "current", "expectedDirect": [], "excludedEverywhere": ["restrictedSecret"] },
+    { "id": "conflicting-facts-visible", "query": "observed candidate port", "timeView": "current", "expectedDirect": ["conflictA", "conflictB"], "excluded": [] },
+    { "id": "typed-linked-neighbor", "query": "Gateway timeout symptom", "timeView": "current", "expectedDirect": ["linkedPrimary"], "expectedRelated": ["linkedNeighbor"], "excluded": [] },
+    { "id": "archived-excluded", "query": "Archived obsolete setup", "timeView": "current", "expectedDirect": [], "excludedEverywhere": ["archivedNote"] }
+  ]
+}

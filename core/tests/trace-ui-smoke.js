@@ -13,6 +13,7 @@ async function main() {
   const { _electron: electron } = require("playwright");
   const appRoot = path.resolve(__dirname, "..", "..");
   const electronPath = require(path.join(appRoot, "node_modules", "electron"));
+  const packagedExecutable = String(process.env.CLARACORE_DESKTOP_TEST_EXECUTABLE || "").trim();
   const dataRoot = await fs.mkdtemp(path.join(os.tmpdir(), "claracore-trace-ui-"));
   const userDataRoot = path.join(dataRoot, "user-data");
   const runtimeApp = {
@@ -47,6 +48,36 @@ async function main() {
     state: { recent_focus: "让痕迹页保持真实和克制。" }
   });
   const { database } = await runtime.ensureProductCore(runtimeApp);
+  await database.updateSettings({ "memory.controller.mode": "observe" });
+  await database.recordMemoryControlEvent({
+    policyVersion: "v0.6.0-test",
+    policyMode: "observe",
+    agentId: "codex",
+    clientId: "codex-app",
+    conversationId: "trace-controller-noop",
+    queryHash: "trace-noop",
+    queryPreview: "检查当前文件语法",
+    stageAAction: "NOOP",
+    stageAReason: "ordinary_task",
+    resultStatus: "completed",
+    totalLatencyMs: 1
+  });
+  await database.recordMemoryControlEvent({
+    policyVersion: "v0.6.0-test",
+    policyMode: "observe",
+    agentId: "clara",
+    clientId: "claude-code",
+    conversationId: "trace-controller-retrieve",
+    queryHash: "trace-retrieve",
+    queryPreview: "还记得我们之前决定的测试范围吗",
+    stageAAction: "RETRIEVE",
+    stageAReason: "prior_context",
+    stageBAction: "INJECT_TOP1",
+    stageBReason: "top_candidate",
+    candidates: [{ id: decision.id, score: 0.9 }],
+    resultStatus: "completed",
+    totalLatencyMs: 12
+  });
   const compactUtcStart = new Date(Date.now() - 86400000).toISOString().replace(/\.\d{3}Z$/, "+0000");
   await database.exec(`
     INSERT INTO memories (id, title, body, status, sensitivity, created_at, updated_at)
@@ -90,8 +121,8 @@ async function main() {
   let app;
   try {
     app = await electron.launch({
-      executablePath: electronPath,
-      args: ["."],
+      executablePath: packagedExecutable || electronPath,
+      args: packagedExecutable ? [] : ["."],
       cwd: appRoot,
       env: {
         ...process.env,
@@ -173,9 +204,23 @@ async function main() {
     await page.waitForFunction(() => document.querySelector("#traceAdvancedDetails")?.open === true);
     const advanced = await page.evaluate(() => ({
       rows: document.querySelectorAll("#traceAdvancedMetrics .trace-metric-row").length,
-      text: document.querySelector("#traceAdvancedMetrics")?.textContent || ""
+      text: document.querySelector("#traceAdvancedMetrics")?.textContent || "",
+      controllerStatus: document.querySelector("#traceMemoryControllerStatus")?.textContent || "",
+      controllerRows: document.querySelectorAll("#traceMemoryControllerMetrics .trace-metric-row").length,
+      controllerEvents: document.querySelectorAll("#traceMemoryControllerList .trace-controller-event").length,
+      controllerText: document.querySelector("#traceMemoryControllerList")?.textContent || ""
     }));
-    if (advanced.rows !== 12 || !advanced.text.includes("InnerLife 会话") || !advanced.text.includes("等待生成向量")) {
+    if (
+      advanced.rows !== 12
+      || !advanced.text.includes("InnerLife 会话")
+      || !advanced.text.includes("等待生成向量")
+      || advanced.controllerStatus !== "仅观察"
+      || advanced.controllerRows !== 4
+      || advanced.controllerEvents !== 2
+      || !advanced.controllerText.includes("codex")
+      || !advanced.controllerText.includes("clara")
+      || !advanced.controllerText.includes("INJECT_TOP1")
+    ) {
       throw new Error(`Trace advanced data did not render: ${JSON.stringify(advanced)}`);
     }
 
@@ -209,9 +254,40 @@ async function main() {
     if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
       await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "dark-narrow"), fullPage: true });
     }
+
+    await page.click("[data-view='settings']");
+    await page.click("[data-settings-tab='advanced']");
+    await page.click("#advancedMemoryControllerDetails > summary");
+    const controllerSetting = await page.evaluate(() => ({
+      mode: document.querySelector("#settingsMemoryControllerMode")?.value,
+      status: document.querySelector("#settingsMemoryControllerStatus")?.textContent
+    }));
+    if (controllerSetting.mode !== "observe" || controllerSetting.status !== "仅观察") {
+      throw new Error(`Controller setting did not reflect observe mode: ${JSON.stringify(controllerSetting)}`);
+    }
+    await page.selectOption("#settingsMemoryControllerMode", "off");
+    await page.click("#saveMemoryControllerMode");
+    await page.waitForFunction(() => document.querySelector("#memoryControllerSettingsNotice")?.textContent.includes("已保存"));
+    const disabledController = await page.evaluate(async () => {
+      const snapshot = await window.ClaraCoreDesktop.getRuntimeSnapshot();
+      return {
+        mode: snapshot.memoryController?.mode,
+        eventCount: snapshot.memoryController?.eventCount,
+        configurationMode: snapshot.configuration?.memoryController?.mode,
+        status: document.querySelector("#settingsMemoryControllerStatus")?.textContent
+      };
+    });
+    if (
+      disabledController.mode !== "off"
+      || disabledController.configurationMode !== "off"
+      || disabledController.eventCount !== 2
+      || disabledController.status !== "关闭"
+    ) {
+      throw new Error(`Controller disable setting failed: ${JSON.stringify(disabledController)}`);
+    }
     if (rendererErrors.length) throw new Error(`Renderer errors: ${rendererErrors.join(" | ")}`);
 
-    console.log(JSON.stringify({ ok: true, initial, advanced, desktopLayout, narrowLayout }, null, 2));
+    console.log(JSON.stringify({ ok: true, packaged: Boolean(packagedExecutable), initial, advanced, controllerSetting, disabledController, desktopLayout, narrowLayout }, null, 2));
   } finally {
     if (app) await app.close();
     runtime.resetCachedDatabase();

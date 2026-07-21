@@ -384,6 +384,17 @@
               </span>
             </summary>
             <div id="traceAdvancedMetrics" class="trace-advanced-grid"></div>
+            <section class="trace-controller-evidence" aria-labelledby="traceMemoryControllerTitle">
+              <div class="trace-controller-heading">
+                <div>
+                  <h3 id="traceMemoryControllerTitle" data-i18n="trace.controller.title">Memory Controller</h3>
+                  <p data-i18n="trace.controller.body">Observe-only routing evidence. No Memory content is injected.</p>
+                </div>
+                <span id="traceMemoryControllerStatus" class="badge warn">off</span>
+              </div>
+              <div id="traceMemoryControllerMetrics" class="trace-advanced-grid trace-controller-metrics"></div>
+              <div id="traceMemoryControllerList" class="trace-controller-list"></div>
+            </section>
           </details>
         </div>
       </section>
@@ -719,6 +730,24 @@
                   <div class="settings-actions compact-actions">
                     <button id="saveRuntimeSettings" class="primary" data-i18n="settings.saveRuntime">Save runtime details</button>
                     <span id="runtimeSettingsNotice" class="quiet" aria-live="polite"></span>
+                  </div>
+                </div>
+              </details>
+
+              <details id="advancedMemoryControllerDetails" class="advanced-settings-group">
+                <summary><span><strong data-i18n="settings.memoryControllerTitle">Memory Controller</strong><small data-i18n="settings.memoryControllerBody">Choose whether automatic Agent prompts create observe-only decisions.</small></span><span id="settingsMemoryControllerStatus" class="badge warn">off</span></summary>
+                <div class="advanced-settings-content">
+                  <label class="field">
+                    <span data-i18n="settings.memoryControllerMode">Automatic recall mode</span>
+                    <select id="settingsMemoryControllerMode">
+                      <option value="off" data-i18n="settings.memoryControllerOff">Off</option>
+                      <option value="observe" data-i18n="settings.memoryControllerObserve">Observe only</option>
+                    </select>
+                    <small class="quiet" data-i18n="settings.memoryControllerHint">Observe records bounded decisions but never injects Memory into an Agent response.</small>
+                  </label>
+                  <div class="settings-actions compact-actions">
+                    <button id="saveMemoryControllerMode" class="primary" type="button" data-i18n="settings.memoryControllerSave">Save Memory Controller</button>
+                    <span id="memoryControllerSettingsNotice" class="quiet" aria-live="polite"></span>
                   </div>
                 </div>
               </details>

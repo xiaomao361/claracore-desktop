@@ -2,10 +2,26 @@ const fs = require("fs/promises");
 const os = require("os");
 const path = require("path");
 const { createGatewayClient, parseTextResult } = require("./gateway-client");
+const runtime = require("../runtime");
 
 async function main() {
   const dataRoot = await fs.mkdtemp(path.join(os.tmpdir(), "claracore-phase2-gateway-"));
-  const client = createGatewayClient(dataRoot);
+  process.env.CLARACORE_DESKTOP_DATA_DIR = dataRoot;
+  const runtimeApp = {
+    getPath(name) {
+      return path.join(dataRoot, name);
+    },
+    isPackaged: false
+  };
+  await runtime.saveProductSettings(runtimeApp, { "memory.controller.mode": "observe" });
+  runtime.resetCachedDatabase();
+  const client = createGatewayClient(dataRoot, {
+    env: {
+      CLARACORE_AGENT_ID: "phase2-agent",
+      CLARACORE_CLIENT_ID: "phase2-smoke",
+      CLARACORE_CONVERSATION_ID: "phase2-controller"
+    }
+  });
   try {
     const initialized = await client.request("initialize", {
       protocolVersion: "2025-06-18",
@@ -19,6 +35,7 @@ async function main() {
     const toolNames = new Set((tools.result?.tools || []).map((tool) => tool.name));
     for (const tool of [
       "gateway_docs",
+      "memory_context",
       "memoria_list",
       "memoria_search",
       "memoria_get",
@@ -65,13 +82,24 @@ async function main() {
       throw new Error("Gateway docs point at old Memoria data.");
     }
 
+    const controllerPrompt = "还记得我们之前决定的 phase2 gateway controller smoke 吗";
     const createdResponse = await client.callTool("memoria_create", {
       title: "Gateway phase2 smoke",
-      body: "Gateway Memory tools should use the Desktop product database.",
+      body: `${controllerPrompt}\nGateway Memory tools should use the Desktop product database.`,
       labels: ["gateway", "phase2"]
     });
     const created = parseTextResult(createdResponse).memory;
     if (!created?.id) throw new Error("Gateway memoria_create did not return a Memory id.");
+    const controllerPacket = parseTextResult(await client.callTool("memory_context", {
+      prompt: controllerPrompt,
+      agentId: "spoofed-agent"
+    }));
+    if (controllerPacket.action !== "RETRIEVE" || controllerPacket.context !== "") {
+      throw new Error(`Gateway memory_context is not observe-only: ${JSON.stringify(controllerPacket)}`);
+    }
+    if (!controllerPacket.candidates.some((candidate) => candidate.id === created.id)) {
+      throw new Error(`Gateway memory_context did not use the stdio process identity: ${JSON.stringify(controllerPacket)}`);
+    }
     const fetched = parseTextResult(await client.callTool("memoria_get", { id: created.id })).memory;
     if (fetched?.id !== created.id || !fetched.labels.includes("gateway")) {
       throw new Error(`Gateway memoria_get did not return created Memory details: ${JSON.stringify(fetched)}`);

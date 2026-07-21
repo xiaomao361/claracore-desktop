@@ -42,13 +42,16 @@ async function main() {
     "innerlife_events",
     "gateway_sessions",
     "runtime_events",
+    "memory_control_events",
+    "memory_control_feedback",
+    "memory_control_watermarks",
     "backups"
   ]) {
     if (!tables.has(table)) throw new Error(`Missing table: ${table}`);
   }
   const migrations = await database.query("SELECT id FROM schema_migrations ORDER BY id;");
   const migrationIds = migrations.map((row) => row.id);
-  for (const expectedId of ["000_gateway_trace_compatibility", "001_product_core_schema", "002_product_additions"]) {
+  for (const expectedId of ["000_gateway_trace_compatibility", "001_product_core_schema", "002_product_additions", "004_memory_controller_ledger", "005_memory_controller_watermark"]) {
     if (!migrationIds.includes(expectedId)) throw new Error(`Missing applied migration: ${expectedId}`);
   }
 

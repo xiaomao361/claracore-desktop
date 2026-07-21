@@ -352,6 +352,58 @@ CREATE TABLE IF NOT EXISTS runtime_events (
   metadata_json TEXT NOT NULL DEFAULT '{}'
 );
 
+CREATE TABLE IF NOT EXISTS memory_control_events (
+  id TEXT PRIMARY KEY,
+  policy_version TEXT NOT NULL,
+  policy_mode TEXT NOT NULL DEFAULT 'observe',
+  agent_id TEXT NOT NULL DEFAULT 'codex',
+  client_id TEXT NOT NULL DEFAULT '',
+  conversation_id TEXT NOT NULL DEFAULT '',
+  session_id TEXT NOT NULL DEFAULT '',
+  query_hash TEXT NOT NULL DEFAULT '',
+  query_preview TEXT NOT NULL DEFAULT '',
+  feature_json TEXT NOT NULL DEFAULT '{}',
+  stage_a_action TEXT NOT NULL,
+  stage_a_reason TEXT NOT NULL,
+  stage_b_action TEXT NOT NULL DEFAULT '',
+  stage_b_reason TEXT NOT NULL DEFAULT '',
+  search_params_json TEXT NOT NULL DEFAULT '{}',
+  candidates_json TEXT NOT NULL DEFAULT '[]',
+  injected_ids_json TEXT NOT NULL DEFAULT '[]',
+  cache_status TEXT NOT NULL DEFAULT 'none',
+  search_latency_ms INTEGER NOT NULL DEFAULT 0,
+  total_latency_ms INTEGER NOT NULL DEFAULT 0,
+  estimated_tokens INTEGER NOT NULL DEFAULT 0,
+  result_status TEXT NOT NULL,
+  error TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS memory_control_feedback (
+  id TEXT PRIMARY KEY,
+  decision_id TEXT NOT NULL,
+  feedback_type TEXT NOT NULL,
+  source TEXT NOT NULL,
+  conversation_id TEXT NOT NULL DEFAULT '',
+  response_id TEXT NOT NULL DEFAULT '',
+  memory_ids_json TEXT NOT NULL DEFAULT '[]',
+  evidence_excerpt TEXT NOT NULL DEFAULT '',
+  evidence_json TEXT NOT NULL DEFAULT '{}',
+  observed_at TEXT,
+  idempotency_key TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (decision_id) REFERENCES memory_control_events(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS memory_control_watermarks (
+  scope TEXT PRIMARY KEY,
+  revision INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+INSERT INTO memory_control_watermarks (scope, revision)
+VALUES ('memoria', 0)
+ON CONFLICT(scope) DO NOTHING;
+
 CREATE TABLE IF NOT EXISTS backups (
   id TEXT PRIMARY KEY,
   path TEXT NOT NULL,
@@ -384,3 +436,59 @@ CREATE INDEX IF NOT EXISTS idx_gateway_traces_conversation_created ON gateway_tr
 CREATE INDEX IF NOT EXISTS idx_gateway_traces_tool_created ON gateway_traces(tool_name, created_at);
 CREATE INDEX IF NOT EXISTS idx_gateway_traces_transport_created ON gateway_traces(transport, created_at);
 CREATE INDEX IF NOT EXISTS idx_runtime_events_created ON runtime_events(created_at);
+CREATE INDEX IF NOT EXISTS idx_memory_control_events_created ON memory_control_events(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_memory_control_events_agent_created ON memory_control_events(agent_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_memory_control_events_conversation_created ON memory_control_events(conversation_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_memory_control_events_query_policy ON memory_control_events(query_hash, policy_version, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_memory_control_events_result_created ON memory_control_events(result_status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_memory_control_feedback_decision_created ON memory_control_feedback(decision_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_memory_control_feedback_type_created ON memory_control_feedback(feedback_type, created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_memory_control_feedback_idempotency
+ON memory_control_feedback(idempotency_key)
+WHERE idempotency_key IS NOT NULL AND idempotency_key != '';
+
+CREATE TRIGGER IF NOT EXISTS trg_memory_control_memories_insert AFTER INSERT ON memories BEGIN
+  UPDATE memory_control_watermarks SET revision = revision + 1, updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE scope = 'memoria';
+END;
+CREATE TRIGGER IF NOT EXISTS trg_memory_control_memories_update AFTER UPDATE ON memories BEGIN
+  UPDATE memory_control_watermarks SET revision = revision + 1, updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE scope = 'memoria';
+END;
+CREATE TRIGGER IF NOT EXISTS trg_memory_control_memories_delete AFTER DELETE ON memories BEGIN
+  UPDATE memory_control_watermarks SET revision = revision + 1, updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE scope = 'memoria';
+END;
+CREATE TRIGGER IF NOT EXISTS trg_memory_control_memory_labels_insert AFTER INSERT ON memory_labels BEGIN
+  UPDATE memory_control_watermarks SET revision = revision + 1, updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE scope = 'memoria';
+END;
+CREATE TRIGGER IF NOT EXISTS trg_memory_control_memory_labels_update AFTER UPDATE ON memory_labels BEGIN
+  UPDATE memory_control_watermarks SET revision = revision + 1, updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE scope = 'memoria';
+END;
+CREATE TRIGGER IF NOT EXISTS trg_memory_control_memory_labels_delete AFTER DELETE ON memory_labels BEGIN
+  UPDATE memory_control_watermarks SET revision = revision + 1, updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE scope = 'memoria';
+END;
+CREATE TRIGGER IF NOT EXISTS trg_memory_control_memory_label_aliases_insert AFTER INSERT ON memory_label_aliases BEGIN
+  UPDATE memory_control_watermarks SET revision = revision + 1, updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE scope = 'memoria';
+END;
+CREATE TRIGGER IF NOT EXISTS trg_memory_control_memory_label_aliases_update AFTER UPDATE ON memory_label_aliases BEGIN
+  UPDATE memory_control_watermarks SET revision = revision + 1, updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE scope = 'memoria';
+END;
+CREATE TRIGGER IF NOT EXISTS trg_memory_control_memory_label_aliases_delete AFTER DELETE ON memory_label_aliases BEGIN
+  UPDATE memory_control_watermarks SET revision = revision + 1, updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE scope = 'memoria';
+END;
+CREATE TRIGGER IF NOT EXISTS trg_memory_control_memory_links_insert AFTER INSERT ON memory_links BEGIN
+  UPDATE memory_control_watermarks SET revision = revision + 1, updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE scope = 'memoria';
+END;
+CREATE TRIGGER IF NOT EXISTS trg_memory_control_memory_links_update AFTER UPDATE ON memory_links BEGIN
+  UPDATE memory_control_watermarks SET revision = revision + 1, updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE scope = 'memoria';
+END;
+CREATE TRIGGER IF NOT EXISTS trg_memory_control_memory_links_delete AFTER DELETE ON memory_links BEGIN
+  UPDATE memory_control_watermarks SET revision = revision + 1, updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE scope = 'memoria';
+END;
+CREATE TRIGGER IF NOT EXISTS trg_memory_control_memory_embeddings_insert AFTER INSERT ON memory_embeddings BEGIN
+  UPDATE memory_control_watermarks SET revision = revision + 1, updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE scope = 'memoria';
+END;
+CREATE TRIGGER IF NOT EXISTS trg_memory_control_memory_embeddings_update AFTER UPDATE ON memory_embeddings BEGIN
+  UPDATE memory_control_watermarks SET revision = revision + 1, updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE scope = 'memoria';
+END;
+CREATE TRIGGER IF NOT EXISTS trg_memory_control_memory_embeddings_delete AFTER DELETE ON memory_embeddings BEGIN
+  UPDATE memory_control_watermarks SET revision = revision + 1, updated_at = STRFTIME('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE scope = 'memoria';
+END;

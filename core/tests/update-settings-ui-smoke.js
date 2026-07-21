@@ -24,7 +24,10 @@ async function main() {
     const fixture = await app.evaluate(async ({ app, clipboard, shell }) => {
       const platform = process.platform;
       const arch = process.arch;
-      const version = "0.5.9";
+      const currentVersion = app.getVersion();
+      const versionParts = currentVersion.split(".").map((part) => Number.parseInt(part, 10));
+      versionParts[versionParts.length - 1] += 1;
+      const version = versionParts.join(".");
       const assetName = platform === "darwin"
         ? `ClaraCore-Desktop-${version}-arm64.dmg`
         : `ClaraCore-Desktop-${version}-x64-Setup.exe`;
@@ -57,7 +60,7 @@ async function main() {
           };
         }
       });
-      return { platform, arch, appVersion: app.getVersion(), assetName, version };
+      return { platform, arch, appVersion: currentVersion, assetName, version };
     });
 
     await page.waitForSelector("[data-view='settings']", { timeout: 15000 });
@@ -65,8 +68,8 @@ async function main() {
     await page.click("[data-settings-tab='common']");
     await page.click("#checkForUpdates");
     await page.waitForFunction(
-      () => document.querySelector("#updateCheckStatus")?.textContent.includes("0.5.9"),
-      null,
+      (version) => document.querySelector("#updateCheckStatus")?.textContent.includes(version),
+      fixture.version,
       { timeout: 10000 }
     );
 
@@ -120,8 +123,8 @@ async function main() {
     });
     await page.click("#checkForUpdates");
     await page.waitForFunction(
-      () => !document.querySelector("#updateCheckStatus")?.textContent.includes("0.5.9"),
-      null,
+      (version) => !document.querySelector("#updateCheckStatus")?.textContent.includes(version),
+      fixture.version,
       { timeout: 10000 }
     );
     const current = await page.evaluate(() => ({

@@ -19,6 +19,9 @@ const DEFAULT_SETTINGS = {
   "memory.maintenance.enabled": true,
   "memory.maintenance.hour": 3,
   "memory.maintenance.last_run_date": "",
+  // Automatic Agent recall is opt-in until the operator has reviewed
+  // observe-only evidence from a test package.
+  "memory.controller.mode": "off",
   // Fresh installs start with InnerLife available through the shared DeepSeek
   // default so the agent loop works without extra model setup.
   "innerlife.enabled": true,
@@ -45,6 +48,7 @@ const WRITABLE_SETTINGS = new Set([
   "memory.maintenance.enabled",
   "memory.maintenance.hour",
   "memory.maintenance.last_run_date",
+  "memory.controller.mode",
   "innerlife.enabled",
   "innerlife.provider",
   "innerlife.base_url",
@@ -93,6 +97,13 @@ function normalizeSettingValue(key, value) {
   }
   if (key === "memory.maintenance.enabled") {
     return value === true || value === "true";
+  }
+  if (key === "memory.controller.mode") {
+    const mode = String(value || "off").trim().toLowerCase();
+    if (!["off", "observe"].includes(mode)) {
+      throw new Error("memory.controller.mode must be off or observe.");
+    }
+    return mode;
   }
   if (key === "innerlife.enabled") {
     return value === true || value === "true";

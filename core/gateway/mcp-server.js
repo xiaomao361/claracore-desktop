@@ -165,9 +165,9 @@ function textResult(value) {
 function currentMcpAgentId(args = {}) {
   return String(process.env.CLARACORE_AGENT_ID || args.agentId || args.agent_id || "").trim() || UNKNOWN_AGENT_ID;
 }
-function currentCallerContext(args = {}) {
+function currentCallerContext() {
   return {
-    agentId: currentMcpAgentId(args),
+    agentId: String(process.env.CLARACORE_AGENT_ID || "").trim() || UNKNOWN_AGENT_ID,
     clientId: String(process.env.CLARACORE_CLIENT_ID || "stdio-client").trim() || "stdio-client",
     conversationId: String(
       process.env.CLARACORE_CONVERSATION_ID || process.env.CLARACORE_SESSION_ID || ""
@@ -218,7 +218,7 @@ function summarizeToolResponse(result) {
 async function callTool(name, args = {}) {
   const startedAt = Date.now();
   const { paths, database } = await openDatabase();
-  const caller = currentCallerContext(args);
+  const caller = currentCallerContext();
   const agentId = caller.agentId;
   const callArgs = { ...args, agentId };
   delete callArgs.agent_id;

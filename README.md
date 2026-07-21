@@ -63,8 +63,8 @@ Read these before adding new features:
 
 ## Current Status
 
-The current development and public release version is `0.5.8`. It is a working
-desktop shell with a
+The current development version is `0.6.0`; the current public release remains
+`0.5.8`. It is a working desktop shell with a
 product-owned local data store, Desktop-native Memoria, Shared Line, InnerLife,
 a Desktop-owned Gateway, with model configuration merged into the Settings
 surface.
@@ -90,7 +90,10 @@ Included:
   the current Streamable HTTP endpoint, bearer authorization, setup order, and
   stdio fallback without duplicating a technical manual in the human UI.
 - Streamable HTTP MCP uses stable localhost port `50668` by default and persisted local token file; port/token edits, random token generation, and copyable agent config live in Settings > General > Agent Gateway
-- Desktop-owned Gateway Streamable HTTP endpoint for Gateway context, Memoria, Shared Line, and InnerLife MCP tools; stdio remains available for clients that do not support HTTP MCP yet
+- Desktop-owned Gateway Streamable HTTP endpoint for Gateway context, Memory Controller, Memoria, Shared Line, and InnerLife MCP tools; stdio remains available for clients that do not support HTTP MCP yet
+- Memory Controller automatic recall is off by default. Settings > Advanced
+  can enable observe-only decisions without injecting Memory, and Trace >
+  Advanced data shows bounded raw counts plus the latest ten decisions.
 - Gateway `memoria_update` requires `id` and `body`; omitted `title`, `labels`,
   and `sensitivity` preserve their current values, while explicitly supplied
   fields replace them.

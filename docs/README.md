@@ -24,6 +24,9 @@ instructions.
   performance contract.
 - [Trace Page](TRACE_PAGE.md): read-only narrative hierarchy and maintained
   definitions for accumulated statistics.
+- [v0.6.0 Memory Controller Plan](V0.6.0_MEMORY_CONTROLLER_PLAN.md): approved
+  agent-first retrieval-control direction, staged implementation, feedback
+  ledger, safety gates, and release boundary.
 
 ## Build And Release
 

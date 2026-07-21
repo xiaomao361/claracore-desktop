@@ -22,10 +22,21 @@ async function main() {
   };
   process.env.CLARACORE_DESKTOP_DATA_DIR = dataRoot;
   const { database } = await runtime.ensureProductCore(appShim);
+  const longSharedLineSummary = [
+    "Make Home a truthful shared consciousness space.",
+    "当共同线同时保存较长的情绪纹理、当前判断、现实边界和下一步时，首页仍然应该保持安静、克制并且容易阅读。",
+    "这里展示的是当前共同位置的预览，不应该随着正文增长而不断向下扩张，挤压地平线、智能体存在和内在活动区域。",
+    "完整内容继续保留在共同线页面，首页只承担快速恢复上下文的职责。"
+  ].join(" ");
   await runtime.saveProductSharedLine(appShim, {
     lineTitle: "Home presence direction",
-    summary: "Make Home a truthful shared consciousness space.",
+    summary: longSharedLineSummary,
     interpretationStatus: "confirmed"
+  });
+  await database.submitInnerLifeInbox({
+    agentId: "codex",
+    source: "home-presence-smoke",
+    body: "A long emerging thought remains readable beside the bounded Shared Line preview without either column covering the horizon, the presence markers, or the edge of the Home surface."
   });
   for (const agentId of ["codex", "clara", "hermes", "fourth-agent", "fifth-agent"]) {
     await database.recordGatewayTrace({
@@ -66,6 +77,33 @@ async function main() {
     const initial = await page.evaluate(() => ({
       title: document.querySelector("#homePresenceTitle")?.textContent || "",
       sharedLine: document.querySelector("#homeSharedLineText")?.textContent || "",
+      emergingThought: document.querySelector("#homeEmergingText")?.textContent || "",
+      sharedLineLayout: (() => {
+        const presence = document.querySelector(".home-presence");
+        const line = document.querySelector("#homeSharedLineText");
+        const style = getComputedStyle(line);
+        const lineHeight = Number.parseFloat(style.lineHeight) || 0;
+        const lineRect = line.getBoundingClientRect();
+        const presenceRect = presence.getBoundingClientRect();
+        return {
+          clientHeight: line.clientHeight,
+          scrollHeight: line.scrollHeight,
+          lineHeight,
+          overflow: style.overflow,
+          lineClamp: style.webkitLineClamp,
+          bottomGap: presenceRect.bottom - lineRect.bottom
+        };
+      })(),
+      lowerColumns: (() => {
+        const sharedLineRect = document.querySelector("#homeSharedLineSection").getBoundingClientRect();
+        const emergingRect = document.querySelector("#homeEmergingSection").getBoundingClientRect();
+        const presenceRect = document.querySelector(".home-presence").getBoundingClientRect();
+        return {
+          separated: sharedLineRect.right < emergingRect.left,
+          alignedBottom: Math.abs(sharedLineRect.bottom - emergingRect.bottom) <= 1,
+          emergingBottomGap: presenceRect.bottom - emergingRect.bottom
+        };
+      })(),
       container: (() => {
         const style = getComputedStyle(document.querySelector(".home-presence"));
         return {
@@ -88,6 +126,15 @@ async function main() {
     if (
       initial.agents.length !== 3 ||
       !initial.sharedLine.includes("truthful shared consciousness space") ||
+      !initial.emergingThought.includes("long emerging thought") ||
+      initial.sharedLineLayout.overflow !== "hidden" ||
+      initial.sharedLineLayout.lineClamp !== "6" ||
+      initial.sharedLineLayout.clientHeight > initial.sharedLineLayout.lineHeight * 6 + 1 ||
+      initial.sharedLineLayout.scrollHeight <= initial.sharedLineLayout.clientHeight ||
+      initial.sharedLineLayout.bottomGap < 40 ||
+      !initial.lowerColumns.separated ||
+      !initial.lowerColumns.alignedBottom ||
+      initial.lowerColumns.emergingBottomGap < 40 ||
       initial.legacyPeriods ||
       initial.legacyModules ||
       initial.legacyRuntime ||
@@ -158,9 +205,38 @@ async function main() {
 
     if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
       await page.screenshot({ path: process.env.CLARACORE_UI_SCREENSHOT_PATH });
-      await page.setViewportSize({ width: 900, height: 720 });
-      await page.click("[data-view='home']");
-      await page.waitForFunction(() => document.querySelector("#homeView")?.classList.contains("active-view"));
+    }
+    await page.setViewportSize({ width: 900, height: 720 });
+    await page.click("[data-view='home']");
+    await page.waitForFunction(() => document.querySelector("#homeView")?.classList.contains("active-view"));
+    const narrow = await page.evaluate(() => {
+      const presence = document.querySelector(".home-presence");
+      const sharedLine = document.querySelector("#homeSharedLineSection");
+      const emerging = document.querySelector("#homeEmergingSection");
+      const lineText = document.querySelector("#homeSharedLineText");
+      const presenceRect = presence.getBoundingClientRect();
+      const sharedLineRect = sharedLine.getBoundingClientRect();
+      const emergingRect = emerging.getBoundingClientRect();
+      return {
+        lineClamp: getComputedStyle(lineText).webkitLineClamp,
+        sameColumn: Math.abs(sharedLineRect.left - emergingRect.left) <= 1,
+        stacked: emergingRect.top >= sharedLineRect.bottom,
+        rightGap: presenceRect.right - Math.max(sharedLineRect.right, emergingRect.right),
+        bottomGap: presenceRect.bottom - emergingRect.bottom,
+        horizontalOverflow: presence.scrollWidth > presence.clientWidth
+      };
+    });
+    if (
+      narrow.lineClamp !== "4" ||
+      !narrow.sameColumn ||
+      !narrow.stacked ||
+      narrow.rightGap < 20 ||
+      narrow.bottomGap < 30 ||
+      narrow.horizontalOverflow
+    ) {
+      throw new Error(`Narrow Home presence layout failed: ${JSON.stringify(narrow)}`);
+    }
+    if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
       await page.evaluate(() => {
         document.body.dataset.theme = "dark";
         document.body.dataset.themePreference = "dark";
@@ -170,7 +246,7 @@ async function main() {
     }
     if (rendererErrors.length) throw new Error(`Renderer errors: ${rendererErrors.join(" | ")}`);
 
-    console.log(JSON.stringify({ ok: true, initial, away, returned, reduced, arrivalSettled }, null, 2));
+    console.log(JSON.stringify({ ok: true, initial, away, returned, reduced, arrivalSettled, narrow }, null, 2));
   } finally {
     if (app) await app.close();
     await Promise.resolve(database.close?.()).catch(() => {});

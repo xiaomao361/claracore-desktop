@@ -1,10 +1,11 @@
 const { toolDefinitions } = require("./tool-definitions");
 const { handleSystemTool } = require("./tool-handlers/system");
+const { handleMemoryControllerTool } = require("./tool-handlers/memory-controller");
 const { handleMemoriaTool } = require("./tool-handlers/memoria");
 const { handleSharedLineTool } = require("./tool-handlers/shared-line");
 const { handleInnerLifeTool } = require("./tool-handlers/innerlife");
 
-const HANDLERS = [handleSystemTool, handleMemoriaTool, handleSharedLineTool, handleInnerLifeTool];
+const HANDLERS = [handleSystemTool, handleMemoryControllerTool, handleMemoriaTool, handleSharedLineTool, handleInnerLifeTool];
 
 function createGatewayTools({ serverInfo, currentMcpAgentId, currentCallerContext, gatewayLaunchConfig, runtimeAppForGateway, textResult }) {
   async function callToolBody(name, args = {}, paths, database) {

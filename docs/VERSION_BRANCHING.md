@@ -4,13 +4,17 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- Current development version: `0.5.8`.
+- Current development version: `0.6.0`.
 - Current public release: `0.5.8`.
 - Tag `v0.5.8` is the current stable GitHub Release.
 
-The release adds the read-only Trace page and its bounded aggregate snapshot to
-the Agent First page set, Home Shared Horizon, strict test-instance isolation,
-and partial MCP `memoria_update` semantics. See
+`0.6.0` is the current development test checkpoint. It includes the Memory
+Controller observe-only path and the earlier bounded Home layout fix; it is not
+yet a public release.
+
+The `0.5.8` release adds the read-only Trace page and its bounded aggregate
+snapshot to the Agent First page set, Home Shared Horizon, strict test-instance
+isolation, and partial MCP `memoria_update` semantics. See
 [Trace Page](TRACE_PAGE.md), [Home Shared Horizon](HOME_SHARED_HORIZON.md), and
 the current architecture/code-map docs for the maintained contract.
 
