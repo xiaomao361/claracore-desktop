@@ -71,6 +71,10 @@ async function main() {
       "shared_line_list",
       "status=active",
       "gateway_context",
+      "Current Memory Controller Contract",
+      "memory_context",
+      "observe-only",
+      "memoria_search",
       "proactively report"
     ];
     for (const marker of required) {

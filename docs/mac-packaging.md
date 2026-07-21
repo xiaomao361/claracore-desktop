@@ -5,6 +5,11 @@
 The current public package line is `v0.5.8`. macOS and Windows artifacts remain
 unsigned.
 
+The current development and installed-test line is `0.6.2`. Its validated
+local macOS artifact is the unsigned arm64 Lite app at
+`dist-lite/mac-arm64/ClaraCore Desktop.app` (about 293 MiB). This local app is
+not a tag, GitHub Release, or automatic-update publication.
+
 It is enough for:
 
 - Opening the Desktop app on the local Mac.
@@ -120,6 +125,17 @@ node core/gateway/mcp-server.js
 ```
 
 ## Validation Status
+
+Validated locally for the installed `0.6.2` Lite checkpoint:
+
+- bundle version and build flavor are `0.6.2` and `lite`;
+- the executable is arm64 and the package excludes built-in model resources
+  and the Full embedding dependency closure;
+- packaged Lite settings and update UI smokes pass;
+- installed Gateway normal 1/4/8-Agent reads, 240-call backpressure, 46.5 MB
+  product-data-copy UI reads, and five-minute endurance pass;
+- the generic Full-vs-Lite package-size comparator was not run because no
+  `0.6.2` Full artifact was built.
 
 Validated for `0.5.8`:
 

@@ -71,7 +71,7 @@ port intentionally. Do not silently fall back to a random port for normal
 Desktop use, because existing MCP client configs would then point at the wrong
 endpoint.
 
-The v0.5.x endpoint supports the MCP JSON-RPC methods needed for local tools.
+The current local endpoint supports the MCP JSON-RPC methods needed for local tools.
 Memory writers must search first: update the same fact, use
 `memoria_supersede` for a confirmed new state, and use `contradicts` when the
 conflict is unresolved. `memoria_search` defaults to current facts and accepts
@@ -92,6 +92,18 @@ transport caller. The operator mode defaults to `off`, which returns
 bounded decision for that caller and returns an empty `context` even when Stage
 B recommends a candidate. Explicit `memoria_search` and mutation tools remain
 separate operations.
+
+Hermes/Lara must keep `agentId=lara` and `clientId=hermes`. It should call
+`memory_context` once for each non-empty user prompt only when Hermes owns a
+verified per-prompt lifecycle hook. Observe mode never authorizes client-side
+injection: the returned `context` stays empty. Without such a hook, Hermes must
+report that automatic routing is unavailable and continue to use explicit
+`memoria_search` when recall is actually requested. See
+`docs/HERMES_V0.6.2_UPDATE.md` for the reconnect and verification receipt.
+
+HTTP `tools/call` overload returns HTTP `429`, JSON-RPC code `-32001`, and
+`Retry-After: 1`. Clients should wait, retry a bounded number of times, and
+must not turn this signal into parallel retry amplification.
 
 Server-initiated event streams are not used in this local checkpoint.
 

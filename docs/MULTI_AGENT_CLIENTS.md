@@ -210,6 +210,17 @@ still request an all-agent inspection snapshot.
    not use that lifecycle rule.
 9. For stdio, set `CLARACORE_CLIENT_ID=hermes`; omit the conversation variable
    when Hermes cannot refresh the MCP process per session.
+10. After upgrading Desktop, restart the Hermes MCP connection, run
+    `claracore_connection_test`, and read the live `gateway_docs` and tool list.
+11. Treat `memory_context` as observe-only. Call it per non-empty prompt only
+    when Hermes has a verified per-prompt hook; never inject its empty context.
+12. Without that hook, keep explicit `memoria_search` for real recall requests
+    and report automatic Controller routing as unavailable instead of implied.
+13. On HTTP `429` / JSON-RPC `-32001`, honor `Retry-After`, use bounded retries,
+    and do not fan out more concurrent calls.
+
+The current copy-ready Hermes upgrade message and verification receipt live in
+[Hermes v0.6.2 Update](HERMES_V0.6.2_UPDATE.md).
 
 ## Compatibility And Verification
 

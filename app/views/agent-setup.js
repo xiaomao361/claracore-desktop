@@ -45,6 +45,12 @@ After tools appear, follow this sequence exactly:
 4. Call \`gateway_context\`, passing an explicit \`lineId\` when selection is required.
 5. In the user's current language, proactively report the truthful connection result, explain ClaraCore's Memory, Shared Line, InnerLife, and Gateway/diagnostics capabilities, summarize only the useful current context you actually found, offer 3-5 natural-language example requests, and suggest one evidence-backed next action when appropriate.
 
+## Current Memory Controller Contract
+
+- \`memory_context\` is the authenticated, observe-only Memory Controller entry point. It is off by default; when the operator enables observe mode, it records bounded recall decisions but returns no injectable context.
+- Do not treat \`memory_context\` as a replacement for explicit \`memoria_search\`. Use \`memoria_search\` when the user asks to recall, research, audit, or compare prior state.
+- Read the live \`gateway_docs\` and available tool list as the authoritative contract after every Desktop upgrade or MCP reconnect.
+
 Do not claim connection success before the test succeeds. Connecting or reading onboarding material must not create user content in Memory, Shared Line, or InnerLife.`;
   }
 

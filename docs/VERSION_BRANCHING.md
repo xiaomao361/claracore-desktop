@@ -4,16 +4,17 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- Current development version: `0.6.1`.
+- Current development and installed-test version: `0.6.2`.
 - Current public release: `0.5.8`.
 - Tag `v0.5.8` is the current stable GitHub Release.
 
-`0.6.1` is the current development test checkpoint. It carries the `0.6.0`
-Memory Controller observe-only path forward and adds a measured, staged
-performance pass across Desktop snapshots, Gateway context, durable background
-work, multi-Agent transport, and trace retention. It is not yet a public
-release. The frozen execution plan is
-[v0.6.1 Performance Plan](V0.6.1_PERFORMANCE_PLAN.md).
+`0.6.2` is the current development and installed-test checkpoint. It carries
+the `0.6.0` Memory Controller observe-only path forward, the `0.6.1` measured
+performance pass, and the `0.6.2` InnerLife retention, compact-detail, HTTP
+backpressure, and simultaneous SQLite-Agent startup hardening. It is not yet a
+public release. See [v0.6.2 Release Notes](RELEASE_NOTES_V0.6.2.md),
+[v0.6.2 Performance Hardening](V0.6.2_PERFORMANCE_HARDENING_PLAN.md), and the
+[Hermes Update Guide](HERMES_V0.6.2_UPDATE.md).
 
 The `0.5.8` release adds the read-only Trace page and its bounded aggregate
 snapshot to the Agent First page set, Home Shared Horizon, strict test-instance
