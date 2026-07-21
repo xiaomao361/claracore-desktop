@@ -249,13 +249,6 @@ function createInnerLifeSessionRepository(helpers) {
         "",
         "Review before sharing or applying this anywhere."
       ].join("\n");
-      const generated = await generateOrTemplate(this, {
-        tier: "light",
-        system: IL_SYSTEM.session,
-        prompt: template,
-        template
-      });
-      const body = generated.body;
       await this.exec(`
         UPDATE innerlife_sessions
         SET status = 'ended',
@@ -267,10 +260,18 @@ function createInnerLifeSessionRepository(helpers) {
         VALUES (
           ${sqlString(inboxId)},
           ${sqlString(session.agent_id)},
-          'session_end',
+          'session_end_afterthought',
           ${sqlString(summary || "Session ended")},
-          'processed',
-          ${jsonSql({ sessionId: id })}
+          'pending',
+          ${jsonSql({
+            jobType: "session_afterthought",
+            sessionId: id,
+            eventId,
+            thoughtId,
+            shareId,
+            template,
+            attempts: 0
+          })}
         );
 
         INSERT INTO innerlife_events (id, agent_id, kind, body, status, metadata_json)
@@ -284,17 +285,11 @@ function createInnerLifeSessionRepository(helpers) {
         );
 
         INSERT INTO innerlife_thoughts (id, event_id, body, review_status)
-        VALUES (${sqlString(thoughtId)}, ${sqlString(eventId)}, ${sqlString(body)}, 'unreviewed');
+        VALUES (${sqlString(thoughtId)}, ${sqlString(eventId)}, ${sqlString(template)}, 'unreviewed');
 
         INSERT INTO innerlife_shares (id, agent_id, thought_id, status, body)
-        VALUES (${sqlString(shareId)}, ${sqlString(session.agent_id)}, ${sqlString(thoughtId)}, 'pending', ${sqlString(body)});
+        VALUES (${sqlString(shareId)}, ${sqlString(session.agent_id)}, ${sqlString(thoughtId)}, 'pending', ${sqlString(template)});
       `);
-      const convergence = await this.convergeInnerLife({
-        agentId: session.agent_id,
-        sourceThoughtId: thoughtId,
-        automated: true,
-        reason: "session_end"
-      });
       // Keep the acknowledgement small: agents only need the closed session,
       // the created ids, and the afterthought share. Full InnerLife state
       // belongs to innerlife_status / innerlife_briefing, not this response.
@@ -305,9 +300,89 @@ function createInnerLifeSessionRepository(helpers) {
         eventId,
         thoughtId,
         share: await this.getInnerLifeShare(shareId),
-        converged: Boolean(convergence?.converged),
-        convergenceReason: convergence?.reason || ""
+        afterthoughtJob: { id: inboxId, status: "pending" },
+        converged: false,
+        convergenceReason: "queued"
       };
+    },
+
+    async processPendingSessionAfterthoughts(limit = 5) {
+      const safeLimit = Math.max(1, Math.min(20, Number.parseInt(String(limit), 10) || 5));
+      const rows = await this.query(`
+        SELECT id, agent_id, body, metadata_json
+        FROM innerlife_inbox
+        WHERE source = 'session_end_afterthought'
+          AND status = 'pending'
+        ORDER BY created_at ASC, id ASC
+        LIMIT ${safeLimit};
+      `);
+      const results = [];
+      for (const row of rows) {
+        const metadata = parseJson(row.metadata_json, {});
+        const template = String(metadata.template || row.body || "Session ended");
+        try {
+          const share = await this.getInnerLifeShare(metadata.shareId);
+          let generated = { body: share?.body || template, source: "skipped" };
+          if (share && ["pending", "approved", "deferred"].includes(share.status)) {
+            generated = await generateOrTemplate(this, {
+              tier: "light",
+              system: IL_SYSTEM.session,
+              prompt: template,
+              template
+            });
+            await this.exec(`
+              UPDATE innerlife_thoughts
+              SET body = ${sqlString(generated.body)}
+              WHERE id = ${sqlString(metadata.thoughtId)};
+
+              UPDATE innerlife_shares
+              SET body = ${sqlString(generated.body)},
+                  updated_at = CURRENT_TIMESTAMP
+              WHERE id = ${sqlString(metadata.shareId)}
+                AND status IN ('pending', 'approved', 'deferred');
+            `);
+          }
+          await this.exec(`
+            UPDATE innerlife_inbox
+            SET status = 'processed',
+                processed_at = CURRENT_TIMESTAMP,
+                metadata_json = ${jsonSql({
+                  ...metadata,
+                  attempts: Number(metadata.attempts || 0) + 1,
+                  completedAt: new Date().toISOString(),
+                  resultSource: generated.source
+                })}
+            WHERE id = ${sqlString(row.id)}
+              AND status = 'pending';
+          `);
+          const convergence = await this.convergeInnerLife({
+            agentId: row.agent_id,
+            sourceThoughtId: metadata.thoughtId,
+            automated: true,
+            reason: "session_end"
+          });
+          results.push({
+            id: row.id,
+            ok: true,
+            shareId: metadata.shareId,
+            source: generated.source,
+            converged: Boolean(convergence?.converged)
+          });
+        } catch (error) {
+          await this.exec(`
+            UPDATE innerlife_inbox
+            SET metadata_json = ${jsonSql({
+              ...metadata,
+              attempts: Number(metadata.attempts || 0) + 1,
+              lastAttemptAt: new Date().toISOString(),
+              lastError: error.message || String(error)
+            })}
+            WHERE id = ${sqlString(row.id)};
+          `);
+          results.push({ id: row.id, ok: false, error: error.message || String(error) });
+        }
+      }
+      return { processed: results.filter((item) => item.ok).length, results };
     }
   };
 }

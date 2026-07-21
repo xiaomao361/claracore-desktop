@@ -816,7 +816,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
         this.getResumePacket(input.lineId ? { lineId: input.lineId, lite: true } : { agentId, lite: true }),
         query ? this.searchMemories(query, limit).then((result) => result.results.slice(0, limit)) : this.listMemories(limit),
         this.getInnerLifeSnapshotLite(agentId),
-        this.listInnerLifeInboxForAgent(agentId, "pending", limit),
+        this.listInnerLifeInboxForAgent(agentId, "pending", limit, { excludeSources: ["session_end_afterthought"] }),
         this.listInnerLifeShares("all", limit, agentId),
         this.listInnerLifeRecentThoughts(agentId, limit)
       ]);

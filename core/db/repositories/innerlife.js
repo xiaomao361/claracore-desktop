@@ -119,7 +119,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       const agentClause = requestedAgentId === "all" ? "" : ` AND agent_id = ${sqlString(requestedAgentId)}`;
       const rows = await this.query(`
         SELECT
-          (SELECT COUNT(*) FROM innerlife_inbox WHERE status = 'pending'${agentClause}) AS pending_inbox_count,
+          (SELECT COUNT(*) FROM innerlife_inbox WHERE status = 'pending' AND source != 'session_end_afterthought'${agentClause}) AS pending_inbox_count,
           (SELECT COUNT(*) FROM innerlife_inbox WHERE status = 'processed'${agentClause}) AS processed_inbox_count,
           (SELECT COUNT(*) FROM innerlife_events WHERE 1 = 1${agentClause}) AS events_count,
           (SELECT COUNT(*) FROM innerlife_thoughts WHERE event_id IN (
@@ -329,7 +329,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       const settings = context.settings || await this.getSettings();
       const resolvedCounts = context.counts || (await this.query(`
           SELECT
-            (SELECT COUNT(*) FROM innerlife_inbox WHERE agent_id = ${sqlString(profile.agent_id)} AND status = 'pending') AS pending_inbox_count,
+            (SELECT COUNT(*) FROM innerlife_inbox WHERE agent_id = ${sqlString(profile.agent_id)} AND status = 'pending' AND source != 'session_end_afterthought') AS pending_inbox_count,
             (SELECT COUNT(*) FROM innerlife_shares WHERE agent_id = ${sqlString(profile.agent_id)} AND status = 'pending') AS pending_shares_count,
             (SELECT COUNT(*) FROM innerlife_sessions WHERE agent_id = ${sqlString(profile.agent_id)} AND status = 'active') AS active_sessions_count;
         `))[0] || {};
@@ -433,7 +433,9 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       const { resumePacket, sharedLineContext } = await this.getOptionalInnerLifeResumePacket(options, profile.agent_id);
       const memories = await this.listMemories(5);
       const pendingShares = (await this.listInnerLifeShares("pending", 20)).filter((share) => share.agent_id === profile.agent_id).slice(0, 5);
-      const pendingInbox = (await this.listInnerLifeInboxPage({ agentId: profile.agent_id, status: "pending", limit: 5, offset: 0 })).items;
+      const pendingInbox = await this.listInnerLifeInboxForAgent(profile.agent_id, "pending", 5, {
+        excludeSources: ["session_end_afterthought"]
+      });
       const rows = await this.query(`
         SELECT t.body, t.created_at
         FROM innerlife_thoughts t
@@ -663,7 +665,9 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       const profile = await this.ensureInnerLifeProfile(agentId);
       const { resumePacket, sharedLineContext } = await this.getOptionalInnerLifeResumePacket(input, profile.agent_id);
       const memories = await this.listMemories(5);
-      const inboxItems = (await this.listInnerLifeInboxPage({ agentId: profile.agent_id, status: "pending", limit: 5, offset: 0 })).items;
+      const inboxItems = await this.listInnerLifeInboxForAgent(profile.agent_id, "pending", 5, {
+        excludeSources: ["session_end_afterthought"]
+      });
       const prompt = String(input?.prompt || "").trim();
       const eventId = newId("inner_event");
       const thoughtId = newId("inner_thought");

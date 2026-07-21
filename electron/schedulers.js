@@ -1,4 +1,5 @@
 const INNERLIFE_SCHEDULER_INTERVAL_MS = 60 * 1000;
+const EMBEDDING_SCHEDULER_INTERVAL_MS = 15 * 1000;
 
 function localDateKey(date = new Date()) {
   const year = date.getFullYear();
@@ -30,6 +31,8 @@ function createSchedulers({
 }) {
   let innerLifeScheduler = null;
   let innerLifeSchedulerBusy = false;
+  let embeddingScheduler = null;
+  let embeddingSchedulerBusy = false;
   let memoryMaintenanceScheduler = null;
   let memoryMaintenanceSchedulerBusy = false;
 
@@ -38,6 +41,16 @@ function createSchedulers({
     innerLifeSchedulerBusy = true;
     try {
       const { database } = await ensureProductCore(app);
+      const afterthoughts = await database.processPendingSessionAfterthoughts(5);
+      if (afterthoughts.processed > 0) {
+        await database.recordRuntimeEvent({
+          level: afterthoughts.results.some((item) => !item.ok) ? "warn" : "info",
+          source: "innerlife",
+          message: "Processed pending session afterthoughts",
+          metadata: afterthoughts
+        });
+        notifyRuntimeChanged("innerlife-session-afterthought", afterthoughts);
+      }
       const agentIds = await database.listEnabledInnerLifeDaemonAgentIds();
       for (const agentId of agentIds) {
         try {
@@ -77,6 +90,49 @@ function createSchedulers({
       runInnerLifeScheduledTick().catch(console.error);
     }, INNERLIFE_SCHEDULER_INTERVAL_MS);
     if (typeof innerLifeScheduler.unref === "function") innerLifeScheduler.unref();
+  }
+
+  async function runEmbeddingScheduledTick() {
+    if (embeddingSchedulerBusy || isQuitting()) return;
+    embeddingSchedulerBusy = true;
+    try {
+      const { database } = await ensureProductCore(app);
+      const result = await database.processPendingEmbeddings(5);
+      if (result.processed > 0) {
+        await database.recordRuntimeEvent({
+          level: result.results?.some((item) => !item.ok) ? "warn" : "info",
+          source: "memoria",
+          message: "Processed persisted Memory embedding jobs",
+          metadata: {
+            processed: result.processed,
+            ready: (result.results || []).filter((item) => item.ok).length,
+            failed: (result.results || []).filter((item) => !item.ok).length
+          }
+        });
+        notifyRuntimeChanged("memory-embeddings", { processed: result.processed });
+      }
+      return result;
+    } catch (error) {
+      console.error("Memory embedding scheduler failed:", error);
+      return { processed: 0, error: error.message || String(error) };
+    } finally {
+      embeddingSchedulerBusy = false;
+    }
+  }
+
+  function startEmbeddings() {
+    if (embeddingScheduler) return;
+    embeddingScheduler = setInterval(() => {
+      runEmbeddingScheduledTick().catch(console.error);
+    }, EMBEDDING_SCHEDULER_INTERVAL_MS);
+    if (typeof embeddingScheduler.unref === "function") embeddingScheduler.unref();
+    runEmbeddingScheduledTick().catch(console.error);
+  }
+
+  function stopEmbeddings() {
+    if (!embeddingScheduler) return;
+    clearInterval(embeddingScheduler);
+    embeddingScheduler = null;
   }
 
   function stopInnerLife() {
@@ -165,11 +221,13 @@ function createSchedulers({
 
   function start() {
     startInnerLife();
+    startEmbeddings();
     startMemoryMaintenance();
   }
 
   function stop() {
     stopInnerLife();
+    stopEmbeddings();
     stopMemoryMaintenance();
   }
 
@@ -182,6 +240,7 @@ function createSchedulers({
     stopInnerLife,
     stopMemoryMaintenance,
     runInnerLifeScheduledTick,
+    runEmbeddingScheduledTick,
     runMemoryMaintenanceScheduledTick
   };
 }

@@ -712,7 +712,8 @@ async function refresh() {
   hydratedViews.clear();
   memoriaView.resetLoadedTabs();
   renderSnapshot();
-  hydrateView(activeView).catch(console.error);
+  if (activeView === "home") hydrateView(activeView).catch(console.error);
+  else await hydrateView(activeView);
   loadMemoryTabData(memoriaView.getActiveTab()).catch(console.error);
 }
 
@@ -733,7 +734,8 @@ async function refreshRuntimeSnapshotOnly() {
   await sharedLineActions.syncSelectedLine(snapshot.sharedLine);
   hydratedViews.clear();
   renderSnapshot();
-  hydrateView(activeView).catch(console.error);
+  if (activeView === "home") hydrateView(activeView).catch(console.error);
+  else await hydrateView(activeView);
 }
 
 async function refreshLogsSnapshot() {

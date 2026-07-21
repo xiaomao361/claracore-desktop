@@ -67,6 +67,9 @@ async function main() {
   if (!sessionEnd.share?.body.includes("Session afterthought")) {
     throw new Error("InnerLife session end did not create a reviewable afterthought share.");
   }
+  if (sessionEnd.afterthoughtJob?.status !== "pending") {
+    throw new Error("InnerLife session end did not persist an afterthought job before returning.");
+  }
   const inboxItem = await runtime.submitProductInnerLifeInbox(app, {
     agentId: "my-agent",
     source: "phase5-smoke",
@@ -91,8 +94,12 @@ async function main() {
   if (firstRun.snapshot.counts.pending_shares_count !== 2) {
     throw new Error("InnerLife pending share count should include session afterthought and process-once share.");
   }
-  if (firstRun.snapshot.counts.pending_inbox_count !== 0 || firstRun.snapshot.counts.processed_inbox_count !== 2) {
+  if (firstRun.snapshot.counts.pending_inbox_count !== 0 || firstRun.snapshot.counts.processed_inbox_count !== 1) {
     throw new Error(`InnerLife inbox counts are wrong after process once: ${JSON.stringify(firstRun.snapshot.counts)}`);
+  }
+  const processedAfterthoughts = await core.database.processPendingSessionAfterthoughts(5);
+  if (processedAfterthoughts.processed !== 1 || processedAfterthoughts.results[0]?.id !== sessionEnd.afterthoughtJob.id) {
+    throw new Error(`InnerLife afterthought worker did not process the persisted job: ${JSON.stringify(processedAfterthoughts)}`);
   }
 
   const pendingShareCheck = await runtime.checkProductInnerLifeShareTiming(app, {

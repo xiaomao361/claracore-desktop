@@ -38,15 +38,13 @@ async function handleMemoriaTool(name, args, context) {
 
   if (name === "memoria_create") {
     const memory = await memoria.create(core, args);
-    await memoria.processEmbeddings(core, 1);
-    return textResult({ memory });
+    return textResult({ memory, embedding: { status: memory.embeddingStatus || "pending", persisted: true } });
   }
 
   if (name === "memoria_update") {
     const existing = await memoria.get(core, args.id);
     const memory = await memoria.update(core, args.id, preserveMissingMemoryFields(existing, args));
-    await memoria.processEmbeddings(core, 1);
-    return textResult({ memory });
+    return textResult({ memory, embedding: { status: memory.embeddingStatus || "pending", persisted: true } });
   }
 
   if (name === "memoria_tag") {
