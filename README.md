@@ -40,9 +40,8 @@ Read these before adding new features:
   pagination, resource ownership, memory telemetry, and long-run checks.
 - [macOS Packaging](docs/mac-packaging.md): current local packaging and packaged
   Gateway validation notes.
-- [v0.5.8 release notes](docs/RELEASE_NOTES_V0.5.8.md): Agent First human
-  surfaces, Home Shared Horizon, the read-only Trace page, and verified Full/Lite
-  packages for macOS arm64 and Windows x64.
+- [v0.6.3 release notes](docs/RELEASE_NOTES_V0.6.3.md): current small-audience
+  stable macOS arm64 Lite release and its validation boundary.
 - [Home Shared Horizon](docs/HOME_SHARED_HORIZON.md): current Home presence,
   performance, and test-isolation contract.
 - [Trace page](docs/TRACE_PAGE.md): read-only narrative, metric definitions,
@@ -63,8 +62,7 @@ Read these before adding new features:
 
 ## Current Status
 
-The current development and packaged-test version is `0.6.3`; the current public release remains
-`0.5.8`. It is a working desktop shell with a
+The current development and public stable version is `0.6.3`. It is a working desktop shell with a
 product-owned local data store, Desktop-native Memoria, Shared Line, InnerLife,
 a Desktop-owned Gateway, with model configuration merged into the Settings
 surface.

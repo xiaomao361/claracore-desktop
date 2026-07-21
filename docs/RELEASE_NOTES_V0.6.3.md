@@ -1,7 +1,7 @@
-# ClaraCore Desktop v0.6.3 Packaged-Test Checkpoint
+# ClaraCore Desktop v0.6.3 Stable Release
 
-> Status: local macOS arm64 Lite packaged-test checkpoint; not a public GitHub Release
-> Public stable release: `v0.5.8`
+> Released on 2026-07-21 as a small-audience stable GitHub Release
+> Distribution boundary: unsigned macOS arm64 Lite
 
 ## Included
 
@@ -31,12 +31,15 @@
 - overview, InnerLife compact snapshot, and Gateway-context performance tests
 - unsigned 293.0 MiB macOS arm64 Lite application at version `0.6.3`
 - packaged Lite settings, update UI, and stdio Gateway checks
+- `hdiutil verify` for `ClaraCore-Desktop-0.6.3-lite-arm64.dmg`
+- mounted-DMG Gateway validation against an online backup copy of the 45 MiB
+  product database, with all six migrations present and `quick_check=ok`
 
 ## Product Boundary
 
 - Memory Controller remains `off`/`observe` only in product settings and the
   Gateway. This checkpoint does not enable canary injection.
-- No tag, GitHub Release, deployment, or automatic-update publication is
-  included.
-- Signing, notarization, Windows, Intel macOS, Full packaging, and installed
-  endurance validation remain outside this Lite checkpoint.
+- The stable Release publishes only the macOS arm64 Lite DMG and its SHA-256
+  checksum. Full, Windows, and Intel macOS artifacts are not claimed.
+- Signing, notarization, canary enablement, deployment, and automatic update
+  installation remain outside this release.

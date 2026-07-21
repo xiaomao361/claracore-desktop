@@ -4,14 +4,16 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- Current development and packaged-test version: `0.6.3`.
-- Current public release: `0.5.8`.
-- Tag `v0.5.8` is the current stable GitHub Release.
+- Current development and public stable version: `0.6.3`.
+- Current public release: `0.6.3`.
+- Tag `v0.6.3` is the current stable GitHub Release.
 
-`0.6.3` is the current development and packaged-test checkpoint. It carries
+`0.6.3` is the current stable release. It carries
 the `0.6.0` observe-only Memory Controller, the `0.6.1` measured performance
 pass, the `0.6.2` multi-Agent runtime hardening, and the `0.6.3` pre-canary
-safety fixes. It is not yet a public release. See
+safety fixes. Its small-audience distribution is the unsigned macOS arm64 Lite
+DMG; Full, Windows, Intel macOS, signing, and notarization remain outside this
+release. See
 [v0.6.3 Release Notes](RELEASE_NOTES_V0.6.3.md),
 [v0.6.2 Performance Hardening](V0.6.2_PERFORMANCE_HARDENING_PLAN.md), and the
 [Hermes Update Guide](HERMES_V0.6.2_UPDATE.md).
@@ -62,7 +64,7 @@ through to the daily-use Application Support directory.
 
 Current packaging commands and artifact checks live in
 [macOS Packaging](mac-packaging.md). Current public-release details live in
-[v0.5.8 Release Notes](RELEASE_NOTES_V0.5.8.md).
+[v0.6.3 Release Notes](RELEASE_NOTES_V0.6.3.md).
 
 ## History
 

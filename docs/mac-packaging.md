@@ -2,13 +2,15 @@
 
 ## Current Target
 
-The current public package line is `v0.5.8`. macOS and Windows artifacts remain
-unsigned.
+The current public stable package line is `v0.6.3`. Its small-audience
+distribution is unsigned macOS arm64 Lite.
 
-The current development and packaged-test line is `0.6.3`. Its validated
+The current development and stable line is `0.6.3`. Its validated
 local macOS artifact is the unsigned arm64 Lite app at
-`dist-lite/mac-arm64/ClaraCore Desktop.app` (293.0 MiB). This local app is
-not a tag, GitHub Release, or automatic-update publication.
+`dist-lite/mac-arm64/ClaraCore Desktop.app` (293.0 MiB). The unpacked app is a
+local validation artifact; the published asset is
+`ClaraCore-Desktop-0.6.3-lite-arm64.dmg`. Full, Windows, and Intel macOS
+artifacts are not part of this release.
 
 It is enough for:
 
@@ -22,32 +24,27 @@ but not a signed/notarized general-public distribution.
 
 ## Commands
 
-Create an unpacked `.app`:
+Create an unpacked Lite `.app`:
 
 ```bash
-npm run pack:mac
+npm run pack:mac:lite
 ```
 
-Create a `.dmg`:
+Create a Lite `.dmg`:
 
 ```bash
-npm run dist:mac
+npm run dist:mac:lite
 ```
 
 Current output:
 
 ```text
-dist/mac-arm64/ClaraCore Desktop.app
-dist/ClaraCore-Desktop-0.5.8-arm64.dmg
-dist-lite/ClaraCore-Desktop-0.5.8-lite-arm64.dmg
-ClaraCore-Desktop-0.5.8-x64-Setup.exe
-ClaraCore-Desktop-0.5.8-lite-x64-Setup.exe
+dist-lite/mac-arm64/ClaraCore Desktop.app
+dist-lite/ClaraCore-Desktop-0.6.3-lite-arm64.dmg
 ```
 
-The `0.5.8` Full/Lite arm64 DMGs and Windows x64 NSIS installers are published
-in GitHub Release `v0.5.8`. Windows Full/Lite are built on `windows-latest`; the
-packaged Full executable must generate a real 512-dimensional built-in
-embedding before its installers are uploaded.
+The previous `0.5.8` Full/Lite arm64 DMGs and Windows x64 NSIS installers remain
+available in GitHub Release `v0.5.8`.
 
 ## Manual Release Update Channel
 
@@ -82,9 +79,9 @@ install anything.
 Run `npm run test:update` for mocked release and Settings UI coverage before
 performing a live published-Release check.
 
-`v0.5.8` is published at
-`https://github.com/xiaomao361/claracore-desktop/releases/tag/v0.5.8` with Full
-and Lite macOS DMGs, Full and Lite Windows installers, and `SHA256SUMS.txt`.
+`v0.6.3` is published at
+`https://github.com/xiaomao361/claracore-desktop/releases/tag/v0.6.3` with the
+macOS arm64 Lite DMG and `SHA256SUMS.txt`.
 
 ## Gateway In Packaged Mode
 
@@ -135,6 +132,9 @@ Validated locally for the packaged `0.6.3` Lite checkpoint:
 - packaged Lite settings and update UI smokes pass;
 - source Memory Controller, Gateway, overview, InnerLife, and repository checks
   pass;
+- the DMG passes `hdiutil verify`, and its mounted Gateway opens an online
+  backup copy of the 45 MiB product database with all six migrations present
+  and `quick_check=ok`;
 - the generic Full-vs-Lite package-size comparator was not run because no
   `0.6.3` Full artifact was built.
 
