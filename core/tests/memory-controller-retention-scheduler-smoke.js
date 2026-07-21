@@ -22,10 +22,14 @@ function fixture({ memoriaMaintenanceEnabled = true } = {}) {
       calls.push("controller-retention");
       return retention;
     },
+    async cleanupGatewayTraces() {
+      calls.push("gateway-retention");
+      return { deleted: 2, before: { total: 12 }, after: { total: 10 } };
+    },
     async recordRuntimeEvent(event) {
       calls.push("runtime-event");
-      assert.equal(event.source, "memory-controller");
-      assert.equal(event.metadata.deleted, retention.deleted);
+      if (event.source === "memory-controller") assert.equal(event.metadata.deleted, retention.deleted);
+      else assert.equal(event.source, "gateway");
     }
   };
   const schedulers = createSchedulers({
@@ -53,6 +57,8 @@ async function main() {
     "settings",
     "memoria-maintenance",
     "controller-retention",
+    "gateway-retention",
+    "runtime-event",
     "runtime-event",
     "settings-save"
   ]);
@@ -66,6 +72,7 @@ async function main() {
   const disabledResult = await disabled.schedulers.runMemoryMaintenanceScheduledTick();
   assert.ok(!disabled.calls.includes("memoria-maintenance"), "Disabled Memoria maintenance should not run.");
   assert.ok(disabled.calls.includes("controller-retention"), "Controller retention must remain scheduled.");
+  assert.ok(disabled.calls.includes("gateway-retention"), "Gateway trace retention must remain scheduled.");
   assert.ok(disabled.calls.includes("settings-save"), "The daily scheduler watermark must advance when only retention runs.");
   assert.equal(disabledResult.memoriaMaintenanceEnabled, false);
 

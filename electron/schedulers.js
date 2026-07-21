@@ -153,6 +153,7 @@ function createSchedulers({
         ? await runProductMemoryMaintenance(app, { scheduled: true })
         : null;
       const controllerRetention = await database.cleanupMemoryControlLedger();
+      const gatewayTraceRetention = await database.cleanupGatewayTraces();
       await database.recordRuntimeEvent({
         level: "info",
         source: "memory-controller",
@@ -167,15 +168,25 @@ function createSchedulers({
           after: controllerRetention.after
         }
       });
+      await database.recordRuntimeEvent({
+        level: "info",
+        source: "gateway",
+        message: "Gateway trace retention completed",
+        metadata: {
+          scheduled: true,
+          ...gatewayTraceRetention
+        }
+      });
       await saveProductSettings(app, { "memory.maintenance.last_run_date": today });
       notifyRuntimeChanged("memory-maintenance-nightly", {
         memoriaMaintenanceEnabled,
         actions: result?.actions || [],
         graphCache: result?.graphCache || null,
         embeddings: result?.embeddings || null,
-        controllerRetention
+        controllerRetention,
+        gatewayTraceRetention
       });
-      return { memoriaMaintenanceEnabled, memoria: result, controllerRetention };
+      return { memoriaMaintenanceEnabled, memoria: result, controllerRetention, gatewayTraceRetention };
     } catch (error) {
       console.error("Memory maintenance scheduler failed:", error);
       notifyRuntimeChanged("memory-maintenance-error", {
