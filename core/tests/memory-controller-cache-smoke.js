@@ -95,7 +95,8 @@ async function main() {
   });
   const afterUpdate = await database.getMemoryControlWatermark();
   assert.ok(afterUpdate.revision > afterCreate.revision, "Memory update did not advance the watermark.");
-  assert.equal(cache.invalidateWatermark(afterUpdate.revision), 2, "Old-watermark entries were not invalidated.");
+  assert.notEqual(staleKey, cacheKey({ watermark: afterUpdate.revision, queryHash: "sha256:stale" }), "Watermark change did not produce a new cache key.");
+  assert.equal(cache.stats().entries, 2, "Old-watermark entries should remain bounded by TTL/LRU instead of a second invalidation mechanism.");
 
   const restricted = await runtime.createProductMemory(app, {
     title: "Cache smoke restricted",

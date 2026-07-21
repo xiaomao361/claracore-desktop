@@ -21,10 +21,12 @@ async function main() {
   const port = await reservePort();
   const oldEnv = {
     maxConcurrency: process.env.CLARACORE_DESKTOP_HTTP_MAX_CONCURRENCY,
+    maxConcurrencyPerAgent: process.env.CLARACORE_DESKTOP_HTTP_MAX_CONCURRENCY_PER_AGENT,
     maxQueue: process.env.CLARACORE_DESKTOP_HTTP_MAX_QUEUE,
     queueWaitMs: process.env.CLARACORE_DESKTOP_HTTP_QUEUE_WAIT_MS
   };
   process.env.CLARACORE_DESKTOP_HTTP_MAX_CONCURRENCY = "2";
+  process.env.CLARACORE_DESKTOP_HTTP_MAX_CONCURRENCY_PER_AGENT = "1";
   process.env.CLARACORE_DESKTOP_HTTP_MAX_QUEUE = "2";
   process.env.CLARACORE_DESKTOP_HTTP_QUEUE_WAIT_MS = "1000";
 
@@ -69,7 +71,7 @@ async function main() {
         Accept: "application/json",
         "Content-Type": "application/json",
         Authorization: authorization,
-        "X-ClaraCore-Agent-ID": `backpressure-agent-${index}`
+        "X-ClaraCore-Agent-ID": index < 6 ? "noisy-agent" : `backpressure-agent-${index}`
       },
       body: JSON.stringify({
         jsonrpc: "2.0",
@@ -90,6 +92,8 @@ async function main() {
     const responses = await Promise.all(calls);
     const statuses = responses.map((response) => response.status);
     assert.strictEqual(during.active, 2);
+    assert.strictEqual(during.activeByAgent["noisy-agent"], 1);
+    assert.strictEqual(Object.keys(during.activeByAgent).length, 2, `Per-agent concurrency did not preserve a slot for another agent: ${JSON.stringify(during)}`);
     assert.strictEqual(during.queued, 2);
     assert.strictEqual(statuses.filter((status) => status === 200).length, 4);
     assert.strictEqual(statuses.filter((status) => status === 429).length, 8);
@@ -100,8 +104,10 @@ async function main() {
     assert.strictEqual(busyPayload.error.code, -32001);
     assert.deepStrictEqual(gateway.status().toolConcurrency, {
       active: 0,
+      activeByAgent: {},
       queued: 0,
       maxActive: 2,
+      maxActivePerAgent: 1,
       maxQueued: 2,
       queueWaitMs: 1000
     });
@@ -121,6 +127,7 @@ async function main() {
     database.close();
     for (const [key, value] of Object.entries({
       CLARACORE_DESKTOP_HTTP_MAX_CONCURRENCY: oldEnv.maxConcurrency,
+      CLARACORE_DESKTOP_HTTP_MAX_CONCURRENCY_PER_AGENT: oldEnv.maxConcurrencyPerAgent,
       CLARACORE_DESKTOP_HTTP_MAX_QUEUE: oldEnv.maxQueue,
       CLARACORE_DESKTOP_HTTP_QUEUE_WAIT_MS: oldEnv.queueWaitMs
     })) {

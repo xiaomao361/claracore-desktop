@@ -22,7 +22,6 @@ const REASON_CODES = Object.freeze({
   LOW_RELEVANCE: "low_relevance",
   AMBIGUOUS_TOP_RESULTS: "ambiguous_top_results",
   CONTEXT_BUDGET_EXCEEDED: "context_budget_exceeded",
-  EXACT_KEYWORD_TOP1: "exact_keyword_top1",
   HIGH_CONFIDENCE_TOP1: "high_confidence_top1"
 });
 
@@ -78,16 +77,21 @@ function evaluateStageB(input = {}) {
     return { action: ACTIONS.ABSTAIN, reason: REASON_CODES.INELIGIBLE_RESULT, selected: [], candidates, policyVersion: POLICY_VERSION };
   }
 
-  const ranked = [...eligible].sort((left, right) => right.score - left.score || left.id.localeCompare(right.id));
-  const top = ranked[0];
-  const second = ranked[1];
-  const topHasKeyword = top.source.includes("keyword");
-  const secondHasKeyword = Boolean(second?.source.includes("keyword"));
-  if (topHasKeyword) {
-    if (secondHasKeyword) {
-      return { action: ACTIONS.ABSTAIN, reason: REASON_CODES.AMBIGUOUS_TOP_RESULTS, selected: [], candidates: ranked, policyVersion: POLICY_VERSION };
-    }
-    return { action: ACTIONS.INJECT_TOP1, reason: REASON_CODES.EXACT_KEYWORD_TOP1, selected: [top], candidates: ranked, policyVersion: POLICY_VERSION };
+  // Keyword-only hits use an unscored literal-match result (search_score = 0),
+  // so they cannot be compared with cosine scores or qualify for injection.
+  // Hybrid hits retain vector evidence and must pass the same score and margin
+  // gates as vector-only hits.
+  const vectorRanked = eligible
+    .filter((candidate) => candidate.source === "vector" || candidate.source === "keyword+vector")
+    .sort((left, right) => right.score - left.score || left.id.localeCompare(right.id));
+  const keywordOnly = eligible
+    .filter((candidate) => !vectorRanked.includes(candidate))
+    .sort((left, right) => left.id.localeCompare(right.id));
+  const ranked = [...vectorRanked, ...keywordOnly];
+  const top = vectorRanked[0];
+  const second = vectorRanked[1];
+  if (!top) {
+    return { action: ACTIONS.ABSTAIN, reason: REASON_CODES.LOW_RELEVANCE, selected: [], candidates: ranked, policyVersion: POLICY_VERSION };
   }
   if (top.score < MIN_VECTOR_SCORE) {
     return { action: ACTIONS.ABSTAIN, reason: REASON_CODES.LOW_RELEVANCE, selected: [], candidates: ranked, policyVersion: POLICY_VERSION };
@@ -110,8 +114,7 @@ function formatMemoryContext(input = {}) {
   const selected = (Array.isArray(input.candidates) ? input.candidates : []).slice(0, 3).map(normalizeCandidate).filter((candidate) => candidate.id);
   const budget = Math.max(0, Math.min(
     HARD_CONTEXT_CAP_TOKENS,
-    Number.parseInt(String(input.contextBudgetTokens ?? DEFAULT_CONTEXT_TARGET_TOKENS), 10) || 0,
-    DEFAULT_CONTEXT_TARGET_TOKENS
+    Number.parseInt(String(input.contextBudgetTokens ?? DEFAULT_CONTEXT_TARGET_TOKENS), 10) || 0
   ));
   if (selected.length === 0 || budget < MIN_CONTEXT_BUDGET_TOKENS) return { context: "", estimatedTokens: 0, candidates: [] };
 

@@ -66,6 +66,10 @@ Do not expose this endpoint beyond localhost without a separate security review.
 Users can change the port, save a custom token, generate a random token, and
 copy a complete agent config from Settings > General > Agent Gateway.
 
+Tool backpressure applies both a global active-call cap and a per-Agent cap, so
+one Agent cannot occupy every active slot. The bounded shared wait queue and
+timeout remain global; `/health` stays outside tool-call backpressure.
+
 If the configured port is occupied, fix the conflict or change the configured
 port intentionally. Do not silently fall back to a random port for normal
 Desktop use, because existing MCP client configs would then point at the wrong

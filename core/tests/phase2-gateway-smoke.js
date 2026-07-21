@@ -94,7 +94,7 @@ async function main() {
       prompt: controllerPrompt,
       agentId: "spoofed-agent"
     }));
-    if (controllerPacket.action !== "RETRIEVE" || controllerPacket.context !== "") {
+    if (!["RETRIEVE", "ABSTAIN"].includes(controllerPacket.action) || controllerPacket.context !== "" || controllerPacket.policyMode !== "observe" || !controllerPacket.decisionId) {
       throw new Error(`Gateway memory_context is not observe-only: ${JSON.stringify(controllerPacket)}`);
     }
     if (!controllerPacket.candidates.some((candidate) => candidate.id === created.id)) {

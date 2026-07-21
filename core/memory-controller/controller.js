@@ -143,7 +143,6 @@ function createMemoryController(options = {}) {
           watermark: watermark.revision
         });
         const cached = await cache.get(key, {
-          watermark: watermark.revision,
           revalidate: (ids) => database.getMemoryControlEligibleIds({ ids, agentId, timeView, sensitivityScope: "normal" })
         });
         if (cached.status === "hit") {
@@ -152,7 +151,7 @@ function createMemoryController(options = {}) {
         }
 
         const searchStartedAt = process.hrtime.bigint();
-        const result = await search(prompt, 3, { agentId, timeView, includeRestricted: false });
+        const result = await search(stageA.normalizedPrompt, 3, { agentId, timeView, includeRestricted: false });
         searchLatencyMs = elapsedMs(searchStartedAt);
         const rawCandidates = (Array.isArray(result?.results) ? result.results : []).slice(0, 3);
         const eligibleIds = await database.getMemoryControlEligibleIds({

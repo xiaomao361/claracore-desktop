@@ -174,7 +174,8 @@ async function main() {
       }
     });
     const controllerPacket = JSON.parse(controllerCall.result.content[0].text);
-    assert.strictEqual(controllerPacket.action, "RETRIEVE");
+    assert.strictEqual(controllerPacket.action, "ABSTAIN");
+    assert.strictEqual(controllerPacket.reason, "low_relevance");
     assert.strictEqual(controllerPacket.context, "", "HTTP memory_context must remain observe-only");
     assert(controllerPacket.candidates.some((candidate) => candidate.id === controllerMemory.id));
     const controllerEvent = await database.getMemoryControlEvent(controllerPacket.decisionId);

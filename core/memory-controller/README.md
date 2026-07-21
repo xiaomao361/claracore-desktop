@@ -38,7 +38,9 @@ history and continuation signals.
 the normalized query hash, agent and sensitivity scope, time view, policy
 version, retrieval parameters, and the current Memoria mutation watermark.
 Entries have explicit TTL, count, byte, and three-candidate caps; there is no
-background timer.
+background timer. A watermark change therefore produces a different key; old
+entries remain harmlessly bounded by TTL/LRU instead of using a second
+invalidation path.
 
 A candidate-bearing hit is valid only after the caller rechecks all candidate
 ids through `getMemoryControlEligibleIds`. Missing, restricted, archived,
@@ -54,12 +56,20 @@ and degrades timeout, search, schema, or audit failures to a context-free
 `NOOP`. Stage A `NOOP` never calls Memoria.
 
 `stage-b.js` contains the initial conservative ranking policy and context
-formatter. Weak vector results, ambiguous leaders, restricted/ineligible rows,
-and insufficient budgets abstain. Selected context defaults to one Memory,
-targets at most 600 estimated tokens, and is hard-capped at 900. Observe mode
+formatter. Keyword-only hits have no comparable relevance score and always
+abstain. Hybrid keyword+vector hits must pass the same cosine score and margin
+gates as vector-only hits. Weak vector results, ambiguous leaders,
+restricted/ineligible rows, and insufficient budgets abstain. Selected context
+defaults to one Memory and 600 estimated tokens; callers may request up to the
+900-token hard cap. Observe mode
 records the prospective Stage B action but returns an empty context and no
 injected ids. Canary formatting remains a core-only contract; the Gateway is
 fixed to observe mode in this slice.
+
+Ledger retention scans and deletes in batches of 500. Age policy may expire
+feedback-bearing decisions only after the longer feedback retention window;
+capacity caps never delete them and may remain temporarily exceeded rather than
+discarding trusted evidence.
 
 ## Observe-only Gateway
 

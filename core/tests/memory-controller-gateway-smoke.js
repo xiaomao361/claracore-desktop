@@ -80,8 +80,8 @@ async function main() {
     prompt,
     agentId: "lara"
   }, paths, database));
-  assert.equal(observed.action, "RETRIEVE");
-  assert.equal(observed.reason, "observe_only");
+  assert.equal(observed.action, "ABSTAIN");
+  assert.equal(observed.reason, "low_relevance");
   assert.equal(observed.context, "", "Gateway observe mode returned injectable context.");
   assert.ok(!JSON.stringify(observed).includes(privateCandidateBody), "Gateway observe packet leaked candidate body outside context.");
   assert.ok(observed.candidates.some((candidate) => candidate.id === codexMemory.id));
@@ -95,6 +95,15 @@ async function main() {
   const cached = parseResult(await callToolBody("memory_context", { prompt }, paths, database));
   assert.equal(cached.cacheStatus, "hit");
   assert.notEqual(cached.decisionId, observed.decisionId, "Gateway cache hit reused a decision id.");
+
+  const beforeInvalidMode = (await database.getMemoryControlLedgerStats()).eventCount;
+  await database.exec(`UPDATE app_settings SET value_json = '"canary"' WHERE key = 'memory.controller.mode';`);
+  const invalidMode = parseResult(await callToolBody("memory_context", { prompt }, paths, database));
+  assert.equal(invalidMode.reason, "invalid_controller_mode");
+  assert.equal(invalidMode.policyMode, "canary");
+  assert.equal(invalidMode.resultStatus, "error");
+  assert.equal((await database.getMemoryControlLedgerStats()).eventCount, beforeInvalidMode, "Invalid controller mode wrote a decision.");
+  await runtime.saveProductSettings(app, { "memory.controller.mode": "observe" });
 
   const noop = parseResult(await callToolBody("memory_context", {
     prompt: "检查当前文件语法"
@@ -142,6 +151,7 @@ async function main() {
     trustedCaller: observedEvent.agentId,
     bodyAgentIgnored: true,
     cacheDecisionUnique: cached.decisionId !== observed.decisionId,
+    invalidMode: invalidMode.reason,
     restrictedAction: restricted.action,
     unidentifiedAction: unknown.reason,
     timeoutAction: timeout.reason,

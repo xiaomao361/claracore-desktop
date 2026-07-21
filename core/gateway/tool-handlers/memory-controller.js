@@ -29,7 +29,19 @@ async function handleMemoryControllerTool(name, args, context) {
     });
   }
   const settings = await database.getSettings();
-  const mode = settings["memory.controller.mode"] === "observe" ? "observe" : "off";
+  const configuredMode = String(settings["memory.controller.mode"] || "off").trim().toLowerCase();
+  if (!["off", "observe"].includes(configuredMode)) {
+    return textResult({
+      decisionId: "",
+      action: "NOOP",
+      reason: "invalid_controller_mode",
+      candidates: [],
+      context: "",
+      policyMode: configuredMode,
+      resultStatus: "error"
+    });
+  }
+  const mode = configuredMode;
   if (mode === "off") {
     return textResult({
       decisionId: "",

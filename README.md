@@ -63,7 +63,7 @@ Read these before adding new features:
 
 ## Current Status
 
-The current development and installed-test version is `0.6.2`; the current public release remains
+The current development and packaged-test version is `0.6.3`; the current public release remains
 `0.5.8`. It is a working desktop shell with a
 product-owned local data store, Desktop-native Memoria, Shared Line, InnerLife,
 a Desktop-owned Gateway, with model configuration merged into the Settings

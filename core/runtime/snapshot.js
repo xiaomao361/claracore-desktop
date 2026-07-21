@@ -213,7 +213,7 @@ function compactInnerLifeSnapshot(snapshot = {}) {
       ...share,
       body: share.preview || ""
     })),
-    recentShares: (snapshot.pendingShares || []).map((share) => ({
+    recentShares: (snapshot.recentShares || []).map((share) => ({
       ...share,
       body: share.preview || ""
     })),
@@ -238,7 +238,7 @@ function createSnapshotRuntime({ ensureProductCore }) {
     ]);
     const [
       recentMemories, memoryStats, memoryMaintenance, resumePacket, activeLines,
-      innerLifeLite, gatewayTraces, canWriteProbe
+      innerLifeLite, recentInnerLifeShares, gatewayTraces, canWriteProbe
     ] = await Promise.all([
       database.listMemories(20),
       database.getMemoryStats(),
@@ -246,11 +246,22 @@ function createSnapshotRuntime({ ensureProductCore }) {
       database.getResumePacket({ lite: true }),
       database.listContinuityLines({ limit: 30, allAgents: true, status: "active" }),
       database.getInnerLifeSnapshotLite("all"),
+      database.listInnerLifeShares("all", 20, "all"),
       database.listGatewayTraces({ limit: 20 }),
       canWriteRuntimeProbe(paths)
     ]);
     const sharedLine = compactSharedLinePacket(resumePacket, activeLines, []);
-    const innerLife = compactInnerLifeSnapshot(innerLifeLite);
+    const innerLife = compactInnerLifeSnapshot({
+      ...innerLifeLite,
+      recentShares: recentInnerLifeShares.map((share) => ({
+        id: share.id,
+        agent_id: share.agent_id,
+        status: share.status,
+        created_at: share.created_at,
+        updated_at: share.updated_at,
+        preview: String(share.body || "").slice(0, 200)
+      }))
+    });
     const health = buildHealthChecks(app, paths, configuration, databaseSummary, canWriteProbe);
     return {
       mode: process.env.CLARACORE_DESKTOP_DATA_DIR || desktopSettings.dataRoot ? "custom-product-data" : "isolated-product-dev",

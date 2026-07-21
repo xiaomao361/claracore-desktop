@@ -5,6 +5,7 @@ const path = require("path");
 const runtime = require("../runtime");
 const { createMemoryController } = require("../memory-controller/controller");
 const { ACTIONS, REASON_CODES, evaluateStageB, formatMemoryContext } = require("../memory-controller/stage-b");
+const { estimateTokens } = require("../memory-controller/evaluation");
 
 async function semanticFingerprint(database) {
   const rows = await database.query(`
@@ -71,16 +72,16 @@ async function main() {
     agentId: "codex",
     conversationId: "orchestration-observe"
   });
-  assert.equal(observed.action, "RETRIEVE", "Observe mode should expose retrieval without injection.");
-  assert.equal(observed.reason, "observe_only");
-  assert.equal(observed.stageB.action, "INJECT_TOP1");
+  assert.equal(observed.action, "ABSTAIN", "Unscored keyword-only retrieval must not become injectable.");
+  assert.equal(observed.reason, REASON_CODES.LOW_RELEVANCE);
+  assert.equal(observed.stageB.action, "ABSTAIN");
   assert.equal(observed.context, "", "Observe mode returned injectable context.");
   assert.equal(observed.cacheStatus, "miss");
   assert.ok(observed.candidates.some((candidate) => candidate.id === codexMemory.id));
   assert.ok(!observed.candidates.some((candidate) => candidate.id === laraMemory.id), "Observe result crossed Agent scope.");
   const observedEvent = await database.getMemoryControlEvent(observed.decisionId);
   assert.deepEqual(observedEvent.injectedIds, [], "Observe event recorded an injection.");
-  assert.equal(observedEvent.stageB.action, "INJECT_TOP1");
+  assert.equal(observedEvent.stageB.action, "ABSTAIN");
 
   const cached = await controller.run({
     prompt: codexPrompt,
@@ -96,12 +97,24 @@ async function main() {
     agentId: "lara",
     conversationId: "orchestration-lara"
   });
-  assert.equal(lara.action, "RETRIEVE");
+  assert.equal(lara.action, "ABSTAIN");
   assert.ok(lara.candidates.some((candidate) => candidate.id === laraMemory.id));
   assert.ok(!lara.candidates.some((candidate) => candidate.id === codexMemory.id), "Lara result crossed Agent scope.");
   assert.equal((await database.getMemoryControlEvent(lara.decisionId)).agentId, "lara");
 
-  const canary = await controller.run({
+  const canaryController = createMemoryController({
+    database,
+    mode: "canary",
+    search: async () => ({
+      mode: "vector",
+      results: [{
+        ...codexMemory,
+        search_source: "vector",
+        search_score: 0.9
+      }]
+    })
+  });
+  const canary = await canaryController.run({
     prompt: codexPrompt,
     agentId: "codex",
     mode: "canary",
@@ -120,6 +133,16 @@ async function main() {
   });
   assert.equal(weak.action, ACTIONS.ABSTAIN);
   assert.equal(weak.reason, REASON_CODES.LOW_RELEVANCE);
+  const weakHybrid = evaluateStageB({
+    candidates: [{ id: "weak-hybrid", status: "active", sensitivity: "normal", source: "keyword+vector", score: 0.11 }]
+  });
+  assert.equal(weakHybrid.action, ACTIONS.ABSTAIN);
+  assert.equal(weakHybrid.reason, REASON_CODES.LOW_RELEVANCE);
+  const keywordOnly = evaluateStageB({
+    candidates: [{ id: "keyword-only", status: "active", sensitivity: "normal", source: "keyword", score: 0 }]
+  });
+  assert.equal(keywordOnly.action, ACTIONS.ABSTAIN);
+  assert.equal(keywordOnly.reason, REASON_CODES.LOW_RELEVANCE);
   const ambiguous = evaluateStageB({
     candidates: [
       { id: "first", status: "active", sensitivity: "normal", source: "vector", score: 0.84 },
@@ -127,6 +150,13 @@ async function main() {
     ]
   });
   assert.equal(ambiguous.reason, REASON_CODES.AMBIGUOUS_TOP_RESULTS);
+  const ambiguousHybrid = evaluateStageB({
+    candidates: [
+      { id: "hybrid", status: "active", sensitivity: "normal", source: "keyword+vector", score: 0.8 },
+      { id: "vector", status: "active", sensitivity: "normal", source: "vector", score: 0.75 }
+    ]
+  });
+  assert.equal(ambiguousHybrid.reason, REASON_CODES.AMBIGUOUS_TOP_RESULTS);
   const restricted = evaluateStageB({
     candidates: [{ id: "restricted", status: "active", sensitivity: "restricted", source: "keyword", score: 1 }]
   });
@@ -142,6 +172,37 @@ async function main() {
   });
   assert.ok(boundedContext.estimatedTokens <= 100, "Formatter exceeded the caller context budget.");
   assert.ok(boundedContext.context.endsWith("…"), "Formatter did not mark truncated context.");
+  const hardCapContext = formatMemoryContext({
+    candidates: [{ id: "hard-cap", title: "Hard cap", body: "长期内容".repeat(2000), status: "active", sensitivity: "normal" }],
+    contextBudgetTokens: 900
+  });
+  assert.ok(hardCapContext.estimatedTokens > 600 && hardCapContext.estimatedTokens <= 900, "Formatter did not honor a caller budget above the default target.");
+  assert.equal(estimateTokens("，，。：！？"), 6, "Full-width punctuation was omitted from the token estimate.");
+
+  const normalizedSearchPrompts = [];
+  const normalizedController = createMemoryController({
+    database,
+    search: async (searchPrompt) => {
+      normalizedSearchPrompts.push(searchPrompt);
+      return {
+        mode: "vector",
+        results: [{ ...codexMemory, search_source: "vector", search_score: 0.9 }]
+      };
+    }
+  });
+  const normalizedFirst = await normalizedController.run({
+    prompt: "Do you remember  our previous decision?",
+    agentId: "codex",
+    conversationId: "normalized-first"
+  });
+  const normalizedSecond = await normalizedController.run({
+    prompt: "do you remember our previous decision?",
+    agentId: "codex",
+    conversationId: "normalized-second"
+  });
+  assert.deepEqual(normalizedSearchPrompts, ["do you remember our previous decision?"], "Cache hashing and retrieval did not use the same normalized prompt.");
+  assert.equal(normalizedFirst.cacheStatus, "miss");
+  assert.equal(normalizedSecond.cacheStatus, "hit");
 
   const timeoutController = createMemoryController({
     database,

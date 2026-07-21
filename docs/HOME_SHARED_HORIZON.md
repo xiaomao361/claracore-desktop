@@ -30,7 +30,7 @@ look biological or decorative instead of expressing continuity.
 - Repository: `/Users/zhouwei/Documents/ClaraCore/apps/claracore-desktop`
 - Remote: `git@github.com:xiaomao361/claracore-desktop.git`
 - Branch: `main`
-- Current development version: `0.6.2`
+- Current development version: `0.6.3`
 - Public baseline: `v0.5.8`
 
 The Desktop repository may contain unrelated uncommitted work. Preserve it. Do

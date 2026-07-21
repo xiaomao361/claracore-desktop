@@ -4,6 +4,7 @@ const STAGE_B_ACTIONS = new Set(["", "ABSTAIN", "INJECT_TOP1", "INJECT_TOPK", "E
 const RESULT_STATUSES = new Set(["completed", "abstained", "timeout", "error"]);
 const CACHE_STATUSES = new Set(["none", "hit", "miss", "invalidated"]);
 const FEEDBACK_TYPES = new Set(["used", "ignored", "wrong", "corrected", "task_succeeded", "task_failed", "outcome_unknown", "delivered"]);
+const LEDGER_CLEANUP_BATCH_SIZE = 500;
 
 function boundedInteger(value, fallback = 0, maximum = Number.MAX_SAFE_INTEGER) {
   const parsed = Number.parseInt(String(value ?? fallback), 10);
@@ -334,43 +335,59 @@ function createMemoryControllerRepository(helpers) {
       const maxBytes = Math.max(1024, boundedInteger(input.maxBytes || input.max_bytes, 8 * 1024 * 1024, 1024 * 1024 * 1024) || 8 * 1024 * 1024);
       const dryRun = input.dryRun === true || input.dry_run === true;
       const before = await this.getMemoryControlLedgerStats();
-      const rows = await this.query(`
-        SELECT e.id, e.created_at,
-          (SELECT COUNT(*) FROM memory_control_feedback f WHERE f.decision_id = e.id) AS feedback_count,
-          (length(e.id) + length(e.policy_version) + length(e.policy_mode) + length(e.agent_id) +
-            length(e.client_id) + length(e.conversation_id) + length(e.session_id) + length(e.query_hash) +
-            length(e.query_preview) + length(e.feature_json) + length(e.stage_a_action) + length(e.stage_a_reason) +
-            length(e.stage_b_action) + length(e.stage_b_reason) + length(e.search_params_json) +
-            length(e.candidates_json) + length(e.injected_ids_json) + length(e.error) +
-            COALESCE((SELECT SUM(length(f.id) + length(f.decision_id) + length(f.feedback_type) + length(f.source) +
-              length(f.conversation_id) + length(f.response_id) + length(f.memory_ids_json) +
-              length(f.evidence_excerpt) + length(f.evidence_json) + COALESCE(length(f.idempotency_key), 0))
-              FROM memory_control_feedback f WHERE f.decision_id = e.id), 0)
-          ) AS estimated_bytes,
-          CASE WHEN julianday(e.created_at) < julianday('now') - ${maxAgeDays} THEN 1 ELSE 0 END AS ordinary_expired,
-          CASE WHEN julianday(e.created_at) < julianday('now') - ${feedbackMaxAgeDays} THEN 1 ELSE 0 END AS feedback_expired
-        FROM memory_control_events e
-        ORDER BY CASE WHEN (SELECT COUNT(*) FROM memory_control_feedback f WHERE f.decision_id = e.id) = 0 THEN 0 ELSE 1 END,
-          e.created_at ASC, e.id ASC;
-      `);
-      const selected = new Map();
-      for (const row of rows) {
-        if ((!row.feedback_count && row.ordinary_expired) || (row.feedback_count && row.feedback_expired)) {
-          selected.set(row.id, row.feedback_count ? "feedback_age" : "ordinary_age");
+      async function scanLedgerRows(database, visitor) {
+        for (let offset = 0; ; offset += LEDGER_CLEANUP_BATCH_SIZE) {
+          const page = await database.query(`
+            SELECT e.id, e.created_at,
+              (SELECT COUNT(*) FROM memory_control_feedback f WHERE f.decision_id = e.id) AS feedback_count,
+              (length(e.id) + length(e.policy_version) + length(e.policy_mode) + length(e.agent_id) +
+                length(e.client_id) + length(e.conversation_id) + length(e.session_id) + length(e.query_hash) +
+                length(e.query_preview) + length(e.feature_json) + length(e.stage_a_action) + length(e.stage_a_reason) +
+                length(e.stage_b_action) + length(e.stage_b_reason) + length(e.search_params_json) +
+                length(e.candidates_json) + length(e.injected_ids_json) + length(e.error) +
+                COALESCE((SELECT SUM(length(f.id) + length(f.decision_id) + length(f.feedback_type) + length(f.source) +
+                  length(f.conversation_id) + length(f.response_id) + length(f.memory_ids_json) +
+                  length(f.evidence_excerpt) + length(f.evidence_json) + COALESCE(length(f.idempotency_key), 0))
+                  FROM memory_control_feedback f WHERE f.decision_id = e.id), 0)
+              ) AS estimated_bytes,
+              CASE WHEN julianday(e.created_at) < julianday('now') - ${maxAgeDays} THEN 1 ELSE 0 END AS ordinary_expired,
+              CASE WHEN julianday(e.created_at) < julianday('now') - ${feedbackMaxAgeDays} THEN 1 ELSE 0 END AS feedback_expired
+            FROM memory_control_events e
+            ORDER BY CASE WHEN (SELECT COUNT(*) FROM memory_control_feedback f WHERE f.decision_id = e.id) = 0 THEN 0 ELSE 1 END,
+              e.created_at ASC, e.id ASC
+            LIMIT ${LEDGER_CLEANUP_BATCH_SIZE} OFFSET ${offset};
+          `);
+          for (const row of page) {
+            if (visitor(row) === false) return;
+          }
+          if (page.length < LEDGER_CLEANUP_BATCH_SIZE) return;
         }
       }
-      let remainingCount = rows.length - selected.size;
-      let remainingBytes = rows.reduce((sum, row) => sum + (row.estimated_bytes || 0), 0) - rows.filter((row) => selected.has(row.id)).reduce((sum, row) => sum + (row.estimated_bytes || 0), 0);
-      for (const row of rows) {
-        if (remainingCount <= maxEvents && remainingBytes <= maxBytes) break;
-        if (selected.has(row.id)) continue;
-        selected.set(row.id, "capacity");
+      const selected = new Map();
+      let selectedBytes = 0;
+      await scanLedgerRows(this, (row) => {
+        if ((!row.feedback_count && row.ordinary_expired) || (row.feedback_count && row.feedback_expired)) {
+          selected.set(row.id, { row, reason: row.feedback_count ? "feedback_age" : "ordinary_age" });
+          selectedBytes += row.estimated_bytes || 0;
+        }
+      });
+      let remainingCount = before.eventCount - selected.size;
+      let remainingBytes = before.estimatedBytes - selectedBytes;
+      await scanLedgerRows(this, (row) => {
+        if (remainingCount <= maxEvents && remainingBytes <= maxBytes) return false;
+        if (selected.has(row.id)) return;
+        if (row.feedback_count) return;
+        selected.set(row.id, { row, reason: "capacity" });
         remainingCount -= 1;
         remainingBytes -= row.estimated_bytes || 0;
-      }
-      const selectedRows = rows.filter((row) => selected.has(row.id));
+      });
+      const selectedEntries = [...selected.values()];
+      const selectedRows = selectedEntries.map((entry) => entry.row);
       if (!dryRun && selectedRows.length) {
-        await this.exec(`DELETE FROM memory_control_events WHERE id IN (${selectedRows.map((row) => sqlString(row.id)).join(", ")});`);
+        for (let offset = 0; offset < selectedRows.length; offset += LEDGER_CLEANUP_BATCH_SIZE) {
+          const batch = selectedRows.slice(offset, offset + LEDGER_CLEANUP_BATCH_SIZE);
+          await this.exec(`DELETE FROM memory_control_events WHERE id IN (${batch.map((row) => sqlString(row.id)).join(", ")});`);
+        }
       }
       const after = dryRun ? {
         eventCount: remainingCount,
@@ -384,9 +401,9 @@ function createMemoryControllerRepository(helpers) {
         deleted: selectedRows.length,
         feedbackRowsDeleted: selectedRows.reduce((sum, row) => sum + (row.feedback_count || 0), 0),
         reasons: {
-          ordinaryAge: selectedRows.filter((row) => selected.get(row.id) === "ordinary_age").length,
-          feedbackAge: selectedRows.filter((row) => selected.get(row.id) === "feedback_age").length,
-          capacity: selectedRows.filter((row) => selected.get(row.id) === "capacity").length
+          ordinaryAge: selectedEntries.filter((entry) => entry.reason === "ordinary_age").length,
+          feedbackAge: selectedEntries.filter((entry) => entry.reason === "feedback_age").length,
+          capacity: selectedEntries.filter((entry) => entry.reason === "capacity").length
         },
         before,
         after

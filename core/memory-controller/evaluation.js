@@ -28,8 +28,9 @@ function percentile(values, ratio) {
 
 function estimateTokens(text) {
   const normalized = String(text || "").trim();
-  const cjkCount = (normalized.match(/[\u3400-\u9fff]/gu) || []).length;
-  const nonCjk = normalized.replace(/[\u3400-\u9fff]/gu, " ");
+  const cjkPattern = /[\u3000-\u303f\u3400-\u9fff\uff00-\uffef]/gu;
+  const cjkCount = (normalized.match(cjkPattern) || []).length;
+  const nonCjk = normalized.replace(cjkPattern, " ");
   const wordCount = (nonCjk.match(/[\p{L}\p{N}]+/gu) || []).length;
   return Math.max(1, cjkCount + Math.ceil(wordCount * 1.3));
 }

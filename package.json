@@ -1,6 +1,6 @@
 {
   "name": "claracore-desktop",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "buildFlavor": "full",
   "private": true,
   "description": "ClaraCore desktop manager for the local personal cognitive core",

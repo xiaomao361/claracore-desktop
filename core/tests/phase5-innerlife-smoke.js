@@ -450,6 +450,33 @@ async function main() {
     throw new Error(`InnerLife multi-agent scheduler notifications are incomplete: ${JSON.stringify(schedulerNotifications)}`);
   }
 
+  const isolatedTicks = [];
+  const isolatedNotifications = [];
+  const isolatedSchedulers = createSchedulers({
+    app,
+    ensureProductCore: async () => ({
+      database: {
+        processPendingSessionAfterthoughts: async () => { throw new Error("synthetic afterthought failure"); },
+        listEnabledInnerLifeDaemonAgentIds: async () => ["codex", "lara"]
+      }
+    }),
+    isQuitting: () => false,
+    notifyRuntimeChanged: (scope, detail) => isolatedNotifications.push({ scope, detail }),
+    runProductMemoryMaintenance: async () => ({}),
+    saveProductSettings: async () => ({}),
+    tickProductInnerLifeDaemon: async (_app, input) => {
+      isolatedTicks.push(input.agentId);
+      return { ran: false, reason: "idle" };
+    }
+  });
+  await isolatedSchedulers.runInnerLifeScheduledTick();
+  if (isolatedTicks.join(",") !== "codex,lara") {
+    throw new Error(`Afterthought failure blocked daemon agents: ${JSON.stringify(isolatedTicks)}`);
+  }
+  if (!isolatedNotifications.some((item) => item.scope === "innerlife-session-afterthought-error")) {
+    throw new Error(`Afterthought failure was not surfaced independently: ${JSON.stringify(isolatedNotifications)}`);
+  }
+
   console.log(
     JSON.stringify(
       {

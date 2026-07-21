@@ -20,11 +20,32 @@ async function main() {
     .map((directory) => fs.mkdir(directory, { recursive: true })));
   const database = await initializeProductDatabase(paths.databasePath);
   try {
+    await database.updateInnerLifeProfile({ agentId: "overview-agent", displayName: "Overview Agent" });
+    await database.exec(`
+      INSERT INTO innerlife_events (id, agent_id, kind, body, status)
+      VALUES ('overview-event', 'overview-agent', 'smoke', 'overview', 'processed');
+      INSERT INTO innerlife_thoughts (id, event_id, body, review_status)
+      VALUES
+        ('overview-thought-pending', 'overview-event', 'pending overview share', 'unreviewed'),
+        ('overview-thought-used', 'overview-event', 'used overview share', 'reviewed');
+      INSERT INTO innerlife_shares (id, agent_id, thought_id, status, body, created_at)
+      VALUES
+        ('overview-share-pending', 'overview-agent', 'overview-thought-pending', 'pending', 'pending overview share', datetime('now', '-1 minute')),
+        ('overview-share-used', 'overview-agent', 'overview-thought-used', 'used', 'used overview share', CURRENT_TIMESTAMP);
+    `);
+    const liteSnapshot = await database.getInnerLifeSnapshotLite("all");
+    assert(!Object.hasOwn(liteSnapshot, "recentShares"), "Lite snapshot should not load recent shares");
     let queryCalls = 0;
+    const shareQueries = [];
     const query = database.query.bind(database);
+    const listInnerLifeShares = database.listInnerLifeShares.bind(database);
     database.query = async (sql) => {
       queryCalls += 1;
       return query(sql);
+    };
+    database.listInnerLifeShares = async (status, ...args) => {
+      shareQueries.push(status);
+      return listInnerLifeShares(status, ...args);
     };
     const runtime = createSnapshotRuntime({ ensureProductCore: async () => ({ database, paths }) });
     const snapshot = await runtime.buildProductOverviewSnapshot({ isPackaged: false });
@@ -35,6 +56,11 @@ async function main() {
     assert.strictEqual(snapshot.overview, true);
     assert.strictEqual(snapshot.sharedLine.overview, true);
     assert.strictEqual(snapshot.innerLife.overview, true);
+    assert.strictEqual(shareQueries.filter((status) => status === "pending").length, 1, "Lite snapshot should query pending shares once");
+    assert.strictEqual(shareQueries.filter((status) => status === "all").length, 1, "Overview should query recent shares once at the view boundary");
+    assert(snapshot.innerLife.pendingShares.some((share) => share.body === "pending overview share"));
+    assert(!snapshot.innerLife.pendingShares.some((share) => share.body === "used overview share"));
+    assert(snapshot.innerLife.recentShares.some((share) => share.body === "used overview share"));
     process.stdout.write(`${JSON.stringify({
       suite: "overview-snapshot-performance-smoke",
       snapshotQueryCalls: queryCalls,

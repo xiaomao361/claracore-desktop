@@ -97,6 +97,7 @@ class MemoryRetrievalCache {
     this.bytes += bytes;
     while (this.entries.size > this.maxEntries || this.bytes > this.maxBytes) {
       const oldestKey = this.entries.keys().next().value;
+      if (oldestKey === undefined) break;
       this.remove(oldestKey, this.entries.size > this.maxEntries ? "entry_cap" : "byte_cap", "eviction");
     }
     return { stored: true, key: cacheKey, bytes, candidateIds, watermark };
@@ -115,12 +116,6 @@ class MemoryRetrievalCache {
       this.remove(cacheKey, "expired");
       this.telemetry.misses += 1;
       return { status: "miss", reason: "expired", value: null };
-    }
-    const watermark = Number.parseInt(String(options.watermark ?? entry.watermark), 10);
-    if (!Number.isFinite(watermark) || watermark !== entry.watermark) {
-      this.remove(cacheKey, "watermark_changed");
-      this.telemetry.misses += 1;
-      return { status: "miss", reason: "watermark_changed", value: null };
     }
     if (entry.candidateIds.length > 0) {
       if (typeof options.revalidate !== "function") {
@@ -157,16 +152,6 @@ class MemoryRetrievalCache {
       if (memoryIds.size === 0 || entry.candidateIds.some((id) => memoryIds.has(id))) {
         if (this.remove(key, reason)) count += 1;
       }
-    }
-    return count;
-  }
-
-  invalidateWatermark(currentWatermark) {
-    const watermark = Number.parseInt(String(currentWatermark), 10);
-    if (!Number.isFinite(watermark) || watermark < 0) throw new Error("Memory Controller cache watermark must be a non-negative integer.");
-    let count = 0;
-    for (const [key, entry] of [...this.entries.entries()]) {
-      if (entry.watermark !== watermark && this.remove(key, "watermark_changed")) count += 1;
     }
     return count;
   }

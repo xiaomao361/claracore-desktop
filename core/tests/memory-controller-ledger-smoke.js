@@ -156,6 +156,35 @@ async function main() {
   assert.equal(capacityCleanup.after.eventCount, 2, "Hard event cap was not enforced.");
   assert.ok(await database.getMemoryControlEvent(retrieval.id), "Capacity cleanup should prefer deleting events without feedback.");
   assert.ok(await database.getMemoryControlEvent(oldWithFeedback.id), "Capacity cleanup should preserve feedback-bearing events when possible.");
+  const protectedCapacity = await database.cleanupMemoryControlLedger({ maxAgeDays: 365, feedbackMaxAgeDays: 365, maxEvents: 1 });
+  assert.equal(protectedCapacity.deleted, 0, "Capacity cleanup deleted feedback-bearing evidence.");
+  assert.equal(protectedCapacity.feedbackRowsDeleted, 0, "Capacity cleanup cascaded protected feedback.");
+  assert.equal(protectedCapacity.after.eventCount, 2, "Feedback protection should allow the ledger to remain above the capacity cap.");
+
+  const bulkStatements = [];
+  for (let index = 0; index < 1100; index += 1) {
+    bulkStatements.push(`
+      INSERT INTO memory_control_events (
+        id, policy_version, policy_mode, agent_id, stage_a_action, stage_a_reason, result_status
+      ) VALUES (
+        'memory_control_bulk_${index}', 'stage-a-v1', 'observe', 'codex', 'RETRIEVE', 'bulk-smoke', 'completed'
+      );
+    `);
+  }
+  await database.exec(bulkStatements.join("\n"));
+  const originalExec = database.exec.bind(database);
+  const deleteBatchSizes = [];
+  database.exec = async (sql) => {
+    if (/^\s*DELETE FROM memory_control_events\b/i.test(sql)) {
+      deleteBatchSizes.push((sql.match(/memory_control_bulk_/g) || []).length);
+    }
+    return originalExec(sql);
+  };
+  const bulkCleanup = await database.cleanupMemoryControlLedger({ maxAgeDays: 365, feedbackMaxAgeDays: 365, maxEvents: 2 });
+  database.exec = originalExec;
+  assert.equal(bulkCleanup.reasons.capacity, 1100, "Bulk capacity cleanup did not remove all unprotected rows.");
+  assert.deepEqual(deleteBatchSizes, [500, 500, 100], "Ledger cleanup did not delete in bounded batches.");
+  assert.equal(bulkCleanup.feedbackRowsDeleted, 0, "Bulk capacity cleanup deleted feedback.");
 
   await database.exec(`
     UPDATE memory_control_events
@@ -178,6 +207,9 @@ async function main() {
       dryRun,
       ageCleanup,
       capacityCleanup,
+      protectedCapacity,
+      bulkCleanup,
+      deleteBatchSizes,
       feedbackExpiry
     }
   }, null, 2));

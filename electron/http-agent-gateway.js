@@ -95,9 +95,14 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
   const configuredPort = normalizePort(process.env.CLARACORE_DESKTOP_HTTP_PORT || port, DEFAULT_HTTP_PORT);
   const toolConcurrency = {
     maxActive: normalizePositiveInteger(process.env.CLARACORE_DESKTOP_HTTP_MAX_CONCURRENCY, 8, 128),
+    maxActivePerAgent: 0,
     maxQueued: normalizePositiveInteger(process.env.CLARACORE_DESKTOP_HTTP_MAX_QUEUE, 64, 4096),
     queueWaitMs: normalizePositiveInteger(process.env.CLARACORE_DESKTOP_HTTP_QUEUE_WAIT_MS, 2000, 30000)
   };
+  toolConcurrency.maxActivePerAgent = Math.min(
+    toolConcurrency.maxActive,
+    normalizePositiveInteger(process.env.CLARACORE_DESKTOP_HTTP_MAX_CONCURRENCY_PER_AGENT, 4, 128)
+  );
   if (
     process.env.CLARACORE_DESKTOP_TEST_INSTANCE === "1" &&
     explicitPort &&
@@ -122,38 +127,57 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
     codexTokenSync: { ok: false, skipped: true },
     lastError: null,
     activeToolCalls: 0,
+    activeToolCallsByAgent: new Map(),
     toolWaiters: []
   };
 
-  function releaseToolCall() {
-    while (state.toolWaiters.length) {
-      const waiter = state.toolWaiters.shift();
-      if (waiter.settled) continue;
-      waiter.settled = true;
-      clearTimeout(waiter.timer);
-      waiter.resolve(releaseToolCallOnce());
-      return;
-    }
-    state.activeToolCalls = Math.max(0, state.activeToolCalls - 1);
+  function activeToolCallsForAgent(agentId) {
+    return state.activeToolCallsByAgent.get(agentId) || 0;
   }
 
-  function releaseToolCallOnce() {
+  function activateToolCall(agentId) {
+    state.activeToolCalls += 1;
+    state.activeToolCallsByAgent.set(agentId, activeToolCallsForAgent(agentId) + 1);
+  }
+
+  function releaseToolCall(agentId) {
+    state.activeToolCalls = Math.max(0, state.activeToolCalls - 1);
+    const remainingForAgent = Math.max(0, activeToolCallsForAgent(agentId) - 1);
+    if (remainingForAgent) state.activeToolCallsByAgent.set(agentId, remainingForAgent);
+    else state.activeToolCallsByAgent.delete(agentId);
+    if (state.activeToolCalls >= toolConcurrency.maxActive) return;
+    const waiterIndex = state.toolWaiters.findIndex((waiter) => (
+      !waiter.settled && activeToolCallsForAgent(waiter.agentId) < toolConcurrency.maxActivePerAgent
+    ));
+    if (waiterIndex >= 0) {
+      const [waiter] = state.toolWaiters.splice(waiterIndex, 1);
+      waiter.settled = true;
+      clearTimeout(waiter.timer);
+      activateToolCall(waiter.agentId);
+      waiter.resolve(releaseToolCallOnce(waiter.agentId));
+    }
+  }
+
+  function releaseToolCallOnce(agentId) {
     let released = false;
     return () => {
       if (released) return;
       released = true;
-      releaseToolCall();
+      releaseToolCall(agentId);
     };
   }
 
-  function acquireToolCall() {
-    if (state.activeToolCalls < toolConcurrency.maxActive) {
-      state.activeToolCalls += 1;
-      return Promise.resolve(releaseToolCallOnce());
+  function acquireToolCall(agentId) {
+    if (
+      state.activeToolCalls < toolConcurrency.maxActive &&
+      activeToolCallsForAgent(agentId) < toolConcurrency.maxActivePerAgent
+    ) {
+      activateToolCall(agentId);
+      return Promise.resolve(releaseToolCallOnce(agentId));
     }
     if (state.toolWaiters.length >= toolConcurrency.maxQueued) return Promise.resolve(null);
     return new Promise((resolve) => {
-      const waiter = { resolve, settled: false, timer: null };
+      const waiter = { agentId, resolve, settled: false, timer: null };
       waiter.timer = setTimeout(() => {
         if (waiter.settled) return;
         waiter.settled = true;
@@ -247,6 +271,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
       codexTokenSync: state.codexTokenSync,
       toolConcurrency: {
         active: state.activeToolCalls,
+        activeByAgent: Object.fromEntries(state.activeToolCallsByAgent),
         queued: state.toolWaiters.length,
         ...toolConcurrency
       },
@@ -512,7 +537,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
     delete callArgs.agent_id;
     const { callToolBody } = createGatewayTools({
       serverInfo: SERVER_INFO,
-      currentMcpAgentId: (toolArgs = {}) => currentHttpAgentId(request, requestUrl, toolArgs),
+      currentMcpAgentId: () => currentHttpAgentId(request, requestUrl),
       currentCallerContext: () => caller,
       gatewayLaunchConfig,
       runtimeAppForGateway: () => app,
@@ -609,7 +634,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
       if (message.method === "tools/list") {
         const { toolDefinitions } = createGatewayTools({
           serverInfo: SERVER_INFO,
-          currentMcpAgentId: (toolArgs = {}) => currentHttpAgentId(request, requestUrl, toolArgs),
+          currentMcpAgentId: () => currentHttpAgentId(request, requestUrl),
           gatewayLaunchConfig,
           runtimeAppForGateway: () => app,
           textResult
@@ -620,7 +645,8 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
       if (message.method === "tools/call") {
         const name = message.params?.name;
         if (!name || typeof name !== "string") throw new Error("Tool name is required.");
-        const release = await acquireToolCall();
+        const concurrencyAgentId = currentHttpAgentId(request, requestUrl);
+        const release = await acquireToolCall(concurrencyAgentId);
         if (!release) {
           sendJson(
             response,

@@ -94,7 +94,7 @@ async function main() {
     process.env.CLARACORE_DESKTOP_DATA_DIR = dataRoot;
     await runtime.saveProductSettings(runtimeApp, { "memory.controller.mode": "observe" });
     const observedController = parseTextResult(await client.callTool("memory_context", { prompt: controllerPrompt }));
-    if (observedController.action !== "RETRIEVE" || observedController.context !== "" || !observedController.decisionId) {
+    if (!["RETRIEVE", "ABSTAIN"].includes(observedController.action) || observedController.context !== "" || observedController.policyMode !== "observe" || !observedController.decisionId) {
       throw new Error(`Packaged Gateway controller did not observe retrieval: ${JSON.stringify(observedController)}`);
     }
     if (!observedController.candidates.some((candidate) => candidate.id === controllerMemory.id)) {

@@ -41,7 +41,15 @@ function createSchedulers({
     innerLifeSchedulerBusy = true;
     try {
       const { database } = await ensureProductCore(app);
-      const afterthoughts = await database.processPendingSessionAfterthoughts(5);
+      let afterthoughts = { processed: 0, results: [] };
+      try {
+        afterthoughts = await database.processPendingSessionAfterthoughts(5);
+      } catch (error) {
+        console.error("InnerLife afterthought processing failed:", error);
+        notifyRuntimeChanged("innerlife-session-afterthought-error", {
+          error: error.message || String(error)
+        });
+      }
       if (afterthoughts.processed > 0) {
         await database.recordRuntimeEvent({
           level: afterthoughts.results.some((item) => !item.ok) ? "warn" : "info",

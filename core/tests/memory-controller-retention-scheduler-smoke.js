@@ -26,10 +26,14 @@ function fixture({ memoriaMaintenanceEnabled = true } = {}) {
       calls.push("gateway-retention");
       return { deleted: 2, before: { total: 12 }, after: { total: 10 } };
     },
+    async cleanupInnerLifeHistory() {
+      calls.push("innerlife-retention");
+      return { deleted: 1, before: { total: 8 }, after: { total: 7 } };
+    },
     async recordRuntimeEvent(event) {
       calls.push("runtime-event");
       if (event.source === "memory-controller") assert.equal(event.metadata.deleted, retention.deleted);
-      else assert.equal(event.source, "gateway");
+      else assert.ok(["gateway", "innerlife"].includes(event.source));
     }
   };
   const schedulers = createSchedulers({
@@ -58,6 +62,8 @@ async function main() {
     "memoria-maintenance",
     "controller-retention",
     "gateway-retention",
+    "innerlife-retention",
+    "runtime-event",
     "runtime-event",
     "runtime-event",
     "settings-save"
