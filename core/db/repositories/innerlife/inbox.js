@@ -36,6 +36,23 @@ function createInnerLifeInboxRepository(helpers) {
       return rows.map(mapInboxRow);
     },
 
+    async listInnerLifeInboxForAgent(agentId, status = "pending", limit = 20) {
+      const safeAgentId = String(agentId || "").trim();
+      if (!safeAgentId) return [];
+      const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 20));
+      const statusFilter = String(status || "pending").trim();
+      const filters = [`agent_id = ${sqlString(safeAgentId)}`];
+      if (statusFilter !== "all") filters.push(`status = ${sqlString(statusFilter)}`);
+      const rows = await this.query(`
+        SELECT id, agent_id, source, body, status, created_at, processed_at, metadata_json
+        FROM innerlife_inbox
+        WHERE ${filters.join(" AND ")}
+        ORDER BY created_at DESC, id DESC
+        LIMIT ${safeLimit};
+      `);
+      return rows.map(mapInboxRow);
+    },
+
     async getInnerLifeInboxItem(id) {
       const inboxId = String(id || "").trim();
       if (!inboxId) throw new Error("InnerLife inbox id is required.");

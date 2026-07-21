@@ -812,16 +812,16 @@ function installContinuityRepository(ProductDatabase, helpers) {
       const agentId = identity.id;
       const query = String(input.query || "").trim();
       const limit = Math.max(1, Math.min(Number.parseInt(String(input.limit || 5), 10) || 5, 20));
-      const [sharedLine, memories, innerLife, doctor] = await Promise.all([
-        this.getResumePacket(input.lineId ? { lineId: input.lineId } : { agentId }),
+      const [sharedLine, memories, innerLife, pendingInbox, recentShares, recentThoughts] = await Promise.all([
+        this.getResumePacket(input.lineId ? { lineId: input.lineId, lite: true } : { agentId, lite: true }),
         query ? this.searchMemories(query, limit).then((result) => result.results.slice(0, limit)) : this.listMemories(limit),
-        this.getInnerLifeSnapshot(agentId),
-        this.getInnerLifeDoctor(agentId)
+        this.getInnerLifeSnapshotLite(agentId),
+        this.listInnerLifeInboxForAgent(agentId, "pending", limit),
+        this.listInnerLifeShares("all", limit, agentId),
+        this.listInnerLifeRecentThoughts(agentId, limit)
       ]);
-      const sameAgent = (item) => String(item?.agentId || item?.agent_id || "").trim() === agentId;
-      const pendingShares = (innerLife.pendingShares || []).filter(sameAgent).slice(0, limit);
-      const pendingInbox = (innerLife.inbox || []).filter((item) => item.status === "pending" && sameAgent(item)).slice(0, limit);
-      const recentShares = (innerLife.recentShares || []).filter(sameAgent).slice(0, limit);
+      const doctor = innerLife.doctor || { status: "ok", summary: "InnerLife is not configured for this agent.", issues: [] };
+      const pendingShares = (innerLife.pendingShares || []).slice(0, limit);
       const memoryText = memories.length
         ? memories.map((memory, index) => `${index + 1}. ${memory.title || memory.body.slice(0, 80)} [${memory.id}]`).join("\n")
         : "(none)";
@@ -875,7 +875,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
           pendingShares,
           pendingInbox,
           recentShares,
-          recentThoughts: (innerLife.recentThoughts || []).slice(0, limit)
+          recentThoughts
         },
         guidance: {
           useSharedLine: "Treat Shared Line as the current resumable position.",

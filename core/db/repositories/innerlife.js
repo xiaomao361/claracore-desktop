@@ -165,13 +165,22 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       const daemon = selectedProfile
         ? await this.ensureInnerLifeDaemonState(selectedProfile.agentId)
         : { agentId: "", status: "paused", enabled: false, lastTickAt: null, nextRunAt: null, lastResult: "", lastError: "", tickCount: 0, updatedAt: null, metadata: {} };
+      const counts = await this.getInnerLifeCounts(requestedAgentId);
       const doctor = selectedProfile
-        ? await this.getInnerLifeDoctor(selectedProfile.agentId)
+        ? await this.getInnerLifeDoctor(selectedProfile.agentId, {
+            profile: { agent_id: selectedProfile.agentId },
+            daemon,
+            counts: {
+              pendingInbox: counts.pending_inbox_count || 0,
+              pendingShares: counts.pending_shares_count || 0,
+              activeSessions: counts.active_sessions_count || 0
+            }
+          })
         : { status: "ok", summary: "No InnerLife profiles configured.", issues: [], nextActions: [] };
       return {
         mode: "lite",
         profiles,
-        counts: await this.getInnerLifeCounts(requestedAgentId),
+        counts,
         pendingShares,
         daemon,
         doctor,
@@ -266,15 +275,32 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       };
     },
 
-    async getInnerLifeDoctor(agentId = DEFAULT_AGENT_ID) {
+    async listInnerLifeRecentThoughts(agentId, limit = 5) {
       const identity = resolveAgentIdentity(agentId || DEFAULT_AGENT_ID);
-      const profileRows = await this.query(`
-        SELECT agent_id, display_name, enabled, profile_json, state_json, created_at, updated_at
-        FROM innerlife_profiles
-        WHERE agent_id = ${sqlString(identity.id)}
-        LIMIT 1;
+      const safeLimit = Math.max(1, Math.min(20, Number.parseInt(String(limit), 10) || 5));
+      const rows = await this.query(`
+        SELECT t.id, t.body, t.created_at
+        FROM innerlife_thoughts t
+        JOIN innerlife_events e ON e.id = t.event_id
+        WHERE e.agent_id = ${sqlString(identity.id)}
+        ORDER BY t.created_at DESC, t.id DESC
+        LIMIT ${safeLimit};
       `);
-      const profile = profileRows[0];
+      return rows.map((row) => ({
+        id: row.id,
+        body: row.body || "",
+        createdAt: row.created_at
+      }));
+    },
+
+    async getInnerLifeDoctor(agentId = DEFAULT_AGENT_ID, context = {}) {
+      const identity = resolveAgentIdentity(agentId || DEFAULT_AGENT_ID);
+      const profile = context.profile || (await this.query(`
+          SELECT agent_id, display_name, enabled, profile_json, state_json, created_at, updated_at
+          FROM innerlife_profiles
+          WHERE agent_id = ${sqlString(identity.id)}
+          LIMIT 1;
+        `))[0];
       if (!profile) {
         return {
           status: "ok",
@@ -299,15 +325,17 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
           }
         };
       }
-      const daemon = await this.ensureInnerLifeDaemonState(profile.agent_id);
-      const settings = await this.getSettings();
-      const rows = await this.query(`
-        SELECT
-          (SELECT COUNT(*) FROM innerlife_inbox WHERE agent_id = ${sqlString(profile.agent_id)} AND status = 'pending') AS pending_inbox_count,
-          (SELECT COUNT(*) FROM innerlife_shares WHERE agent_id = ${sqlString(profile.agent_id)} AND status = 'pending') AS pending_shares_count,
-          (SELECT COUNT(*) FROM innerlife_sessions WHERE agent_id = ${sqlString(profile.agent_id)} AND status = 'active') AS active_sessions_count;
-      `);
-      const counts = rows[0] || {};
+      const daemon = context.daemon || await this.ensureInnerLifeDaemonState(profile.agent_id);
+      const settings = context.settings || await this.getSettings();
+      const resolvedCounts = context.counts || (await this.query(`
+          SELECT
+            (SELECT COUNT(*) FROM innerlife_inbox WHERE agent_id = ${sqlString(profile.agent_id)} AND status = 'pending') AS pending_inbox_count,
+            (SELECT COUNT(*) FROM innerlife_shares WHERE agent_id = ${sqlString(profile.agent_id)} AND status = 'pending') AS pending_shares_count,
+            (SELECT COUNT(*) FROM innerlife_sessions WHERE agent_id = ${sqlString(profile.agent_id)} AND status = 'active') AS active_sessions_count;
+        `))[0] || {};
+      const pendingInboxCount = resolvedCounts.pendingInbox ?? resolvedCounts.pending_inbox_count ?? 0;
+      const pendingSharesCount = resolvedCounts.pendingShares ?? resolvedCounts.pending_shares_count ?? 0;
+      const activeSessionsCount = resolvedCounts.activeSessions ?? resolvedCounts.active_sessions_count ?? 0;
       const issues = [];
       const failureCount = Number.parseInt(String(daemon.metadata?.failureCount || 0), 10) || 0;
       const retrySeconds = Number.parseInt(String(daemon.metadata?.retrySeconds || 0), 10) || 0;
@@ -327,11 +355,11 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
           action: "Configure an InnerLife model provider before relying on model-backed output."
         });
       }
-      if (counts.pending_inbox_count > 0 && !daemon.enabled) {
+      if (pendingInboxCount > 0 && !daemon.enabled) {
         issues.push({
           level: "info",
           code: "pending_inbox_paused",
-          message: `${counts.pending_inbox_count} inbox item(s) are waiting while the daemon is paused.`,
+          message: `${pendingInboxCount} inbox item(s) are waiting while the daemon is paused.`,
           action: "Run process once, run a digest, or enable the daemon when ready."
         });
       }
@@ -353,9 +381,9 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         issues,
         nextActions,
         counts: {
-          pendingInbox: counts.pending_inbox_count || 0,
-          pendingShares: counts.pending_shares_count || 0,
-          activeSessions: counts.active_sessions_count || 0
+          pendingInbox: pendingInboxCount,
+          pendingShares: pendingSharesCount,
+          activeSessions: activeSessionsCount
         },
         daemon: {
           status: daemon.status,
