@@ -91,17 +91,37 @@ function createSchedulers({
     try {
       const { database } = await ensureProductCore(app);
       const settings = await database.getSettings();
-      if (settings["memory.maintenance.enabled"] === false) return;
       const today = localDateKey();
-      const result = await runProductMemoryMaintenance(app, { scheduled: true });
+      const memoriaMaintenanceEnabled = settings["memory.maintenance.enabled"] !== false;
+      const result = memoriaMaintenanceEnabled
+        ? await runProductMemoryMaintenance(app, { scheduled: true })
+        : null;
+      const controllerRetention = await database.cleanupMemoryControlLedger();
+      await database.recordRuntimeEvent({
+        level: "info",
+        source: "memory-controller",
+        message: "Memory Controller retention completed",
+        metadata: {
+          scheduled: true,
+          policy: controllerRetention.policy,
+          deleted: controllerRetention.deleted,
+          feedbackRowsDeleted: controllerRetention.feedbackRowsDeleted,
+          reasons: controllerRetention.reasons,
+          before: controllerRetention.before,
+          after: controllerRetention.after
+        }
+      });
       await saveProductSettings(app, { "memory.maintenance.last_run_date": today });
       notifyRuntimeChanged("memory-maintenance-nightly", {
+        memoriaMaintenanceEnabled,
         actions: result?.actions || [],
         graphCache: result?.graphCache || null,
-        embeddings: result?.embeddings || null
+        embeddings: result?.embeddings || null,
+        controllerRetention
       });
+      return { memoriaMaintenanceEnabled, memoria: result, controllerRetention };
     } catch (error) {
-      console.error("Memoria maintenance scheduler failed:", error);
+      console.error("Memory maintenance scheduler failed:", error);
       notifyRuntimeChanged("memory-maintenance-error", {
         error: error.message || String(error)
       });
@@ -161,7 +181,8 @@ function createSchedulers({
     startMemoryMaintenance,
     stopInnerLife,
     stopMemoryMaintenance,
-    runInnerLifeScheduledTick
+    runInnerLifeScheduledTick,
+    runMemoryMaintenanceScheduledTick
   };
 }
 

@@ -56,7 +56,9 @@ Start here:
 
 Use this path for Dock/tray behavior, close/quit rules, packaged `--gateway`
 behavior, BrowserWindow security policy, HTTP Agent Gateway lifecycle, and
-background timers.
+background timers. The daily maintenance timer also owns Memory Controller
+ledger retention and its bounded runtime receipt, independently of optional
+Memoria repair.
 
 ### Renderer Navigation And UI Behavior
 
