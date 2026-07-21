@@ -117,3 +117,11 @@ The script repeatedly builds the runtime snapshot and calls Gateway MCP tools.
 It fails if the global runtime snapshot starts carrying more than 25 Memory
 rows or if RSS growth exceeds the configured threshold. When changing MCP
 transport behavior, also run the focused Streamable HTTP Gateway smoke.
+
+Use `npm run baseline:runtime` for startup, global-snapshot, navigation, and
+process-footprint measurements in an empty temporary database. To measure
+current product-scale reads without mutating the live database, set
+`CLARACORE_PERFORMANCE_DB` to its path; the baseline creates and later removes
+a consistent SQLite backup in an isolated test root. The current v0.6.0
+reference results and interpretation live in
+`docs/PERFORMANCE_BASELINE_V0.6.0.md`.
