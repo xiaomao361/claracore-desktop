@@ -38,8 +38,15 @@ async function main() {
       await new Promise((resolve) => setTimeout(resolve, 150));
       return "Model-generated afterthought completed by the persisted worker.";
     };
-    const processed = await database.processPendingSessionAfterthoughts(5);
-    assert.strictEqual(processed.processed, 1);
+    const workerRuns = await Promise.all([
+      database.processPendingSessionAfterthoughts(5),
+      database.processPendingSessionAfterthoughts(5)
+    ]);
+    const processed = {
+      processed: workerRuns.reduce((sum, result) => sum + result.processed, 0),
+      results: workerRuns.flatMap((result) => result.results)
+    };
+    assert.strictEqual(processed.processed, 1, "Concurrent workers processed the same persisted job twice.");
     const share = await database.getInnerLifeShare(ended.share.id);
     assert(share.body.includes("persisted worker"), "Persisted afterthought worker did not update the queued share.");
     const job = await database.getInnerLifeInboxItem(ended.afterthoughtJob.id);

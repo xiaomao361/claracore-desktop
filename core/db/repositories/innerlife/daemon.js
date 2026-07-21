@@ -11,6 +11,31 @@ function createInnerLifeDaemonRepository(helpers) {
   } = helpers;
 
   return {
+    async getInnerLifeDaemonStateReadOnly(agentId = DEFAULT_AGENT_ID, settings = null) {
+      const identity = resolveAgentIdentity(agentId || DEFAULT_AGENT_ID);
+      const resolvedSettings = settings || await this.getSettings();
+      const enabled = Boolean(resolvedSettings["innerlife.enabled"]);
+      const rows = await this.query(`
+        SELECT agent_id, status, enabled, last_tick_at, next_run_at, last_result, last_error, tick_count, updated_at, metadata_json
+        FROM innerlife_daemon_state
+        WHERE agent_id = ${sqlString(identity.id)}
+        LIMIT 1;
+      `);
+      const row = rows[0] || {};
+      return {
+        agentId: row.agent_id || identity.id,
+        status: row.status || (enabled ? "enabled" : "paused"),
+        enabled: row.agent_id ? Boolean(row.enabled) : enabled,
+        lastTickAt: row.last_tick_at || null,
+        nextRunAt: row.next_run_at || null,
+        lastResult: row.last_result || "",
+        lastError: row.last_error || "",
+        tickCount: row.tick_count || 0,
+        updatedAt: row.updated_at || null,
+        metadata: parseJson(row.metadata_json, {})
+      };
+    },
+
     async listEnabledInnerLifeDaemonAgentIds() {
       const settings = await this.getSettings();
       if (!settings["innerlife.enabled"]) return [];

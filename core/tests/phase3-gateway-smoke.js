@@ -10,6 +10,9 @@ async function main() {
       CLARACORE_AGENT_ID: ""
     }
   });
+  const ambiguityClient = createGatewayClient(dataRoot, { env: { CLARACORE_AGENT_ID: "gateway-ambiguity-agent" } });
+  const ownerClient = createGatewayClient(dataRoot, { env: { CLARACORE_AGENT_ID: "owner-agent" } });
+  const writerClient = createGatewayClient(dataRoot, { env: { CLARACORE_AGENT_ID: "writer-agent" } });
   try {
     const initialized = await client.request("initialize", {
       protocolVersion: "2025-06-18",
@@ -191,23 +194,20 @@ async function main() {
     }
 
     const ambiguousLineA = parseTextResult(
-      await client.callTool("shared_line_create", {
-        agentId: "gateway-ambiguity-agent",
+      await ambiguityClient.callTool("shared_line_create", {
         title: "Gateway ambiguity line A",
         makeActive: false
       })
     ).line;
     const ambiguousLineB = parseTextResult(
-      await client.callTool("shared_line_create", {
-        agentId: "gateway-ambiguity-agent",
+      await ambiguityClient.callTool("shared_line_create", {
         title: "Gateway ambiguity line B",
         makeActive: false
       })
     ).line;
     let ambiguityMessage = "";
     try {
-      await client.callTool("shared_line_update", {
-        agentId: "gateway-ambiguity-agent",
+      await ambiguityClient.callTool("shared_line_update", {
         summary: "Gateway ambiguous write must be rejected."
       });
     } catch (error) {
@@ -221,8 +221,7 @@ async function main() {
       throw new Error(`Gateway ambiguity error did not include actionable candidates: ${ambiguityMessage}`);
     }
     const ambiguousLinesAfterBlockedWrite = parseTextResult(
-      await client.callTool("shared_line_list", {
-        agentId: "gateway-ambiguity-agent",
+      await ambiguityClient.callTool("shared_line_list", {
         status: "active"
       })
     ).lines;
@@ -230,8 +229,7 @@ async function main() {
       throw new Error("Gateway ambiguous write changed a candidate line.");
     }
     const explicitGatewayWrite = parseTextResult(
-      await client.callTool("shared_line_update", {
-        agentId: "gateway-ambiguity-agent",
+      await ambiguityClient.callTool("shared_line_update", {
         lineId: ambiguousLineB.id,
         summary: "Gateway explicit selection reached line B."
       })
@@ -241,15 +239,13 @@ async function main() {
     }
 
     const ownedLine = parseTextResult(
-      await client.callTool("shared_line_create", {
-        agentId: "owner-agent",
+      await ownerClient.callTool("shared_line_create", {
         title: "Owner must survive a cross-agent write",
         makeActive: false
       })
     ).line;
     const crossAgentWrite = parseTextResult(
-      await client.callTool("shared_line_update", {
-        agentId: "writer-agent",
+      await writerClient.callTool("shared_line_update", {
         lineId: ownedLine.id,
         summary: "An explicit collaborator updated this line without taking ownership."
       })
@@ -283,7 +279,7 @@ async function main() {
       )
     );
   } finally {
-    await client.close();
+    await Promise.all([client.close(), ambiguityClient.close(), ownerClient.close(), writerClient.close()]);
   }
 }
 

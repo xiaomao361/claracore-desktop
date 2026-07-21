@@ -201,11 +201,13 @@ Runtime modules may compose multiple domains for product workflows, such as
 snapshots, backup-gated imports, archive export, or read-only decay audits. They
 should not become the home for new domain rules.
 
-Runtime snapshots must stay bounded. `buildProductSnapshot()` is the Home,
-Trace, Logs, and status snapshot, so it should carry counts, summaries, recent
-samples, and compact read-only inspection results only. Full Memory lists, InnerLife
-history, Gateway trace browsing, and graph data must be fetched through focused
-paged or lazy-loaded IPC calls. The detailed resource rules live in
+Runtime snapshots must stay bounded. `buildProductOverviewSnapshot()` owns the
+shell/Home startup contract; Logs has a two-query snapshot, and Shared Line,
+InnerLife, Trace, and Data details hydrate through focused view IPC. The full
+`buildProductSnapshot()` remains for compatibility tests and explicit tools,
+not renderer polling. Full Memory lists, InnerLife history, Gateway trace
+browsing, and graph data must be fetched through focused paged or lazy-loaded
+IPC calls. The detailed resource rules live in
 [Runtime Memory Policy](RUNTIME_MEMORY_POLICY.md).
 
 Database implementation belongs in `core/db`. Product persistence is split into

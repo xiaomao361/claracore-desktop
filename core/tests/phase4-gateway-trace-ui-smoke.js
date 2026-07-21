@@ -146,6 +146,11 @@ async function main() {
       null,
       { timeout: 15000 }
     );
+    await page.waitForFunction(
+      () => document.querySelector("#logDecayList")?.textContent.includes("Dormant Decay Memory"),
+      null,
+      { timeout: 15000 }
+    );
     const primaryContract = await page.evaluate(() => ({
       advancedOpen: document.querySelector("#logAdvancedDiagnostics")?.open,
       clearButtonPresent: Boolean(document.querySelector("#clearLogs")),
@@ -198,8 +203,11 @@ async function main() {
       await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "advanced") });
     }
     const result = await page.evaluate(async () => {
-      const snapshot = await window.ClaraCoreDesktop.getRuntimeSnapshot();
-      const decayIssueCodes = (snapshot.decayAudit?.issues || []).map((issue) => issue.code);
+      const [snapshot, logsDetail] = await Promise.all([
+        window.ClaraCoreDesktop.getRuntimeSnapshot(),
+        window.ClaraCoreDesktop.getViewSnapshot("logs")
+      ]);
+      const decayIssueCodes = (logsDetail.decayAudit?.issues || []).map((issue) => issue.code);
       return {
         databasePath: snapshot.data.databasePath,
         traceCount: snapshot.gatewayTraces.length,
@@ -207,7 +215,7 @@ async function main() {
         agentTraceText: document.querySelector("#gatewayTraceList").textContent,
         homeIssueText: document.querySelector("#homeActionableIssue").textContent,
         decayIssueCodes,
-        decayStatus: snapshot.decayAudit?.status || "",
+        decayStatus: logsDetail.decayAudit?.status || "",
         decayText: document.querySelector("#logDecayList")?.textContent || "",
         timeFlowCount: document.querySelectorAll("#logTimeFlowList .time-flow-item").length,
         timeFlowText: document.querySelector("#logTimeFlowList")?.textContent || ""

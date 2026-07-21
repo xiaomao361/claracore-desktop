@@ -308,13 +308,26 @@ function createInnerLifeSessionRepository(helpers) {
 
     async processPendingSessionAfterthoughts(limit = 5) {
       const safeLimit = Math.max(1, Math.min(20, Number.parseInt(String(limit), 10) || 5));
-      const rows = await this.query(`
-        SELECT id, agent_id, body, metadata_json
-        FROM innerlife_inbox
+      await this.exec(`
+        UPDATE innerlife_inbox
+        SET status = 'pending', processed_at = NULL
         WHERE source = 'session_end_afterthought'
+          AND status = 'processing'
+          AND datetime(processed_at) < datetime('now', '-5 minutes');
+      `);
+      const rows = await this.query(`
+        UPDATE innerlife_inbox
+        SET status = 'processing', processed_at = CURRENT_TIMESTAMP
+        WHERE id IN (
+          SELECT id
+          FROM innerlife_inbox
+          WHERE source = 'session_end_afterthought'
+            AND status = 'pending'
+          ORDER BY created_at ASC, id ASC
+          LIMIT ${sqlString(safeLimit)}
+        )
           AND status = 'pending'
-        ORDER BY created_at ASC, id ASC
-        LIMIT ${safeLimit};
+        RETURNING id, agent_id, body, metadata_json;
       `);
       const results = [];
       for (const row of rows) {
@@ -353,7 +366,7 @@ function createInnerLifeSessionRepository(helpers) {
                   resultSource: generated.source
                 })}
             WHERE id = ${sqlString(row.id)}
-              AND status = 'pending';
+              AND status = 'processing';
           `);
           const convergence = await this.convergeInnerLife({
             agentId: row.agent_id,
@@ -371,7 +384,9 @@ function createInnerLifeSessionRepository(helpers) {
         } catch (error) {
           await this.exec(`
             UPDATE innerlife_inbox
-            SET metadata_json = ${jsonSql({
+            SET status = 'pending',
+                processed_at = NULL,
+                metadata_json = ${jsonSql({
               ...metadata,
               attempts: Number(metadata.attempts || 0) + 1,
               lastAttemptAt: new Date().toISOString(),

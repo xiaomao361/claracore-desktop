@@ -162,14 +162,21 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         updated_at: share.updated_at,
         preview: String(share.body || "").slice(0, 200)
       }));
+      const settings = selectedProfile ? await this.getSettings() : null;
       const daemon = selectedProfile
-        ? await this.ensureInnerLifeDaemonState(selectedProfile.agentId)
+        ? await this.getInnerLifeDaemonStateReadOnly(selectedProfile.agentId, settings)
         : { agentId: "", status: "paused", enabled: false, lastTickAt: null, nextRunAt: null, lastResult: "", lastError: "", tickCount: 0, updatedAt: null, metadata: {} };
       const counts = await this.getInnerLifeCounts(requestedAgentId);
+      const pendingInbox = selectedProfile
+        ? await this.listInnerLifeInboxForAgent(selectedProfile.agentId, "pending", 5, {
+            excludeSources: ["session_end_afterthought"]
+          })
+        : [];
       const doctor = selectedProfile
         ? await this.getInnerLifeDoctor(selectedProfile.agentId, {
             profile: { agent_id: selectedProfile.agentId },
             daemon,
+            settings,
             counts: {
               pendingInbox: counts.pending_inbox_count || 0,
               pendingShares: counts.pending_shares_count || 0,
@@ -182,6 +189,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         profiles,
         counts,
         pendingShares,
+        pendingInbox,
         daemon,
         doctor,
         detail_ref: "Pass detail=true to innerlife_status for the full snapshot, or use innerlife_sessions / innerlife_digest / innerlife_pending_shares for specific records."

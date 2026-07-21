@@ -280,17 +280,17 @@ function createSystemRepository(helpers) {
       await runDelete(this, "success_age", `
         DELETE FROM gateway_traces
         WHERE status = 'ok'
-          AND datetime(created_at) < datetime('now', '-${policy.successMaxAgeDays} days');
+          AND datetime(created_at) < datetime('now', ${sqlString(`-${policy.successMaxAgeDays} days`)});
       `);
       await runDelete(this, "error_age", `
         DELETE FROM gateway_traces
         WHERE status = 'error'
-          AND datetime(created_at) < datetime('now', '-${policy.errorMaxAgeDays} days')
+          AND datetime(created_at) < datetime('now', ${sqlString(`-${policy.errorMaxAgeDays} days`)})
           AND id NOT IN (
             SELECT id FROM gateway_traces
             WHERE status = 'error'
             ORDER BY datetime(created_at) DESC, id DESC
-            LIMIT ${policy.protectedErrorRows}
+            LIMIT ${sqlString(policy.protectedErrorRows)}
           );
       `);
       await runDelete(this, "success_capacity", `
@@ -300,7 +300,7 @@ function createSystemRepository(helpers) {
             SELECT id FROM gateway_traces
             WHERE status = 'ok'
             ORDER BY datetime(created_at) DESC, id DESC
-            LIMIT ${policy.successMaxRows}
+            LIMIT ${sqlString(policy.successMaxRows)}
           );
       `);
       await runDelete(this, "total_capacity", `
@@ -311,10 +311,10 @@ function createSystemRepository(helpers) {
             SELECT id FROM gateway_traces
             WHERE status = 'error'
             ORDER BY datetime(created_at) DESC, id DESC
-            LIMIT ${policy.protectedErrorRows}
+            LIMIT ${sqlString(policy.protectedErrorRows)}
           )
           ORDER BY datetime(created_at) ASC, id ASC
-          LIMIT MAX(0, (SELECT COUNT(*) FROM gateway_traces) - ${policy.totalMaxRows})
+          LIMIT MAX(0, (SELECT COUNT(*) FROM gateway_traces) - ${sqlString(policy.totalMaxRows)})
         );
       `);
       const after = await countRows();

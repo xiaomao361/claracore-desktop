@@ -110,13 +110,14 @@ Start here:
 6. `app/views/home-vision.js`
 
 Use this path when Home shows the wrong current line, thought, Agent presence,
-arrival state, or visual cadence. `buildProductSnapshot()` remains bounded;
-Home derives its presence model from compact recent samples and does not add a
-second poll or database query. Full lists stay behind focused IPC/runtime calls.
+arrival state, or visual cadence. `buildProductOverviewSnapshot()` owns the
+bounded startup path; `buildProductViewSnapshot()` hydrates page detail and
+`buildProductLogsSnapshot()` owns Follow polling. Full lists stay behind
+focused IPC/runtime calls.
 
-Decay audit is part of the bounded snapshot, but it remains read-only. Start at
-`core/runtime/decay.js` when dormant Memory, stale Shared Line, old InnerLife
-waiting state, or daemon-error review indicators look wrong.
+Decay audit is part of the focused Logs snapshot and remains read-only. Start
+at `core/runtime/decay.js` when dormant Memory, stale Shared Line, old
+InnerLife waiting state, or daemon-error review indicators look wrong.
 
 ### Product Paths, Data Root, And Settings
 

@@ -5,7 +5,9 @@ Runtime memory should stay bounded by design, not by manual restarts.
 
 ## Snapshot Contract
 
-`buildProductSnapshot()` is the Home/runtime snapshot. Keep it small:
+`buildProductOverviewSnapshot()` is the shell/Home runtime snapshot.
+`buildProductSnapshot()` remains the full compatibility/test snapshot and must
+not be used by routine renderer refreshes. Keep the overview small:
 
 - Include counts, configuration, health, summaries, and recent rows only.
 - Keep recent list limits at 20 unless a view-specific reason requires less.
@@ -17,11 +19,11 @@ Current global snapshot allowances:
 
 - `memories` / `recentMemories`: recent active Memory sample only, limit 20.
 - `gatewayTraces`: recent traces only, limit 20.
-- `runtimeEvents`: recent events only, limit 50.
-- `innerLife`: compact snapshot with paged sessions, inbox, digest runs, and
-  recent shares only.
-- `trace`: read-only aggregate counts, at most five milestones, and one compact
-  participation row per attributable Agent; it never carries full domain rows.
+- `runtimeEvents`: omitted from the overview; Logs loads its own recent rows.
+- `innerLife`: lite counts, daemon/doctor state, profiles, and bounded waiting
+  share previews only.
+- `trace`, backups, full Shared Line packets, and full InnerLife state: loaded
+  through `getViewSnapshot()` when their owning view is entered.
 
 ## Pagination And Lazy Loading
 
@@ -50,6 +52,8 @@ Every long-lived resource needs one owner and an explicit release path.
 | HTTP Agent Gateway server | `electron/http-agent-gateway.js` | `httpAgentGateway.stop()` from `electron/main.js` quit path |
 | HTTP sockets | `electron/http-agent-gateway.js` | destroyed in `httpAgentGateway.stop()` |
 | InnerLife scheduler | `electron/schedulers.js` | `schedulers.stop()` from `electron/main.js` quit path |
+| Persisted embedding scheduler | `electron/schedulers.js` | `schedulers.stop()` from `electron/main.js` quit path |
+| Session-afterthought jobs | `innerlife_inbox` + InnerLife scheduler | atomically claimed, stale claims recover after five minutes |
 | Memory maintenance scheduler | `electron/schedulers.js` | `schedulers.stop()` or `schedulers.rescheduleMemoryMaintenance()` |
 | Packaged sibling Gateway process | `electron/main.js` | best-effort `stopSiblingGatewayProcesses()` |
 | Renderer runtime change listener | `electron/preload.js` consumer | unsubscribe function from `onRuntimeChanged()` |
@@ -125,6 +129,10 @@ current product-scale reads without mutating the live database, set
 a consistent SQLite backup in an isolated test root. The current v0.6.0
 reference results and interpretation live in
 `docs/PERFORMANCE_BASELINE_V0.6.0.md`.
+
+Use `npm run baseline:http-ui` for the combined shared HTTP Gateway and UI IPC
+profile. The maintained Worker threshold is a 50 ms p95 on the local health
+probe; do not add a Worker boundary while this threshold continues to pass.
 
 Use `npm run baseline:retrieval` with the same
 `CLARACORE_PERFORMANCE_DB` boundary to split Memory search time into keyword,

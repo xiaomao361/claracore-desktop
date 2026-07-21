@@ -219,7 +219,7 @@ function compactInnerLifeSnapshot(snapshot = {}) {
     })),
     sessions: [],
     digestRuns: [],
-    inbox: [],
+    inbox: (snapshot.pendingInbox || []).map((item) => ({ ...item })),
     shareChecks: [],
     history: [],
     experiences: [],
@@ -238,7 +238,7 @@ function createSnapshotRuntime({ ensureProductCore }) {
     ]);
     const [
       recentMemories, memoryStats, memoryMaintenance, resumePacket, activeLines,
-      innerLifeLite, decayAudit, gatewayTraces, canWriteProbe
+      innerLifeLite, gatewayTraces, canWriteProbe
     ] = await Promise.all([
       database.listMemories(20),
       database.getMemoryStats(),
@@ -246,7 +246,6 @@ function createSnapshotRuntime({ ensureProductCore }) {
       database.getResumePacket({ lite: true }),
       database.listContinuityLines({ limit: 30, allAgents: true, status: "active" }),
       database.getInnerLifeSnapshotLite("all"),
-      buildDecayAudit(database),
       database.listGatewayTraces({ limit: 20 }),
       canWriteRuntimeProbe(paths)
     ]);
@@ -283,7 +282,7 @@ function createSnapshotRuntime({ ensureProductCore }) {
       memoryController: {
         mode: configuration.memoryController?.mode || "off"
       },
-      decayAudit,
+      decayAudit: {},
       gatewayTraces,
       agentActivitySummary: {},
       runtimeEvents: [],
