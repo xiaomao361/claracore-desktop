@@ -20,6 +20,9 @@ instructions.
   Shared Line contracts for Codex, Claude, and Hermes.
 - [Runtime Memory Policy](RUNTIME_MEMORY_POLICY.md): bounded snapshots,
   pagination, resource ownership, and long-run behavior.
+- [v0.6.1 Performance Plan](V0.6.1_PERFORMANCE_PLAN.md): ordered solution and
+  acceptance plan for snapshot, Gateway, background-work, transport, and trace
+  performance.
 - [v0.6.0 Performance Baseline](PERFORMANCE_BASELINE_V0.6.0.md): measured
   startup, snapshot, navigation, Home, endurance, and retrieval posture.
 - [Home Shared Horizon](HOME_SHARED_HORIZON.md): current Home presence and

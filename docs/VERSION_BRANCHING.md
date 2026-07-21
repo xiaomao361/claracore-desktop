@@ -4,13 +4,16 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- Current development version: `0.6.0`.
+- Current development version: `0.6.1`.
 - Current public release: `0.5.8`.
 - Tag `v0.5.8` is the current stable GitHub Release.
 
-`0.6.0` is the current development test checkpoint. It includes the Memory
-Controller observe-only path and the earlier bounded Home layout fix; it is not
-yet a public release.
+`0.6.1` is the current development test checkpoint. It carries the `0.6.0`
+Memory Controller observe-only path forward and adds a measured, staged
+performance pass across Desktop snapshots, Gateway context, durable background
+work, multi-Agent transport, and trace retention. It is not yet a public
+release. The frozen execution plan is
+[v0.6.1 Performance Plan](V0.6.1_PERFORMANCE_PLAN.md).
 
 The `0.5.8` release adds the read-only Trace page and its bounded aggregate
 snapshot to the Agent First page set, Home Shared Horizon, strict test-instance
