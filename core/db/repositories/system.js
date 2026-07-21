@@ -57,29 +57,37 @@ function createSystemRepository(helpers) {
 
   return {
     async ensureGatewayTraceCompatibility() {
-      const columns = new Set((await this.query("PRAGMA table_info(gateway_traces);")).map((row) => row.name));
-      if (!columns.has("id")) return;
-      const additions = [];
-      if (!columns.has("session_id")) additions.push("ALTER TABLE gateway_traces ADD COLUMN session_id TEXT NOT NULL DEFAULT '';");
-      if (!columns.has("client_id")) additions.push("ALTER TABLE gateway_traces ADD COLUMN client_id TEXT NOT NULL DEFAULT '';");
-      if (!columns.has("conversation_id")) additions.push("ALTER TABLE gateway_traces ADD COLUMN conversation_id TEXT NOT NULL DEFAULT '';");
-      if (!columns.has("transport")) additions.push("ALTER TABLE gateway_traces ADD COLUMN transport TEXT NOT NULL DEFAULT 'stdio';");
-      if (additions.length) {
-        await this.exec(additions.join("\n"));
+      if (!this.gatewayTraceCompatibilityPromise) {
+        this.gatewayTraceCompatibilityPromise = (async () => {
+          const columns = new Set((await this.query("PRAGMA table_info(gateway_traces);")).map((row) => row.name));
+          if (!columns.has("id")) return;
+          const additions = [];
+          if (!columns.has("session_id")) additions.push("ALTER TABLE gateway_traces ADD COLUMN session_id TEXT NOT NULL DEFAULT '';");
+          if (!columns.has("client_id")) additions.push("ALTER TABLE gateway_traces ADD COLUMN client_id TEXT NOT NULL DEFAULT '';");
+          if (!columns.has("conversation_id")) additions.push("ALTER TABLE gateway_traces ADD COLUMN conversation_id TEXT NOT NULL DEFAULT '';");
+          if (!columns.has("transport")) additions.push("ALTER TABLE gateway_traces ADD COLUMN transport TEXT NOT NULL DEFAULT 'stdio';");
+          if (additions.length) {
+            await this.exec(additions.join("\n"));
+          }
+          await this.exec(`
+            CREATE INDEX IF NOT EXISTS idx_gateway_traces_agent_created
+            ON gateway_traces(agent_id, created_at DESC);
+
+            CREATE INDEX IF NOT EXISTS idx_gateway_traces_transport_created
+            ON gateway_traces(transport, created_at DESC);
+
+            CREATE INDEX IF NOT EXISTS idx_gateway_traces_client_created
+            ON gateway_traces(client_id, created_at DESC);
+
+            CREATE INDEX IF NOT EXISTS idx_gateway_traces_conversation_created
+            ON gateway_traces(conversation_id, created_at DESC);
+          `);
+        })().catch((error) => {
+          this.gatewayTraceCompatibilityPromise = null;
+          throw error;
+        });
       }
-      await this.exec(`
-        CREATE INDEX IF NOT EXISTS idx_gateway_traces_agent_created
-        ON gateway_traces(agent_id, created_at DESC);
-
-        CREATE INDEX IF NOT EXISTS idx_gateway_traces_transport_created
-        ON gateway_traces(transport, created_at DESC);
-
-        CREATE INDEX IF NOT EXISTS idx_gateway_traces_client_created
-        ON gateway_traces(client_id, created_at DESC);
-
-        CREATE INDEX IF NOT EXISTS idx_gateway_traces_conversation_created
-        ON gateway_traces(conversation_id, created_at DESC);
-      `);
+      await this.gatewayTraceCompatibilityPromise;
     },
 
     async updateSettings(updates) {
