@@ -239,6 +239,8 @@ Current shape:
 - `core/db/repositories/innerlife.js`: InnerLife persistence
 - `core/db/repositories/innerlife/`: focused InnerLife repository submodules,
   including profile, inbox, daemon, history, session, and share persistence
+- `core/db/repositories/innerlife/retention.js`: age and per-Agent capacity
+  retention for processed inbox, ended sessions, share checks, and digest runs
 
 `core/db/migrations/index.js` runs ordered, idempotent migration modules in
 `before-schema` or `after-schema` phases and records each successful id in
@@ -270,7 +272,9 @@ The Node runtime uses a cached `ProductDatabase` connection per process. In
 packaged mode, `node:sqlite` may be unavailable, so the database helper can
 fall back to the `sqlite3` CLI. Both paths must set WAL mode and a non-zero busy
 timeout; otherwise short write contention between Desktop and multiple Gateway
-processes can surface as immediate `database is locked` failures.
+processes can surface as immediate `database is locked` failures. The Node
+connection sets `busy_timeout` before confirming WAL mode because WAL setup can
+itself contend when several stdio Agent processes open together.
 
 Multi-statement writes that must be atomic must wrap their SQL in an explicit
 `BEGIN; ... COMMIT;` block. The `exec()` helper runs multiple statements in
@@ -346,6 +350,12 @@ database writes must therefore remain correct under SQLite's cross-process WAL
 and busy-timeout rules. The Desktop UI's quit path best-effort stops packaged
 sibling Gateway processes so replacing `/Applications/ClaraCore Desktop.app` is
 not blocked by a stale `--gateway` process.
+
+Streamable HTTP tool execution has a fair bounded admission queue. The default
+contract allows eight active tool calls and 64 queued calls with a two-second
+maximum wait; overflow is an explicit retryable HTTP 429 / JSON-RPC busy
+response. Health and MCP discovery methods bypass this queue so overload stays
+observable instead of turning into main-process silence.
 
 Test instances must isolate both product data and Electron user data. When
 `CLARACORE_DESKTOP_TEST_INSTANCE=1`, `electron/main.js` requires

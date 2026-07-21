@@ -88,7 +88,7 @@ function createInnerLifeInboxRepository(helpers) {
       if (status !== "all") clauses.push(`status = ${sqlString(status)}`);
       const whereClause = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
       const rows = await this.query(`
-        SELECT id, agent_id, source, body, status, created_at, processed_at, metadata_json
+        SELECT id, agent_id, source, substr(body, 1, 800) AS body, status, created_at, processed_at
         FROM innerlife_inbox
         ${whereClause}
         ORDER BY created_at DESC, id DESC
@@ -98,7 +98,15 @@ function createInnerLifeInboxRepository(helpers) {
       return {
         agentId,
         status,
-        items: rows.map(mapInboxRow),
+        items: rows.map((row) => ({
+          id: row.id,
+          agentId: row.agent_id,
+          source: row.source,
+          body: row.body || "",
+          status: row.status,
+          createdAt: row.created_at,
+          processedAt: row.processed_at
+        })),
         limit,
         offset,
         total,

@@ -64,7 +64,12 @@ async function main() {
         })
       });
       const payload = await response.json();
-      return { durationMs: performance.now() - startedAt, ok: response.ok && !payload.error };
+      return {
+        durationMs: performance.now() - startedAt,
+        ok: response.ok && !payload.error,
+        status: response.status,
+        errorCode: payload?.error?.code || null
+      };
     }
 
     const scenarios = [];
@@ -89,9 +94,13 @@ async function main() {
         }
         return samples;
       });
-      const calls = (await Promise.all(Array.from({ length: agents }, (_, agentIndex) =>
-        Promise.all(Array.from({ length: 30 }, (_, index) => toolCall(`http-agent-${agentIndex + 1}`, index)))
-      ))).flat();
+      const calls = (await Promise.all(Array.from({ length: agents }, async (_, agentIndex) => {
+        const agentCalls = [];
+        for (let index = 0; index < 30; index += 1) {
+          agentCalls.push(await toolCall(`http-agent-${agentIndex + 1}`, index));
+        }
+        return agentCalls;
+      }))).flat();
       const uiIpcDurations = await uiIpc;
       stop.value = true;
       await healthProbe;
@@ -104,14 +113,45 @@ async function main() {
         uiIpcLatency: summary(uiIpcDurations)
       });
     }
-    const workerRequired = scenarios.some((scenario) => scenario.mainEventLoopHealth.p95Ms >= 50);
+
+    const burstStop = { value: false };
+    const burstHealthDurations = [];
+    const burstHealthProbe = (async () => {
+      while (!burstStop.value) {
+        const startedAt = performance.now();
+        await fetch(healthUrl);
+        burstHealthDurations.push(performance.now() - startedAt);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+    })();
+    const burstCalls = await Promise.all(Array.from({ length: 240 }, (_, index) =>
+      toolCall(`burst-agent-${(index % 8) + 1}`, index)
+    ));
+    burstStop.value = true;
+    await burstHealthProbe;
+    const burst = {
+      calls: burstCalls.length,
+      succeeded: burstCalls.filter((call) => call.status === 200 && call.ok).length,
+      backpressured: burstCalls.filter((call) => call.status === 429 && call.errorCode === -32001).length,
+      serverErrors: burstCalls.filter((call) => call.status >= 500).length,
+      unexpectedFailures: burstCalls.filter((call) => !call.ok && call.status !== 429).length,
+      toolLatency: summary(burstCalls.map((call) => call.durationMs)),
+      mainEventLoopHealth: summary(burstHealthDurations)
+    };
+    const workerRequired = [...scenarios.map((scenario) => scenario.mainEventLoopHealth.p95Ms), burst.mainEventLoopHealth.p95Ms]
+      .some((p95Ms) => p95Ms >= 50);
     const result = {
-      ok: scenarios.every((scenario) => scenario.failures === 0),
+      ok: scenarios.every((scenario) => scenario.failures === 0 && scenario.mainEventLoopHealth.p95Ms < 50)
+        && burst.backpressured > 0
+        && burst.serverErrors === 0
+        && burst.unexpectedFailures === 0
+        && burst.mainEventLoopHealth.p95Ms < 50,
       databasePath: path.join(root, "claracore.db"),
       databaseOwnership: "Electron main process shared ensureProductCore connection",
       workerThresholdMs: 50,
       workerRequired,
-      scenarios
+      scenarios,
+      burst
     };
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     if (!result.ok) process.exitCode = 1;

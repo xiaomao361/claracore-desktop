@@ -4,6 +4,7 @@ const { createInnerLifeDaemonRepository } = require("./innerlife/daemon");
 const { createInnerLifeHistoryRepository } = require("./innerlife/history");
 const { createInnerLifeSessionRepository } = require("./innerlife/sessions");
 const { createInnerLifeShareRepository } = require("./innerlife/shares");
+const { createInnerLifeRetentionRepository } = require("./innerlife/retention");
 const { fetchCandidates, hash, normalizeSources } = require("../../innerlife/source-ingest");
 const {
   IL_SYSTEM,
@@ -62,6 +63,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
     ...createInnerLifeShareRepository(helpers),
     ...createInnerLifeInboxRepository(helpers),
     ...createInnerLifeDaemonRepository(helpers),
+    ...createInnerLifeRetentionRepository(helpers),
     async listInnerLifeDigestRuns(agentId = DEFAULT_AGENT_ID, limit = 10, offset = 0) {
       const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 10));
       const safeOffset = Math.max(0, Number.parseInt(String(offset), 10) || 0);
@@ -75,6 +77,29 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         LIMIT ${safeLimit} OFFSET ${safeOffset};
       `);
       return rows.map(mapDigestRunRow);
+    },
+
+    async listInnerLifeDigestRunsCompact(agentId = DEFAULT_AGENT_ID, limit = 10, offset = 0) {
+      const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 10));
+      const safeOffset = Math.max(0, Number.parseInt(String(offset), 10) || 0);
+      const agentFilter = String(agentId || DEFAULT_AGENT_ID).trim();
+      const whereClause = agentFilter === "all" ? "" : `WHERE agent_id = ${sqlString(agentFilter)}`;
+      const rows = await this.query(`
+        SELECT id, agent_id, mode, status, substr(summary, 1, 1000) AS summary, created_at, completed_at
+        FROM innerlife_digest_runs
+        ${whereClause}
+        ORDER BY created_at DESC, id DESC
+        LIMIT ${safeLimit} OFFSET ${safeOffset};
+      `);
+      return rows.map((row) => ({
+        id: row.id,
+        agentId: row.agent_id,
+        mode: row.mode,
+        status: row.status,
+        summary: row.summary || "",
+        createdAt: row.created_at,
+        completedAt: row.completed_at
+      }));
     },
 
     async getInnerLifeDigestRun(id) {
@@ -101,7 +126,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
       const limit = Math.max(1, Math.min(Number.parseInt(String(input.limit || 10), 10) || 10, 50));
       const offset = Math.max(0, Number.parseInt(String(input.offset || 0), 10) || 0);
       const [items, total] = await Promise.all([
-        this.listInnerLifeDigestRuns(agentId, limit, offset),
+        this.listInnerLifeDigestRunsCompact(agentId, limit, offset),
         this.countInnerLifeDigestRuns(agentId)
       ]);
       return {
@@ -228,18 +253,37 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
             state: selectedProfile.state || {}
           }
         : null;
-      const pendingShares = await this.listInnerLifeShares("pending", 20, requestedAgentId);
-      const recentShares = await this.listInnerLifeShares("all", 20, requestedAgentId);
+      const compactShare = (share) => ({
+        id: share.id,
+        agent_id: share.agent_id,
+        thought_id: share.thought_id,
+        status: share.status,
+        body: String(share.body || "").slice(0, 800),
+        decision_reason: String(share.decision_reason || "").slice(0, 600),
+        created_at: share.created_at,
+        updated_at: share.updated_at
+      });
+      const pendingShares = (await this.listInnerLifeShares("pending", 20, requestedAgentId)).map(compactShare);
+      const recentShares = (await this.listInnerLifeShares("all", 20, requestedAgentId)).map(compactShare);
       const sessionsPage = await this.listInnerLifeSessionsPage({ agentId: requestedAgentId, limit: 10, offset: 0 });
       const sessions = sessionsPage.items;
       const inboxPage = await this.listInnerLifeInboxPage({ agentId: requestedAgentId, status: "all", limit: 10, offset: 0 });
       const inbox = inboxPage.items;
       const digestRunsPage = await this.listInnerLifeDigestRunsPage({ agentId: requestedAgentId, limit: 10, offset: 0 });
       const digestRuns = digestRunsPage.items;
-      const shareChecks = await this.listInnerLifeShareChecks(requestedAgentId, 20);
-      const history = await this.getInnerLifeHistory(requestedAgentId, 20);
-      const experiences = await this.listInnerLifeExperiences(requestedAgentId, 10);
-      const summaries = await this.listInnerLifeSummaries(requestedAgentId, 10);
+      const shareChecks = await this.listInnerLifeShareChecksCompact(requestedAgentId, 20);
+      const history = (await this.getInnerLifeHistory(requestedAgentId, 20)).map((item) => ({
+        ...item,
+        body: String(item.body || "").slice(0, 800)
+      }));
+      const experiences = (await this.listInnerLifeExperiences(requestedAgentId, 10)).map((item) => ({
+        ...item,
+        body: String(item.body || "").slice(0, 800)
+      }));
+      const summaries = (await this.listInnerLifeSummaries(requestedAgentId, 10)).map((item) => ({
+        ...item,
+        summary: String(item.summary || "").slice(0, 1000)
+      }));
       const daemon = profile
         ? await this.ensureInnerLifeDaemonState(profile.agent_id)
         : { agentId: "", status: "paused", enabled: false, lastTickAt: null, nextRunAt: null, lastResult: "", lastError: "", tickCount: 0, updatedAt: null, metadata: {} };

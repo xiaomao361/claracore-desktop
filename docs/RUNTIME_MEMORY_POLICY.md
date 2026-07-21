@@ -35,6 +35,10 @@ Large surfaces must page or lazy-load:
   adding DOM nodes per graph item. Canvas labels should stay selective and use
   simple collision avoidance so dense graphs do not become text clouds.
 - InnerLife sessions, inbox, and digest runs use page objects.
+- InnerLife list pages are previews: session briefing, inbox metadata, digest
+  input/metadata, and share-check context stay out of list snapshots. Fetch a
+  specific record through its detail repository method when full data is
+  required. The maintained detail-snapshot ceiling is 160 KiB.
 - Gateway trace review should stay recent by default; deep trace browsing should
   be a separate paged surface before trace volume grows.
 
@@ -51,6 +55,7 @@ Every long-lived resource needs one owner and an explicit release path.
 | Gateway SQLite connection | `core/gateway/mcp-server.js` | stdin close, process exit, SIGINT, SIGTERM |
 | HTTP Agent Gateway server | `electron/http-agent-gateway.js` | `httpAgentGateway.stop()` from `electron/main.js` quit path |
 | HTTP sockets | `electron/http-agent-gateway.js` | destroyed in `httpAgentGateway.stop()` |
+| HTTP tool queue | `electron/http-agent-gateway.js` | queued calls resolve busy during `httpAgentGateway.stop()` |
 | InnerLife scheduler | `electron/schedulers.js` | `schedulers.stop()` from `electron/main.js` quit path |
 | Persisted embedding scheduler | `electron/schedulers.js` | `schedulers.stop()` from `electron/main.js` quit path |
 | Session-afterthought jobs | `innerlife_inbox` + InnerLife scheduler | atomically claimed, stale claims recover after five minutes |
@@ -69,6 +74,20 @@ quit path should release HTTP resources and best-effort stop sibling packaged
 `--gateway` processes so the app bundle can be replaced during development.
 The stdio Gateway itself must also close its cached database connection when
 stdin closes, because stdio transport lifetime is the agent connection lifetime.
+
+HTTP `tools/call` admission is bounded to eight active and 64 queued calls by
+default. A queued call waits at most two seconds. Overflow and expired waits
+return HTTP `429`, JSON-RPC error `-32001`, and `Retry-After: 1`; health,
+initialize, tools/list, and ping remain outside the tool queue. The limits can
+be changed for controlled tests with
+`CLARACORE_DESKTOP_HTTP_MAX_CONCURRENCY`,
+`CLARACORE_DESKTOP_HTTP_MAX_QUEUE`, and
+`CLARACORE_DESKTOP_HTTP_QUEUE_WAIT_MS`.
+
+Daily maintenance also bounds processed InnerLife inbox rows, ended sessions,
+share checks, and digest runs per Agent. Pending/processing inbox rows and
+active sessions are protected. Cleanup records the applied policy, age/capacity
+deletions, and before/after counts; it does not run automatic `VACUUM`.
 
 ## Manual Repair Scratch Backups
 
@@ -132,7 +151,10 @@ reference results and interpretation live in
 
 Use `npm run baseline:http-ui` for the combined shared HTTP Gateway and UI IPC
 profile. The maintained Worker threshold is a 50 ms p95 on the local health
-probe; do not add a Worker boundary while this threshold continues to pass.
+probe. The baseline includes sequential-per-Agent 1/4/8 workloads and a
+simultaneous 240-call burst that must produce explicit backpressure without
+HTTP 500 responses; do not add a Worker boundary while this threshold
+continues to pass.
 
 Use `npm run baseline:retrieval` with the same
 `CLARACORE_PERFORMANCE_DB` boundary to split Memory search time into keyword,

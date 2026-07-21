@@ -125,7 +125,10 @@ class ProductDatabase {
     // busy_timeout makes a contended writer wait instead of failing
     // immediately with SQLITE_BUSY. Both are required for a long-running
     // Gateway serving multiple agents against one product database.
-    db.exec(`PRAGMA journal_mode = WAL; PRAGMA busy_timeout = ${SQLITE_BUSY_TIMEOUT_MS}; PRAGMA foreign_keys = ON;`);
+    // Set the wait policy before journal_mode. Multiple stdio Agents can open
+    // the same database at once, and switching/confirming WAL itself may need
+    // a write lock during their first connection.
+    db.exec(`PRAGMA busy_timeout = ${SQLITE_BUSY_TIMEOUT_MS}; PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;`);
     this.connection = db;
     return db;
   }

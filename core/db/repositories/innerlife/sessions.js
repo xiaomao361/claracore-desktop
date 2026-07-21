@@ -75,6 +75,32 @@ function createInnerLifeSessionRepository(helpers) {
       return rows.map(mapSessionRow);
     },
 
+    async listInnerLifeSessionsCompact(agentId = DEFAULT_AGENT_ID, limit = 20, offset = 0) {
+      const safeLimit = Math.max(1, Math.min(Number.parseInt(String(limit), 10) || 20, 100));
+      const safeOffset = Math.max(0, Number.parseInt(String(offset), 10) || 0);
+      const agentFilter = String(agentId || DEFAULT_AGENT_ID).trim();
+      const whereClause = agentFilter === "all" ? "" : `WHERE agent_id = ${sqlString(agentFilter)}`;
+      const rows = await this.query(`
+        SELECT id, agent_id, user_id, host, external_session_id, status, started_at, ended_at,
+               substr(summary, 1, 600) AS summary
+        FROM innerlife_sessions
+        ${whereClause}
+        ORDER BY started_at DESC, id DESC
+        LIMIT ${safeLimit} OFFSET ${safeOffset};
+      `);
+      return rows.map((row) => ({
+        id: row.id,
+        agentId: row.agent_id,
+        userId: row.user_id,
+        host: row.host,
+        externalSessionId: row.external_session_id,
+        status: row.status,
+        startedAt: row.started_at,
+        endedAt: row.ended_at,
+        summary: row.summary || ""
+      }));
+    },
+
     async getInnerLifeSession(id) {
       const sessionId = String(id || "").trim();
       if (!sessionId) throw new Error("InnerLife session id is required.");
@@ -92,7 +118,7 @@ function createInnerLifeSessionRepository(helpers) {
       const limit = Math.max(1, Math.min(Number.parseInt(String(input.limit || 10), 10) || 10, 50));
       const offset = Math.max(0, Number.parseInt(String(input.offset || 0), 10) || 0);
       const [items, total] = await Promise.all([
-        this.listInnerLifeSessions(agentId, limit, offset),
+        this.listInnerLifeSessionsCompact(agentId, limit, offset),
         this.countInnerLifeSessions(agentId)
       ]);
       return {

@@ -170,7 +170,7 @@ Repository ownership:
   model adjustment persistence.
 - `core/db/repositories/innerlife.js`: InnerLife repository aggregation plus
   events, thoughts, shares, digest/exploration/convergence data, compact status
-  snapshots, per-agent digest-run retention, and review flows.
+  and view snapshots, and review flows.
 - `core/db/repositories/innerlife/profile.js`: InnerLife profile create,
   update, list, and delete persistence.
 - `core/db/repositories/innerlife/inbox.js`: InnerLife inbox list, count,
@@ -186,6 +186,9 @@ Repository ownership:
   checks, review/mark actions, and apply-to-Memory/Shared-Line persistence.
   Timing checks may use the current Shared Line resume packet as implicit
   context, and persist overlap metadata for later inspection.
+- `core/db/repositories/innerlife/retention.js`: scheduled age/capacity cleanup
+  for processed inbox, ended sessions, share checks, and digest runs while
+  protecting active work.
 
 New schema-heavy behavior should use an explicit migration and repository API.
 Product policy should live in a domain module rather than directly in a
@@ -256,6 +259,11 @@ Start here:
 
 Gateway tools should call runtime or domain facades. Avoid adding Gateway
 behavior that bypasses a domain facade into database internals.
+
+`electron/http-agent-gateway.js` also owns tool-call admission. Keep health,
+initialize, tools/list, and ping outside its bounded active/queued tool-call
+limits; overload must return the retryable 429 busy contract rather than an
+unbounded promise backlog.
 
 For test launches, read `electron/main.js` and
 `electron/http-agent-gateway.js` together. A test instance must set both

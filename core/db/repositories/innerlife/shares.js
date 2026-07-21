@@ -126,6 +126,28 @@ function createInnerLifeShareRepository(helpers) {
       return rows.map(mapShareCheckRow);
     },
 
+    async listInnerLifeShareChecksCompact(agentId = DEFAULT_AGENT_ID, limit = 10) {
+      const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 10));
+      const agentFilter = String(agentId || DEFAULT_AGENT_ID).trim();
+      const whereClause = agentFilter === "all" ? "" : `WHERE agent_id = ${sqlString(agentFilter)}`;
+      const rows = await this.query(`
+        SELECT id, share_id, agent_id, session_id, decision, substr(reason, 1, 600) AS reason, created_at
+        FROM innerlife_share_checks
+        ${whereClause}
+        ORDER BY created_at DESC, id DESC
+        LIMIT ${safeLimit};
+      `);
+      return rows.map((row) => ({
+        id: row.id,
+        shareId: row.share_id,
+        agentId: row.agent_id,
+        sessionId: row.session_id,
+        decision: row.decision,
+        reason: row.reason || "",
+        createdAt: row.created_at
+      }));
+    },
+
     async getInnerLifeShareCheck(id) {
       const checkId = String(id || "").trim();
       if (!checkId) throw new Error("InnerLife share check id is required.");

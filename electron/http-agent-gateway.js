@@ -30,6 +30,12 @@ function normalizePort(value, fallback = DEFAULT_HTTP_PORT) {
   return fallback;
 }
 
+function normalizePositiveInteger(value, fallback, maximum) {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  if (!Number.isInteger(parsed) || parsed < 1) return fallback;
+  return Math.min(parsed, maximum);
+}
+
 // For the non-explicit (production) path, a persisted or user-entered port of 0
 // is a stale placeholder rather than a request for a random port; fall back to
 // the stable default. Random binding is reserved for the explicit env/test path.
@@ -87,6 +93,11 @@ function tokenLooksValid(value) {
 function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, getProductGatewayContext, port }) {
   const explicitPort = Boolean(process.env.CLARACORE_DESKTOP_HTTP_PORT || port !== undefined);
   const configuredPort = normalizePort(process.env.CLARACORE_DESKTOP_HTTP_PORT || port, DEFAULT_HTTP_PORT);
+  const toolConcurrency = {
+    maxActive: normalizePositiveInteger(process.env.CLARACORE_DESKTOP_HTTP_MAX_CONCURRENCY, 8, 128),
+    maxQueued: normalizePositiveInteger(process.env.CLARACORE_DESKTOP_HTTP_MAX_QUEUE, 64, 4096),
+    queueWaitMs: normalizePositiveInteger(process.env.CLARACORE_DESKTOP_HTTP_QUEUE_WAIT_MS, 2000, 30000)
+  };
   if (
     process.env.CLARACORE_DESKTOP_TEST_INSTANCE === "1" &&
     explicitPort &&
@@ -109,8 +120,59 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
     tokenCreatedAt: "",
     tokenRotatedAt: "",
     codexTokenSync: { ok: false, skipped: true },
-    lastError: null
+    lastError: null,
+    activeToolCalls: 0,
+    toolWaiters: []
   };
+
+  function releaseToolCall() {
+    while (state.toolWaiters.length) {
+      const waiter = state.toolWaiters.shift();
+      if (waiter.settled) continue;
+      waiter.settled = true;
+      clearTimeout(waiter.timer);
+      waiter.resolve(releaseToolCallOnce());
+      return;
+    }
+    state.activeToolCalls = Math.max(0, state.activeToolCalls - 1);
+  }
+
+  function releaseToolCallOnce() {
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      releaseToolCall();
+    };
+  }
+
+  function acquireToolCall() {
+    if (state.activeToolCalls < toolConcurrency.maxActive) {
+      state.activeToolCalls += 1;
+      return Promise.resolve(releaseToolCallOnce());
+    }
+    if (state.toolWaiters.length >= toolConcurrency.maxQueued) return Promise.resolve(null);
+    return new Promise((resolve) => {
+      const waiter = { resolve, settled: false, timer: null };
+      waiter.timer = setTimeout(() => {
+        if (waiter.settled) return;
+        waiter.settled = true;
+        const index = state.toolWaiters.indexOf(waiter);
+        if (index >= 0) state.toolWaiters.splice(index, 1);
+        resolve(null);
+      }, toolConcurrency.queueWaitMs);
+      state.toolWaiters.push(waiter);
+    });
+  }
+
+  function rejectToolWaiters() {
+    for (const waiter of state.toolWaiters.splice(0)) {
+      if (waiter.settled) continue;
+      waiter.settled = true;
+      clearTimeout(waiter.timer);
+      waiter.resolve(null);
+    }
+  }
 
   function baseUrl() {
     if (!state.port) return null;
@@ -183,15 +245,21 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
       tokenCreatedAt: state.tokenCreatedAt,
       tokenRotatedAt: state.tokenRotatedAt,
       codexTokenSync: state.codexTokenSync,
+      toolConcurrency: {
+        active: state.activeToolCalls,
+        queued: state.toolWaiters.length,
+        ...toolConcurrency
+      },
       error: state.lastError
     };
   }
 
-  function sendJson(response, statusCode, payload) {
+  function sendJson(response, statusCode, payload, headers = {}) {
     const body = JSON.stringify(payload, null, 2);
     response.writeHead(statusCode, {
       "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store"
+      "cache-control": "no-store",
+      ...headers
     });
     response.end(body);
   }
@@ -552,13 +620,27 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
       if (message.method === "tools/call") {
         const name = message.params?.name;
         if (!name || typeof name !== "string") throw new Error("Tool name is required.");
-        const result = await callMcpTool({
-          request,
-          requestUrl,
-          name,
-          args: message.params?.arguments || {}
-        });
-        sendJson(response, 200, jsonRpcResult(message.id, result));
+        const release = await acquireToolCall();
+        if (!release) {
+          sendJson(
+            response,
+            429,
+            jsonRpcError(message.id, -32001, "Gateway busy; retry after backpressure clears."),
+            { "retry-after": "1" }
+          );
+          return;
+        }
+        try {
+          const result = await callMcpTool({
+            request,
+            requestUrl,
+            name,
+            args: message.params?.arguments || {}
+          });
+          sendJson(response, 200, jsonRpcResult(message.id, result));
+        } finally {
+          release();
+        }
         return;
       }
       if (message.method === "ping") {
@@ -594,7 +676,8 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
         bind: state.host,
         port: state.port,
         configuredPort: state.configuredPort,
-        tokenFile: state.tokenFile
+        tokenFile: state.tokenFile,
+        toolConcurrency: status().toolConcurrency
       });
       return;
     }
@@ -732,6 +815,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
   }
 
   function stop() {
+    rejectToolWaiters();
     if (!state.server) return;
     state.server.close();
     for (const socket of state.sockets) {
