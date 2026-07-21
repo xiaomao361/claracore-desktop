@@ -33,6 +33,7 @@ CLARACORE_LONG_RUN_DURATION_MINUTES=5 \
   CLARACORE_LONG_RUN_MAX_RSS_GROWTH_MB=64 \
   npm run test:memory-long-run
 npm run baseline:memory-controller:live -- --db "/path/to/claracore.db"
+CLARACORE_PERFORMANCE_DB="/path/to/claracore.db" npm run baseline:retrieval
 ```
 
 `baseline:runtime` always creates and later removes a consistent temporary
@@ -93,21 +94,52 @@ the only measured path near a hard product budget: the seven-day p95 is close
 to the Controller's 2500 ms timeout. The two Controller retrievals are too few
 to justify an algorithm change by themselves.
 
+### Retrieval Phase Breakdown
+
+The content-safe retrieval profiler ran five maintained synthetic query shapes
+twice against a consistent copy of the current database. It emitted only
+fixture ids, timing, modes, and counts; no live Memory content or ids.
+
+| Phase | First run including cold load | Immediate warm rerun |
+| --- | ---: | ---: |
+| Total search p95 | 2336.8 ms | 310.0 ms |
+| Query embedding p95 | 2058.3 ms | 156.1 ms |
+| Read/parse/score up to 200 vector candidates p95 | 274.9 ms | 182.6 ms |
+| Keyword query p95 | 1.7 ms | 1.3 ms |
+| State annotation p95 | 0.3 ms | 0.2 ms |
+| Neighbor lookup p95 | 0.3 ms | 0.3 ms |
+| Controller eligibility p95 | 0.2 ms | 0.1 ms |
+
+The active embedding provider was Ollama 0.32.1 with `bge-m3:latest`. After the
+first run, `ollama ps` reported the model loaded on GPU at about 664 MB with the
+default roughly five-minute expiry. An immediate full rerun removed the
+2-second tail: all ten searches finished between about 234 and 310 ms.
+
+The legacy `/api/embeddings` endpoint used by Desktop supports `keep_alive` and
+defaults to five minutes according to the
+[official Ollama API reference](https://github.com/ollama/ollama/blob/main/docs/api.md#generate-embedding). A
+longer value would trade roughly 664 MB of persistent GPU memory on this machine
+for fewer post-idle cold searches. That is a product/operator tradeoff, not a
+safe hidden default change.
+
 ## Decision
 
 Do not start a broad Desktop performance refactor. Startup, global snapshot,
 navigation, Home scheduling, and short-run memory behavior are all below the
 current intervention thresholds.
 
-The next performance loop should target retrieval observability before
-optimization:
+Retrieval observability is now sufficient to split the next decision:
 
-1. collect a larger reproducible query set without storing full prompts;
-2. separate embedding/provider time, keyword fallback, database scoring,
-   eligibility revalidation, cache hit/miss, and total Controller time;
-3. compare cold and repeated-query latency;
-4. optimize only the stage responsible for the measured p95 tail;
-5. rerun this baseline and the full 30-minute endurance check before a package
+1. **Memory-balanced:** keep Ollama's five-minute default and accept an
+   occasional roughly 2.3-second first retrieval after idle.
+2. **Speed-biased:** add an explicit bounded embedding `keep_alive` such as
+   `30m`, then validate that the observed cold tail falls without unacceptable
+   system pressure.
+3. Independently evaluate reducing or indexing the 200-row vector candidate
+   path only after recall-quality fixtures prove that a smaller candidate set
+   does not remove relevant Memories. Its warm cost is material but not the
+   source of the 2.3-second tail.
+4. Rerun this baseline and the full 30-minute endurance check before a package
    candidate is called performance-validated.
 
 The global Controller aggregate scan remains a future scaling watchpoint, but

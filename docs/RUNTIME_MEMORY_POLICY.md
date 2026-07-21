@@ -125,3 +125,9 @@ current product-scale reads without mutating the live database, set
 a consistent SQLite backup in an isolated test root. The current v0.6.0
 reference results and interpretation live in
 `docs/PERFORMANCE_BASELINE_V0.6.0.md`.
+
+Use `npm run baseline:retrieval` with the same
+`CLARACORE_PERFORMANCE_DB` boundary to split Memory search time into keyword,
+embedding/provider, vector-candidate, annotation, neighbor, and Controller
+eligibility phases. The profiler uses maintained synthetic query shapes and
+must not emit live Memory bodies, ids, or trace request/response content.
