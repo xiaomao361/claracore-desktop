@@ -185,6 +185,8 @@ const rendererState = {
 };
 let runtimeRefreshTimer = null;
 const pendingRuntimeScopes = new Set();
+const hydratedViews = new Set();
+const hydratingViews = new Map();
 const appearance = window.createClaraCoreAppearance({
   desktop: window.ClaraCoreDesktop,
   onSystemPreferenceChange: () => renderSettings()
@@ -200,7 +202,7 @@ const logsView = window.createClaraCoreLogsView({
   escapeHtml,
   formatLocalDateTime,
   getSnapshot: () => snapshot,
-  refreshSnapshot: refreshRuntimeSnapshotOnly
+  refreshSnapshot: refreshLogsSnapshot
 });
 const agentSetupView = window.createClaraCoreAgentSetupView({
   dom: window.ClaraCoreDom,
@@ -642,6 +644,35 @@ function setView(viewName) {
   homeView.setActive(nextView === "home");
   if (enteringLogs) logsView.closeAdvancedDiagnostics();
   syncLogRefreshTimer();
+  if (snapshot) hydrateView(nextView).catch(console.error);
+}
+
+async function hydrateView(viewName, { force = false } = {}) {
+  if (!snapshot || typeof window.ClaraCoreDesktop.getViewSnapshot !== "function") return;
+  if (!force && hydratedViews.has(viewName)) return;
+  if (hydratingViews.has(viewName)) return hydratingViews.get(viewName);
+  const request = (async () => {
+    const detail = await window.ClaraCoreDesktop.getViewSnapshot(viewName);
+    if (!detail || typeof detail !== "object") return;
+    snapshot = { ...snapshot, ...detail };
+    hydratedViews.add(viewName);
+    if (viewName === "shared-line" && detail.sharedLine) {
+      await sharedLineActions.syncSelectedLine(detail.sharedLine);
+      renderSharedLine();
+    } else if (viewName === "innerlife") {
+      renderInnerLife();
+    } else if (viewName === "trace") {
+      traceView.render();
+    } else if (viewName === "logs") {
+      renderLogs();
+    } else if (viewName === "settings") {
+      renderBackups();
+    } else if (viewName === "home") {
+      renderHomeDashboard();
+    }
+  })().finally(() => hydratingViews.delete(viewName));
+  hydratingViews.set(viewName, request);
+  return request;
 }
 
 function setLanguage(language) {
@@ -678,8 +709,10 @@ async function refresh() {
     window.ClaraCoreDesktop.getDataRootPreference()
   ]);
   await sharedLineActions.syncSelectedLine(snapshot.sharedLine);
+  hydratedViews.clear();
   memoriaView.resetLoadedTabs();
   renderSnapshot();
+  hydrateView(activeView).catch(console.error);
   loadMemoryTabData(memoriaView.getActiveTab()).catch(console.error);
 }
 
@@ -698,7 +731,22 @@ async function refreshRuntimeSnapshotOnly() {
   snapshot = nextSnapshot;
   rendererState.dataRootPreference = dataRootPreference;
   await sharedLineActions.syncSelectedLine(snapshot.sharedLine);
+  hydratedViews.clear();
   renderSnapshot();
+  hydrateView(activeView).catch(console.error);
+}
+
+async function refreshLogsSnapshot() {
+  const logsSnapshot = typeof window.ClaraCoreDesktop.getLogsSnapshot === "function"
+    ? await window.ClaraCoreDesktop.getLogsSnapshot()
+    : await window.ClaraCoreDesktop.getRuntimeSnapshot();
+  snapshot = {
+    ...(snapshot || {}),
+    gatewayTraces: logsSnapshot.gatewayTraces || [],
+    runtimeEvents: logsSnapshot.runtimeEvents || []
+  };
+  renderLogs();
+  return logsSnapshot;
 }
 
 async function refreshForRuntimeScopes(scopes = []) {

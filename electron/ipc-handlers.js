@@ -28,6 +28,8 @@ const {
   getProductInnerLifeDigestRuns,
   getProductImportPreview,
   getProductInnerLifeInbox,
+  getProductLogsSnapshot,
+  getProductViewSnapshot,
   getProductArchivedMemories,
   getProductMemoryArchiveSuggestions,
   getProductDeletedMemories,
@@ -105,6 +107,11 @@ function registerIpcHandlers({
   updateTrayMenu
 }) {
   ipcMain.handle(ipcChannel("getRuntimeSnapshot"), () => getRuntimeSnapshot());
+  ipcMain.handle(ipcChannel("getLogsSnapshot"), () => getProductLogsSnapshot(app));
+  ipcMain.handle(ipcChannel("getViewSnapshot"), (_event, view) => {
+    if (typeof view !== "string") return {};
+    return getProductViewSnapshot(app, view);
+  });
   ipcMain.handle(ipcChannel("getResourceSnapshot"), () => getResourceSnapshot());
   ipcMain.handle(ipcChannel("getImportPreview"), () => getProductImportPreview(app));
   ipcMain.handle(ipcChannel("clearLogs"), async () => {

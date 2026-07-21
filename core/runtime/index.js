@@ -74,6 +74,18 @@ async function buildProductSnapshot(app) {
   return snapshotRuntime.buildProductSnapshot(app);
 }
 
+async function buildProductOverviewSnapshot(app) {
+  return snapshotRuntime.buildProductOverviewSnapshot(app);
+}
+
+async function getProductViewSnapshot(app, view) {
+  return snapshotRuntime.buildProductViewSnapshot(app, view);
+}
+
+async function getProductLogsSnapshot(app) {
+  return snapshotRuntime.buildProductLogsSnapshot(app);
+}
+
 async function getProductDecayAudit(app, input = {}) {
   return decayRuntime.getProductDecayAudit(app, input);
 }
@@ -309,6 +321,7 @@ async function restoreProductBackup(app, backupId) {
 module.exports = {
   applyProductInnerLifeShareToMemory,
   applyProductInnerLifeShareToSharedLine,
+  buildProductOverviewSnapshot,
   buildProductSnapshot,
   checkProductInnerLifeShareTiming,
   activateProductSharedLine,
@@ -339,6 +352,8 @@ module.exports = {
   getProductMemoryMaintenance,
   getProductMemoryArchiveSuggestions,
   getProductMemoryMergeSuggestions,
+  getProductLogsSnapshot,
+  getProductViewSnapshot,
   getProductDeletedMemories,
   getProductArchivedMemories,
   getProductDecayAudit,

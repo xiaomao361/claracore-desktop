@@ -8,6 +8,12 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   getRuntimeSnapshot() {
     return ipcRenderer.invoke(ipcChannel("getRuntimeSnapshot"));
   },
+  getLogsSnapshot() {
+    return ipcRenderer.invoke(ipcChannel("getLogsSnapshot"));
+  },
+  getViewSnapshot(view) {
+    return ipcRenderer.invoke(ipcChannel("getViewSnapshot"), view);
+  },
   getResourceSnapshot() {
     return ipcRenderer.invoke(ipcChannel("getResourceSnapshot"));
   },

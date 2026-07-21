@@ -12,7 +12,7 @@ const { createSchedulers } = require("./schedulers");
 const { ipcChannel } = require("./ipc-contracts");
 const { registerIpcHandlers } = require("./ipc-handlers");
 const {
-  buildProductSnapshot,
+  buildProductOverviewSnapshot,
   ensureProductCore,
   ensureProductDirectories,
   getProductGatewayContext,
@@ -445,7 +445,7 @@ async function getResourceSnapshot() {
 }
 
 async function getRuntimeSnapshot() {
-  const snapshot = await buildProductSnapshot(app);
+  const snapshot = await buildProductOverviewSnapshot(app);
   const connections = {
     ...snapshot.connections,
     httpEndpoints: httpAgentGateway ? httpAgentGateway.buildEndpoints() : [],

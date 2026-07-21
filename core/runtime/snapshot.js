@@ -162,7 +162,180 @@ function buildHealthChecks(app, paths, configuration, databaseSummary, canWriteR
   };
 }
 
+function compactSharedLinePacket(packet = {}, lines = [], archivedLines = []) {
+  const compactLine = (line = {}) => ({
+    id: line.id,
+    agentId: line.agentId,
+    title: line.title,
+    status: line.status,
+    active: Boolean(line.active),
+    summary: line.summary || "",
+    interpretationStatus: line.interpretationStatus || "draft",
+    createdAt: line.createdAt,
+    updatedAt: line.updatedAt,
+    positionUpdatedAt: line.positionUpdatedAt
+  });
+  const position = packet.currentPosition || {};
+  return {
+    lineId: packet.lineId || position.lineId || "",
+    agentId: packet.agentId || position.agentId || "",
+    lineTitle: packet.lineTitle || position.lineTitle || "",
+    lines: lines.map(compactLine),
+    archivedLines: archivedLines.map(compactLine),
+    currentPosition: {
+      id: position.id,
+      lineId: position.lineId,
+      agentId: position.agentId,
+      lineTitle: position.lineTitle,
+      summary: position.summary || "",
+      interpretationStatus: position.interpretationStatus || "draft",
+      createdAt: position.createdAt,
+      updatedAt: position.updatedAt
+    },
+    history: (packet.history || []).slice(0, 5),
+    snapshots: [],
+    handoffs: [],
+    sharedReality: packet.sharedReality || {},
+    overview: true
+  };
+}
+
+function compactInnerLifeSnapshot(snapshot = {}) {
+  return {
+    ...snapshot,
+    profiles: (snapshot.profiles || []).map((profile) => ({
+      agentId: profile.agentId,
+      displayName: profile.displayName,
+      enabled: Boolean(profile.enabled),
+      state: {}
+    })),
+    pendingShares: (snapshot.pendingShares || []).map((share) => ({
+      ...share,
+      body: share.preview || ""
+    })),
+    recentShares: (snapshot.pendingShares || []).map((share) => ({
+      ...share,
+      body: share.preview || ""
+    })),
+    sessions: [],
+    digestRuns: [],
+    inbox: [],
+    shareChecks: [],
+    history: [],
+    experiences: [],
+    summaries: [],
+    overview: true
+  };
+}
+
 function createSnapshotRuntime({ ensureProductCore }) {
+  async function buildProductOverviewSnapshot(app) {
+    const { paths, database } = await ensureProductCore(app);
+    const desktopSettings = readDesktopSettings(app);
+    const [configuration, databaseSummary] = await Promise.all([
+      database.getConfiguration(paths),
+      database.getSummary()
+    ]);
+    const [
+      recentMemories, memoryStats, memoryMaintenance, resumePacket, activeLines,
+      innerLifeLite, decayAudit, gatewayTraces, canWriteProbe
+    ] = await Promise.all([
+      database.listMemories(20),
+      database.getMemoryStats(),
+      database.getMemoryMaintenanceReport(),
+      database.getResumePacket({ lite: true }),
+      database.listContinuityLines({ limit: 30, allAgents: true, status: "active" }),
+      database.getInnerLifeSnapshotLite("all"),
+      buildDecayAudit(database),
+      database.listGatewayTraces({ limit: 20 }),
+      canWriteRuntimeProbe(paths)
+    ]);
+    const sharedLine = compactSharedLinePacket(resumePacket, activeLines, []);
+    const innerLife = compactInnerLifeSnapshot(innerLifeLite);
+    const health = buildHealthChecks(app, paths, configuration, databaseSummary, canWriteProbe);
+    return {
+      mode: process.env.CLARACORE_DESKTOP_DATA_DIR || desktopSettings.dataRoot ? "custom-product-data" : "isolated-product-dev",
+      productVersion: PRODUCT_VERSION,
+      build: buildFlavorInfo(),
+      root: paths.appRoot,
+      appRoot: paths.appRoot,
+      coreStatus: health.status === "ok" ? "Ready" : "Needs attention",
+      data: {
+        root: paths.dataRoot,
+        databasePath: paths.databasePath,
+        databasePresent: Boolean(databaseSummary.initialized),
+        backupsDir: paths.backupsDir,
+        exportsDir: paths.exportsDir,
+        runtimeDir: paths.runtimeDir,
+        logsDir: paths.logsDir
+      },
+      database: databaseSummary,
+      health,
+      connections: productAgentSetup(app, paths),
+      configuration,
+      memories: recentMemories,
+      recentMemories,
+      memoryStats,
+      memoryMaintenance,
+      sharedLine,
+      innerLife,
+      trace: {},
+      memoryController: {
+        mode: configuration.memoryController?.mode || "off"
+      },
+      decayAudit,
+      gatewayTraces,
+      agentActivitySummary: {},
+      runtimeEvents: [],
+      importPreview: null,
+      backups: [],
+      modules: productModules({ innerLife }),
+      plans: {
+        productReset: path.join(paths.appRoot, "docs", "ARCHITECTURE.md"),
+        v02Legacy: path.join(paths.appRoot, "docs", "CODE_MAP.md")
+      },
+      overview: true
+    };
+  }
+
+  async function buildProductViewSnapshot(app, view = "") {
+    const { database } = await ensureProductCore(app);
+    switch (String(view || "").trim()) {
+      case "home":
+        return { agentActivitySummary: await database.getAgentActivitySummary() };
+      case "shared-line":
+        return { sharedLine: await database.getResumePacket() };
+      case "innerlife":
+        return { innerLife: await database.getInnerLifeSnapshot() };
+      case "trace":
+        return {
+          trace: await database.getTraceSnapshot(),
+          memoryController: {
+            ...(await database.getMemoryControlObservationSnapshot({ limit: 10 }))
+          }
+        };
+      case "logs":
+        return { decayAudit: await buildDecayAudit(database) };
+      case "settings":
+        return { backups: await database.listBackups(5) };
+      default:
+        return {};
+    }
+  }
+
+  async function buildProductLogsSnapshot(app) {
+    const { database } = await ensureProductCore(app);
+    const [gatewayTraces, runtimeEvents] = await Promise.all([
+      database.listGatewayTraces({ limit: 20 }),
+      database.listRuntimeEvents({ limit: 50 })
+    ]);
+    return {
+      gatewayTraces,
+      runtimeEvents,
+      generatedAt: new Date().toISOString()
+    };
+  }
+
   async function buildProductSnapshot(app) {
     const { paths, database } = await ensureProductCore(app);
     const desktopSettings = readDesktopSettings(app);
@@ -237,6 +410,9 @@ function createSnapshotRuntime({ ensureProductCore }) {
   }
 
   return {
+    buildProductLogsSnapshot,
+    buildProductOverviewSnapshot,
+    buildProductViewSnapshot,
     buildProductSnapshot
   };
 }

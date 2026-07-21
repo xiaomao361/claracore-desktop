@@ -9,7 +9,7 @@ const CHANNEL_NAMES = Object.freeze([
   "getInnerLifeInbox", "getInnerLifeSessions", "getMemories", "getMemoryArchiveSuggestions",
   "getMemoryGraph", "getMemoryLabelAliases", "getMemoryMaintenance", "getMemoryMergeSuggestions",
   "getMemoryRecords", "getMemoryStats", "getResourceSnapshot", "getRestrictedMemories",
-  "getRuntimeSnapshot", "getSharedLine", "getShellState", "getUiPreferences", "importMemoryArchive",
+  "getLogsSnapshot", "getRuntimeSnapshot", "getSharedLine", "getShellState", "getUiPreferences", "getViewSnapshot", "importMemoryArchive",
   "importOldContinuity", "importOldInnerLife", "importOldMemoria", "importProductJson", "listModels",
   "markInnerLifeShare", "mergeMemories", "openExternal", "openPath", "openUpdateUrl", "previewRestore",
   "processInnerLifeOnce", "processMemoryEmbeddings", "relaunch", "renameSharedLine",
