@@ -5,8 +5,9 @@
 The current public stable package line is `v0.6.3`. Its small-audience
 distribution is unsigned macOS arm64 Lite.
 
-The current development and stable line is `0.6.3`. Its validated
-local macOS artifact is the unsigned arm64 Lite app at
+The current development line is `0.6.4`, but no `0.6.4` package has been built.
+The last validated packaged line remains `0.6.3`. Its local macOS artifact is
+the unsigned arm64 Lite app at
 `dist-lite/mac-arm64/ClaraCore Desktop.app` (293.0 MiB). The unpacked app is a
 local validation artifact; the published asset is
 `ClaraCore-Desktop-0.6.3-lite-arm64.dmg`. Full, Windows, and Intel macOS
@@ -36,12 +37,14 @@ Create a Lite `.dmg`:
 npm run dist:mac:lite
 ```
 
-Current output:
+Expected output for the current development version after a future package run:
 
 ```text
 dist-lite/mac-arm64/ClaraCore Desktop.app
-dist-lite/ClaraCore-Desktop-0.6.3-lite-arm64.dmg
+dist-lite/ClaraCore-Desktop-0.6.4-lite-arm64.dmg
 ```
+
+No `0.6.4` package or DMG was produced as part of the version bump.
 
 The previous `0.5.8` Full/Lite arm64 DMGs and Windows x64 NSIS installers remain
 available in GitHub Release `v0.5.8`.

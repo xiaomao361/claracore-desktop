@@ -4,9 +4,15 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- Current development and public stable version: `0.6.3`.
+- Current development version: `0.6.4`.
 - Current public release: `0.6.3`.
 - Tag `v0.6.3` is the current stable GitHub Release.
+
+`0.6.4` is an unreleased development checkpoint. It adds InnerLife share-quality
+controls for context-only or empty input, explicit no-share output, and
+duplicate-theme suppression. No `0.6.4` application, DMG, tag, GitHub Release,
+or update-channel entry exists yet. See
+[v0.6.4 Development Notes](RELEASE_NOTES_V0.6.4.md).
 
 `0.6.3` is the current stable release. It carries
 the `0.6.0` observe-only Memory Controller, the `0.6.1` measured performance
@@ -64,7 +70,8 @@ through to the daily-use Application Support directory.
 
 Current packaging commands and artifact checks live in
 [macOS Packaging](mac-packaging.md). Current public-release details live in
-[v0.6.3 Release Notes](RELEASE_NOTES_V0.6.3.md).
+[v0.6.3 Release Notes](RELEASE_NOTES_V0.6.3.md); current unreleased changes live
+in [v0.6.4 Development Notes](RELEASE_NOTES_V0.6.4.md).
 
 ## History
 

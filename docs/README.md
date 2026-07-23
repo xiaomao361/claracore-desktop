@@ -20,6 +20,8 @@ instructions.
   Shared Line contracts for Codex, Claude, and Hermes.
 - [Runtime Memory Policy](RUNTIME_MEMORY_POLICY.md): bounded snapshots,
   pagination, resource ownership, and long-run behavior.
+- [v0.6.4 Development Notes](RELEASE_NOTES_V0.6.4.md): current unreleased
+  InnerLife share-quality checkpoint; no package or release yet.
 - [v0.6.3 Release Notes](RELEASE_NOTES_V0.6.3.md): current small-audience
   stable release, validation, and distribution boundary.
 - [Hermes v0.6.2 Update](HERMES_V0.6.2_UPDATE.md): copy-ready Lara/Hermes
@@ -43,6 +45,8 @@ instructions.
 
 - [macOS Packaging](mac-packaging.md): current Full/Lite packaging commands and
   packaged Gateway checks.
+- [v0.6.4 Development Notes](RELEASE_NOTES_V0.6.4.md): current development
+  version and remaining release work.
 - [v0.6.3 Release Notes](RELEASE_NOTES_V0.6.3.md): current stable GitHub
   Release for unsigned macOS arm64 Lite.
 - [v0.5.8 Release Notes](RELEASE_NOTES_V0.5.8.md): previous cross-platform

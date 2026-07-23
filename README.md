@@ -40,6 +40,8 @@ Read these before adding new features:
   pagination, resource ownership, memory telemetry, and long-run checks.
 - [macOS Packaging](docs/mac-packaging.md): current local packaging and packaged
   Gateway validation notes.
+- [v0.6.4 development notes](docs/RELEASE_NOTES_V0.6.4.md): current unreleased
+  InnerLife share-quality checkpoint and its validation boundary.
 - [v0.6.3 release notes](docs/RELEASE_NOTES_V0.6.3.md): current small-audience
   stable macOS arm64 Lite release and its validation boundary.
 - [Home Shared Horizon](docs/HOME_SHARED_HORIZON.md): current Home presence,
@@ -62,7 +64,8 @@ Read these before adding new features:
 
 ## Current Status
 
-The current development and public stable version is `0.6.3`. It is a working desktop shell with a
+The current development version is `0.6.4`; the current public stable version
+remains `0.6.3`. The development line is a working desktop shell with a
 product-owned local data store, Desktop-native Memoria, Shared Line, InnerLife,
 a Desktop-owned Gateway, with model configuration merged into the Settings
 surface.
