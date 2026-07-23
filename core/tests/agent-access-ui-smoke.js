@@ -73,7 +73,10 @@ async function main() {
       "gateway_context",
       "Current Memory Controller Contract",
       "memory_context",
-      "observe-only",
+      "trusted canary",
+      "available to every authenticated Agent",
+      "belonging to that same Agent",
+      "project-scoped Memory",
       "memoria_search",
       "proactively report"
     ];

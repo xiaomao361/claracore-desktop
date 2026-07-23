@@ -24,7 +24,10 @@ async function main() {
     interpretationStatus: "confirmed",
     factsUsed: [before.id]
   });
-  await runtime.saveProductSettings(app, { "memory.controller.mode": "observe" });
+  await runtime.saveProductSettings(app, {
+    "memory.controller.mode": "observe",
+    "memory.controller.canary_agent_ids": ["*"]
+  });
   const sourceDatabase = (await runtime.ensureProductCore(app)).database;
   const controllerDecision = await sourceDatabase.recordMemoryControlEvent({
     policyVersion: "v0.6.0-backup-smoke",
@@ -117,6 +120,9 @@ async function main() {
   if (snapshot.memoryController.mode !== "observe" || snapshot.memoryController.eventCount !== 1 || snapshot.memoryController.feedbackCount !== 1) {
     throw new Error(`Restore did not recover Memory Controller state: ${JSON.stringify(snapshot.memoryController)}`);
   }
+  if (JSON.stringify(snapshot.configuration.memoryController.canaryAgentIds) !== JSON.stringify(["*"])) {
+    throw new Error(`Restore did not recover the canary allowlist: ${JSON.stringify(snapshot.configuration.memoryController)}`);
+  }
 
   const productJson = await runtime.exportProductDataJson(app, {});
   await fs.access(productJson.path);
@@ -132,6 +138,11 @@ async function main() {
   }
   if (productJsonPayload.tables?.memory_control_feedback?.length !== 1) {
     throw new Error("Product JSON export did not include Memory Controller feedback.");
+  }
+  const exportedControllerAllowlist = productJsonPayload.tables?.app_settings
+    ?.find((setting) => setting.key === "memory.controller.canary_agent_ids");
+  if (exportedControllerAllowlist?.value_json !== JSON.stringify(["*"])) {
+    throw new Error(`Product JSON export did not include the canary allowlist: ${JSON.stringify(exportedControllerAllowlist)}`);
   }
   const afterJson = await runtime.createProductMemory(app, {
     title: "Product JSON after C",
@@ -163,9 +174,13 @@ async function main() {
   if (jsonRemovedSearch.results.some((memory) => memory.id === afterJson.id)) {
     throw new Error("Product JSON import did not replace post-export Memory.");
   }
-  const importedController = (await runtime.buildProductSnapshot(app)).memoryController;
+  const importedSnapshot = await runtime.buildProductSnapshot(app);
+  const importedController = importedSnapshot.memoryController;
   if (importedController.eventCount !== 1 || importedController.feedbackCount !== 1 || importedController.recent[0]?.id !== controllerDecision.id) {
     throw new Error(`Product JSON import did not restore Controller evidence exactly: ${JSON.stringify(importedController)}`);
+  }
+  if (JSON.stringify(importedSnapshot.configuration.memoryController.canaryAgentIds) !== JSON.stringify(["*"])) {
+    throw new Error(`Product JSON import did not restore the canary allowlist: ${JSON.stringify(importedSnapshot.configuration.memoryController)}`);
   }
 
   const disposableBackup = await runtime.createProductBackup(app);

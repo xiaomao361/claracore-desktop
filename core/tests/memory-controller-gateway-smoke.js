@@ -45,6 +45,20 @@ async function main() {
     agentId: "codex",
     sensitivity: "restricted"
   });
+  const canaryPrompt = "还记得我们之前决定的 trusted gateway canary 吗";
+  const trustedCanaryMemory = await runtime.createProductMemory(app, {
+    title: "Trusted Gateway Canary",
+    body: `${canaryPrompt}\nTRUSTED_CANARY_CONTEXT`,
+    agentId: "codex",
+    labels: ["decision", "project:claracore-desktop"]
+  });
+  const laraCanaryPrompt = "还记得 Lara 之前决定的 trusted gateway canary 吗";
+  const laraTrustedCanaryMemory = await runtime.createProductMemory(app, {
+    title: "Lara Trusted Gateway Canary",
+    body: `${laraCanaryPrompt}\nLARA_TRUSTED_CANARY_CONTEXT`,
+    agentId: "lara",
+    labels: ["decision", "project:claracore-desktop"]
+  });
   const { paths, database } = await runtime.ensureProductCore(app);
   const semanticBefore = await semanticFingerprint(database);
   let caller = {
@@ -97,10 +111,10 @@ async function main() {
   assert.notEqual(cached.decisionId, observed.decisionId, "Gateway cache hit reused a decision id.");
 
   const beforeInvalidMode = (await database.getMemoryControlLedgerStats()).eventCount;
-  await database.exec(`UPDATE app_settings SET value_json = '"canary"' WHERE key = 'memory.controller.mode';`);
+  await database.exec(`UPDATE app_settings SET value_json = '"future"' WHERE key = 'memory.controller.mode';`);
   const invalidMode = parseResult(await callToolBody("memory_context", { prompt }, paths, database));
   assert.equal(invalidMode.reason, "invalid_controller_mode");
-  assert.equal(invalidMode.policyMode, "canary");
+  assert.equal(invalidMode.policyMode, "future");
   assert.equal(invalidMode.resultStatus, "error");
   assert.equal((await database.getMemoryControlLedgerStats()).eventCount, beforeInvalidMode, "Invalid controller mode wrote a decision.");
   await runtime.saveProductSettings(app, { "memory.controller.mode": "observe" });
@@ -143,6 +157,87 @@ async function main() {
   assert(Date.now() - timeoutStartedAt < 2900, "Gateway did not enforce the 2500 ms controller timeout.");
   assert.equal((await database.getMemoryControlEvent(timeout.decisionId)).resultStatus, "timeout");
 
+  const originalCanarySearch = database.searchMemories;
+  database.searchMemories = async (_prompt, _limit, searchOptions = {}) => {
+    const trustedMemory = searchOptions.agentId === "lara"
+      ? laraTrustedCanaryMemory
+      : trustedCanaryMemory;
+    return {
+      mode: "vector",
+      results: [{
+        ...trustedMemory,
+        labels: [...trustedMemory.labels, `agent-id:${searchOptions.agentId}`],
+        search_source: "vector",
+        search_score: 0.91
+      }]
+    };
+  };
+  await runtime.saveProductSettings(app, {
+    "memory.controller.mode": "canary",
+    "memory.controller.canary_agent_ids": ["*"]
+  });
+  caller = { ...caller, agentId: "codex", conversationId: "trusted-canary-caller" };
+  const canary = parseResult(await callToolBody("memory_context", {
+    prompt: canaryPrompt
+  }, paths, database));
+  assert.equal(canary.action, "INJECT_TOP1");
+  assert.equal(canary.policyMode, "canary");
+  assert.equal(canary.configuredMode, "canary");
+  assert.equal(canary.canaryEligible, true);
+  assert.ok(canary.context.includes(canary.decisionId), "Canary context omitted the decision id.");
+  assert.ok(canary.context.includes(trustedCanaryMemory.id), "Canary context omitted the selected Memory id.");
+  assert.ok(canary.context.includes("Verify against current code, runtime, data, and user statements."));
+  assert.deepEqual((await database.getMemoryControlEvent(canary.decisionId)).injectedIds, [trustedCanaryMemory.id]);
+
+  caller = { ...caller, agentId: "lara", conversationId: "all-agents-canary-caller" };
+  const allAgentsCanary = parseResult(await callToolBody("memory_context", {
+    prompt: laraCanaryPrompt
+  }, paths, database));
+  assert.equal(allAgentsCanary.action, "INJECT_TOP1");
+  assert.equal(allAgentsCanary.policyMode, "canary");
+  assert.equal(allAgentsCanary.canaryEligible, true);
+  assert.ok(allAgentsCanary.context.includes(laraTrustedCanaryMemory.id));
+  assert.ok(!allAgentsCanary.context.includes(trustedCanaryMemory.id), "All-Agent canary crossed Agent scope.");
+  assert.deepEqual(
+    (await database.getMemoryControlEvent(allAgentsCanary.decisionId)).injectedIds,
+    [laraTrustedCanaryMemory.id]
+  );
+
+  await runtime.saveProductSettings(app, {
+    "memory.controller.canary_agent_ids": ["codex"]
+  });
+  caller = { ...caller, agentId: "lara", conversationId: "explicitly-non-allowlisted-caller" };
+  const nonAllowlisted = parseResult(await callToolBody("memory_context", {
+    prompt: laraCanaryPrompt
+  }, paths, database));
+  assert.equal(nonAllowlisted.configuredMode, "canary");
+  assert.equal(nonAllowlisted.policyMode, "observe");
+  assert.equal(nonAllowlisted.canaryEligible, false);
+  assert.equal(nonAllowlisted.context, "");
+
+  caller = { ...caller, agentId: "codex", conversationId: "historical-canary-caller" };
+  const historical = parseResult(await callToolBody("memory_context", {
+    prompt: canaryPrompt,
+    timeView: "historical"
+  }, paths, database));
+  assert.equal(historical.policyMode, "observe");
+  assert.equal(historical.canaryEligible, false);
+  assert.equal(historical.context, "");
+
+  const beforeInvalidAllowlist = (await database.getMemoryControlLedgerStats()).eventCount;
+  await database.exec(`
+    UPDATE app_settings
+    SET value_json = '"codex"'
+    WHERE key = 'memory.controller.canary_agent_ids';
+  `);
+  const invalidAllowlist = parseResult(await callToolBody("memory_context", {
+    prompt: canaryPrompt
+  }, paths, database));
+  assert.equal(invalidAllowlist.reason, "invalid_canary_allowlist");
+  assert.equal(invalidAllowlist.context, "");
+  assert.equal((await database.getMemoryControlLedgerStats()).eventCount, beforeInvalidAllowlist, "Malformed canary allowlist wrote a decision.");
+  database.searchMemories = originalCanarySearch;
+
   assert.deepEqual(await semanticFingerprint(database), semanticBefore, "Gateway controller mutated semantic domain tables.");
   console.log(JSON.stringify({
     suite: "memory-controller-gateway-smoke",
@@ -152,6 +247,12 @@ async function main() {
     bodyAgentIgnored: true,
     cacheDecisionUnique: cached.decisionId !== observed.decisionId,
     invalidMode: invalidMode.reason,
+    canaryContext: canary.action,
+    allAgentsCanary: allAgentsCanary.action,
+    allAgentsScopedMemory: laraTrustedCanaryMemory.id,
+    nonAllowlistedMode: nonAllowlisted.policyMode,
+    historicalMode: historical.policyMode,
+    invalidAllowlist: invalidAllowlist.reason,
     restrictedAction: restricted.action,
     unidentifiedAction: unknown.reason,
     timeoutAction: timeout.reason,

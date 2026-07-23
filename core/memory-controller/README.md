@@ -61,22 +61,29 @@ abstain. Hybrid keyword+vector hits must pass the same cosine score and margin
 gates as vector-only hits. Weak vector results, ambiguous leaders,
 restricted/ineligible rows, and insufficient budgets abstain. Selected context
 defaults to one Memory and 600 estimated tokens; callers may request up to the
-900-token hard cap. Observe mode
-records the prospective Stage B action but returns an empty context and no
-injected ids. Canary formatting remains a core-only contract; the Gateway is
-fixed to observe mode in this slice.
+900-token hard cap. Observe mode records the prospective Stage B action but
+returns an empty context and no injected ids. Trusted canary uses a separate
+cache scope, accepts only current, normal-sensitivity, same-Agent project
+decisions, engineering experience, or knowledge-card pointers, and returns at
+most one candidate. Its read-only block includes both the fresh decision id and
+selected Memory id.
 
 Ledger retention scans and deletes in batches of 500. Age policy may expire
 feedback-bearing decisions only after the longer feedback retention window;
 capacity caps never delete them and may remain temporarily exceeded rather than
 discarding trusted evidence.
 
-## Observe-only Gateway
+## Gateway modes
 
 The `memory_context` MCP operation exposes this controller over stdio and
-Streamable HTTP without enabling injection. It accepts the prompt, time view,
-and context budget only; Agent, client, and conversation identity come from the
-Gateway transport. Unidentified callers receive a context-free refusal, and
-body-supplied Agent ids cannot override the transport caller. Controller
-instances are reused per product database so the bounded cache survives across
-tool calls.
+Streamable HTTP. It accepts the prompt, time view, and context budget only;
+Agent, client, and conversation identity come from the Gateway transport.
+Unidentified callers receive a context-free refusal, and body-supplied Agent
+ids cannot override the transport caller. Persisted `off` and `observe`
+behavior is unchanged. Persisted `canary` uses the explicit
+`memory.controller.canary_agent_ids` allowlist. The default `["*"]` allows
+every identified authenticated Agent; explicit ids can narrow the rollout.
+Only allowed callers using the current time view can receive bounded context,
+and retrieval remains scoped to the caller's own Memory. Every other caller
+remains observe-only. Controller instances are reused per product database so
+the bounded cache survives across tool calls.

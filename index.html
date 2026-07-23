@@ -742,8 +742,9 @@
                     <select id="settingsMemoryControllerMode">
                       <option value="off" data-i18n="settings.memoryControllerOff">Off</option>
                       <option value="observe" data-i18n="settings.memoryControllerObserve">Observe only</option>
+                      <option value="canary" data-i18n="settings.memoryControllerCanary">Trusted canary · All authenticated Agents</option>
                     </select>
-                    <small class="quiet" data-i18n="settings.memoryControllerHint">Observe records bounded decisions but never injects Memory into an Agent response.</small>
+                    <small class="quiet" data-i18n="settings.memoryControllerHint">Observe records bounded decisions without injection. Trusted canary can return one current, normal-sensitivity, project-scoped Memory belonging to any authenticated Agent.</small>
                   </label>
                   <div class="settings-actions compact-actions">
                     <button id="saveMemoryControllerMode" class="primary" type="button" data-i18n="settings.memoryControllerSave">Save Memory Controller</button>

@@ -317,13 +317,20 @@ function createSnapshotRuntime({ ensureProductCore }) {
         return { sharedLine: await database.getResumePacket() };
       case "innerlife":
         return { innerLife: await database.getInnerLifeSnapshot() };
-      case "trace":
+      case "trace": {
+        const [trace, memoryControllerEvidence, settings] = await Promise.all([
+          database.getTraceSnapshot(),
+          database.getMemoryControlObservationSnapshot({ limit: 10 }),
+          database.getSettings()
+        ]);
         return {
-          trace: await database.getTraceSnapshot(),
+          trace,
           memoryController: {
-            ...(await database.getMemoryControlObservationSnapshot({ limit: 10 }))
+            mode: settings["memory.controller.mode"] || "off",
+            ...memoryControllerEvidence
           }
         };
+      }
       case "logs":
         return { decayAudit: await buildDecayAudit(database) };
       case "settings":

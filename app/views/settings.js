@@ -304,9 +304,13 @@ function renderSettings() {
   innerLifePollSeconds.value = secondsToDisplayMinutes(innerlife.pollSeconds);
   setInputValue(settingsMemoryControllerMode, memoryController.mode || "off");
   if (settingsMemoryControllerStatus) {
-    const observe = memoryController.mode === "observe";
-    settingsMemoryControllerStatus.textContent = t(observe ? "settings.memoryControllerObserve" : "settings.memoryControllerOff");
-    settingsMemoryControllerStatus.className = observe ? "badge ok" : "badge warn";
+    const modeKey = memoryController.mode === "canary"
+      ? "settings.memoryControllerCanary"
+      : memoryController.mode === "observe"
+        ? "settings.memoryControllerObserve"
+        : "settings.memoryControllerOff";
+    settingsMemoryControllerStatus.textContent = t(modeKey);
+    settingsMemoryControllerStatus.className = memoryController.mode === "off" ? "badge warn" : "badge ok";
   }
   setSecretInput(innerLifeApiKey, innerlife.apiKeyRef || "");
   if (innerLifeApiKeySummary) innerLifeApiKeySummary.textContent = maskMiddle(innerlife.apiKeyRef);
@@ -390,8 +394,12 @@ function collectRuntimeSettingsForm() {
 }
 
 function collectMemoryControllerSettingsForm() {
+  const mode = ["off", "observe", "canary"].includes(settingsMemoryControllerMode?.value)
+    ? settingsMemoryControllerMode.value
+    : "off";
   return {
-    "memory.controller.mode": settingsMemoryControllerMode?.value === "observe" ? "observe" : "off"
+    "memory.controller.mode": mode,
+    "memory.controller.canary_agent_ids": ["*"]
   };
 }
 

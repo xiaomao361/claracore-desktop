@@ -20,8 +20,12 @@ instructions.
   Shared Line contracts for Codex, Claude, and Hermes.
 - [Runtime Memory Policy](RUNTIME_MEMORY_POLICY.md): bounded snapshots,
   pagination, resource ownership, and long-run behavior.
+- [Memory Controller Canary Handoff](MEMORY_CONTROLLER_CANARY_HANDOFF.md):
+  confirmed authenticated multi-Agent trusted-context boundary, implementation slices,
+  evidence contract, and first-canary acceptance.
 - [v0.6.4 Development Notes](RELEASE_NOTES_V0.6.4.md): current unreleased
-  InnerLife share-quality checkpoint; no package or release yet.
+  InnerLife share-quality and Trace truth checkpoint; a local Lite App exists,
+  but there is no DMG or public release.
 - [v0.6.3 Release Notes](RELEASE_NOTES_V0.6.3.md): current small-audience
   stable release, validation, and distribution boundary.
 - [Hermes v0.6.2 Update](HERMES_V0.6.2_UPDATE.md): copy-ready Lara/Hermes

@@ -5,13 +5,12 @@
 The current public stable package line is `v0.6.3`. Its small-audience
 distribution is unsigned macOS arm64 Lite.
 
-The current development line is `0.6.4`, but no `0.6.4` package has been built.
-The last validated packaged line remains `0.6.3`. Its local macOS artifact is
-the unsigned arm64 Lite app at
-`dist-lite/mac-arm64/ClaraCore Desktop.app` (293.0 MiB). The unpacked app is a
-local validation artifact; the published asset is
+The current development line is `0.6.4`. Its local unsigned arm64 Lite app at
+`dist-lite/mac-arm64/ClaraCore Desktop.app` is a validated owner-installation
+artifact (293.0 MiB). No `0.6.4` DMG, tag, GitHub Release, or update-channel
+entry exists. The current published asset remains
 `ClaraCore-Desktop-0.6.3-lite-arm64.dmg`. Full, Windows, and Intel macOS
-artifacts are not part of this release.
+artifacts are not part of the `0.6.4` local checkpoint.
 
 It is enough for:
 
@@ -37,14 +36,15 @@ Create a Lite `.dmg`:
 npm run dist:mac:lite
 ```
 
-Expected output for the current development version after a future package run:
+Current App output and future DMG output:
 
 ```text
 dist-lite/mac-arm64/ClaraCore Desktop.app
 dist-lite/ClaraCore-Desktop-0.6.4-lite-arm64.dmg
 ```
 
-No `0.6.4` package or DMG was produced as part of the version bump.
+The `0.6.4` App has been produced and validated locally. The `0.6.4` DMG has
+not been built.
 
 The previous `0.5.8` Full/Lite arm64 DMGs and Windows x64 NSIS installers remain
 available in GitHub Release `v0.5.8`.
@@ -125,6 +125,18 @@ node core/gateway/mcp-server.js
 ```
 
 ## Validation Status
+
+Validated locally for the unpacked `0.6.4` Lite checkpoint:
+
+- bundle version and packaged metadata are `0.6.4` and `lite`;
+- the executable is arm64 and the App is 293.0 MiB;
+- built-in model resources, Xenova, ONNX Runtime, Sharp, and unpacked production
+  dependencies are absent;
+- packaged Lite settings and Trace UI smokes pass;
+- Trace shows the persisted Memory Controller observe mode as `仅观察`;
+- packaged stdio Gateway smoke passes and reports version `0.6.4`;
+- no DMG, signing, notarization, tag, GitHub Release, update publication, or
+  installation was performed.
 
 Validated locally for the packaged `0.6.3` Lite checkpoint:
 

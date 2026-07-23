@@ -1,4 +1,9 @@
 const { createMemoryController } = require("../../memory-controller/controller");
+const {
+  MEMORY_CONTROLLER_MODES,
+  canaryAllowsAgent,
+  parseCanaryAgentIds
+} = require("../../memory-controller/settings");
 
 const controllers = new WeakMap();
 const UNIDENTIFIED_AGENT_IDS = new Set(["", "unknown-agent", "http-agent"]);
@@ -30,7 +35,7 @@ async function handleMemoryControllerTool(name, args, context) {
   }
   const settings = await database.getSettings();
   const configuredMode = String(settings["memory.controller.mode"] || "off").trim().toLowerCase();
-  if (!["off", "observe"].includes(configuredMode)) {
+  if (!MEMORY_CONTROLLER_MODES.includes(configuredMode)) {
     return textResult({
       decisionId: "",
       action: "NOOP",
@@ -41,8 +46,7 @@ async function handleMemoryControllerTool(name, args, context) {
       resultStatus: "error"
     });
   }
-  const mode = configuredMode;
-  if (mode === "off") {
+  if (configuredMode === "off") {
     return textResult({
       decisionId: "",
       action: "NOOP",
@@ -53,6 +57,25 @@ async function handleMemoryControllerTool(name, args, context) {
       resultStatus: "completed"
     });
   }
+  const allowlist = parseCanaryAgentIds(settings["memory.controller.canary_agent_ids"]);
+  if (configuredMode === "canary" && !allowlist.valid) {
+    return textResult({
+      decisionId: "",
+      action: "NOOP",
+      reason: "invalid_canary_allowlist",
+      candidates: [],
+      context: "",
+      policyMode: "off",
+      configuredMode,
+      canaryEligible: false,
+      resultStatus: "error"
+    });
+  }
+  const requestedTimeView = String(args.timeView || "current").trim().toLowerCase();
+  const canaryEligible = configuredMode === "canary"
+    && canaryAllowsAgent(allowlist.agentIds, agentId)
+    && requestedTimeView === "current";
+  const mode = canaryEligible ? "canary" : "observe";
   const packet = await controllerFor(database).run({
     prompt: args.prompt,
     agentId,
@@ -64,7 +87,9 @@ async function handleMemoryControllerTool(name, args, context) {
   });
   return textResult({
     ...packet,
-    context: ""
+    configuredMode,
+    canaryEligible,
+    context: canaryEligible ? packet.context : ""
   });
 }
 

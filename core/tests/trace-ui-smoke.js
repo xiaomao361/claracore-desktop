@@ -150,7 +150,7 @@ async function main() {
     await page.waitForFunction(() => document.querySelector("#viewTitle")?.textContent === "痕迹");
 
     const initial = await page.evaluate(async () => {
-      const runtimeSnapshot = await window.ClaraCoreDesktop.getRuntimeSnapshot();
+      const traceSnapshot = await window.ClaraCoreDesktop.getViewSnapshot("trace");
       return {
         title: document.querySelector("#viewTitle")?.textContent || "",
         subtitle: document.querySelector("#viewSubtitle")?.textContent || "",
@@ -162,11 +162,11 @@ async function main() {
         metricRows: document.querySelectorAll("#traceView .trace-data-card .trace-metric-row").length,
         advancedOpen: document.querySelector("#traceAdvancedDetails")?.open,
         buttons: document.querySelectorAll("#traceView button").length,
-        semantic: runtimeSnapshot.trace.semantic,
-        firstAt: runtimeSnapshot.trace.firstAt,
-        spanDays: runtimeSnapshot.trace.spanDays,
-        memory: runtimeSnapshot.trace.memory,
-        dataRoot: runtimeSnapshot.data.databasePath
+        semantic: traceSnapshot.trace.semantic,
+        firstAt: traceSnapshot.trace.firstAt,
+        spanDays: traceSnapshot.trace.spanDays,
+        memory: traceSnapshot.trace.memory,
+        controllerMode: traceSnapshot.memoryController.mode
       };
     });
     if (
@@ -192,7 +192,7 @@ async function main() {
       initial.spanDays < 1 ||
       initial.spanDays > 2 ||
       initial.memory.archivedCount !== 1 ||
-      !initial.dataRoot.startsWith(dataRoot)
+      initial.controllerMode !== "observe"
     ) {
       throw new Error(`Trace first-screen contract failed: ${JSON.stringify(initial)}`);
     }
@@ -200,6 +200,7 @@ async function main() {
       await page.screenshot({ path: process.env.CLARACORE_UI_SCREENSHOT_PATH, fullPage: true });
     }
 
+    await page.evaluate(() => hydrateView("trace", { force: true }));
     await page.click("#traceAdvancedDetails > summary");
     await page.waitForFunction(() => document.querySelector("#traceAdvancedDetails")?.open === true);
     const advanced = await page.evaluate(() => ({
@@ -265,14 +266,37 @@ async function main() {
     if (controllerSetting.mode !== "observe" || controllerSetting.status !== "仅观察") {
       throw new Error(`Controller setting did not reflect observe mode: ${JSON.stringify(controllerSetting)}`);
     }
-    await page.selectOption("#settingsMemoryControllerMode", "off");
+    await page.selectOption("#settingsMemoryControllerMode", "canary");
     await page.click("#saveMemoryControllerMode");
-    await page.waitForFunction(() => document.querySelector("#memoryControllerSettingsNotice")?.textContent.includes("已保存"));
-    const disabledController = await page.evaluate(async () => {
+    await page.waitForFunction(() => document.querySelector("#settingsMemoryControllerStatus")?.textContent === "受信 canary · 所有已认证 Agent");
+    const canaryController = await page.evaluate(async () => {
       const snapshot = await window.ClaraCoreDesktop.getRuntimeSnapshot();
       return {
-        mode: snapshot.memoryController?.mode,
-        eventCount: snapshot.memoryController?.eventCount,
+        mode: snapshot.configuration?.memoryController?.mode,
+        allowlist: snapshot.configuration?.memoryController?.canaryAgentIds,
+        configurationValid: snapshot.configuration?.memoryController?.configurationValid,
+        status: document.querySelector("#settingsMemoryControllerStatus")?.textContent
+      };
+    });
+    if (
+      canaryController.mode !== "canary"
+      || JSON.stringify(canaryController.allowlist) !== JSON.stringify(["*"])
+      || canaryController.configurationValid !== true
+      || canaryController.status !== "受信 canary · 所有已认证 Agent"
+    ) {
+      throw new Error(`Controller canary setting failed: ${JSON.stringify(canaryController)}`);
+    }
+    await page.selectOption("#settingsMemoryControllerMode", "off");
+    await page.click("#saveMemoryControllerMode");
+    await page.waitForFunction(() => document.querySelector("#settingsMemoryControllerStatus")?.textContent === "关闭");
+    const disabledController = await page.evaluate(async () => {
+      const [snapshot, traceSnapshot] = await Promise.all([
+        window.ClaraCoreDesktop.getRuntimeSnapshot(),
+        window.ClaraCoreDesktop.getViewSnapshot("trace")
+      ]);
+      return {
+        mode: traceSnapshot.memoryController?.mode,
+        eventCount: traceSnapshot.memoryController?.eventCount,
         configurationMode: snapshot.configuration?.memoryController?.mode,
         status: document.querySelector("#settingsMemoryControllerStatus")?.textContent
       };
@@ -287,7 +311,7 @@ async function main() {
     }
     if (rendererErrors.length) throw new Error(`Renderer errors: ${rendererErrors.join(" | ")}`);
 
-    console.log(JSON.stringify({ ok: true, packaged: Boolean(packagedExecutable), initial, advanced, controllerSetting, disabledController, desktopLayout, narrowLayout }, null, 2));
+    console.log(JSON.stringify({ ok: true, packaged: Boolean(packagedExecutable), initial, advanced, controllerSetting, canaryController, disabledController, desktopLayout, narrowLayout }, null, 2));
   } finally {
     if (app) await app.close();
     runtime.resetCachedDatabase();

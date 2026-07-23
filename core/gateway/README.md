@@ -94,15 +94,21 @@ Memoria only for explicit durable decisions or an explicit request to remember.
 transport caller. The operator mode defaults to `off`, which returns
 `controller_disabled` without retrieval or a ledger write. `observe` records a
 bounded decision for that caller and returns an empty `context` even when Stage
-B recommends a candidate. Explicit `memoria_search` and mutation tools remain
-separate operations.
+B recommends a candidate. The optional trusted canary uses the persisted
+`memory.controller.canary_agent_ids` allowlist. It defaults to `["*"]`, which
+means every identified authenticated Agent, and returns context only for an
+allowed caller using the current time view. Each call remains scoped to that
+caller's own Memory. Explicit Agent ids may replace the wildcard for a narrower
+rollout. Non-allowlisted and historical/all callers remain observe-only.
+Malformed modes or allowlists fail closed without a ledger write.
+Explicit `memoria_search` and mutation tools remain separate operations.
 
 Hermes/Lara must keep `agentId=lara` and `clientId=hermes`. It should call
 `memory_context` once for each non-empty user prompt only when Hermes owns a
-verified per-prompt lifecycle hook. Observe mode never authorizes client-side
-injection: the returned `context` stays empty. Without such a hook, Hermes must
-report that automatic routing is unavailable and continue to use explicit
-`memoria_search` when recall is actually requested. See
+verified per-prompt lifecycle hook. Without such a hook, Hermes can still use
+`memory_context` explicitly as a pull operation and continue to use
+`memoria_search` when broader recall is requested; it must not claim automatic
+per-prompt routing. See
 `docs/HERMES_V0.6.2_UPDATE.md` for the reconnect and verification receipt.
 
 HTTP `tools/call` overload returns HTTP `429`, JSON-RPC code `-32001`, and

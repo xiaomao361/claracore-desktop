@@ -109,6 +109,7 @@ async function main() {
       mode: "vector",
       results: [{
         ...codexMemory,
+        labels: [...(codexMemory.labels || []), "decision", "project:claracore-desktop"],
         search_source: "vector",
         search_score: 0.9
       }]
@@ -122,8 +123,10 @@ async function main() {
   });
   assert.equal(canary.action, "INJECT_TOP1");
   assert.ok(canary.context.includes(codexMemory.id));
+  assert.ok(canary.context.includes(canary.decisionId));
   assert.ok(!canary.context.includes(laraMemory.id));
-  assert.ok(canary.context.includes("read-only"));
+  assert.ok(canary.context.includes("read-only evidence"));
+  assert.ok(canary.context.includes("Verify against current code, runtime, data, and user statements."));
   const canaryEvent = await database.getMemoryControlEvent(canary.decisionId);
   assert.deepEqual(canaryEvent.injectedIds, [codexMemory.id]);
   assert.ok(canaryEvent.estimatedTokens > 0 && canaryEvent.estimatedTokens <= 600);
@@ -178,6 +181,28 @@ async function main() {
   });
   assert.ok(hardCapContext.estimatedTokens > 600 && hardCapContext.estimatedTokens <= 900, "Formatter did not honor a caller budget above the default target.");
   assert.equal(estimateTokens("，，。：！？"), 6, "Full-width punctuation was omitted from the token estimate.");
+
+  const untrustedCanaryController = createMemoryController({
+    database,
+    mode: "canary",
+    search: async () => ({
+      mode: "vector",
+      results: [{
+        ...codexMemory,
+        labels: [...(codexMemory.labels || []), "personal-preference"],
+        search_source: "vector",
+        search_score: 0.95
+      }]
+    })
+  });
+  const untrustedCanary = await untrustedCanaryController.run({
+    prompt: "还记得我之前的个人偏好吗",
+    agentId: "codex",
+    mode: "canary",
+    conversationId: "orchestration-untrusted-canary"
+  });
+  assert.equal(untrustedCanary.action, "ABSTAIN");
+  assert.equal(untrustedCanary.context, "");
 
   const normalizedSearchPrompts = [];
   const normalizedController = createMemoryController({

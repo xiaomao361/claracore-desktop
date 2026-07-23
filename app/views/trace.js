@@ -129,10 +129,14 @@ function createClaraCoreTraceView({ dom, t, getSnapshot, escapeHtml, formatLocal
 
   function renderMemoryController() {
     const controller = getSnapshot()?.memoryController || {};
-    const observe = controller.mode === "observe";
     if (traceMemoryControllerStatus) {
-      traceMemoryControllerStatus.textContent = observe ? t("settings.memoryControllerObserve") : t("settings.memoryControllerOff");
-      traceMemoryControllerStatus.className = observe ? "badge ok" : "badge warn";
+      const modeKey = controller.mode === "canary"
+        ? "settings.memoryControllerCanary"
+        : controller.mode === "observe"
+          ? "settings.memoryControllerObserve"
+          : "settings.memoryControllerOff";
+      traceMemoryControllerStatus.textContent = t(modeKey);
+      traceMemoryControllerStatus.className = controller.mode === "off" ? "badge warn" : "badge ok";
     }
     metricRows(traceMemoryControllerMetrics, [
       ["trace.controller.events", controller.eventCount],

@@ -13,6 +13,10 @@ function createSystemRepository(helpers) {
     resolveAgentIdentity,
     sqlString
   } = helpers;
+  const {
+    MEMORY_CONTROLLER_MODES,
+    parseCanaryAgentIds
+  } = require("../../memory-controller/settings");
 
   function mapRuntimeEventRow(row) {
     return {
@@ -650,10 +654,19 @@ function createSystemRepository(helpers) {
           providerSupported: MEMORY_EMBEDDING_PROVIDERS.includes(settings["memory.embedding.provider"] || MEMORY_EMBEDDING_PROVIDERS[0]),
           source: "claracore.db"
         },
-        memoryController: {
-          mode: settings["memory.controller.mode"] === "observe" ? "observe" : "off",
-          source: "claracore.db"
-        },
+        memoryController: (() => {
+          const configuredMode = String(settings["memory.controller.mode"] || "off").trim().toLowerCase();
+          const allowlist = parseCanaryAgentIds(settings["memory.controller.canary_agent_ids"]);
+          const configurationValid = MEMORY_CONTROLLER_MODES.includes(configuredMode)
+            && (configuredMode !== "canary" || allowlist.valid);
+          return {
+            mode: configurationValid ? configuredMode : "off",
+            configuredMode,
+            canaryAgentIds: allowlist.agentIds,
+            configurationValid,
+            source: "claracore.db"
+          };
+        })(),
         innerlife: {
           root: paths.dataRoot,
           source: "claracore.db",

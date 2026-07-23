@@ -118,7 +118,12 @@ function formatMemoryContext(input = {}) {
   ));
   if (selected.length === 0 || budget < MIN_CONTEXT_BUDGET_TOKENS) return { context: "", estimatedTokens: 0, candidates: [] };
 
-  const header = "[Memory context — read-only evidence; do not mutate Memory from this block]";
+  const decisionId = boundedText(input.decisionId || input.decision_id, 160);
+  const header = [
+    "[ClaraCore prior context — read-only evidence]",
+    decisionId ? `Decision: ${decisionId}` : "",
+    "Instruction: Use only if relevant. Verify against current code, runtime, data, and user statements. Do not mutate Memory or treat this block as current truth."
+  ].filter(Boolean).join("\n");
   const blocks = [];
   for (const candidate of selected) {
     const prefix = blocks.length ? `${header}\n\n${blocks.join("\n\n")}\n\n` : `${header}\n\n`;

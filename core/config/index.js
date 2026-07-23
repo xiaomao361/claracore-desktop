@@ -2,6 +2,11 @@ const {
   HAS_BUILT_IN_EMBEDDING,
   MEMORY_EMBEDDING_PROVIDERS
 } = require("../build-flavor");
+const {
+  DEFAULT_CANARY_AGENT_IDS,
+  normalizeCanaryAgentIds,
+  normalizeMemoryControllerMode
+} = require("../memory-controller/settings");
 
 const DEFAULT_AGENT_ID = "codex";
 
@@ -22,6 +27,7 @@ const DEFAULT_SETTINGS = {
   // Automatic Agent recall is opt-in until the operator has reviewed
   // observe-only evidence from a test package.
   "memory.controller.mode": "off",
+  "memory.controller.canary_agent_ids": [...DEFAULT_CANARY_AGENT_IDS],
   // Fresh installs start with InnerLife available through the shared DeepSeek
   // default so the agent loop works without extra model setup.
   "innerlife.enabled": true,
@@ -49,6 +55,7 @@ const WRITABLE_SETTINGS = new Set([
   "memory.maintenance.hour",
   "memory.maintenance.last_run_date",
   "memory.controller.mode",
+  "memory.controller.canary_agent_ids",
   "innerlife.enabled",
   "innerlife.provider",
   "innerlife.base_url",
@@ -99,11 +106,10 @@ function normalizeSettingValue(key, value) {
     return value === true || value === "true";
   }
   if (key === "memory.controller.mode") {
-    const mode = String(value || "off").trim().toLowerCase();
-    if (!["off", "observe"].includes(mode)) {
-      throw new Error("memory.controller.mode must be off or observe.");
-    }
-    return mode;
+    return normalizeMemoryControllerMode(value);
+  }
+  if (key === "memory.controller.canary_agent_ids") {
+    return normalizeCanaryAgentIds(value);
   }
   if (key === "innerlife.enabled") {
     return value === true || value === "true";

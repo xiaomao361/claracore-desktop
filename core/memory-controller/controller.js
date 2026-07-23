@@ -6,6 +6,8 @@ const { ACTIONS: STAGE_B_ACTIONS, evaluateStageB, formatMemoryContext } = requir
 const CONTROLLER_POLICY_VERSION = "memory-controller-v1";
 const HARD_TIMEOUT_MS = 2500;
 const POLICY_MODES = new Set(["off", "observe", "canary"]);
+const CANARY_ALLOWED_LABELS = new Set(["engineering-experience", "knowledge-card", "knowledge-card-pointer"]);
+const CANARY_BLOCKED_LABELS = new Set(["affective", "intimate", "personal-preference", "relationship"]);
 
 class ControllerTimeoutError extends Error {
   constructor() {
@@ -20,6 +22,21 @@ function elapsedMs(startedAt) {
 
 function queryHash(prompt) {
   return `sha256:${crypto.createHash("sha256").update(String(prompt || "")).digest("hex")}`;
+}
+
+function newDecisionId() {
+  return `memory_control_${Date.now().toString(36)}_${crypto.randomBytes(4).toString("hex")}`;
+}
+
+function isTrustedCanaryCandidate(candidate = {}) {
+  const labels = new Set((Array.isArray(candidate.labels) ? candidate.labels : [])
+    .map((label) => String(label || "").trim().toLowerCase())
+    .filter(Boolean));
+  if ([...CANARY_BLOCKED_LABELS].some((label) => labels.has(label))) return false;
+  if ([...CANARY_ALLOWED_LABELS].some((label) => labels.has(label))) return true;
+  const projectScoped = [...labels].some((label) => label.startsWith("project:"))
+    || labels.has("claracore-desktop");
+  return labels.has("decision") && projectScoped;
 }
 
 function withTimeout(operation, timeoutMs) {
@@ -83,6 +100,7 @@ function createMemoryController(options = {}) {
     const timeView = String(input.timeView || input.time_view || "current").trim().toLowerCase();
     if (!["current", "historical", "all"].includes(timeView)) throw new Error("Memory Controller timeView must be current, historical, or all.");
     const contextBudgetTokens = Math.max(0, Math.min(900, Number.parseInt(String(input.contextBudgetTokens ?? 600), 10) || 0));
+    const decisionId = newDecisionId();
     const stageA = evaluateStageA({ prompt, mode });
     const hash = queryHash(stageA.normalizedPrompt);
     const commonEvent = {
@@ -106,6 +124,7 @@ function createMemoryController(options = {}) {
 
     if (stageA.action === STAGE_A_ACTIONS.NOOP) {
       const event = await record({
+        id: decisionId,
         ...commonEvent,
         resultStatus: "completed",
         totalLatencyMs: elapsedMs(startedAt)
@@ -132,7 +151,8 @@ function createMemoryController(options = {}) {
       const retrieval = await withTimeout(async () => {
         const watermark = await database.getMemoryControlWatermark("memoria");
         if (!watermark) throw new Error("Memory Controller watermark is unavailable.");
-        const searchParams = { limit: 3, timeView };
+        const eligibilityScope = mode === "canary" ? "trusted-canary-v1" : "normal";
+        const searchParams = { limit: 3, timeView, eligibilityScope };
         const key = createCacheKey({
           queryHash: hash,
           agentScope: agentId,
@@ -153,7 +173,10 @@ function createMemoryController(options = {}) {
         const searchStartedAt = process.hrtime.bigint();
         const result = await search(stageA.normalizedPrompt, 3, { agentId, timeView, includeRestricted: false });
         searchLatencyMs = elapsedMs(searchStartedAt);
-        const rawCandidates = (Array.isArray(result?.results) ? result.results : []).slice(0, 3);
+        const rawCandidates = (Array.isArray(result?.results) ? result.results : [])
+          .slice(0, 3)
+          .filter((candidate) => mode !== "canary"
+            || (timeView === "current" && isTrustedCanaryCandidate(candidate)));
         const eligibleIds = await database.getMemoryControlEligibleIds({
           ids: rawCandidates.map((candidate) => candidate.id),
           agentId,
@@ -175,7 +198,7 @@ function createMemoryController(options = {}) {
 
       const stageB = evaluateStageB({ candidates: retrieval.value.candidates, timeView, contextBudgetTokens });
       const formatted = stageB.action === STAGE_B_ACTIONS.INJECT_TOP1 || stageB.action === STAGE_B_ACTIONS.INJECT_TOPK
-        ? formatMemoryContext({ candidates: stageB.selected, contextBudgetTokens })
+        ? formatMemoryContext({ candidates: stageB.selected, contextBudgetTokens, decisionId })
         : { context: "", estimatedTokens: 0, candidates: [] };
       const effectiveStageB = formatted.context || stageB.action === STAGE_B_ACTIONS.ABSTAIN
         ? stageB
@@ -190,6 +213,7 @@ function createMemoryController(options = {}) {
       const injectedIds = context ? formatted.candidates.map((candidate) => candidate.id) : [];
       const resultStatus = effectiveStageB.action === STAGE_B_ACTIONS.ABSTAIN ? "abstained" : "completed";
       const event = await record({
+        id: decisionId,
         ...commonEvent,
         stageBAction: effectiveStageB.action,
         stageBReason: effectiveStageB.reason,
@@ -237,6 +261,7 @@ function createMemoryController(options = {}) {
       const reason = timedOut ? "controller_timeout" : "controller_error";
       const resultStatus = timedOut ? "timeout" : "error";
       const event = await record({
+        id: decisionId,
         ...commonEvent,
         stageBAction: "ABSTAIN",
         stageBReason: reason,
@@ -271,6 +296,8 @@ module.exports = {
   ControllerTimeoutError,
   HARD_TIMEOUT_MS,
   createMemoryController,
+  isTrustedCanaryCandidate,
+  newDecisionId,
   queryHash,
   withTimeout
 };
