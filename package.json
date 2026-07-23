@@ -46,7 +46,7 @@
     "test:gateway:http": "node core/tests/streamable-http-gateway-smoke.js && node core/tests/http-gateway-backpressure-smoke.js",
     "test:phase4:trace-ui": "node core/tests/run-ui-smoke.js core/tests/phase4-gateway-trace-ui-smoke.js",
     "test:phase4:packaged": "npm run pack:mac && node core/tests/phase4-packaged-gateway-smoke.js",
-    "test:phase5": "node core/tests/phase5-innerlife-smoke.js && node core/tests/innerlife-retention-smoke.js && node core/tests/innerlife-compact-snapshot-performance-smoke.js && node core/tests/innerlife-source-ingest-smoke.js && npm run test:phase5:ui && npm run test:phase5:scheduler-ui",
+    "test:phase5": "node core/tests/phase5-innerlife-smoke.js && node core/tests/innerlife-share-quality-smoke.js && node core/tests/innerlife-retention-smoke.js && node core/tests/innerlife-compact-snapshot-performance-smoke.js && node core/tests/innerlife-source-ingest-smoke.js && npm run test:phase5:ui && npm run test:phase5:scheduler-ui",
     "test:phase5:ui": "node core/tests/run-ui-smoke.js core/tests/phase5-innerlife-ui-smoke.js",
     "test:phase5:scheduler-ui": "node core/tests/run-ui-smoke.js core/tests/phase5-innerlife-scheduler-ui-smoke.js",
     "test:backup": "node core/tests/backup-restore-smoke.js",

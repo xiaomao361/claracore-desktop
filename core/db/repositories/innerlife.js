@@ -9,6 +9,8 @@ const { fetchCandidates, hash, normalizeSources } = require("../../innerlife/sou
 const {
   IL_SYSTEM,
   generateOrTemplate,
+  isContextOnlyInnerLifeInbox,
+  isNoShareInnerLifeOutput,
   summarizeInnerLifeProfile
 } = require("../../innerlife/policy");
 
@@ -753,6 +755,24 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
         template
       });
       const body = generated.body;
+      const hasShareableInput = inboxItems.length > 0 || Boolean(prompt);
+      const contextOnlyInbox = isContextOnlyInnerLifeInbox(inboxItems);
+      const noveltyText = inboxItems.length > 0
+        ? inboxItems.map((item) => item.body).join("\n")
+        : prompt || body;
+      const noShareOutput = isNoShareInnerLifeOutput(body);
+      const duplicate = !hasShareableInput || contextOnlyInbox || noShareOutput
+        ? null
+        : await this.findSimilarInnerLifeShare(profile.agent_id, noveltyText);
+      const shareDecision = !hasShareableInput
+        ? { create: false, reason: "no_shareable_input" }
+        : contextOnlyInbox
+          ? { create: false, reason: "context_only_inbox" }
+          : noShareOutput
+            ? { create: false, reason: "model_no_share" }
+            : duplicate
+              ? { create: false, reason: "similar_share_exists", duplicateOf: duplicate.id, similarity: duplicate.similarity }
+              : { create: true, reason: "distinct_shareable_thought" };
       await this.exec(`
         INSERT INTO innerlife_events (id, agent_id, kind, body, status, metadata_json)
         VALUES (
@@ -767,15 +787,21 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
             sharedLineStatus: sharedLineContext.status,
             candidateLineIds: sharedLineContext.candidateLineIds,
             memoryIds: memories.map((memory) => memory.id),
-            inboxIds: inboxItems.map((item) => item.id)
+            inboxIds: inboxItems.map((item) => item.id),
+            inboxSources: inboxItems.map((item) => item.source),
+            generationSource: generated.source,
+            generationTier: generated.tier,
+            shareNoveltyText: noveltyText,
+            shareDecision
           })}
         );
     
         INSERT INTO innerlife_thoughts (id, event_id, body, review_status)
         VALUES (${sqlString(thoughtId)}, ${sqlString(eventId)}, ${sqlString(body)}, 'unreviewed');
-    
+
         INSERT INTO innerlife_shares (id, agent_id, thought_id, status, body)
-        VALUES (${sqlString(shareId)}, ${sqlString(profile.agent_id)}, ${sqlString(thoughtId)}, 'pending', ${sqlString(body)});
+        SELECT ${sqlString(shareId)}, ${sqlString(profile.agent_id)}, ${sqlString(thoughtId)}, 'pending', ${sqlString(body)}
+        WHERE ${sqlString(shareDecision.create ? "1" : "0")} = '1';
       `);
       if (inboxItems.length > 0) {
         await this.exec(`
@@ -785,16 +811,19 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
           WHERE id IN (${inboxItems.map((item) => sqlString(item.id)).join(", ")});
         `);
       }
-      const convergence = await this.convergeInnerLife({
-        agentId: profile.agent_id,
-        sourceThoughtId: thoughtId,
-        automated: true,
-        reason: "process"
-      });
+      const convergence = shareDecision.create
+        ? await this.convergeInnerLife({
+            agentId: profile.agent_id,
+            sourceThoughtId: thoughtId,
+            automated: true,
+            reason: "process"
+          })
+        : null;
       return {
         eventId,
         thoughtId,
-        share: await this.getInnerLifeShare(shareId),
+        share: shareDecision.create ? await this.getInnerLifeShare(shareId) : null,
+        shareDecision,
         convergence,
         sharedLineContext,
         snapshot: await this.getInnerLifeSnapshotLite(profile.agent_id)

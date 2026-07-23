@@ -19,6 +19,10 @@ Desktop currently owns:
 - Autonomous exploration and convergence into waiting share candidates.
 - Internal change history, formed experiences, and stable summaries.
 - Pending share lifecycle records.
+- Context-only continuity digestion: continuity updates may shape thoughts but
+  do not create proactive share candidates by themselves.
+- Share novelty checks: semantically similar pending/recently used thoughts are
+  reused instead of adding another waiting copy of the same theme.
 - Share timing checks against current context.
 - Daemon enable/pause/tick state, scheduler behavior, and recovery doctor.
 - Backup-gated copy import from the old InnerLife v2 database.
@@ -46,6 +50,16 @@ unreachable model produces a clearly tagged waiting share instead of breaking
 the daemon tick or session lifecycle. The model client supports `ollama`
 (`/api/chat`) and `openai-compatible` (`/v1/chat/completions`) providers, reusing
 the same secret-ref pattern as Memory embeddings (`innerlife.llm.api_key`).
+
+The process-once path treats `continuity` inbox rows as context rather than a
+reason to speak, and it does not create a candidate when both inbox and operator
+prompt are empty. Ending a session without a summary closes the session without
+inventing an afterthought. A model may also return `[NO_SHARE]` when the material
+contains no distinct judgment, question, synthesis, or personal perspective;
+session afterthought workers honor the same sentinel and novelty filter. These
+paths still preserve an auditable event (and a thought when digestion actually
+ran). For actual share candidates, a token-based novelty check suppresses close
+matches against active shares and shares delivered during the previous 30 days.
 
 The Desktop InnerLife page is intentionally inspect-oriented. Agents create and
 update InnerLife state through Gateway MCP or CLI fallback. Humans can inspect

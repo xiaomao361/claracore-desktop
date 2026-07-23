@@ -281,7 +281,10 @@ async function main() {
     throw new Error(`InnerLife digest counts are wrong: ${JSON.stringify(digest.snapshot.counts)}`);
   }
 
-  const secondRun = await runtime.processProductInnerLifeOnce(app, { agentId: "my-agent" });
+  const secondRun = await runtime.processProductInnerLifeOnce(app, {
+    agentId: "my-agent",
+    prompt: "Create a distinct review candidate for Shared Line timing validation."
+  });
   if (!secondRun.share?.id) throw new Error("Second InnerLife process once did not create a pending share.");
   const implicitLineCheck = await runtime.checkProductInnerLifeShareTiming(app, {
     agentId: "my-agent",

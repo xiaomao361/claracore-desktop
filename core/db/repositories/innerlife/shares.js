@@ -1,3 +1,5 @@
+const { innerLifeShareSimilarity } = require("../../../innerlife/policy");
+
 function createInnerLifeShareRepository(helpers) {
   const {
     DEFAULT_AGENT_ID,
@@ -75,6 +77,47 @@ function createInnerLifeShareRepository(helpers) {
   }
 
   return {
+    async findSimilarInnerLifeShare(agentId, body, input = {}) {
+      const safeAgentId = String(agentId || "").trim();
+      const candidate = String(body || "").trim();
+      if (!safeAgentId || !candidate) return null;
+      const threshold = Math.max(0.1, Math.min(1, Number(input.threshold) || 0.42));
+      const limit = Math.max(1, Math.min(300, Number.parseInt(String(input.limit || 200), 10) || 200));
+      const excludeId = String(input.excludeId || input.exclude_id || "").trim();
+      const rows = await this.query(`
+        SELECT
+          s.id,
+          s.status,
+          s.body,
+          s.updated_at,
+          COALESCE(json_extract(e.metadata_json, '$.shareNoveltyText'), s.body) AS novelty_text
+        FROM innerlife_shares s
+        LEFT JOIN innerlife_thoughts t ON t.id = s.thought_id
+        LEFT JOIN innerlife_events e ON e.id = t.event_id
+        WHERE s.agent_id = ${sqlString(safeAgentId)}
+          AND (${sqlString(excludeId)} = '' OR s.id != ${sqlString(excludeId)})
+          AND (
+            s.status IN ('pending', 'approved', 'deferred')
+            OR (s.status = 'used' AND datetime(s.updated_at) >= datetime('now', '-30 days'))
+          )
+        ORDER BY s.updated_at DESC, s.created_at DESC
+        LIMIT ${limit};
+      `);
+      let best = null;
+      for (const row of rows) {
+        const score = innerLifeShareSimilarity(candidate, row.novelty_text || row.body);
+        if (score < threshold || (best && best.similarity >= score)) continue;
+        best = {
+          id: row.id,
+          status: row.status,
+          body: row.body || "",
+          updatedAt: row.updated_at,
+          similarity: score
+        };
+      }
+      return best;
+    },
+
     async listInnerLifeShares(status = "pending", limit = 20, agentId = "all") {
       const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 20));
       const statusFilter = String(status || "pending").trim();

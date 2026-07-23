@@ -2,7 +2,8 @@ const {
   IL_SYSTEM,
   compactSession,
   compactShare,
-  generateOrTemplate
+  generateOrTemplate,
+  isNoShareInnerLifeOutput
 } = require("../../../innerlife/policy");
 
 function normalizeSessionSummary(value) {
@@ -267,6 +268,37 @@ function createInnerLifeSessionRepository(helpers) {
       const thoughtId = newId("inner_thought");
       const shareId = newId("inner_share");
       const inboxId = newId("inner_inbox");
+      if (!summary) {
+        await this.exec(`
+          UPDATE innerlife_sessions
+          SET status = 'ended',
+              ended_at = CURRENT_TIMESTAMP,
+              summary = ''
+          WHERE id = ${sqlString(id)};
+
+          INSERT INTO innerlife_events (id, agent_id, kind, body, status, metadata_json)
+          VALUES (
+            ${sqlString(eventId)},
+            ${sqlString(session.agent_id)},
+            'session_end',
+            'Session ended without a summary.',
+            'processed',
+            ${jsonSql({ sessionId: id, shareDecision: { create: false, reason: "empty_session_summary" } })}
+          );
+        `);
+        const { briefing: _briefing, ...endedSession } = (await this.getInnerLifeSession(id)) || {};
+        return {
+          session: endedSession,
+          inboxId: null,
+          eventId,
+          thoughtId: null,
+          share: null,
+          shareDecision: { create: false, reason: "empty_session_summary" },
+          afterthoughtJob: null,
+          converged: false,
+          convergenceReason: "empty_session_summary"
+        };
+      }
       const template = [
         "Session afterthought",
         "",
@@ -369,6 +401,15 @@ function createInnerLifeSessionRepository(helpers) {
               prompt: template,
               template
             });
+            const noShareOutput = isNoShareInnerLifeOutput(generated.body);
+            const duplicate = noShareOutput
+              ? null
+              : await this.findSimilarInnerLifeShare(row.agent_id, generated.body, { excludeId: metadata.shareId });
+            const shareDecision = noShareOutput
+              ? { create: false, reason: "model_no_share" }
+              : duplicate
+                ? { create: false, reason: "similar_share_exists", duplicateOf: duplicate.id, similarity: duplicate.similarity }
+                : { create: true, reason: "distinct_shareable_thought" };
             await this.exec(`
               UPDATE innerlife_thoughts
               SET body = ${sqlString(generated.body)}
@@ -376,10 +417,13 @@ function createInnerLifeSessionRepository(helpers) {
 
               UPDATE innerlife_shares
               SET body = ${sqlString(generated.body)},
+                  status = ${sqlString(shareDecision.create ? share.status : "discarded")},
+                  decision_reason = ${sqlString(shareDecision.create ? (share.decision_reason || "") : `Automatic quality filter: ${shareDecision.reason}`)},
                   updated_at = CURRENT_TIMESTAMP
               WHERE id = ${sqlString(metadata.shareId)}
                 AND status IN ('pending', 'approved', 'deferred');
             `);
+            metadata.shareDecision = shareDecision;
           }
           await this.exec(`
             UPDATE innerlife_inbox
@@ -394,12 +438,14 @@ function createInnerLifeSessionRepository(helpers) {
             WHERE id = ${sqlString(row.id)}
               AND status = 'processing';
           `);
-          const convergence = await this.convergeInnerLife({
-            agentId: row.agent_id,
-            sourceThoughtId: metadata.thoughtId,
-            automated: true,
-            reason: "session_end"
-          });
+          const convergence = metadata.shareDecision?.create === false
+            ? null
+            : await this.convergeInnerLife({
+                agentId: row.agent_id,
+                sourceThoughtId: metadata.thoughtId,
+                automated: true,
+                reason: "session_end"
+              });
           results.push({
             id: row.id,
             ok: true,
