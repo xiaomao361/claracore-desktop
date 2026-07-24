@@ -3,7 +3,7 @@
 ## Status
 
 - Decision date: 2026-07-23
-- Status: Multi-Agent pull-mode Gateway canary foundation implemented and validated in source; automatic host injection and feedback not started
+- Status: Multi-Agent pull-mode Gateway canary and bounded Codex host injection implemented and validated; delivery/usage feedback not started
 - Target repository: `/Users/zhouwei/Documents/ClaraCore/apps/claracore-desktop`
 - Current development version: `0.6.4`
 - Current public stable version: `0.6.3`
@@ -11,38 +11,36 @@
 
 This handoff defines the next smallest verified loop for turning the existing
 observe-only Memory Controller into a trusted Agent context layer. Source
-support now covers every authenticated Agent, but this does not authorize a
-public release, push, deployment, live canary enablement, or automatic Memory
-mutation.
+support now covers every authenticated Agent, and the owner-installed live
+canary has been validated for Codex and Clara. This does not authorize a public
+release, deployment, or automatic Memory mutation.
 
 ## Working Tree Boundary
 
-At handoff creation, `main` was ahead of `origin/main` by two commits and had
-existing uncommitted work. The current implementation continues on that
-uncommitted checkpoint; preserve the original changes:
+At this closeout start, `main` and `origin/main` both pointed to
+`9d4759c3e8ba1dd9593b66a6e7852ad4889057d7`. The intended checkpoint contains
+only:
 
-- `core/runtime/snapshot.js`
-- `core/tests/trace-ui-smoke.js`
+- `core/memory-controller/controller.js`
+- `core/memory-controller/README.md`
+- `core/tests/memory-controller-gateway-smoke.js`
+- `docs/MEMORY_CONTROLLER_CANARY_HANDOFF.md`
 - `docs/RELEASE_NOTES_V0.6.4.md`
-- `docs/mac-packaging.md`
 
-The trusted-context implementation adds its own bounded changes under
-`core/memory-controller`, `core/gateway`, Settings/Agent Access, tests, and
-these docs. These files form one closeout checkpoint; packaging, installation,
-live enablement, and release remain separate later actions.
+The global Codex hook is user-level integration outside this repository, so
+the source commit cannot distribute it with the Desktop App.
 
-Those changes fix the Trace Memory Controller mode display and record the local
-`0.6.4` Lite package validation. Do not revert, overwrite, or silently fold
-them into unrelated work.
-
-The validated local owner-installation artifact is:
+The validated owner installation is:
 
 ```text
-dist-lite/mac-arm64/ClaraCore Desktop.app
+/Applications/ClaraCore Desktop.app
 ```
 
-It is an unsigned arm64 Lite App, approximately 293 MiB. It is not a DMG,
-GitHub Release, update-channel artifact, or public stable release.
+It is an unsigned arm64 Lite App, approximately 293 MiB, with packaged
+`app.asar` SHA-256
+`8ab012e13fcd3affadad8b263be1eb32dbc62b8f1bcc3ef5d86e7b6fb8bd9833`.
+It is not a DMG, GitHub Release, update-channel artifact, or public stable
+release.
 
 ## Product Outcome
 
@@ -137,9 +135,11 @@ Most of the deterministic core already exists:
   - does not expose `memory_context_feedback`.
 - `/Users/zhouwei/.codex/hooks/claracore-desktop/hook.mjs`
   - calls `memory_context` on every non-empty `UserPromptSubmit`;
-  - records the decision but deliberately ignores the returned Memory context;
-  - already has an `additionalContext` output path suitable for bounded
-    delivery.
+  - appends the returned bounded context to `additionalContext` only when the
+    Gateway call succeeds with `policyMode=canary`, `action=INJECT_TOP1`, and a
+    non-empty context;
+  - records only bounded decision metadata and does not infer delivery or
+    usage feedback.
 
 Do not duplicate policy, ranking, thresholds, or eligibility checks in the
 Codex hook. The Desktop Controller remains the only retrieval-control owner.
@@ -218,7 +218,7 @@ leave usage `unknown`; do not synthesize evidence from intent or planned text.
 
 ## Recommended Implementation Slices
 
-### Slice A: effective canary mode — implemented locally
+### Slice A: effective canary mode — implemented and owner-validated
 
 Add one persisted, inspectable configuration boundary for a canary with an
 explicit Agent allowlist.
@@ -236,7 +236,7 @@ Required behavior:
 Keep the wildcard inside the explicit allowlist contract rather than bypassing
 Gateway identity, Stage A, Stage B, or Controller policy.
 
-### Slice B: Gateway context delivery — implemented locally
+### Slice B: Gateway context delivery — implemented and owner-validated
 
 Allow `memory_context` to pass through the Controller's context only when all
 of these are true:
@@ -250,10 +250,10 @@ of these are true:
 
 Every other path returns an empty context.
 
-### Slice C: Codex hook injection — not started
+### Slice C: Codex hook injection — implemented and validated
 
-Update the Codex `UserPromptSubmit` path to append the returned bounded context
-to `additionalContext` only for a valid canary packet.
+The Codex `UserPromptSubmit` path appends the returned bounded context to
+`additionalContext` only for a valid canary packet.
 
 The hook must:
 
@@ -265,8 +265,21 @@ The hook must:
   also present;
 - log only bounded ids/action/reason, not private Memory bodies.
 
-Use an isolated hook state directory and temporary Desktop data root for smoke
-tests. Do not test against the live product database.
+The implementation was validated with an isolated hook state directory against
+the explicitly enabled live canary Gateway: a high-confidence prompt produced
+one read-only context block, while an ordinary current-turn prompt produced no
+Memory block. The validation did not submit feedback or mutate semantic Memory
+state.
+
+Installed-runtime acceptance also proved:
+
+- Codex injected the expected same-Agent stable-release Memory at score
+  `0.7694336107196864`;
+- an ordinary Codex prompt remained `NOOP` with no context;
+- Clara injected the expected same-Agent `product-decision` Memory at score
+  `0.7887356419240835`;
+- the global Codex hook emitted exactly one read-only block for the hit and no
+  Memory block for the miss.
 
 ### Slice D: feedback and delivery evidence — not started
 
@@ -397,9 +410,8 @@ Use this in the next development session:
 - core/memory-controller/README.md
 - 当前 git status 和现有未提交改动
 
-Gateway multi-Agent pull-mode canary foundation 已完成并已收口。下一轮先证明
-Codex Stop/response-completion
-payload 是否可靠包含最终回答与当前 decision id；在这个证据成立前，不要实现
-used/wrong/corrected 自动反馈。仍不要启用 live canary、不要打包或发布。若证据
-不足，只允许设计 delivered/outcome_unknown 的保守路径。
+Gateway multi-Agent pull-mode canary、owner live canary 和 Codex hook 注入已完成
+并验证。下一轮先证明 Codex Stop/response-completion payload 是否可靠包含最终
+回答与当前 decision id；在这个证据成立前，不要实现 used/wrong/corrected 自动
+反馈。不要发布；若证据不足，只允许设计 delivered/outcome_unknown 的保守路径。
 ```

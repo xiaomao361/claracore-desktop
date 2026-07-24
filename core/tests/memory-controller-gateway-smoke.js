@@ -59,6 +59,13 @@ async function main() {
     agentId: "lara",
     labels: ["decision", "project:claracore-desktop"]
   });
+  const productDecisionPrompt = "还记得我们之前确认的 product decision canary 吗";
+  const productDecisionMemory = await runtime.createProductMemory(app, {
+    title: "Clara Product Decision Canary",
+    body: `${productDecisionPrompt}\nCLARA_PRODUCT_DECISION_CONTEXT`,
+    agentId: "clara",
+    labels: ["product-decision", "claracore-desktop"]
+  });
   const { paths, database } = await runtime.ensureProductCore(app);
   const semanticBefore = await semanticFingerprint(database);
   let caller = {
@@ -161,7 +168,9 @@ async function main() {
   database.searchMemories = async (_prompt, _limit, searchOptions = {}) => {
     const trustedMemory = searchOptions.agentId === "lara"
       ? laraTrustedCanaryMemory
-      : trustedCanaryMemory;
+      : searchOptions.agentId === "clara"
+        ? productDecisionMemory
+        : trustedCanaryMemory;
     return {
       mode: "vector",
       results: [{
@@ -201,6 +210,21 @@ async function main() {
   assert.deepEqual(
     (await database.getMemoryControlEvent(allAgentsCanary.decisionId)).injectedIds,
     [laraTrustedCanaryMemory.id]
+  );
+
+  caller = { ...caller, agentId: "clara", conversationId: "product-decision-canary-caller" };
+  const productDecisionCanary = parseResult(await callToolBody("memory_context", {
+    prompt: productDecisionPrompt
+  }, paths, database));
+  assert.equal(productDecisionCanary.action, "INJECT_TOP1");
+  assert.equal(productDecisionCanary.policyMode, "canary");
+  assert.equal(productDecisionCanary.canaryEligible, true);
+  assert.ok(productDecisionCanary.context.includes(productDecisionMemory.id));
+  assert.ok(!productDecisionCanary.context.includes(trustedCanaryMemory.id), "Product-decision canary crossed Codex Agent scope.");
+  assert.ok(!productDecisionCanary.context.includes(laraTrustedCanaryMemory.id), "Product-decision canary crossed Lara Agent scope.");
+  assert.deepEqual(
+    (await database.getMemoryControlEvent(productDecisionCanary.decisionId)).injectedIds,
+    [productDecisionMemory.id]
   );
 
   await runtime.saveProductSettings(app, {
@@ -250,6 +274,8 @@ async function main() {
     canaryContext: canary.action,
     allAgentsCanary: allAgentsCanary.action,
     allAgentsScopedMemory: laraTrustedCanaryMemory.id,
+    productDecisionCanary: productDecisionCanary.action,
+    productDecisionScopedMemory: productDecisionMemory.id,
     nonAllowlistedMode: nonAllowlisted.policyMode,
     historicalMode: historical.policyMode,
     invalidAllowlist: invalidAllowlist.reason,

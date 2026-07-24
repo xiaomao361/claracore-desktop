@@ -6,7 +6,12 @@ const { ACTIONS: STAGE_B_ACTIONS, evaluateStageB, formatMemoryContext } = requir
 const CONTROLLER_POLICY_VERSION = "memory-controller-v1";
 const HARD_TIMEOUT_MS = 2500;
 const POLICY_MODES = new Set(["off", "observe", "canary"]);
-const CANARY_ALLOWED_LABELS = new Set(["engineering-experience", "knowledge-card", "knowledge-card-pointer"]);
+const CANARY_ALLOWED_LABELS = new Set([
+  "engineering-experience",
+  "knowledge-card",
+  "knowledge-card-pointer",
+  "product-decision"
+]);
 const CANARY_BLOCKED_LABELS = new Set(["affective", "intimate", "personal-preference", "relationship"]);
 
 class ControllerTimeoutError extends Error {

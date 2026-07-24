@@ -64,9 +64,9 @@ defaults to one Memory and 600 estimated tokens; callers may request up to the
 900-token hard cap. Observe mode records the prospective Stage B action but
 returns an empty context and no injected ids. Trusted canary uses a separate
 cache scope, accepts only current, normal-sensitivity, same-Agent project
-decisions, engineering experience, or knowledge-card pointers, and returns at
-most one candidate. Its read-only block includes both the fresh decision id and
-selected Memory id.
+decisions (`decision` plus project scope or `product-decision`), engineering
+experience, or knowledge-card pointers, and returns at most one candidate. Its
+read-only block includes both the fresh decision id and selected Memory id.
 
 Ledger retention scans and deletes in batches of 500. Age policy may expire
 feedback-bearing decisions only after the longer feedback retention window;
