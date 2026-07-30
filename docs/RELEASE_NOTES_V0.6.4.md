@@ -1,14 +1,26 @@
-# ClaraCore Desktop v0.6.4 Development Notes
+# ClaraCore Desktop v0.6.4 Release Notes
 
 ## Status
 
-`0.6.4` is the current unreleased development version. The current public
-stable release remains `v0.6.3`.
+`v0.6.4` is the current public stable GitHub Release. Tag `v0.6.4` points to
+commit `c2d91b9acc247989b9259e55ec3cec9faaf804b3`.
 
-An unsigned macOS arm64 Lite App was built and owner-installed at
-`/Applications/ClaraCore Desktop.app`. Its packaged `app.asar` SHA-256 is
-`8ab012e13fcd3affadad8b263be1eb32dbc62b8f1bcc3ef5d86e7b6fb8bd9833`.
-There is no `0.6.4` DMG, tag, GitHub Release, or update-channel entry yet.
+Release:
+<https://github.com/xiaomao361/claracore-desktop/releases/tag/v0.6.4>
+
+The Release contains six assets:
+
+- `ClaraCore-Desktop-0.6.4-arm64.dmg` — macOS Apple Silicon Full
+- `ClaraCore-Desktop-0.6.4-lite-arm64.dmg` — macOS Apple Silicon Lite
+- `ClaraCore-Desktop-0.6.4-x64-Setup.exe` — Windows x64 Full
+- `ClaraCore-Desktop-0.6.4-lite-x64-Setup.exe` — Windows x64 Lite
+- `SHA256SUMS.txt` — macOS checksums
+- `SHA256SUMS-windows.txt` — Windows checksums
+
+Both macOS DMGs contain Developer ID signed, Hardened Runtime apps and have
+accepted Apple notarization tickets stapled to the final disk images. The
+Windows installers are currently unsigned and may show an unknown-publisher or
+SmartScreen warning.
 
 ## InnerLife Share Quality
 
@@ -72,6 +84,12 @@ There is no `0.6.4` DMG, tag, GitHub Release, or update-channel entry yet.
 - packaged Lite Trace UI smoke, including the observe-mode status
 - packaged stdio Gateway smoke, including Controller default-off and version
   `0.6.4`
+- Developer ID signature, Hardened Runtime, and deep strict signature
+  validation for the packaged Lite App
+- accepted and stapled App notarization ticket, plus Gatekeeper execution
+  acceptance as `Notarized Developer ID`
+- Full and Lite final DMG integrity, signature, stapler, and Gatekeeper
+  verification
 - owner-installed live Gateway connectivity and packaged identity
 - live Codex canary: the expected same-Agent stable-release Memory was injected
   at score `0.7694336107196864`; an ordinary prompt remained `NOOP`
@@ -84,17 +102,28 @@ The quality fix was also installed locally as a same-version `0.6.3` test build
 before this version bump. That local installation was validation evidence, not
 a `0.6.4` release artifact.
 
-The current `0.6.4` Lite App is about 293.0 MiB, reports arm64 and Lite flavor,
-and excludes the built-in embedding model and dependency closure.
+The current `0.6.4` Lite packages exclude the built-in embedding model and its
+dependency closure. Full packages include the built-in model resources.
 
-## Remaining Release Work
+## Release Artifact Verification
 
-Current recommendation: keep `0.6.4` as an unreleased development checkpoint
-until the automatic host integration has an intentional distribution story and
-delivery/usage evidence has a conservative product contract. Releasing now
-would publish the pull-mode Gateway and canary configuration, but not the
-owner-tested automatic Codex experience.
+- macOS Full SHA-256:
+  `301b38d797b31aa8464bcbbe40a46a9d4bfbe62e1001ab2ad60db6608f102e58`
+- macOS Lite SHA-256:
+  `8b13c35fc1c3743d548c8c663a45081089c609df6dcdb5f85e570a50144f3eb1`
+- Windows Full SHA-256:
+  `39a8ebc70f62767da6645ed8866d6e1d3dd70811a0beed481ccb1241456f23db`
+- Windows Lite SHA-256:
+  `db1e2d4245a79f99aeefe3d2f45917028b13f10e7803f34551e907e1f3c14326`
+- The macOS assets were downloaded back from the public Release and passed
+  checksum, `codesign`, stapler, and Gatekeeper verification.
+- Windows GitHub Actions run `30503828638` passed the source checks, Full
+  packaged embedding test, Lite package-boundary test, and checksum generation.
+- Both Windows installers were downloaded back from the public Release and
+  passed SHA-256 verification.
 
-Before publishing `v0.6.4`, build and validate a fresh Lite DMG from the final
-committed source, generate release checksums, and explicitly authorize the tag,
-push, and GitHub Release. Publication is not part of this checkpoint.
+## Remaining Distribution Risk
+
+The Windows x64 installers do not yet carry an Authenticode signature. Windows
+code signing is separate from the Apple Developer ID certificate used for the
+macOS artifacts.

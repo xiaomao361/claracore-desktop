@@ -23,11 +23,10 @@ instructions.
 - [Memory Controller Canary Handoff](MEMORY_CONTROLLER_CANARY_HANDOFF.md):
   confirmed authenticated multi-Agent trusted-context boundary, implementation slices,
   evidence contract, and first-canary acceptance.
-- [v0.6.4 Development Notes](RELEASE_NOTES_V0.6.4.md): current unreleased
-  InnerLife share-quality and Trace truth checkpoint; a local Lite App exists,
-  but there is no DMG or public release.
-- [v0.6.3 Release Notes](RELEASE_NOTES_V0.6.3.md): current small-audience
-  stable release, validation, and distribution boundary.
+- [v0.6.4 Release Notes](RELEASE_NOTES_V0.6.4.md): current stable macOS Apple
+  Silicon and Windows x64 Full/Lite release.
+- [v0.6.3 Release Notes](RELEASE_NOTES_V0.6.3.md): previous small-audience
+  release and validation boundary.
 - [Hermes v0.6.2 Update](HERMES_V0.6.2_UPDATE.md): copy-ready Lara/Hermes
   reconnect, Memory Controller, lifecycle, and overload contract.
 - [v0.6.2 Performance Hardening](V0.6.2_PERFORMANCE_HARDENING_PLAN.md):
@@ -49,10 +48,10 @@ instructions.
 
 - [macOS Packaging](mac-packaging.md): current Full/Lite packaging commands and
   packaged Gateway checks.
-- [v0.6.4 Development Notes](RELEASE_NOTES_V0.6.4.md): current development
-  version and remaining release work.
-- [v0.6.3 Release Notes](RELEASE_NOTES_V0.6.3.md): current stable GitHub
-  Release for unsigned macOS arm64 Lite.
+- [v0.6.4 Release Notes](RELEASE_NOTES_V0.6.4.md): current stable GitHub
+  Release for macOS Apple Silicon and Windows x64.
+- [v0.6.3 Release Notes](RELEASE_NOTES_V0.6.3.md): previous GitHub Release for
+  unsigned macOS arm64 Lite.
 - [v0.5.8 Release Notes](RELEASE_NOTES_V0.5.8.md): previous cross-platform
   public release.
 
