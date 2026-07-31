@@ -139,14 +139,15 @@ session throws.
 line only by supplying its exact `lineId`. That explicit write records
 `writerAgentId` but does not transfer ownership.
 
-Before reading or writing a Shared Line:
+For a resume read:
 
-1. Call `shared_line_list` with `status: "active"`.
-2. If more than one active line is returned, select the intended line.
-3. Pass its `lineId` to `gateway_context`, `shared_line_get`, and
-   `shared_line_update`.
-4. If `SHARED_LINE_ID_REQUIRED` is returned, no write occurred. Select a
-   candidate and retry.
+1. Call `gateway_context` without `lineId`.
+2. If `SHARED_LINE_ID_REQUIRED` is returned, select one of its candidates and
+   retry with that explicit `lineId`.
+
+Before a write, call `shared_line_list` with `status: "active"`, select the
+intended line when more than one is present, and pass its `lineId` to
+`shared_line_update`. `shared_line_list` remains the full catalog operation.
 
 Do not guess the line from recency or summary text.
 

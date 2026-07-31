@@ -142,7 +142,7 @@ async function main() {
     const setup = await setupResponse.json();
     assert.deepStrictEqual(
       setup.firstCalls.map((item) => item.match(/claracore_connection_test|gateway_docs|shared_line_list|gateway_context/)?.[0]),
-      ["claracore_connection_test", "gateway_docs", "shared_line_list", "gateway_context"],
+      ["claracore_connection_test", "gateway_docs", "gateway_context"],
       "Agent setup should expose the canonical first-connection sequence"
     );
     assert.deepStrictEqual(Object.keys(setup.capabilities), ["memory", "sharedLine", "innerLife", "gateway"]);
@@ -212,7 +212,7 @@ async function main() {
     });
     assert(called.result.content[0].text.includes("claracore-desktop"), "tool response should mention product");
     const connectionPacket = JSON.parse(called.result.content[0].text);
-    assert.deepStrictEqual(connectionPacket.nextCalls, ["gateway_docs", "shared_line_list", "gateway_context"]);
+    assert.deepStrictEqual(connectionPacket.nextCalls, ["gateway_docs", "gateway_context"]);
     assert(connectionPacket.afterOnboarding.includes("Tell the user"));
     const contentBeforeOnboarding = await database.getSummary();
     const docsCall = await postMcp({

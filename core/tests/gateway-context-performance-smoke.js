@@ -49,13 +49,56 @@ async function main() {
     const p95Ms = percentile(durations, 0.95);
     const maxQueryCalls = Math.max(...calls);
 
-    assert(maxQueryCalls <= 25, `Gateway context exceeded 25 SQL reads: ${maxQueryCalls}`);
+    assert(maxQueryCalls <= 20, `Gateway context exceeded 20 SQL reads: ${maxQueryCalls}`);
     assert(p95Ms <= 100, `Gateway context p95 exceeded 100 ms: ${p95Ms}`);
     assert.strictEqual(before, after, "Gateway context mutated domain tables.");
+
+    await database.exec(`
+      INSERT INTO continuity_lines (id, agent_id, title, status)
+      VALUES
+        ('line_ambiguous_a', 'agent-ambiguous', 'Ambiguous A', 'active'),
+        ('line_ambiguous_b', 'agent-ambiguous', 'Ambiguous B', 'active');
+    `);
+    const unrelatedReadMethods = [
+      "listMemories",
+      "getInnerLifeSnapshotLite",
+      "listInnerLifeInboxForAgent",
+      "listInnerLifeShares",
+      "listInnerLifeRecentThoughts"
+    ];
+    const originalMethods = new Map();
+    const unrelatedReads = [];
+    for (const method of unrelatedReadMethods) {
+      originalMethods.set(method, database[method]);
+      database[method] = async (...args) => {
+        unrelatedReads.push(method);
+        return originalMethods.get(method).apply(database, args);
+      };
+    }
+    let ambiguousQueryCalls = 0;
+    database.query = async (sql) => {
+      ambiguousQueryCalls += 1;
+      return query(sql);
+    };
+    let ambiguityError = null;
+    try {
+      await database.getGatewayContext({ agentId: "agent-ambiguous", limit: 5 });
+    } catch (error) {
+      ambiguityError = error;
+    } finally {
+      database.query = query;
+      for (const [method, original] of originalMethods) database[method] = original;
+    }
+    assert(ambiguityError?.message.includes("SHARED_LINE_ID_REQUIRED"), "Ambiguous Gateway context did not fail closed.");
+    assert(ambiguityError.message.includes("line_ambiguous_a") && ambiguityError.message.includes("line_ambiguous_b"));
+    assert.deepStrictEqual(unrelatedReads, [], `Ambiguous Gateway context started unrelated reads: ${unrelatedReads.join(", ")}`);
+    assert.strictEqual(ambiguousQueryCalls, 1, `Ambiguous Gateway context should fail after one SQL read: ${ambiguousQueryCalls}`);
+
     process.stdout.write(`${JSON.stringify({
       suite: "gateway-context-performance-smoke",
       samples: durations.length,
       maxQueryCalls,
+      ambiguousQueryCalls,
       p95Ms: Math.round(p95Ms * 1000) / 1000,
       preChangeReferenceQueryCalls: 51,
       queryReductionPercent: Math.round((1 - maxQueryCalls / 51) * 1000) / 10

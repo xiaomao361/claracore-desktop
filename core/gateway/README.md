@@ -49,7 +49,8 @@ fallback when MCP is unavailable.
   `--gateway` processes, before trusting new traces.
 - Use `agent_identity_merge` to consolidate data after renaming an agent id.
 - First connection order is `claracore_connection_test` -> `gateway_docs` ->
-  `shared_line_list(status=active)` -> `gateway_context(lineId when needed)`.
+  `gateway_context`. Start without `lineId`; if multiple Agent-owned lines make
+  the read ambiguous, choose a returned candidate and retry explicitly.
   After reading context, the agent proactively explains ClaraCore's useful
   capabilities and the actual resumable context to the user.
 
@@ -134,13 +135,15 @@ fallback config from Agent Access.
   the current conversation.
 - Fully quit and restart Claude Desktop after config or identity changes so the
   stdio Gateway process is relaunched.
-- Verify with `claracore_connection_test`, read `gateway_docs`, list active
-  Shared Lines, then read `gateway_context` with `lineId` when needed.
+- Verify with `claracore_connection_test`, read `gateway_docs`, then call
+  `gateway_context` without `lineId`. Retry with a returned candidate only when
+  the read reports `SHARED_LINE_ID_REQUIRED`.
 
 ## Shared Line Rules
 
 - `lineId` values are real `continuity_lines.id` values. Agents should get them
-  from `shared_line_list`; names such as `lara_love` are not implicit aliases.
+  from `SHARED_LINE_ID_REQUIRED` candidates or `shared_line_list`; names such
+  as `lara_love` are not implicit aliases.
 - `shared_line_update` writes the requested `lineId` when provided. Without
   `lineId`, it writes the caller agent's own active line using the transport
   identity (`X-ClaraCore-Agent-ID` for Streamable HTTP, `CLARACORE_AGENT_ID` for

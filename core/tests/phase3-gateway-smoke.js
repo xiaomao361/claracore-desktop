@@ -48,7 +48,8 @@ async function main() {
       !docsText.includes("shared_line_create") ||
       !docsText.includes("shared_line_archive") ||
       !docsText.includes("SHARED_LINE_ID_REQUIRED") ||
-      !docsText.includes("shared_line_list with status=active")
+      !docsText.includes("shared_line_list with status=active") ||
+      !docsText.includes("Call gateway_context without lineId")
     ) {
       throw new Error("Gateway docs do not include Shared Line tools.");
     }
@@ -205,6 +206,42 @@ async function main() {
         makeActive: false
       })
     ).line;
+    await ambiguityClient.callTool("shared_line_update", {
+      lineId: ambiguousLineA.id,
+      summary: "Ambiguous context candidate A."
+    });
+    await ambiguityClient.callTool("shared_line_update", {
+      lineId: ambiguousLineB.id,
+      summary: "Ambiguous context candidate B."
+    });
+    let ambiguityContextMessage = "";
+    try {
+      await ambiguityClient.callTool("gateway_context");
+    } catch (error) {
+      ambiguityContextMessage = String(error.message || "");
+    }
+    for (const expected of [
+      "SHARED_LINE_ID_REQUIRED",
+      ambiguousLineA.id,
+      ambiguousLineA.title,
+      "Ambiguous context candidate A.",
+      ambiguousLineB.id,
+      ambiguousLineB.title,
+      "Ambiguous context candidate B."
+    ]) {
+      if (!ambiguityContextMessage.includes(expected)) {
+        throw new Error(`Gateway context ambiguity did not return actionable candidates: ${ambiguityContextMessage}`);
+      }
+    }
+    const explicitGatewayContext = parseTextResult(
+      await ambiguityClient.callTool("gateway_context", { lineId: ambiguousLineB.id })
+    );
+    if (
+      explicitGatewayContext.sharedLine?.lineId !== ambiguousLineB.id ||
+      explicitGatewayContext.sharedLine?.currentPosition?.summary !== "Ambiguous context candidate B."
+    ) {
+      throw new Error(`Gateway context explicit retry selected the wrong line: ${JSON.stringify(explicitGatewayContext.sharedLine)}`);
+    }
     let ambiguityMessage = "";
     try {
       await ambiguityClient.callTool("shared_line_update", {

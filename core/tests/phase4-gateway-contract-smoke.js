@@ -175,7 +175,7 @@ async function main() {
     }
     const connection = parseTextResult(await client.callTool("claracore_connection_test"));
     if (
-      JSON.stringify(connection.nextCalls) !== JSON.stringify(["gateway_docs", "shared_line_list", "gateway_context"]) ||
+      JSON.stringify(connection.nextCalls) !== JSON.stringify(["gateway_docs", "gateway_context"]) ||
       !connection.afterOnboarding?.includes("Tell the user")
     ) {
       throw new Error(`Connection test onboarding contract drifted: ${JSON.stringify(connection)}`);

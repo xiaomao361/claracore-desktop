@@ -37,9 +37,11 @@ After MCP is installed, connected, or restarted, run this sequence:
 
 1. `claracore_connection_test`
 2. `gateway_docs`
-3. `shared_line_list` with `status: "active"`
-4. `gateway_context` with an explicit `lineId` when your agent owns multiple
-   active lines
+3. `gateway_context` without `lineId`
+
+If the context call returns `SHARED_LINE_ID_REQUIRED`, choose one of the
+returned candidates and retry with its explicit `lineId`. Use
+`shared_line_list` only when you need the full active or archived catalog.
 
 After these calls, proactively respond in the user's current language with the
 truthful connection result, ClaraCore's Memory, Shared Line, InnerLife, and
@@ -58,9 +60,9 @@ use the names listed there.
 
 ### Resume Work
 
-1. Call `shared_line_list` with `status: "active"`.
-2. If your agent owns multiple active lines, choose the intended line and pass
-   its `lineId` to `gateway_context`.
+1. Call `gateway_context` without `lineId`.
+2. If it returns `SHARED_LINE_ID_REQUIRED`, choose the intended candidate and
+   retry with its `lineId`.
 3. Read the selected Shared Line and recent Memory.
 4. Continue from the selected state instead of starting a new thread of work.
 

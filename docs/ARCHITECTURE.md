@@ -473,8 +473,11 @@ Shared Line selection is fail-closed for identified agents. A missing `lineId`
 may default only when that agent owns zero or one active non-default line. If it
 owns more than one, read/context/update calls return
 `SHARED_LINE_ID_REQUIRED` with candidate ids and perform no write. The caller
-must use `shared_line_list` and retry with an explicit `lineId`; the Gateway
-does not guess from recency or summary text.
+can choose a returned candidate and retry with an explicit `lineId`;
+`shared_line_list` is only required when the full catalog is needed or before a
+write. The Gateway does not guess from recency or summary text. Gateway Context
+resolves Shared Line before starting Memory or InnerLife reads, so an ambiguous
+request fails after the candidate lookup without doing unrelated domain work.
 
 InnerLife treats Shared Line as optional context rather than a runtime
 prerequisite. Briefing, digest, process/daemon ticks, and share timing with

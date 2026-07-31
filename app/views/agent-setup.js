@@ -41,9 +41,8 @@ After tools appear, follow this sequence exactly:
 
 1. Call \`claracore_connection_test\`.
 2. Call \`gateway_docs\` and read **First Connection** and **What ClaraCore Lets You Do**.
-3. Call \`shared_line_list\` with \`status=active\`.
-4. Call \`gateway_context\`, passing an explicit \`lineId\` when selection is required.
-5. In the user's current language, proactively report the truthful connection result, explain ClaraCore's Memory, Shared Line, InnerLife, and Gateway/diagnostics capabilities, summarize only the useful current context you actually found, offer 3-5 natural-language example requests, and suggest one evidence-backed next action when appropriate.
+3. Call \`gateway_context\` without \`lineId\`. If it returns \`SHARED_LINE_ID_REQUIRED\`, choose one of its candidates and retry with that explicit \`lineId\`.
+4. In the user's current language, proactively report the truthful connection result, explain ClaraCore's Memory, Shared Line, InnerLife, and Gateway/diagnostics capabilities, summarize only the useful current context you actually found, offer 3-5 natural-language example requests, and suggest one evidence-backed next action when appropriate.
 
 ## Current Memory Controller Contract
 

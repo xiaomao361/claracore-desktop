@@ -37,7 +37,7 @@ const systemToolDefinitions = [
   {
     "name": "gateway_context",
     "title": "Gateway Context",
-    "description": "Read one assembled agent context packet from Memory, Shared Line, InnerLife, and Doctor. Pass lineId when the identified agent owns multiple active Shared Lines; otherwise the call returns SHARED_LINE_ID_REQUIRED without guessing.",
+    "description": "Read one assembled agent context packet from Memory, Shared Line, InnerLife, and Doctor. Start without lineId; when the identified agent owns multiple active Shared Lines, the call returns SHARED_LINE_ID_REQUIRED with candidates instead of guessing. Retry with the chosen lineId.",
     "inputSchema": {
       "type": "object",
       "properties": {

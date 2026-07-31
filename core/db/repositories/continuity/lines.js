@@ -64,7 +64,8 @@ function createContinuityLineRepository(helpers) {
       .join("; ");
     const error = new Error(
       `SHARED_LINE_ID_REQUIRED: Agent "${agentId}" has multiple active Shared Lines. ` +
-        `Call shared_line_list and retry with an explicit lineId. Candidates: ${candidateText}`
+        `Choose a returned candidate and retry with its explicit lineId; call shared_line_list only when you need the full active catalog. ` +
+        `Candidates: ${candidateText}`
     );
     error.code = "SHARED_LINE_ID_REQUIRED";
     error.agentId = agentId;
@@ -154,14 +155,13 @@ function createContinuityLineRepository(helpers) {
       const agentId = String(agentIdInput || "").trim();
       if (!agentId) return null;
       if (agentId === "http-agent" || agentId === "unknown-agent") return null;
-      const activeLineId = await this.getActiveContinuityLineIdReadOnly();
       const rows = await this.query(`
         ${CONTINUITY_LINE_SELECT}
         WHERE l.agent_id = ${sqlString(agentId)} AND l.status = 'active' AND l.id != 'line_default'
         ORDER BY l.updated_at DESC, l.created_at DESC
         LIMIT 20;
       `);
-      const lines = rows.map((row) => mapContinuityLineRow(row, activeLineId));
+      const lines = rows.map((row) => mapContinuityLineRow(row, null));
       if (lines.length > 1) throw buildAmbiguousSharedLineError(agentId, lines);
       return lines[0]?.id || null;
     },

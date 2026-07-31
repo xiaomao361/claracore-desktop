@@ -31,9 +31,9 @@ Reconnect verification:
 1. Call claracore_connection_test and confirm server version 0.6.2, agentId=lara,
    clientId=hermes, and the expected transport.
 2. Call gateway_docs.
-3. Call shared_line_list with status=active.
-4. Call gateway_context with an explicit lineId when multiple active lines are
-   returned.
+3. Call gateway_context without lineId.
+4. If it returns SHARED_LINE_ID_REQUIRED, choose one of its candidates and
+   retry with that explicit lineId.
 
 Memory Controller rules:
 - memory_context is off by default.

@@ -515,8 +515,13 @@ function installContinuityRepository(ProductDatabase, helpers) {
       const agentId = identity.id;
       const query = String(input.query || "").trim();
       const limit = Math.max(1, Math.min(Number.parseInt(String(input.limit || 5), 10) || 5, 20));
-      const [sharedLine, memories, innerLife, pendingInbox, recentShares, recentThoughts] = await Promise.all([
-        this.getResumePacket(input.lineId ? { lineId: input.lineId, lite: true } : { agentId, lite: true }),
+      // Resolve Shared Line first so an ambiguous caller fails before unrelated
+      // Memory and InnerLife reads start. The error already carries candidates
+      // for an explicit retry.
+      const sharedLine = await this.getResumePacket(
+        input.lineId ? { lineId: input.lineId, lite: true } : { agentId, lite: true }
+      );
+      const [memories, innerLife, pendingInbox, recentShares, recentThoughts] = await Promise.all([
         query ? this.searchMemories(query, limit).then((result) => result.results.slice(0, limit)) : this.listMemories(limit),
         this.getInnerLifeSnapshotLite(agentId),
         this.listInnerLifeInboxForAgent(agentId, "pending", limit, { excludeSources: ["session_end_afterthought"] }),

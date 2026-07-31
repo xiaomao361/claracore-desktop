@@ -760,8 +760,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
         firstCalls: [
           "Call claracore_connection_test after installing or changing the MCP connection.",
           "Call gateway_docs and read First Connection and What ClaraCore Lets You Do.",
-          "Call shared_line_list with status=active.",
-          "Call gateway_context with an explicit lineId when selection is required."
+          "Call gateway_context without lineId; if it returns SHARED_LINE_ID_REQUIRED, choose a returned candidate and retry with that explicit lineId."
         ],
         capabilities: {
           memory: "Remember and retrieve durable facts, preferences, decisions, and prior knowledge when they matter.",
