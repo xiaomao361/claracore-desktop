@@ -14,9 +14,16 @@ Current split:
   adapter. Session lifecycle policy lives in
   `core/innerlife/services/session-lifecycle.js`; `innerlife/sessions.js`
   preserves the public database API as a thin adapter.
+- `innerlife/workflow-wiring.js`: focused composition for digest-run and
+  share-timing services. Their private `digest-run-store.js` and
+  `share-timing-store.js` adapters own compound persistence while
+  `innerlife/digests.js` and `innerlife/shares.js` preserve the public API.
 - `memory-controller.js`: append-only controller decisions and feedback,
   bounded audit queries, and feedback-aware retention. It must not mutate
   Memoria, Shared Line, or InnerLife semantic state.
 
 Product decisions belong in `core/memoria`, `core/continuity`, and
 `core/innerlife`. Repositories should stay close to persistence and SQL.
+InnerLife repository modules must remain acyclic; workflow services may compose
+repository capabilities only through explicit ports wired at the composition
+boundary.

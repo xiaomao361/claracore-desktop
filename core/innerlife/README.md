@@ -94,6 +94,22 @@ the public session repository call those modules directly.
 job claiming. `core/db/repositories/innerlife/sessions.js` keeps the existing
 eight `ProductDatabase` methods as thin read and service adapters.
 
+`core/innerlife/services/digest-run.js` owns digest context assembly,
+generation dispatch, write/prune ordering, and response composition through 11
+explicit ports. `core/db/repositories/innerlife/digest-run-store.js` owns the
+multi-record digest/event/thought write, inbox completion, and per-Agent prune
+SQL. The public digest repository keeps its existing query and compatibility
+methods as thin adapters.
+
+`core/innerlife/services/share-timing.js` owns Agent/share selection, provided
+plus Shared Line context matching, overlap metadata, and the
+`review_first`/`use`/`defer`/`none` decision through 10 explicit ports.
+`core/db/repositories/innerlife/share-timing-store.js` owns candidate selection
+and timing-check receipts. `workflow-wiring.js` composes both focused workflows
+without making repositories call read-model repositories in reverse. The
+repository dependency graph is therefore acyclic and guarded by
+`innerlife-workflow-service-boundary-smoke.js`.
+
 When an agent profile contains `autonomous_sources`, each due daemon tick first
 fetches those public RSS, Atom, or webpage sources, dedupes recent items, and
 writes new material to the InnerLife inbox before running the existing digest

@@ -1,13 +1,15 @@
 const { innerLifeShareSimilarity } = require("../../../innerlife/policy");
 
-function createInnerLifeShareRepository(helpers) {
+function createInnerLifeShareRepository(helpers, dependencies = {}) {
+  const { shareTimingService } = dependencies;
+  if (typeof shareTimingService !== "function") {
+    throw new Error("InnerLife share repository requires shareTimingService.");
+  }
   const {
     DEFAULT_AGENT_ID,
     jsonSql,
-    meaningfulTokens,
     newId,
     parseJson,
-    resolveAgentIdentity,
     sqlString
   } = helpers;
 
@@ -25,10 +27,6 @@ function createInnerLifeShareRepository(helpers) {
       shareStatus: row.share_status || "",
       metadata: parseJson(row.metadata_json, {})
     };
-  }
-
-  function uniqueTokens(tokens) {
-    return [...new Set(tokens || [])];
   }
 
   function mapShareRow(row) {
@@ -56,24 +54,6 @@ function createInnerLifeShareRepository(helpers) {
       sharedAt: new Date(sharedAt).toISOString(),
       source
     };
-  }
-
-  function buildSharedLineTimingContext(resumePacket = {}) {
-    const current = resumePacket.currentPosition || {};
-    const sharedReality = resumePacket.sharedReality || {};
-    const agentState = resumePacket.agentState || {};
-    return [
-      current.summary ? `Current position: ${current.summary}` : "",
-      current.interpretationStatus ? `Interpretation status: ${current.interpretationStatus}` : "",
-      sharedReality.realityLine ? `Reality line: ${sharedReality.realityLine}` : "",
-      sharedReality.currentInterpretation ? `Current interpretation: ${sharedReality.currentInterpretation}` : "",
-      sharedReality.confirmedGround ? `Confirmed ground: ${sharedReality.confirmedGround}` : "",
-      sharedReality.provisionalRead ? `Provisional read: ${sharedReality.provisionalRead}` : "",
-      sharedReality.boundaryNotes ? `Boundary notes: ${sharedReality.boundaryNotes}` : "",
-      sharedReality.misreadRisks ? `Misread risks: ${sharedReality.misreadRisks}` : "",
-      resumePacket.nextStep ? `Next step: ${resumePacket.nextStep}` : "",
-      agentState.notes ? `Agent notes: ${agentState.notes}` : ""
-    ].filter(Boolean).join("\n");
   }
 
   return {
@@ -205,120 +185,7 @@ function createInnerLifeShareRepository(helpers) {
     },
 
     async checkInnerLifeShareTiming(input = {}) {
-      const providedContext = String(input.context || "").trim();
-      const sessionId = String(input.sessionId || "").trim() || null;
-      const requestedShareId = String(input.shareId || "").trim();
-      const requestedShare = requestedShareId ? await this.getInnerLifeShare(requestedShareId) : null;
-      const hasExplicitAgent = Boolean(input?.agentId || input?.agent_id || input?.agent);
-      const agentId = hasExplicitAgent ? resolveAgentIdentity(input || {}).id : requestedShare?.agent_id || resolveAgentIdentity(input || {}).id;
-      if (requestedShare && requestedShare.agent_id !== agentId) {
-        throw new Error("InnerLife share belongs to another agent.");
-      }
-      const profile = await this.ensureInnerLifeProfile(agentId);
-      const { resumePacket, sharedLineContext: sharedLineSelection } = await this.getOptionalInnerLifeResumePacket(input, profile.agent_id);
-      const sharedLineContext = buildSharedLineTimingContext(resumePacket);
-      const context = providedContext || sharedLineContext;
-      let share = requestedShare;
-      if (!share) {
-        const available = await this.query(`
-          SELECT id
-          FROM innerlife_shares
-          WHERE agent_id = ${sqlString(profile.agent_id)}
-            AND status IN ('approved', 'pending', 'deferred')
-          ORDER BY
-            CASE status WHEN 'approved' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END,
-            updated_at DESC,
-            created_at DESC
-          LIMIT 1;
-        `);
-        if (available[0]?.id) {
-          share = await this.getInnerLifeShare(available[0].id);
-        }
-      }
-      if (!share) {
-        const checkId = newId("inner_share_check");
-        await this.exec(`
-          INSERT INTO innerlife_share_checks (id, share_id, agent_id, session_id, context, decision, reason, metadata_json)
-          VALUES (
-            ${sqlString(checkId)},
-            NULL,
-            ${sqlString(profile.agent_id)},
-            ${sessionId ? sqlString(sessionId) : "NULL"},
-            ${sqlString(context)},
-            'none',
-            'No shareable InnerLife thought is available.',
-            ${jsonSql({
-              contextSource: providedContext ? "provided" : "none",
-              sharedLineStatus: sharedLineSelection.status,
-              candidateLineIds: sharedLineSelection.candidateLineIds
-            })}
-          );
-        `);
-        return {
-          check: await this.getInnerLifeShareCheck(checkId),
-          share: null,
-          snapshot: await this.getInnerLifeSnapshotLite(profile.agent_id)
-        };
-      }
-      const explicitTokens = meaningfulTokens(providedContext);
-      const lineTokens = meaningfulTokens(sharedLineContext);
-      const contextTokens = meaningfulTokens([providedContext, sharedLineContext].filter(Boolean).join("\n"));
-      const shareTokens = new Set(meaningfulTokens(share.body));
-      const explicitOverlap = uniqueTokens(explicitTokens.filter((token) => shareTokens.has(token)));
-      const lineOverlap = uniqueTokens(lineTokens.filter((token) => shareTokens.has(token)));
-      const overlap = uniqueTokens(contextTokens.filter((token) => shareTokens.has(token)));
-      const hasAsk = /\b(ask|asked|question|share|need|use|recall|remember)\b/i.test(providedContext) || /分享|需要|使用|记得|回忆|问题/u.test(providedContext);
-      const hasConnection = hasAsk || explicitOverlap.length > 0 || lineOverlap.length > 0;
-      let decision = "defer";
-      let reason = "Context is not specific enough yet.";
-      if (!context) {
-        decision = "defer";
-        reason = "No current context or Shared Line context was available.";
-      } else if (share.status === "pending" && hasConnection) {
-        decision = "review_first";
-        reason = overlap.length > 0
-          ? `Pending share connects to the ${sharedLineContext ? "current line" : "provided context"}: ${overlap.slice(0, 5).join(", ")}. Review before use.`
-          : "Pending share may fit the current context, but it still requires review before use.";
-      } else if (share.status === "approved" && hasConnection) {
-        decision = "use";
-        reason = overlap.length > 0
-          ? `Approved share connects to the ${sharedLineContext ? "current line" : "provided context"}: ${overlap.slice(0, 5).join(", ")}.`
-          : "Approved share fits the current context.";
-      } else if (share.status === "deferred") {
-        decision = hasConnection ? "use" : "defer";
-        reason = decision === "use" ? "Deferred share now matches the current context." : "Deferred share still does not match the current context.";
-      }
-      const checkId = newId("inner_share_check");
-      await this.exec(`
-        INSERT INTO innerlife_share_checks (id, share_id, agent_id, session_id, context, decision, reason, metadata_json)
-        VALUES (
-          ${sqlString(checkId)},
-          ${sqlString(share.id)},
-          ${sqlString(profile.agent_id)},
-          ${sessionId ? sqlString(sessionId) : "NULL"},
-          ${sqlString(context)},
-          ${sqlString(decision)},
-          ${sqlString(reason)},
-          ${jsonSql({
-            overlap,
-            explicitOverlap,
-            lineOverlap,
-            hasAsk,
-            contextSource: providedContext
-              ? sharedLineContext ? "provided+shared_line" : "provided"
-              : sharedLineContext ? "shared_line" : "none",
-            sharedLineStatus: sharedLineSelection.status,
-            candidateLineIds: sharedLineSelection.candidateLineIds,
-            lineId: resumePacket.lineId || "",
-            positionId: resumePacket.currentPosition?.positionId || ""
-          })}
-        );
-      `);
-      return {
-        check: await this.getInnerLifeShareCheck(checkId),
-        share,
-        snapshot: await this.getInnerLifeSnapshotLite(profile.agent_id)
-      };
+      return shareTimingService(this, input);
     },
 
     async reviewInnerLifeShare(id, decision, reason = "") {

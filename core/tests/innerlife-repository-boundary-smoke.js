@@ -22,6 +22,12 @@ const factoryServices = {
   daemon: {
     tickInnerLifeDaemon: async () => ({ ran: false, reason: "test" })
   },
+  digests: {
+    digestRunService: async () => ({}),
+    digestRunStore: {
+      prune: async () => {}
+    }
+  },
   sessions: {
     sessionLifecycle: {
       endInnerLifeSession: async () => ({}),
@@ -34,6 +40,9 @@ const factoryServices = {
       list: async () => [],
       listCompact: async () => []
     }
+  },
+  shares: {
+    shareTimingService: async () => ({})
   }
 };
 

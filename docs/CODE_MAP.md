@@ -189,6 +189,18 @@ Repository ownership:
 - `core/innerlife/services/session-lifecycle.js`: session start packet, close,
   persisted afterthought quality/convergence, and retry orchestration through
   explicit ports.
+- `core/innerlife/services/digest-run.js`: digest context assembly, generation,
+  compound-write/prune ordering, and response composition through explicit
+  ports.
+- `core/innerlife/services/share-timing.js`: Agent/share selection, provided
+  plus Shared Line context matching, overlap metadata, and timing decisions
+  through explicit ports.
+- `core/db/repositories/innerlife/workflow-wiring.js`: focused digest-run and
+  share-timing service/store composition.
+- `core/db/repositories/innerlife/digest-run-store.js`: private digest,
+  event/thought, inbox-completion, and per-Agent prune SQL.
+- `core/db/repositories/innerlife/share-timing-store.js`: private eligible-share
+  selection and timing-check receipt SQL.
 - `core/db/repositories/innerlife/profile.js`: InnerLife profile create,
   update, list, and delete persistence.
 - `core/db/repositories/innerlife/inbox.js`: InnerLife inbox list, count,
@@ -201,8 +213,8 @@ Repository ownership:
 - `core/db/repositories/innerlife/read-models.js`: bounded status/view
   snapshots, counts, Doctor guidance, briefing, and optional Shared Line
   resume context.
-- `core/db/repositories/innerlife/digests.js`: digest run list/page/get,
-  digest execution receipts, and per-Agent digest retention.
+- `core/db/repositories/innerlife/digests.js`: digest run list/page/get plus
+  thin execution and retention adapters.
 - `core/db/repositories/innerlife/source-inbox.js`: source candidate
   deduplication and inbox persistence.
 - `core/db/repositories/innerlife/reflection.js`: process-once, exploration,
@@ -213,8 +225,9 @@ Repository ownership:
   afterthought job claiming.
 - `core/db/repositories/innerlife/sessions.js`: thin eight-method public
   adapter for session reads and lifecycle services.
-- `core/db/repositories/innerlife/shares.js`: InnerLife share list, timing
-  checks, review/mark actions, and apply-to-Memory/Shared-Line persistence.
+- `core/db/repositories/innerlife/shares.js`: InnerLife share list,
+  review/mark actions, apply-to-Memory/Shared-Line persistence, and a thin
+  timing-service adapter.
   Timing checks may use the current Shared Line resume packet as implicit
   context, and persist overlap metadata for later inspection.
 - `core/db/repositories/innerlife/retention.js`: scheduled age/capacity cleanup
@@ -228,7 +241,10 @@ Repository ownership:
   stable `ProductDatabase.tickInnerLifeDaemon()` API.
 - `core/tests/innerlife-session-service-boundary-smoke.js`: verifies session
   lifecycle ports and behavior, SQL/store ownership, stable public APIs, and
-  the reduced repository dependency cycle.
+  repository-cycle exclusion.
+- `core/tests/innerlife-workflow-service-boundary-smoke.js`: verifies digest
+  and share-timing ports, behavior/write ordering, SQL/store ownership, stable
+  public method counts, and an empty repository SCC set.
 - `core/tests/repository-composition-smoke.js`: verifies global method
   uniqueness across System, Memory Controller, Memoria, Continuity, and
   InnerLife, and prevents direct `ProductDatabase.prototype` assignment from
@@ -281,12 +297,16 @@ Start here:
 2. `core/innerlife/policy.js`
 3. `core/innerlife/services/daemon-tick.js` for daemon tick orchestration
 4. `core/innerlife/services/session-lifecycle.js` for session orchestration
-5. `core/db/repositories/innerlife.js`
-6. the matching focused module under `core/db/repositories/innerlife/`
-7. `electron/schedulers.js`
-8. `app/views/shared-innerlife.js`
-9. `core/gateway/tool-handlers/innerlife.js`
-10. `core/gateway/tool-definitions/innerlife.js` and
+5. `core/innerlife/services/digest-run.js` or `share-timing.js` for those
+   focused workflows
+6. `core/db/repositories/innerlife/workflow-wiring.js`
+7. `core/db/repositories/innerlife.js`
+8. the matching focused module or private store under
+   `core/db/repositories/innerlife/`
+9. `electron/schedulers.js`
+10. `app/views/shared-innerlife.js`
+11. `core/gateway/tool-handlers/innerlife.js`
+12. `core/gateway/tool-definitions/innerlife.js` and
    `core/gateway/tool-definitions/innerlife-*.js`
 
 Use this path for profiles, daemon enable/pause/tick, inbox, sessions, shares,

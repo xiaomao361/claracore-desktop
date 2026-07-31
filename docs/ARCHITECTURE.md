@@ -200,6 +200,10 @@ ingest, reflection, and snapshots only through explicit ports. Session start,
 end, and persisted afterthought orchestration live in
 `core/innerlife/services/session-lifecycle.js`; session SQL is isolated in a
 private store and the public repository is a thin compatibility adapter.
+Digest execution and share-timing decisions live in the focused
+`digest-run.js` and `share-timing.js` services. Their private stores own
+compound SQL, while `workflow-wiring.js` connects read-model, policy, and
+persistence ports without reverse calls between repositories.
 `core/db/repositories/innerlife.js` is a composition-only entry: focused
 repository modules own read models, digest runs, source intake, reflection
 workflows, sessions, shares, retention, and daemon-state transitions.
@@ -272,10 +276,24 @@ Current shape:
   writes, lifecycle transitions, and atomic afterthought job claiming
 - `core/db/repositories/innerlife/sessions.js`: stable eight-method public
   session API delegating to the store and lifecycle service
+- `core/innerlife/services/digest-run.js`: digest context, generation,
+  persistence ordering, retention dispatch, and response composition through
+  explicit ports
+- `core/db/repositories/innerlife/digest-run-store.js`: private compound
+  digest/event/thought, inbox completion, and per-Agent prune SQL
+- `core/innerlife/services/share-timing.js`: Agent/share selection, provided
+  plus Shared Line context matching, and timing-decision policy through explicit
+  ports
+- `core/db/repositories/innerlife/share-timing-store.js`: private eligible-share
+  selection and timing-check receipt SQL
+- `core/db/repositories/innerlife/workflow-wiring.js`: focused composition for
+  digest-run and share-timing ports
 - `core/db/repositories/innerlife/read-models.js`: bounded snapshots, counts,
   Doctor status, briefing, and optional Shared Line resume context
-- `core/db/repositories/innerlife/digests.js`: digest run list/page/get,
-  execution receipts, and per-Agent retention
+- `core/db/repositories/innerlife/digests.js`: digest run list/page/get plus
+  thin execution and retention adapters
+- `core/db/repositories/innerlife/shares.js`: share queries and lifecycle
+  actions plus a thin timing-service adapter
 - `core/db/repositories/innerlife/source-inbox.js`: external source candidate
   deduplication and inbox persistence
 - `core/db/repositories/innerlife/reflection.js`: process-once, exploration,
@@ -295,8 +313,11 @@ port contract, transition behavior, SQL-free service boundary, and stable
 public database API.
 `core/tests/innerlife-session-service-boundary-smoke.js` verifies session
 lifecycle ports and behavior, keeps SQL in the private store, preserves the
-public API, and prevents sessions/reflection from re-entering the remaining
-repository dependency cycle.
+public API, and prevents sessions/reflection from re-entering repository
+cycles.
+`core/tests/innerlife-workflow-service-boundary-smoke.js` verifies digest and
+share-timing port contracts, behavior and write ordering, SQL/store ownership,
+stable public method counts, and an empty repository SCC set.
 
 `core/db/migrations/index.js` runs ordered, idempotent migration modules in
 `before-schema` or `after-schema` phases and records each successful id in

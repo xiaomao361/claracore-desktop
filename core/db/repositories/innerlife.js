@@ -10,12 +10,14 @@ const { createInnerLifeSessionStore } = require("./innerlife/session-store");
 const { createInnerLifeSessionRepository } = require("./innerlife/sessions");
 const { createInnerLifeShareRepository } = require("./innerlife/shares");
 const { createInnerLifeSourceInboxRepository } = require("./innerlife/source-inbox");
+const { createInnerLifeWorkflowWiring } = require("./innerlife/workflow-wiring");
 const { createInnerLifeDaemonTickService } = require("../../innerlife/services/daemon-tick");
 const { createInnerLifeSessionLifecycleService } = require("../../innerlife/services/session-lifecycle");
 const { generateOrTemplate } = require("../../innerlife/policy");
 const { composeRepositoryMethods, installRepositoryMethods } = require("../repository-installer");
 
 function installInnerLifeRepository(ProductDatabase, helpers) {
+  const workflowWiring = createInnerLifeWorkflowWiring(helpers);
   const tickInnerLifeDaemon = createInnerLifeDaemonTickService({
     completeFailure: (database, input) => database.completeInnerLifeDaemonTickFailure(input),
     completeIdle: (database, input) => database.completeInnerLifeDaemonTickIdle(input),
@@ -54,12 +56,12 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
   });
   const methods = composeRepositoryMethods("innerlife", [
     ["profile", createInnerLifeProfileRepository(helpers)],
-    ["shares", createInnerLifeShareRepository(helpers)],
+    ["shares", createInnerLifeShareRepository(helpers, workflowWiring.shares)],
     ["inbox", createInnerLifeInboxRepository(helpers)],
     ["daemon", createInnerLifeDaemonRepository(helpers, { tickInnerLifeDaemon })],
     ["retention", createInnerLifeRetentionRepository(helpers)],
     ["read-models", createInnerLifeReadModelRepository(helpers)],
-    ["digests", createInnerLifeDigestRepository(helpers)],
+    ["digests", createInnerLifeDigestRepository(helpers, workflowWiring.digests)],
     ["sessions", createInnerLifeSessionRepository(helpers, { sessionLifecycle, sessionStore })],
     ["source-inbox", createInnerLifeSourceInboxRepository(helpers)],
     ["history", createInnerLifeHistoryRepository(helpers)],

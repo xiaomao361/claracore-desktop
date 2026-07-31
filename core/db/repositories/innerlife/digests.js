@@ -1,17 +1,10 @@
-const {
-  IL_SYSTEM,
-  generateOrTemplate,
-  summarizeInnerLifeProfile
-} = require("../../../innerlife/policy");
-
-const DIGEST_RUN_RETENTION_PER_AGENT = 200;
-
-function createInnerLifeDigestRepository(helpers) {
+function createInnerLifeDigestRepository(helpers, dependencies = {}) {
+  const { digestRunService, digestRunStore } = dependencies;
+  if (typeof digestRunService !== "function" || typeof digestRunStore?.prune !== "function") {
+    throw new Error("InnerLife digest repository requires digestRunService and digestRunStore.prune.");
+  }
   const {
     DEFAULT_AGENT_ID,
-    jsonSql,
-    newId,
-    resolveAgentIdentity,
     parseJson,
     sqlString
   } = helpers;
@@ -107,117 +100,12 @@ function createInnerLifeDigestRepository(helpers) {
     },
 
     async runInnerLifeDigest(input = {}) {
-      const agentId = resolveAgentIdentity(input || {}).id;
-      const profile = await this.ensureInnerLifeProfile(agentId);
-      const mode = String(input.mode || "manual").trim() || "manual";
-      const prompt = String(input.prompt || "").trim();
-      const { resumePacket, sharedLineContext } = await this.getOptionalInnerLifeResumePacket(input, profile.agent_id);
-      const memories = await this.listMemories(5);
-      const inboxItems = (await this.listInnerLifeInboxPage({ agentId: profile.agent_id, status: "pending", limit: 10, offset: 0 })).items;
-      const digestId = newId("inner_digest");
-      const eventId = newId("inner_event");
-      const thoughtId = newId("inner_thought");
-      const memoryLines = memories.map((memory) => `- ${memory.title || memory.body.slice(0, 80)}`).join("\n") || "- No recent Memory records.";
-      const inboxLines = inboxItems.map((item) => `- ${item.source}: ${item.body}`).join("\n") || "- No pending inbox items.";
-      const currentPosition = resumePacket.currentPosition.summary || (
-        sharedLineContext.status === "ambiguous"
-          ? "Shared Line selection is ambiguous; no line context was used."
-          : "No Shared Line position saved yet."
-      );
-      const template = [
-        "InnerLife digest",
-        "",
-        summarizeInnerLifeProfile(profile),
-        "",
-        `Mode: ${mode}`,
-        `Current position: ${currentPosition}`,
-        "",
-        "Inbox digested:",
-        inboxLines,
-        "",
-        "Recent Memory context:",
-        memoryLines,
-        "",
-        `Operator prompt: ${prompt || "Digest current state without sharing automatically."}`
-      ].join("\n");
-      const generated = await generateOrTemplate(this, {
-        tier: mode === "deep" ? "deep" : "light",
-        system: IL_SYSTEM.digest,
-        prompt: template,
-        template
-      });
-      const summary = generated.body;
-      await this.exec(`
-        INSERT INTO innerlife_digest_runs (id, agent_id, mode, status, input_json, summary, completed_at, metadata_json)
-        VALUES (
-          ${sqlString(digestId)},
-          ${sqlString(profile.agent_id)},
-          ${sqlString(mode)},
-          'completed',
-          ${jsonSql(input)},
-          ${sqlString(summary)},
-          CURRENT_TIMESTAMP,
-          ${jsonSql({
-            lineId: resumePacket.lineId,
-            positionId: resumePacket.currentPosition.positionId,
-            sharedLineStatus: sharedLineContext.status,
-            candidateLineIds: sharedLineContext.candidateLineIds,
-            memoryIds: memories.map((memory) => memory.id),
-            inboxIds: inboxItems.map((item) => item.id),
-            generationSource: generated.source,
-            generationTier: generated.tier
-          })}
-        );
-
-        INSERT INTO innerlife_events (id, agent_id, kind, body, status, metadata_json)
-        VALUES (
-          ${sqlString(eventId)},
-          ${sqlString(profile.agent_id)},
-          'digest',
-          ${sqlString(prompt || "Manual digest")},
-          'processed',
-          ${jsonSql({ digestId, inboxIds: inboxItems.map((item) => item.id) })}
-        );
-
-        INSERT INTO innerlife_thoughts (id, event_id, body, review_status)
-        VALUES (${sqlString(thoughtId)}, ${sqlString(eventId)}, ${sqlString(summary)}, 'unreviewed');
-      `);
-      if (inboxItems.length > 0) {
-        await this.exec(`
-          UPDATE innerlife_inbox
-          SET status = 'processed',
-              processed_at = CURRENT_TIMESTAMP
-          WHERE id IN (${inboxItems.map((item) => sqlString(item.id)).join(", ")});
-        `);
-      }
-      await this.pruneInnerLifeDigestRuns(profile.agent_id);
-      return {
-        digest: await this.getInnerLifeDigestRun(digestId),
-        eventId,
-        thoughtId,
-        convergence: null,
-        sharedLineContext,
-        processedInboxIds: inboxItems.map((item) => item.id),
-        snapshot: await this.getInnerLifeSnapshotLite(profile.agent_id)
-      };
+      return digestRunService(this, input);
     },
 
-    async pruneInnerLifeDigestRuns(agentId, keep = DIGEST_RUN_RETENTION_PER_AGENT) {
-      const id = String(agentId || "").trim();
-      if (!id) return;
-      const safeLimit = Math.max(1, Number.parseInt(String(keep), 10) || DIGEST_RUN_RETENTION_PER_AGENT);
-      await this.exec(`
-        DELETE FROM innerlife_digest_runs
-        WHERE agent_id = ${sqlString(id)}
-          AND id NOT IN (
-            SELECT id FROM innerlife_digest_runs
-            WHERE agent_id = ${sqlString(id)}
-            ORDER BY created_at DESC, id DESC
-            LIMIT ${safeLimit}
-          );
-      `);
+    async pruneInnerLifeDigestRuns(agentId, keep) {
+      return digestRunStore.prune(this, agentId, keep);
     },
-
   };
 }
 
