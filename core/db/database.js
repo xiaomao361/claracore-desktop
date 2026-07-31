@@ -9,6 +9,7 @@ const { installMemoriaRepository } = require("./repositories/memoria");
 const { installContinuityRepository } = require("./repositories/continuity");
 const { createSystemRepository } = require("./repositories/system");
 const { createMemoryControllerRepository } = require("./repositories/memory-controller");
+const { installRepositoryMethods } = require("./repository-installer");
 const { recordMigration, runMigrations } = require("./migrations");
 const {
   cosineSimilarity,
@@ -343,7 +344,7 @@ class ProductDatabase {
 
 }
 
-Object.assign(ProductDatabase.prototype, createSystemRepository({
+installRepositoryMethods(ProductDatabase, "system", createSystemRepository({
   BUILD_FLAVOR,
   DEFAULT_AGENT_ID,
   HAS_BUILT_IN_EMBEDDING,
@@ -358,7 +359,7 @@ Object.assign(ProductDatabase.prototype, createSystemRepository({
   sqlString
 }));
 
-Object.assign(ProductDatabase.prototype, createMemoryControllerRepository({
+installRepositoryMethods(ProductDatabase, "memory-controller", createMemoryControllerRepository({
   jsonSql,
   newId,
   parseJson,

@@ -195,6 +195,12 @@ Check JavaScript syntax:
 npm run check
 ```
 
+Run the repository composition and ownership gates alone:
+
+```bash
+npm run test:architecture
+```
+
 Run the full smoke suite:
 
 ```bash

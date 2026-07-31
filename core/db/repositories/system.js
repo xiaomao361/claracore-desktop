@@ -1,5 +1,6 @@
 const { createAgentActivityRepository } = require("./system/agent-activity");
 const { createGatewayTraceRepository } = require("./system/gateway-traces");
+const { composeRepositoryMethods } = require("../repository-installer");
 
 function createSystemRepository(helpers) {
   const {
@@ -40,10 +41,7 @@ function createSystemRepository(helpers) {
     return Math.max(1, Math.round((currentLocalDay - firstLocalDay) / 86400000) + 1);
   }
 
-  return {
-    ...createGatewayTraceRepository(helpers),
-    ...createAgentActivityRepository(helpers),
-
+  const systemMethods = {
     async updateSettings(updates) {
       const entries = Object.entries(updates || {}).filter(([key]) => WRITABLE_SETTINGS.has(key));
       const memoryApiKeyRef =
@@ -596,6 +594,11 @@ function createSystemRepository(helpers) {
       };
     }
   };
+  return composeRepositoryMethods("system", [
+    ["gateway-traces", createGatewayTraceRepository(helpers)],
+    ["agent-activity", createAgentActivityRepository(helpers)],
+    ["system", systemMethods]
+  ]);
 }
 
 module.exports = {

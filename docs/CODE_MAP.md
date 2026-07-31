@@ -137,8 +137,9 @@ Start here:
 
 1. `core/db/schema.sql`
 2. `core/db/database.js`
-3. `core/db/migrations/`
-4. `core/db/repositories/`
+3. `core/db/repository-installer.js`
+4. `core/db/migrations/`
+5. `core/db/repositories/`
 
 Repository ownership:
 
@@ -147,6 +148,9 @@ Repository ownership:
 - `core/db/helpers.js`: shared helper functions injected into database
   repositories, including SQL escaping, JSON/date parsing, agent identity,
   label/value normalization, vector math, and JSON HTTP calls.
+- `core/db/repository-installer.js`: composes repository method groups without
+  silent overwrites, rejects cross-domain collisions before prototype
+  installation, and exposes installed ownership to architecture tests.
 - `core/db/repositories/system.js`: composition plus settings, secrets,
   configuration, runtime events, backup records, LLM calls, database summary
   persistence, and the bounded cross-domain Trace aggregate.
@@ -209,6 +213,10 @@ Repository ownership:
 - `core/tests/innerlife-repository-boundary-smoke.js`: verifies unique method
   ownership across repository modules and keeps the aggregate installer free
   of SQL and query execution.
+- `core/tests/repository-composition-smoke.js`: verifies global method
+  uniqueness across System, Memory Controller, Memoria, Continuity, and
+  InnerLife, and prevents direct `ProductDatabase.prototype` assignment from
+  bypassing the collision-safe installer.
 
 New schema-heavy behavior should use an explicit migration and repository API.
 Product policy should live in a domain module rather than directly in a
@@ -378,6 +386,7 @@ rg -n "listGatewayTraces|recordGatewayTrace|runtimeEvents" core
 Choose the smallest validation that matches the changed surface.
 
 - Syntax-only JavaScript change: `npm run check`
+- Repository composition or module-boundary change: `npm run test:architecture`
 - Trace snapshot or page change: `npm run test:trace`
 - Shell/window change: `npm run test:shell`
 - Memoria CLI or domain change: `npm run test:memoria:cli` or

@@ -3,6 +3,7 @@ const { createMemoriaLinkRepository } = require("./memoria/links");
 const { createMemoriaRecordRepository } = require("./memoria/records");
 const { createMemoriaEmbeddingRepository } = require("./memoria/embeddings");
 const { createMemoriaMaintenanceRepository } = require("./memoria/maintenance");
+const { composeRepositoryMethods, installRepositoryMethods } = require("../repository-installer");
 
 function installMemoriaRepository(ProductDatabase, helpers) {
   const {
@@ -39,8 +40,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
     return `${alias}.status = 'active'`;
   }
 
-  Object.assign(ProductDatabase.prototype, {
-    ...createMemoriaLabelRepository(helpers),
+  const memoriaMethods = {
     async createMemory(input) {
       const body = String(input?.body || "").trim();
       if (!body) throw new Error("Memory body is required.");
@@ -587,11 +587,16 @@ function installMemoriaRepository(ProductDatabase, helpers) {
     }
     ,
     
-    ...createMemoriaLinkRepository(helpers),
-    ...createMemoriaMaintenanceRepository(helpers),
-    ...createMemoriaRecordRepository(helpers),
-    ...createMemoriaEmbeddingRepository(helpers)
-  });
+  };
+  const methods = composeRepositoryMethods("memoria", [
+    ["labels", createMemoriaLabelRepository(helpers)],
+    ["memoria", memoriaMethods],
+    ["links", createMemoriaLinkRepository(helpers)],
+    ["maintenance", createMemoriaMaintenanceRepository(helpers)],
+    ["records", createMemoriaRecordRepository(helpers)],
+    ["embeddings", createMemoriaEmbeddingRepository(helpers)]
+  ]);
+  installRepositoryMethods(ProductDatabase, "memoria", methods);
 }
 
 module.exports = {

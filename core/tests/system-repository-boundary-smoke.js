@@ -38,8 +38,8 @@ const aggregatorSource = fs.readFileSync(aggregatorPath, "utf8");
 const aggregatorLines = aggregatorSource.trimEnd().split("\n").length;
 assert(aggregatorLines <= 650, `System repository aggregator grew to ${aggregatorLines} lines.`);
 assert(
-  aggregatorSource.includes("...createGatewayTraceRepository(helpers)") &&
-    aggregatorSource.includes("...createAgentActivityRepository(helpers)"),
+  aggregatorSource.includes('["gateway-traces", createGatewayTraceRepository(helpers)]') &&
+    aggregatorSource.includes('["agent-activity", createAgentActivityRepository(helpers)]'),
   "System repository must compose the extracted Trace modules."
 );
 for (const methodName of owners.keys()) {

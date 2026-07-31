@@ -56,8 +56,8 @@ const aggregatorSource = fs.readFileSync(aggregatorPath, "utf8");
 const aggregatorLines = aggregatorSource.trimEnd().split("\n").length;
 assert(aggregatorLines <= 650, `Continuity repository aggregator grew to ${aggregatorLines} lines.`);
 assert(
-  aggregatorSource.includes("...createContinuityAgentRepository(helpers)") &&
-    aggregatorSource.includes("...createContinuityLineRepository(helpers)"),
+  aggregatorSource.includes('["agents", createContinuityAgentRepository(helpers)]') &&
+    aggregatorSource.includes('["lines", createContinuityLineRepository(helpers)]'),
   "Continuity repository must compose the extracted modules."
 );
 for (const methodName of owners.keys()) {

@@ -229,6 +229,9 @@ Current shape:
 - `core/db/helpers.js`: shared repository/database helpers for SQL escaping,
   JSON parsing, agent identity normalization, label/date/value normalization,
   vector math, and JSON HTTP calls
+- `core/db/repository-installer.js`: collision-safe repository method
+  composition and installation; duplicate method ownership fails before a
+  repository can overwrite `ProductDatabase.prototype`
 - `core/db/migrations/`: explicit migrations
 - `core/db/repositories/system.js`: composition plus settings, configuration,
   runtime events, backup records, LLM calls, and database summary
@@ -267,6 +270,9 @@ Current shape:
 activity ownership out of the remaining system repository aggregator.
 `core/tests/continuity-repository-boundary-smoke.js` keeps line lifecycle,
 agent state, and model adjustment ownership in focused Continuity modules.
+`core/tests/repository-composition-smoke.js` verifies that every repository
+domain uses the shared installer, all installed methods are globally unique,
+and local factory groups reject duplicate ownership before installation.
 
 `core/db/migrations/index.js` runs ordered, idempotent migration modules in
 `before-schema` or `after-schema` phases and records each successful id in
@@ -463,9 +469,12 @@ executable bit where relevant, and is discoverable through
 
 Use these gates for current development:
 
-- `npm run check`: syntax and module-load check across Electron, core, tests,
-  and renderer modules; also runs the SQL interpolation lint
-  (`npm run test:sql-lint` runs it alone).
+- `npm run check`: automatically discovers JavaScript under `app/`, `core/`,
+  `electron/`, and `scripts/`, checks it with bounded parallel Node workers,
+  then runs SQL interpolation, IPC contract, and repository architecture
+  gates. New source and test files do not require a manual syntax-check list.
+- `npm run test:architecture`: repository composition plus focused InnerLife,
+  System, and Continuity ownership boundaries.
 - `npm run test:sqlite-binary`: packaged SQLite resource integrity and resolver
   check.
 - `npm run test:phase5`: InnerLife runtime, UI, and scheduler coverage.

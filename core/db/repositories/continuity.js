@@ -1,5 +1,6 @@
 const { createContinuityAgentRepository } = require("./continuity/agents");
 const { createContinuityLineRepository } = require("./continuity/lines");
+const { composeRepositoryMethods, installRepositoryMethods } = require("../repository-installer");
 
 function installContinuityRepository(ProductDatabase, helpers) {
   const {
@@ -159,8 +160,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
     return metadata;
   }
 
-  Object.assign(ProductDatabase.prototype, {
-    ...createContinuityLineRepository(helpers),
+  const positionMethods = {
     async getCurrentPosition(lineIdInput = null) {
       const requestedLineId = String(lineIdInput || "").trim();
       const lineId = requestedLineId || (await this.getActiveContinuityLineIdReadOnly());
@@ -358,8 +358,8 @@ function installContinuityRepository(ProductDatabase, helpers) {
       return this.getContinuityHandoff(id);
     },
 
-    ...createContinuityAgentRepository(helpers),
-    
+  };
+  const contextMethods = {
     async getContinuityHandoff(id) {
       const rows = await this.query(`
         SELECT id, line_id, objective, completed_json, open_items_json, next_step, created_at
@@ -589,7 +589,14 @@ function installContinuityRepository(ProductDatabase, helpers) {
         text
       };
     }
-  });
+  };
+  const methods = composeRepositoryMethods("continuity", [
+    ["lines", createContinuityLineRepository(helpers)],
+    ["position", positionMethods],
+    ["agents", createContinuityAgentRepository(helpers)],
+    ["context", contextMethods]
+  ]);
+  installRepositoryMethods(ProductDatabase, "continuity", methods);
 }
 
 module.exports = {
