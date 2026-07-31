@@ -187,6 +187,8 @@ let runtimeRefreshTimer = null;
 const pendingRuntimeScopes = new Set();
 const hydratedViews = new Set();
 const hydratingViews = new Map();
+let snapshotGeneration = 0;
+let runtimeRefreshRevision = 0;
 const appearance = window.createClaraCoreAppearance({
   desktop: window.ClaraCoreDesktop,
   onSystemPreferenceChange: () => renderSettings()
@@ -648,18 +650,26 @@ function setView(viewName) {
 }
 
 async function hydrateView(viewName, { force = false } = {}) {
-  if (!snapshot || typeof window.ClaraCoreDesktop.getViewSnapshot !== "function") return;
+  if (!snapshot) return;
   if (!force && hydratedViews.has(viewName)) return;
-  if (hydratingViews.has(viewName)) return hydratingViews.get(viewName);
+  const generation = snapshotGeneration;
+  const existing = hydratingViews.get(viewName);
+  if (existing?.generation === generation) return existing.request;
+  const sharedLineCatalog = snapshot.sharedLine;
   const request = (async () => {
+    if (viewName === "shared-line") {
+      await sharedLineActions.hydrateSelectedLine(sharedLineCatalog);
+      if (generation !== snapshotGeneration) return;
+      hydratedViews.add(viewName);
+      renderSharedLine();
+      return;
+    }
+    if (typeof window.ClaraCoreDesktop.getViewSnapshot !== "function") return;
     const detail = await window.ClaraCoreDesktop.getViewSnapshot(viewName);
-    if (!detail || typeof detail !== "object") return;
+    if (generation !== snapshotGeneration || !detail || typeof detail !== "object") return;
     snapshot = { ...snapshot, ...detail };
     hydratedViews.add(viewName);
-    if (viewName === "shared-line" && detail.sharedLine) {
-      await sharedLineActions.syncSelectedLine(detail.sharedLine);
-      renderSharedLine();
-    } else if (viewName === "innerlife") {
+    if (viewName === "innerlife") {
       renderInnerLife();
     } else if (viewName === "trace") {
       traceView.render();
@@ -670,8 +680,10 @@ async function hydrateView(viewName, { force = false } = {}) {
     } else if (viewName === "home") {
       renderHomeDashboard();
     }
-  })().finally(() => hydratingViews.delete(viewName));
-  hydratingViews.set(viewName, request);
+  })().finally(() => {
+    if (hydratingViews.get(viewName)?.request === request) hydratingViews.delete(viewName);
+  });
+  hydratingViews.set(viewName, { generation, request });
   return request;
 }
 
@@ -704,11 +716,16 @@ async function hydrateUiPreferences() {
 }
 
 async function refresh() {
-  [snapshot, rendererState.dataRootPreference] = await Promise.all([
+  const refreshRevision = ++runtimeRefreshRevision;
+  const [nextSnapshot, dataRootPreference] = await Promise.all([
     window.ClaraCoreDesktop.getRuntimeSnapshot(),
     window.ClaraCoreDesktop.getDataRootPreference()
   ]);
-  await sharedLineActions.syncSelectedLine(snapshot.sharedLine);
+  if (refreshRevision !== runtimeRefreshRevision) return;
+  snapshot = nextSnapshot;
+  rendererState.dataRootPreference = dataRootPreference;
+  snapshotGeneration += 1;
+  sharedLineActions.syncSelectedLineCatalog(snapshot.sharedLine);
   hydratedViews.clear();
   memoriaView.resetLoadedTabs();
   renderSnapshot();
@@ -718,11 +735,13 @@ async function refresh() {
 }
 
 async function refreshRuntimeSnapshotOnly() {
+  const refreshRevision = ++runtimeRefreshRevision;
   const previousSnapshot = snapshot;
   const [nextSnapshot, dataRootPreference] = await Promise.all([
     window.ClaraCoreDesktop.getRuntimeSnapshot(),
     window.ClaraCoreDesktop.getDataRootPreference()
   ]);
+  if (refreshRevision !== runtimeRefreshRevision) return;
   if (previousSnapshot?.memoryGraph && !nextSnapshot.memoryGraph) {
     nextSnapshot.memoryGraph = previousSnapshot.memoryGraph;
   }
@@ -731,7 +750,8 @@ async function refreshRuntimeSnapshotOnly() {
   }
   snapshot = nextSnapshot;
   rendererState.dataRootPreference = dataRootPreference;
-  await sharedLineActions.syncSelectedLine(snapshot.sharedLine);
+  snapshotGeneration += 1;
+  sharedLineActions.syncSelectedLineCatalog(snapshot.sharedLine);
   hydratedViews.clear();
   renderSnapshot();
   if (activeView === "home") hydrateView(activeView).catch(console.error);

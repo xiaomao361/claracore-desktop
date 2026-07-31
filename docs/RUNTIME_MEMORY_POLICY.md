@@ -22,8 +22,11 @@ Current global snapshot allowances:
 - `runtimeEvents`: omitted from the overview; Logs loads its own recent rows.
 - `innerLife`: lite counts, daemon/doctor state, profiles, and bounded waiting
   share previews only.
-- `trace`, backups, full Shared Line packets, and full InnerLife state: loaded
-  through `getViewSnapshot()` when their owning view is entered.
+- Shared Line: the overview owns the bounded line catalog; entering the view
+  loads the exact selected line once through `getSharedLine()`. Catalog refresh
+  is read-free and invalidates stale detail responses.
+- `trace`, backups, and full InnerLife state: loaded through
+  `getViewSnapshot()` when their owning view is entered.
 
 ## Pagination And Lazy Loading
 

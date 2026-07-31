@@ -316,8 +316,20 @@ function renderMemoryList() {
 
 function renderSharedLine() {
   const snapshot = getSnapshot();
-  const catalog = snapshot?.sharedLine || {};
-  const sharedLine = state.selectedSharedLinePacket || (catalog.lineId === state.selectedSharedLineId ? catalog : null);
+  const overviewCatalog = snapshot?.sharedLine || {};
+  const selectedPacket = (
+    state.selectedSharedLinePacket?.lineId === state.selectedSharedLineId
+    && state.selectedSharedLinePacket?.currentPosition?.lineId === state.selectedSharedLineId
+  )
+    ? state.selectedSharedLinePacket
+    : null;
+  const catalog = selectedPacket || overviewCatalog;
+  const sharedLine = selectedPacket || (
+    overviewCatalog.lineId === state.selectedSharedLineId
+    && overviewCatalog.currentPosition?.lineId === state.selectedSharedLineId
+      ? overviewCatalog
+      : null
+  );
   const current = sharedLine?.currentPosition || {};
   const lines = catalog.lines || [];
   const archivedLines = catalog.archivedLines || [];

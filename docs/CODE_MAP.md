@@ -111,9 +111,10 @@ Start here:
 
 Use this path when Home shows the wrong current line, thought, Agent presence,
 arrival state, or visual cadence. `buildProductOverviewSnapshot()` owns the
-bounded startup path; `buildProductViewSnapshot()` hydrates page detail and
-`buildProductLogsSnapshot()` owns Follow polling. Full lists stay behind
-focused IPC/runtime calls.
+bounded startup path; `buildProductViewSnapshot()` hydrates page detail other
+than Shared Line, whose renderer loads the exact selected line through
+`getSharedLine()`. `buildProductLogsSnapshot()` owns Follow polling. Full lists
+stay behind focused IPC/runtime calls.
 
 Decay audit is part of the focused Logs snapshot and remains read-only. Start
 at `core/runtime/decay.js` when dormant Memory, stale Shared Line, old
@@ -280,14 +281,18 @@ Start here:
 1. `core/continuity/index.js`
 2. `core/db/repositories/continuity/lines.js`
 3. `core/db/repositories/continuity.js`
-4. `app/views/shared-innerlife.js`
-5. `core/gateway/tool-handlers/shared-line.js`
-6. `core/gateway/tool-definitions/shared-line.js`
+4. `app/shared-line-actions.js`
+5. `app/views/shared-innerlife.js`
+6. `core/gateway/tool-handlers/shared-line.js`
+7. `core/gateway/tool-definitions/shared-line.js`
 
 Use this path for line create/list/get/activate/rename/archive/restore/update,
 current position, handoffs, agent state, model adjustments, shared-reality
 fields, affective arcs, and resume packets. The repository ownership contract
-is enforced by `core/tests/continuity-repository-boundary-smoke.js`.
+is enforced by `core/tests/continuity-repository-boundary-smoke.js`. Renderer
+catalog refresh must stay at zero detail reads; one view hydration loads only
+the selected line, and revision plus packet-identity guards prevent an older
+request from overwriting a newer human selection.
 
 ### InnerLife Behavior
 

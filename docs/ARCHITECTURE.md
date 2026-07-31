@@ -215,12 +215,16 @@ snapshots, backup-gated imports, archive export, or read-only decay audits. They
 should not become the home for new domain rules.
 
 Runtime snapshots must stay bounded. `buildProductOverviewSnapshot()` owns the
-shell/Home startup contract; Logs has a two-query snapshot, and Shared Line,
-InnerLife, Trace, and Data details hydrate through focused view IPC. The full
-`buildProductSnapshot()` remains for compatibility tests and explicit tools,
-not renderer polling. Full Memory lists, InnerLife history, Gateway trace
-browsing, and graph data must be fetched through focused paged or lazy-loaded
-IPC calls. The detailed resource rules live in
+shell/Home startup contract; Logs has a two-query snapshot. Shared Line keeps
+its bounded catalog in that overview and hydrates the exact human-selected line
+through one `getSharedLine` IPC. Selection and snapshot generations reject
+stale asynchronous detail, while the compatibility
+`buildProductViewSnapshot("shared-line")` entry remains available outside the
+renderer path. InnerLife, Trace, and Data detail uses focused view IPC. The
+full `buildProductSnapshot()` remains for compatibility tests and explicit
+tools, not renderer polling. Full Memory lists, InnerLife history, Gateway
+trace browsing, and graph data must be fetched through focused paged or
+lazy-loaded IPC calls. The detailed resource rules live in
 [Runtime Memory Policy](RUNTIME_MEMORY_POLICY.md).
 
 Database implementation belongs in `core/db`. Product persistence is split into
