@@ -85,6 +85,15 @@ daemon-state persistence and keeps the public
 `ProductDatabase.tickInnerLifeDaemon()` compatibility method as a thin service
 delegate.
 
+`core/innerlife/services/session-lifecycle.js` owns session start packets,
+idempotent/best-effort session close behavior, and persisted afterthought
+processing. Its 16 explicit ports connect profile, briefing, share-quality,
+convergence, model generation, and the private session store without making
+the public session repository call those modules directly.
+`core/db/repositories/innerlife/session-store.js` owns session SQL and atomic
+job claiming. `core/db/repositories/innerlife/sessions.js` keeps the existing
+eight `ProductDatabase` methods as thin read and service adapters.
+
 When an agent profile contains `autonomous_sources`, each due daemon tick first
 fetches those public RSS, Atom, or webpage sources, dedupes recent items, and
 writes new material to the InnerLife inbox before running the existing digest

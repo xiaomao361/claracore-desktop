@@ -10,6 +10,10 @@ Current split:
   domain-service ports.
 - `innerlife/daemon.js`: daemon state and tick-transition persistence. Tick
   orchestration lives in `core/innerlife/services/daemon-tick.js`.
+- `innerlife/session-store.js`: private session and persisted-afterthought SQL
+  adapter. Session lifecycle policy lives in
+  `core/innerlife/services/session-lifecycle.js`; `innerlife/sessions.js`
+  preserves the public database API as a thin adapter.
 - `memory-controller.js`: append-only controller decisions and feedback,
   bounded audit queries, and feedback-aware retention. It must not mutate
   Memoria, Shared Line, or InnerLife semantic state.

@@ -6,10 +6,13 @@ const { createInnerLifeProfileRepository } = require("./innerlife/profile");
 const { createInnerLifeReadModelRepository } = require("./innerlife/read-models");
 const { createInnerLifeReflectionRepository } = require("./innerlife/reflection");
 const { createInnerLifeRetentionRepository } = require("./innerlife/retention");
+const { createInnerLifeSessionStore } = require("./innerlife/session-store");
 const { createInnerLifeSessionRepository } = require("./innerlife/sessions");
 const { createInnerLifeShareRepository } = require("./innerlife/shares");
 const { createInnerLifeSourceInboxRepository } = require("./innerlife/source-inbox");
 const { createInnerLifeDaemonTickService } = require("../../innerlife/services/daemon-tick");
+const { createInnerLifeSessionLifecycleService } = require("../../innerlife/services/session-lifecycle");
+const { generateOrTemplate } = require("../../innerlife/policy");
 const { composeRepositoryMethods, installRepositoryMethods } = require("../repository-installer");
 
 function installInnerLifeRepository(ProductDatabase, helpers) {
@@ -30,6 +33,25 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
     processOnce: (database, input) => database.processInnerLifeOnce(input),
     resolveAgentIdentity: helpers.resolveAgentIdentity
   });
+  const sessionStore = createInnerLifeSessionStore(helpers);
+  const sessionLifecycle = createInnerLifeSessionLifecycleService({
+    claimAfterthoughts: sessionStore.claimAfterthoughts,
+    closeSession: sessionStore.close,
+    completeAfterthought: sessionStore.completeAfterthought,
+    converge: (database, input) => database.convergeInnerLife(input),
+    createSession: sessionStore.create,
+    ensureProfile: (database, agentId) => database.ensureInnerLifeProfile(agentId),
+    findExistingSession: sessionStore.findExisting,
+    findSessionForEnd: sessionStore.findForEnd,
+    findSimilarShare: (database, agentId, body, input) => database.findSimilarInnerLifeShare(agentId, body, input),
+    generateAfterthought: (database, input) => generateOrTemplate(database, input),
+    getBriefing: (database, input) => database.getInnerLifeBriefing(input),
+    getShare: (database, id) => database.getInnerLifeShare(id),
+    listShares: (database, status, limit) => database.listInnerLifeShares(status, limit),
+    newId: helpers.newId,
+    resolveAgentIdentity: helpers.resolveAgentIdentity,
+    retryAfterthought: sessionStore.retryAfterthought
+  });
   const methods = composeRepositoryMethods("innerlife", [
     ["profile", createInnerLifeProfileRepository(helpers)],
     ["shares", createInnerLifeShareRepository(helpers)],
@@ -38,7 +60,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
     ["retention", createInnerLifeRetentionRepository(helpers)],
     ["read-models", createInnerLifeReadModelRepository(helpers)],
     ["digests", createInnerLifeDigestRepository(helpers)],
-    ["sessions", createInnerLifeSessionRepository(helpers)],
+    ["sessions", createInnerLifeSessionRepository(helpers, { sessionLifecycle, sessionStore })],
     ["source-inbox", createInnerLifeSourceInboxRepository(helpers)],
     ["history", createInnerLifeHistoryRepository(helpers)],
     ["reflection", createInnerLifeReflectionRepository(helpers)]

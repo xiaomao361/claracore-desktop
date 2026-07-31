@@ -15,7 +15,7 @@
     "memoria": "node core/cli.js",
     "check:syntax": "node scripts/check-js-syntax.js",
     "check": "npm run check:syntax && node core/tests/sql-interpolation-lint.js && node core/tests/ipc-contract-lint.js && npm run test:architecture",
-    "test:architecture": "node core/tests/repository-composition-smoke.js && node core/tests/innerlife-repository-boundary-smoke.js && node core/tests/innerlife-service-boundary-smoke.js && node core/tests/system-repository-boundary-smoke.js && node core/tests/continuity-repository-boundary-smoke.js",
+    "test:architecture": "node core/tests/repository-composition-smoke.js && node core/tests/innerlife-repository-boundary-smoke.js && node core/tests/innerlife-service-boundary-smoke.js && node core/tests/innerlife-session-service-boundary-smoke.js && node core/tests/system-repository-boundary-smoke.js && node core/tests/continuity-repository-boundary-smoke.js",
     "test:shell": "node core/tests/run-ui-smoke.js core/tests/shell-window-smoke.js",
     "test:ux:polish": "node core/tests/run-ui-smoke.js core/tests/ux-polish-ui-smoke.js",
     "test:onboarding": "node core/tests/run-ui-smoke.js core/tests/onboarding-ui-smoke.js",

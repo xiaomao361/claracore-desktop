@@ -196,7 +196,10 @@ uses repository methods. For example, InnerLife prompts, share policy defaults,
 compact response shaping, and model-generation fallback live in
 `core/innerlife/policy.js`. Daemon tick orchestration lives in
 `core/innerlife/services/daemon-tick.js` and reaches persistence, source
-ingest, reflection, and snapshots only through explicit ports.
+ingest, reflection, and snapshots only through explicit ports. Session start,
+end, and persisted afterthought orchestration live in
+`core/innerlife/services/session-lifecycle.js`; session SQL is isolated in a
+private store and the public repository is a thin compatibility adapter.
 `core/db/repositories/innerlife.js` is a composition-only entry: focused
 repository modules own read models, digest runs, source intake, reflection
 workflows, sessions, shares, retention, and daemon-state transitions.
@@ -263,6 +266,12 @@ Current shape:
 - `core/db/repositories/innerlife/daemon.js`: daemon state, due checks, and
   idle/running/success/failure transition persistence; the public tick method
   delegates to the domain service
+- `core/innerlife/services/session-lifecycle.js`: session start/end and
+  persisted afterthought orchestration through explicit ports
+- `core/db/repositories/innerlife/session-store.js`: private session reads,
+  writes, lifecycle transitions, and atomic afterthought job claiming
+- `core/db/repositories/innerlife/sessions.js`: stable eight-method public
+  session API delegating to the store and lifecycle service
 - `core/db/repositories/innerlife/read-models.js`: bounded snapshots, counts,
   Doctor status, briefing, and optional Shared Line resume context
 - `core/db/repositories/innerlife/digests.js`: digest run list/page/get,
@@ -284,6 +293,10 @@ and local factory groups reject duplicate ownership before installation.
 `core/tests/innerlife-service-boundary-smoke.js` verifies the daemon service
 port contract, transition behavior, SQL-free service boundary, and stable
 public database API.
+`core/tests/innerlife-session-service-boundary-smoke.js` verifies session
+lifecycle ports and behavior, keeps SQL in the private store, preserves the
+public API, and prevents sessions/reflection from re-entering the remaining
+repository dependency cycle.
 
 `core/db/migrations/index.js` runs ordered, idempotent migration modules in
 `before-schema` or `after-schema` phases and records each successful id in

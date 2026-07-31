@@ -186,6 +186,9 @@ Repository ownership:
 - `core/innerlife/services/daemon-tick.js`: InnerLife daemon tick orchestration,
   per-Agent locking, due/paused decisions, process dispatch, and retry policy
   through explicit persistence and domain ports.
+- `core/innerlife/services/session-lifecycle.js`: session start packet, close,
+  persisted afterthought quality/convergence, and retry orchestration through
+  explicit ports.
 - `core/db/repositories/innerlife/profile.js`: InnerLife profile create,
   update, list, and delete persistence.
 - `core/db/repositories/innerlife/inbox.js`: InnerLife inbox list, count,
@@ -205,9 +208,11 @@ Repository ownership:
 - `core/db/repositories/innerlife/reflection.js`: process-once, exploration,
   and convergence workflows. Prompt and generation fallback policy remains in
   `core/innerlife/policy.js`.
-- `core/db/repositories/innerlife/sessions.js`: agent-scoped InnerLife session
-  count/list/page, start packet, canonical internal/external session lookup,
-  best-effort lifecycle-hook close, and session-end persistence.
+- `core/db/repositories/innerlife/session-store.js`: private session SQL,
+  canonical internal/external lookup, lifecycle transitions, and atomic
+  afterthought job claiming.
+- `core/db/repositories/innerlife/sessions.js`: thin eight-method public
+  adapter for session reads and lifecycle services.
 - `core/db/repositories/innerlife/shares.js`: InnerLife share list, timing
   checks, review/mark actions, and apply-to-Memory/Shared-Line persistence.
   Timing checks may use the current Shared Line resume packet as implicit
@@ -221,6 +226,9 @@ Repository ownership:
 - `core/tests/innerlife-service-boundary-smoke.js`: verifies the daemon
   service's explicit port contract, transition paths, SQL-free boundary, and
   stable `ProductDatabase.tickInnerLifeDaemon()` API.
+- `core/tests/innerlife-session-service-boundary-smoke.js`: verifies session
+  lifecycle ports and behavior, SQL/store ownership, stable public APIs, and
+  the reduced repository dependency cycle.
 - `core/tests/repository-composition-smoke.js`: verifies global method
   uniqueness across System, Memory Controller, Memoria, Continuity, and
   InnerLife, and prevents direct `ProductDatabase.prototype` assignment from
@@ -272,12 +280,13 @@ Start here:
 1. `core/innerlife/index.js`
 2. `core/innerlife/policy.js`
 3. `core/innerlife/services/daemon-tick.js` for daemon tick orchestration
-4. `core/db/repositories/innerlife.js`
-5. the matching focused module under `core/db/repositories/innerlife/`
-6. `electron/schedulers.js`
-7. `app/views/shared-innerlife.js`
-8. `core/gateway/tool-handlers/innerlife.js`
-9. `core/gateway/tool-definitions/innerlife.js` and
+4. `core/innerlife/services/session-lifecycle.js` for session orchestration
+5. `core/db/repositories/innerlife.js`
+6. the matching focused module under `core/db/repositories/innerlife/`
+7. `electron/schedulers.js`
+8. `app/views/shared-innerlife.js`
+9. `core/gateway/tool-handlers/innerlife.js`
+10. `core/gateway/tool-definitions/innerlife.js` and
    `core/gateway/tool-definitions/innerlife-*.js`
 
 Use this path for profiles, daemon enable/pause/tick, inbox, sessions, shares,

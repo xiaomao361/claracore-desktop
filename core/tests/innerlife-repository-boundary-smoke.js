@@ -21,6 +21,19 @@ const factoryModules = [
 const factoryServices = {
   daemon: {
     tickInnerLifeDaemon: async () => ({ ran: false, reason: "test" })
+  },
+  sessions: {
+    sessionLifecycle: {
+      endInnerLifeSession: async () => ({}),
+      processPendingSessionAfterthoughts: async () => ({ processed: 0, results: [] }),
+      startInnerLifeSession: async () => ({})
+    },
+    sessionStore: {
+      count: async () => 0,
+      get: async () => null,
+      list: async () => [],
+      listCompact: async () => []
+    }
   }
 };
 
