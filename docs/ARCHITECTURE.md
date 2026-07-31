@@ -194,8 +194,11 @@ Domain behavior belongs in:
 Domain policy should live with the domain module even when persistence still
 uses repository methods. For example, InnerLife prompts, share policy defaults,
 compact response shaping, and model-generation fallback live in
-`core/innerlife/policy.js`; `core/db/repositories/innerlife.js` should keep
-moving toward persistence and query orchestration only.
+`core/innerlife/policy.js`. `core/db/repositories/innerlife.js` is a
+composition-only entry: focused repository modules own read models, digest
+runs, source intake, reflection workflows, sessions, shares, and retention.
+`core/tests/innerlife-repository-boundary-smoke.js` prevents SQL or query
+orchestration from growing back into that entry.
 
 Runtime modules may compose multiple domains for product workflows, such as
 snapshots, backup-gated imports, archive export, or read-only decay audits. They
@@ -236,9 +239,18 @@ Current shape:
 - `core/db/repositories/continuity.js`: Shared Line persistence
 - `core/db/repositories/continuity/`: focused Shared Line repository
   submodules, including agent state and model adjustment persistence
-- `core/db/repositories/innerlife.js`: InnerLife persistence
+- `core/db/repositories/innerlife.js`: composition-only InnerLife repository
+  installer
 - `core/db/repositories/innerlife/`: focused InnerLife repository submodules,
   including profile, inbox, daemon, history, session, and share persistence
+- `core/db/repositories/innerlife/read-models.js`: bounded snapshots, counts,
+  Doctor status, briefing, and optional Shared Line resume context
+- `core/db/repositories/innerlife/digests.js`: digest run list/page/get,
+  execution receipts, and per-Agent retention
+- `core/db/repositories/innerlife/source-inbox.js`: external source candidate
+  deduplication and inbox persistence
+- `core/db/repositories/innerlife/reflection.js`: process-once, exploration,
+  and convergence workflows using policy from `core/innerlife/policy.js`
 - `core/db/repositories/innerlife/retention.js`: age and per-Agent capacity
   retention for processed inbox, ended sessions, share checks, and digest runs
 

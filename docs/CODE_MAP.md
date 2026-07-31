@@ -168,9 +168,8 @@ Repository ownership:
   lifecycle, and Gateway context composition.
 - `core/db/repositories/continuity/agents.js`: Shared Line agent state and
   model adjustment persistence.
-- `core/db/repositories/innerlife.js`: InnerLife repository aggregation plus
-  events, thoughts, shares, digest/exploration/convergence data, compact status
-  and view snapshots, and review flows.
+- `core/db/repositories/innerlife.js`: composition-only installer for focused
+  InnerLife repository modules. It must not own SQL or workflow logic.
 - `core/db/repositories/innerlife/profile.js`: InnerLife profile create,
   update, list, and delete persistence.
 - `core/db/repositories/innerlife/inbox.js`: InnerLife inbox list, count,
@@ -179,6 +178,16 @@ Repository ownership:
   enable/pause/tick scheduling, and per-agent tick locking.
 - `core/db/repositories/innerlife/history.js`: InnerLife history, experience,
   summary, and digest-summary read models.
+- `core/db/repositories/innerlife/read-models.js`: bounded status/view
+  snapshots, counts, Doctor guidance, briefing, and optional Shared Line
+  resume context.
+- `core/db/repositories/innerlife/digests.js`: digest run list/page/get,
+  digest execution receipts, and per-Agent digest retention.
+- `core/db/repositories/innerlife/source-inbox.js`: source candidate
+  deduplication and inbox persistence.
+- `core/db/repositories/innerlife/reflection.js`: process-once, exploration,
+  and convergence workflows. Prompt and generation fallback policy remains in
+  `core/innerlife/policy.js`.
 - `core/db/repositories/innerlife/sessions.js`: agent-scoped InnerLife session
   count/list/page, start packet, canonical internal/external session lookup,
   best-effort lifecycle-hook close, and session-end persistence.
@@ -189,6 +198,9 @@ Repository ownership:
 - `core/db/repositories/innerlife/retention.js`: scheduled age/capacity cleanup
   for processed inbox, ended sessions, share checks, and digest runs while
   protecting active work.
+- `core/tests/innerlife-repository-boundary-smoke.js`: verifies unique method
+  ownership across repository modules and keeps the aggregate installer free
+  of SQL and query execution.
 
 New schema-heavy behavior should use an explicit migration and repository API.
 Product policy should live in a domain module rather than directly in a
@@ -234,10 +246,11 @@ Start here:
 1. `core/innerlife/index.js`
 2. `core/innerlife/policy.js`
 3. `core/db/repositories/innerlife.js`
-4. `electron/schedulers.js`
-5. `app/views/shared-innerlife.js`
-6. `core/gateway/tool-handlers/innerlife.js`
-7. `core/gateway/tool-definitions/innerlife.js` and
+4. the matching focused module under `core/db/repositories/innerlife/`
+5. `electron/schedulers.js`
+6. `app/views/shared-innerlife.js`
+7. `core/gateway/tool-handlers/innerlife.js`
+8. `core/gateway/tool-definitions/innerlife.js` and
    `core/gateway/tool-definitions/innerlife-*.js`
 
 Use this path for profiles, daemon enable/pause/tick, inbox, sessions, shares,
