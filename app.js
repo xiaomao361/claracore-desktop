@@ -658,9 +658,9 @@ async function hydrateView(viewName, { force = false } = {}) {
   const sharedLineCatalog = snapshot.sharedLine;
   const request = (async () => {
     if (viewName === "shared-line") {
-      await sharedLineActions.hydrateSelectedLine(sharedLineCatalog);
+      const packet = await sharedLineActions.hydrateSelectedLine(sharedLineCatalog);
       if (generation !== snapshotGeneration) return;
-      hydratedViews.add(viewName);
+      if (packet) hydratedViews.add(viewName);
       renderSharedLine();
       return;
     }

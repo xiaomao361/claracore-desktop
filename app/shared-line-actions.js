@@ -7,6 +7,8 @@ function createClaraCoreSharedLineActions({
 }) {
   let selectionRevision = 0;
   let detailRequestRevision = 0;
+  let committedLineId = "";
+  let committedPacket = null;
 
   function activeLines(packet = {}) {
     return (packet.lines || []).filter((line) => line.status !== "archived");
@@ -23,6 +25,16 @@ function createClaraCoreSharedLineActions({
       && packet?.lineId === lineId
       && packet?.currentPosition?.lineId === lineId
     );
+  }
+
+  function rememberCommittedPacket(lineId, packet) {
+    if (!packetMatchesLine(packet, lineId)) return;
+    committedLineId = lineId;
+    committedPacket = packet;
+  }
+
+  if (packetMatchesLine(state.selectedSharedLinePacket, state.selectedSharedLineId)) {
+    rememberCommittedPacket(state.selectedSharedLineId, state.selectedSharedLinePacket);
   }
 
   function invalidatePendingDetail() {
@@ -55,11 +67,16 @@ function createClaraCoreSharedLineActions({
   function syncSelectedLineCatalog(catalogPacket = {}) {
     const lines = activeLines(catalogPacket);
     const selectedStillExists = lines.some((line) => line.id === state.selectedSharedLineId);
+    const committedStillExists = lines.some((line) => line.id === committedLineId);
     const fallback = fallbackLine(catalogPacket);
     const nextLineId = selectedStillExists ? state.selectedSharedLineId : fallback?.id || "";
     const previousLineId = state.selectedSharedLineId;
 
     invalidatePendingDetail();
+    if (!committedStillExists) {
+      committedLineId = "";
+      committedPacket = null;
+    }
 
     if (!nextLineId) {
       state.selectedSharedLineId = "";
@@ -96,6 +113,7 @@ function createClaraCoreSharedLineActions({
       const packet = await readSelectedLine(lineId, catalogPacket);
       if (!isCurrentDetailRequest(lineId, intentRevision, requestRevision)) return null;
       state.selectedSharedLinePacket = packet;
+      rememberCommittedPacket(lineId, packet);
       if (dom.sharedLineNotice) dom.sharedLineNotice.textContent = "";
       return packet;
     } catch (error) {
@@ -105,7 +123,10 @@ function createClaraCoreSharedLineActions({
       if (fallback?.id && fallback.id !== lineId) {
         invalidatePendingDetail();
         state.selectedSharedLineId = fallback.id;
-        state.selectedSharedLinePacket = null;
+        state.selectedSharedLinePacket = committedLineId === fallback.id
+          && packetMatchesLine(committedPacket, fallback.id)
+          ? committedPacket
+          : null;
         if (dom.sharedLineSelectionNotice) {
           dom.sharedLineSelectionNotice.textContent = t("sharedLine.selectionFallback");
         }
@@ -122,9 +143,16 @@ function createClaraCoreSharedLineActions({
 
   async function selectLine(card) {
     const lineId = card.dataset.sharedLineId;
-    if (!lineId || lineId === state.selectedSharedLineId) return;
-    const previousLineId = state.selectedSharedLineId;
-    const previousPacket = state.selectedSharedLinePacket;
+    if (
+      !lineId
+      || (
+        lineId === state.selectedSharedLineId
+        && packetMatchesLine(state.selectedSharedLinePacket, lineId)
+        && dom.sharedLineNotice?.textContent !== t("sharedLine.lineFailed")
+      )
+    ) return;
+    const previousLineId = committedLineId || state.selectedSharedLineId;
+    const previousPacket = packetMatchesLine(committedPacket, committedLineId) ? committedPacket : null;
     const intentRevision = invalidatePendingDetail();
     const requestRevision = ++detailRequestRevision;
     state.selectedSharedLineId = lineId;
@@ -135,6 +163,7 @@ function createClaraCoreSharedLineActions({
       const packet = await readSelectedLine(lineId);
       if (!isCurrentDetailRequest(lineId, intentRevision, requestRevision)) return;
       state.selectedSharedLinePacket = packet;
+      rememberCommittedPacket(lineId, packet);
       if (dom.sharedLineSelectionNotice) dom.sharedLineSelectionNotice.textContent = "";
       if (dom.sharedLineNotice) dom.sharedLineNotice.textContent = "";
       renderSharedLine();
@@ -143,7 +172,7 @@ function createClaraCoreSharedLineActions({
       console.error(error);
       invalidatePendingDetail();
       state.selectedSharedLineId = previousLineId;
-      state.selectedSharedLinePacket = packetMatchesLine(previousPacket, previousLineId) ? previousPacket : null;
+      state.selectedSharedLinePacket = previousPacket;
       if (dom.sharedLineNotice) dom.sharedLineNotice.textContent = t("sharedLine.lineFailed");
       renderSharedLine();
     } finally {

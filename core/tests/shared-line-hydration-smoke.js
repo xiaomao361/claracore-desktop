@@ -256,6 +256,85 @@ async function userSelectionInvalidatesOlderHydration() {
   assert.strictEqual(fixture.state.selectedSharedLinePacket.currentPosition.summary, "selected");
 }
 
+async function failedLatestSelectionRestoresLastCommittedPacket() {
+  const pendingParallel = deferred();
+  const pendingThird = deferred();
+  const committed = packet("active", "committed");
+  const fixture = createActions(
+    {
+      getSharedLine({ lineId }) {
+        return lineId === "parallel" ? pendingParallel.promise : pendingThird.promise;
+      }
+    },
+    {
+      selectedSharedLineId: "active",
+      selectedSharedLinePacket: committed
+    }
+  );
+
+  const parallelSelection = fixture.actions.selectLine(card("parallel"));
+  const thirdSelection = fixture.actions.selectLine(card("third"));
+  pendingThird.reject(new Error("third unavailable"));
+  await thirdSelection;
+
+  assert.strictEqual(fixture.state.selectedSharedLineId, "active");
+  assert.strictEqual(fixture.state.selectedSharedLinePacket, committed);
+
+  pendingParallel.resolve(packet("parallel", "stale pending selection"));
+  await parallelSelection;
+  assert.strictEqual(fixture.state.selectedSharedLineId, "active");
+  assert.strictEqual(fixture.state.selectedSharedLinePacket, committed);
+}
+
+async function missingSameLinePacketCanRetry() {
+  let reads = 0;
+  const fixture = createActions(
+    {
+      async getSharedLine({ lineId }) {
+        reads += 1;
+        return packet(lineId, "retried");
+      }
+    },
+    {
+      selectedSharedLineId: "parallel",
+      selectedSharedLinePacket: null
+    }
+  );
+
+  await fixture.actions.selectLine(card("parallel"));
+
+  assert.strictEqual(reads, 1);
+  assert.strictEqual(fixture.state.selectedSharedLinePacket.currentPosition.summary, "retried");
+}
+
+async function failedHydrationWithCommittedPacketCanRetry() {
+  let reads = 0;
+  const committed = packet("active", "committed");
+  const fixture = createActions(
+    {
+      async getSharedLine({ lineId }) {
+        reads += 1;
+        if (reads === 1) throw new Error("temporary failure");
+        return packet(lineId, "retried");
+      }
+    },
+    {
+      selectedSharedLineId: "active",
+      selectedSharedLinePacket: committed
+    }
+  );
+
+  fixture.actions.syncSelectedLineCatalog(catalog());
+  await fixture.actions.hydrateSelectedLine(catalog());
+  assert.strictEqual(fixture.state.selectedSharedLinePacket, committed);
+  assert.strictEqual(fixture.dom.sharedLineNotice.textContent, "sharedLine.lineFailed");
+
+  await fixture.actions.selectLine(card("active"));
+  assert.strictEqual(reads, 2);
+  assert.strictEqual(fixture.state.selectedSharedLinePacket.currentPosition.summary, "retried");
+  assert.strictEqual(fixture.dom.sharedLineNotice.textContent, "");
+}
+
 async function failedSelectionRestoresPreviousPacket() {
   const previousPacket = packet("active", "previous");
   const fixture = createActions(
@@ -310,6 +389,9 @@ async function main() {
   await rapidSelectionKeepsLatestIntent();
   await refreshedCatalogInvalidatesOlderHydration();
   await userSelectionInvalidatesOlderHydration();
+  await failedLatestSelectionRestoresLastCommittedPacket();
+  await missingSameLinePacketCanRetry();
+  await failedHydrationWithCommittedPacketCanRetry();
   await failedSelectionRestoresPreviousPacket();
   await mismatchedDetailFailsClosedWithoutSecondRead();
   console.log(JSON.stringify({
@@ -320,6 +402,9 @@ async function main() {
     emptyCatalogReads: 0,
     rapidSelectionRace: "passed",
     refreshRace: "passed",
+    failedLatestSelectionRollback: "passed",
+    sameLineRetry: "passed",
+    failedHydrationRetry: "passed",
     selectionFailureRestore: "passed",
     packetIdentityGuard: "passed"
   }, null, 2));
