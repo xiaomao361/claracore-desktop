@@ -240,9 +240,14 @@ Current shape:
 - `core/db/repositories/memoria/`: focused Memoria repository submodules,
   including label alias, canonicalization, structured record, and
   embedding/search/maintenance persistence
-- `core/db/repositories/continuity.js`: Shared Line persistence
+- `core/db/repositories/continuity.js`: composition plus current position,
+  history, snapshots, handoffs, arc policy, and Gateway context persistence
 - `core/db/repositories/continuity/`: focused Shared Line repository
-  submodules, including agent state and model adjustment persistence
+  submodules
+- `core/db/repositories/continuity/lines.js`: line lifecycle, active-line
+  selection, agent-owned line resolution, and bounded line listing
+- `core/db/repositories/continuity/agents.js`: agent state and model
+  adjustment persistence
 - `core/db/repositories/innerlife.js`: composition-only InnerLife repository
   installer
 - `core/db/repositories/innerlife/`: focused InnerLife repository submodules,
@@ -260,6 +265,8 @@ Current shape:
 
 `core/tests/system-repository-boundary-smoke.js` keeps Gateway Trace and Agent
 activity ownership out of the remaining system repository aggregator.
+`core/tests/continuity-repository-boundary-smoke.js` keeps line lifecycle,
+agent state, and model adjustment ownership in focused Continuity modules.
 
 `core/db/migrations/index.js` runs ordered, idempotent migration modules in
 `before-schema` or `after-schema` phases and records each successful id in

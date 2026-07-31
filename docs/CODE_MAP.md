@@ -168,9 +168,12 @@ Repository ownership:
 - `core/db/repositories/memoria/maintenance.js`: Memoria archive suggestions,
   maintenance reports and repair, audit reports, merge suggestions, and merge
   persistence.
-- `core/db/repositories/continuity.js`: Shared Line tables, stable owner plus
-  writer provenance, current position, history, snapshots, handoffs, arc
-  lifecycle, and Gateway context composition.
+- `core/db/repositories/continuity.js`: composition plus current position,
+  writer provenance, history, snapshots, handoffs, affective arc policy,
+  resume packets, and Gateway context composition.
+- `core/db/repositories/continuity/lines.js`: Shared Line lifecycle,
+  active-line selection, explicit and agent-owned line resolution, and bounded
+  line listing.
 - `core/db/repositories/continuity/agents.js`: Shared Line agent state and
   model adjustment persistence.
 - `core/db/repositories/innerlife.js`: composition-only installer for focused
@@ -235,14 +238,16 @@ repository remains a full-record update primitive.
 Start here:
 
 1. `core/continuity/index.js`
-2. `core/db/repositories/continuity.js`
-3. `app/views/shared-innerlife.js`
-4. `core/gateway/tool-handlers/shared-line.js`
-5. `core/gateway/tool-definitions/shared-line.js`
+2. `core/db/repositories/continuity/lines.js`
+3. `core/db/repositories/continuity.js`
+4. `app/views/shared-innerlife.js`
+5. `core/gateway/tool-handlers/shared-line.js`
+6. `core/gateway/tool-definitions/shared-line.js`
 
 Use this path for line create/list/get/activate/rename/archive/restore/update,
 current position, handoffs, agent state, model adjustments, shared-reality
-fields, affective arcs, and resume packets.
+fields, affective arcs, and resume packets. The repository ownership contract
+is enforced by `core/tests/continuity-repository-boundary-smoke.js`.
 
 ### InnerLife Behavior
 
