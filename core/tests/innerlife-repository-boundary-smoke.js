@@ -18,6 +18,11 @@ const factoryModules = [
   "shares",
   "source-inbox"
 ];
+const factoryServices = {
+  daemon: {
+    tickInnerLifeDaemon: async () => ({ ran: false, reason: "test" })
+  }
+};
 
 const owners = new Map();
 const methodCounts = {};
@@ -26,7 +31,7 @@ for (const moduleName of factoryModules) {
   const repositoryModule = require(`../db/repositories/innerlife/${moduleName}`);
   const factories = Object.values(repositoryModule).filter((value) => typeof value === "function");
   assert.strictEqual(factories.length, 1, `${moduleName} must export exactly one repository factory.`);
-  const methods = Object.keys(factories[0]({}));
+  const methods = Object.keys(factories[0]({}, factoryServices[moduleName] || {}));
   assert(methods.length > 0, `${moduleName} must own at least one repository method.`);
   methodCounts[moduleName] = methods.length;
   for (const methodName of methods) {

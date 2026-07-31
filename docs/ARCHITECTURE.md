@@ -194,9 +194,12 @@ Domain behavior belongs in:
 Domain policy should live with the domain module even when persistence still
 uses repository methods. For example, InnerLife prompts, share policy defaults,
 compact response shaping, and model-generation fallback live in
-`core/innerlife/policy.js`. `core/db/repositories/innerlife.js` is a
-composition-only entry: focused repository modules own read models, digest
-runs, source intake, reflection workflows, sessions, shares, and retention.
+`core/innerlife/policy.js`. Daemon tick orchestration lives in
+`core/innerlife/services/daemon-tick.js` and reaches persistence, source
+ingest, reflection, and snapshots only through explicit ports.
+`core/db/repositories/innerlife.js` is a composition-only entry: focused
+repository modules own read models, digest runs, source intake, reflection
+workflows, sessions, shares, retention, and daemon-state transitions.
 `core/tests/innerlife-repository-boundary-smoke.js` prevents SQL or query
 orchestration from growing back into that entry.
 
@@ -255,6 +258,11 @@ Current shape:
   installer
 - `core/db/repositories/innerlife/`: focused InnerLife repository submodules,
   including profile, inbox, daemon, history, session, and share persistence
+- `core/innerlife/services/daemon-tick.js`: daemon tick orchestration with
+  explicit ports for scheduling state, source ingest, reflection, and snapshots
+- `core/db/repositories/innerlife/daemon.js`: daemon state, due checks, and
+  idle/running/success/failure transition persistence; the public tick method
+  delegates to the domain service
 - `core/db/repositories/innerlife/read-models.js`: bounded snapshots, counts,
   Doctor status, briefing, and optional Shared Line resume context
 - `core/db/repositories/innerlife/digests.js`: digest run list/page/get,
@@ -273,6 +281,9 @@ agent state, and model adjustment ownership in focused Continuity modules.
 `core/tests/repository-composition-smoke.js` verifies that every repository
 domain uses the shared installer, all installed methods are globally unique,
 and local factory groups reject duplicate ownership before installation.
+`core/tests/innerlife-service-boundary-smoke.js` verifies the daemon service
+port contract, transition behavior, SQL-free service boundary, and stable
+public database API.
 
 `core/db/migrations/index.js` runs ordered, idempotent migration modules in
 `before-schema` or `after-schema` phases and records each successful id in

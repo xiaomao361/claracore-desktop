@@ -181,13 +181,18 @@ Repository ownership:
 - `core/db/repositories/continuity/agents.js`: Shared Line agent state and
   model adjustment persistence.
 - `core/db/repositories/innerlife.js`: composition-only installer for focused
-  InnerLife repository modules. It must not own SQL or workflow logic.
+  InnerLife repository modules and domain-service ports. It must not own SQL or
+  workflow logic.
+- `core/innerlife/services/daemon-tick.js`: InnerLife daemon tick orchestration,
+  per-Agent locking, due/paused decisions, process dispatch, and retry policy
+  through explicit persistence and domain ports.
 - `core/db/repositories/innerlife/profile.js`: InnerLife profile create,
   update, list, and delete persistence.
 - `core/db/repositories/innerlife/inbox.js`: InnerLife inbox list, count,
   pagination, and submit persistence.
 - `core/db/repositories/innerlife/daemon.js`: InnerLife daemon state,
-  enable/pause/tick scheduling, and per-agent tick locking.
+  enable/pause, due checks, and idle/running/success/failure transition
+  persistence. Its public tick method delegates to the domain service.
 - `core/db/repositories/innerlife/history.js`: InnerLife history, experience,
   summary, and digest-summary read models.
 - `core/db/repositories/innerlife/read-models.js`: bounded status/view
@@ -213,6 +218,9 @@ Repository ownership:
 - `core/tests/innerlife-repository-boundary-smoke.js`: verifies unique method
   ownership across repository modules and keeps the aggregate installer free
   of SQL and query execution.
+- `core/tests/innerlife-service-boundary-smoke.js`: verifies the daemon
+  service's explicit port contract, transition paths, SQL-free boundary, and
+  stable `ProductDatabase.tickInnerLifeDaemon()` API.
 - `core/tests/repository-composition-smoke.js`: verifies global method
   uniqueness across System, Memory Controller, Memoria, Continuity, and
   InnerLife, and prevents direct `ProductDatabase.prototype` assignment from
@@ -263,12 +271,13 @@ Start here:
 
 1. `core/innerlife/index.js`
 2. `core/innerlife/policy.js`
-3. `core/db/repositories/innerlife.js`
-4. the matching focused module under `core/db/repositories/innerlife/`
-5. `electron/schedulers.js`
-6. `app/views/shared-innerlife.js`
-7. `core/gateway/tool-handlers/innerlife.js`
-8. `core/gateway/tool-definitions/innerlife.js` and
+3. `core/innerlife/services/daemon-tick.js` for daemon tick orchestration
+4. `core/db/repositories/innerlife.js`
+5. the matching focused module under `core/db/repositories/innerlife/`
+6. `electron/schedulers.js`
+7. `app/views/shared-innerlife.js`
+8. `core/gateway/tool-handlers/innerlife.js`
+9. `core/gateway/tool-definitions/innerlife.js` and
    `core/gateway/tool-definitions/innerlife-*.js`
 
 Use this path for profiles, daemon enable/pause/tick, inbox, sessions, shares,

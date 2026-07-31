@@ -1,14 +1,24 @@
-const innerLifeTickLocks = new Map();
-
-function createInnerLifeDaemonRepository(helpers) {
+function createInnerLifeDaemonRepository(helpers, services = {}) {
   const {
     DEFAULT_AGENT_ID,
-    innerLifeRetrySeconds,
     jsonSql,
     parseJson,
     resolveAgentIdentity,
     sqlString
   } = helpers;
+  const { tickInnerLifeDaemon } = services;
+  if (typeof tickInnerLifeDaemon !== "function") {
+    throw new Error("InnerLife daemon repository requires tickInnerLifeDaemon service.");
+  }
+
+  function compactSourceIngest(input = {}) {
+    return {
+      sourceCount: Number(input.sourceCount || 0),
+      candidateCount: Number(input.candidateCount || 0),
+      insertedCount: Number(input.insertedCount || 0),
+      errors: Array.isArray(input.errors) ? input.errors : []
+    };
+  }
 
   return {
     async getInnerLifeDaemonStateReadOnly(agentId = DEFAULT_AGENT_ID, settings = null) {
@@ -144,183 +154,122 @@ function createInnerLifeDaemonRepository(helpers) {
       return this.ensureInnerLifeDaemonState(profile.agent_id);
     },
 
+    async isInnerLifeDaemonTickDue(agentId = DEFAULT_AGENT_ID) {
+      const identity = resolveAgentIdentity(agentId || DEFAULT_AGENT_ID);
+      const rows = await this.query(`
+        SELECT CASE
+          WHEN next_run_at IS NULL THEN 1
+          WHEN next_run_at <= CURRENT_TIMESTAMP THEN 1
+          ELSE 0
+        END AS due
+        FROM innerlife_daemon_state
+        WHERE agent_id = ${sqlString(identity.id)}
+        LIMIT 1;
+      `);
+      return Boolean(rows[0]?.due);
+    },
+
+    async markInnerLifeDaemonTickRunning(agentId = DEFAULT_AGENT_ID) {
+      const identity = resolveAgentIdentity(agentId || DEFAULT_AGENT_ID);
+      await this.exec(`
+        UPDATE innerlife_daemon_state
+        SET status = 'running',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE agent_id = ${sqlString(identity.id)};
+      `);
+    },
+
+    async completeInnerLifeDaemonTickIdle(input = {}) {
+      const identity = resolveAgentIdentity(input.agentId || DEFAULT_AGENT_ID);
+      const pollSeconds = Math.max(1, Number.parseInt(String(input.pollSeconds || 900), 10) || 900);
+      await this.exec(`
+        UPDATE innerlife_daemon_state
+        SET status = 'enabled',
+            last_tick_at = CURRENT_TIMESTAMP,
+            next_run_at = datetime('now', '+${pollSeconds} seconds'),
+            last_result = 'idle',
+            last_error = '',
+            tick_count = tick_count + 1,
+            updated_at = CURRENT_TIMESTAMP,
+            metadata_json = ${jsonSql({
+              pollSeconds,
+              pendingInbox: 0,
+              sourceIngest: compactSourceIngest(input.sourceIngest),
+              failureCount: 0,
+              retrySeconds: 0
+            })}
+        WHERE agent_id = ${sqlString(identity.id)};
+      `);
+    },
+
+    async completeInnerLifeDaemonTickSuccess(input = {}) {
+      const identity = resolveAgentIdentity(input.agentId || DEFAULT_AGENT_ID);
+      const pendingInboxCount = Math.max(
+        0,
+        Number.parseInt(String(input.pendingInboxCount || 0), 10) || 0
+      );
+      const pollSeconds = Math.max(1, Number.parseInt(String(input.pollSeconds || 900), 10) || 900);
+      const result = input.result || {};
+      await this.exec(`
+        UPDATE innerlife_daemon_state
+        SET status = 'enabled',
+            last_tick_at = CURRENT_TIMESTAMP,
+            next_run_at = datetime('now', '+${pollSeconds} seconds'),
+            last_result = ${sqlString(`processed ${pendingInboxCount} inbox item(s)`)},
+            last_error = '',
+            tick_count = tick_count + 1,
+            updated_at = CURRENT_TIMESTAMP,
+            metadata_json = ${jsonSql({
+              pollSeconds,
+              pendingInbox: pendingInboxCount,
+              sourceIngest: compactSourceIngest(input.sourceIngest),
+              shareId: result.share?.id || "",
+              convergence: result.convergence
+                ? {
+                    converged: Boolean(result.convergence.converged),
+                    reason: result.convergence.reason || "",
+                    shareId: result.convergence.share?.id || ""
+                  }
+                : null,
+              failureCount: 0,
+              retrySeconds: 0
+            })}
+        WHERE agent_id = ${sqlString(identity.id)};
+      `);
+    },
+
+    async completeInnerLifeDaemonTickFailure(input = {}) {
+      const identity = resolveAgentIdentity(input.agentId || DEFAULT_AGENT_ID);
+      const pendingInboxCount = Math.max(
+        0,
+        Number.parseInt(String(input.pendingInboxCount || 0), 10) || 0
+      );
+      const pollSeconds = Math.max(1, Number.parseInt(String(input.pollSeconds || 900), 10) || 900);
+      const failureCount = Math.max(1, Number.parseInt(String(input.failureCount || 1), 10) || 1);
+      const retrySeconds = Math.max(1, Number.parseInt(String(input.retrySeconds || 1), 10) || 1);
+      const error = String(input.error || "InnerLife daemon tick failed.");
+      await this.exec(`
+        UPDATE innerlife_daemon_state
+        SET status = 'error',
+            last_tick_at = CURRENT_TIMESTAMP,
+            next_run_at = datetime('now', '+${retrySeconds} seconds'),
+            last_result = ${sqlString(`retry in ${retrySeconds}s`)},
+            last_error = ${sqlString(error)},
+            tick_count = tick_count + 1,
+            updated_at = CURRENT_TIMESTAMP,
+            metadata_json = ${jsonSql({
+              pollSeconds,
+              pendingInbox: pendingInboxCount,
+              failureCount,
+              retrySeconds,
+              error
+            })}
+        WHERE agent_id = ${sqlString(identity.id)};
+      `);
+    },
+
     async tickInnerLifeDaemon(input = {}) {
-      const requestedAgentId = resolveAgentIdentity(input || {}).id;
-      const includeSnapshot = input.includeSnapshot !== false;
-      const snapshotIfRequested = async () => includeSnapshot ? this.getInnerLifeSnapshot(requestedAgentId) : undefined;
-      const force = Boolean(input.force);
-      if (!includeSnapshot && !force) {
-        const settings = await this.getSettings();
-        if (!settings["innerlife.enabled"]) {
-          return {
-            ran: false,
-            reason: "paused",
-            daemon: {
-              agentId: requestedAgentId,
-              status: "paused",
-              enabled: false
-            }
-          };
-        }
-      }
-      const hasExplicitAgent = Boolean(input?.agentId || input?.agent_id || input?.agent || input?.agentTool || input?.agent_tool || input?.agentName || input?.agent_name);
-      const firstPendingInbox = await this.listInnerLifeInbox("pending", 1);
-      const agentId = !hasExplicitAgent && firstPendingInbox[0]?.agentId ? firstPendingInbox[0].agentId : requestedAgentId;
-      let pendingInboxPage = await this.listInnerLifeInboxPage({ agentId, status: "pending", limit: 5, offset: 0 });
-      let pendingInbox = pendingInboxPage.items;
-      const lockKey = `${this.dbPath}:${agentId}`;
-      if (innerLifeTickLocks.get(lockKey)) {
-        return {
-          ran: false,
-          reason: "running",
-          daemon: await this.ensureInnerLifeDaemonState(agentId),
-          snapshot: await snapshotIfRequested()
-        };
-      }
-      innerLifeTickLocks.set(lockKey, true);
-      try {
-        const state = await this.ensureInnerLifeDaemonState(agentId);
-        if (!state.enabled || state.status === "paused") {
-          return {
-            ran: false,
-            reason: "paused",
-            daemon: state,
-            snapshot: await snapshotIfRequested()
-          };
-        }
-        const dueRows = await this.query(`
-          SELECT CASE
-            WHEN next_run_at IS NULL THEN 1
-            WHEN next_run_at <= CURRENT_TIMESTAMP THEN 1
-            ELSE 0
-          END AS due
-          FROM innerlife_daemon_state
-          WHERE agent_id = ${sqlString(agentId)}
-          LIMIT 1;
-        `);
-        const due = Boolean(dueRows[0]?.due);
-        if (!force && !due) {
-          return {
-            ran: false,
-            reason: "not_due",
-            daemon: state,
-            snapshot: await snapshotIfRequested()
-          };
-        }
-        const settings = await this.getSettings();
-        const pollSeconds = Math.max(1, Number.parseInt(String(settings["innerlife.loop_seconds"] || 900), 10) || 900);
-        const sourceIngest = await this.ingestInnerLifeSources({ agentId, maxItems: 5 });
-        if (sourceIngest.insertedCount > 0) {
-          pendingInboxPage = await this.listInnerLifeInboxPage({ agentId, status: "pending", limit: 5, offset: 0 });
-          pendingInbox = pendingInboxPage.items;
-        }
-        if (pendingInbox.length === 0) {
-          await this.exec(`
-            UPDATE innerlife_daemon_state
-            SET status = 'enabled',
-                last_tick_at = CURRENT_TIMESTAMP,
-                next_run_at = datetime('now', '+${pollSeconds} seconds'),
-                last_result = 'idle',
-                last_error = '',
-                tick_count = tick_count + 1,
-                updated_at = CURRENT_TIMESTAMP,
-                metadata_json = ${jsonSql({
-                  pollSeconds,
-                  pendingInbox: 0,
-                  sourceIngest: {
-                    sourceCount: sourceIngest.sourceCount,
-                    candidateCount: sourceIngest.candidateCount,
-                    insertedCount: sourceIngest.insertedCount,
-                    errors: sourceIngest.errors
-                  },
-                  failureCount: 0,
-                  retrySeconds: 0
-                })}
-            WHERE agent_id = ${sqlString(agentId)};
-          `);
-          return {
-            ran: false,
-            reason: "idle",
-            daemon: await this.ensureInnerLifeDaemonState(agentId),
-            snapshot: await snapshotIfRequested()
-          };
-        }
-        await this.exec(`
-          UPDATE innerlife_daemon_state
-          SET status = 'running',
-              updated_at = CURRENT_TIMESTAMP
-          WHERE agent_id = ${sqlString(agentId)};
-        `);
-        try {
-          const result = await this.processInnerLifeOnce({
-            agentId,
-            lineId: input.lineId || input.line_id || "",
-            prompt: "Daemon tick: digest pending inbox and create only one shareable thought for the next fitting moment."
-          });
-          await this.exec(`
-            UPDATE innerlife_daemon_state
-            SET status = 'enabled',
-                last_tick_at = CURRENT_TIMESTAMP,
-                next_run_at = datetime('now', '+${pollSeconds} seconds'),
-                last_result = ${sqlString(`processed ${pendingInbox.length} inbox item(s)`)},
-                last_error = '',
-                tick_count = tick_count + 1,
-                updated_at = CURRENT_TIMESTAMP,
-                metadata_json = ${jsonSql({
-                  pollSeconds,
-                  pendingInbox: pendingInbox.length,
-                  sourceIngest: {
-                    sourceCount: sourceIngest.sourceCount,
-                    candidateCount: sourceIngest.candidateCount,
-                    insertedCount: sourceIngest.insertedCount,
-                    errors: sourceIngest.errors
-                  },
-                  shareId: result.share?.id || "",
-                  convergence: result.convergence
-                    ? {
-                        converged: Boolean(result.convergence.converged),
-                        reason: result.convergence.reason || "",
-                        shareId: result.convergence.share?.id || ""
-                      }
-                    : null,
-                  failureCount: 0,
-                  retrySeconds: 0
-                })}
-            WHERE agent_id = ${sqlString(agentId)};
-          `);
-          return {
-            ran: true,
-            reason: "processed",
-            result,
-            daemon: await this.ensureInnerLifeDaemonState(agentId),
-            snapshot: await this.getInnerLifeSnapshot(agentId)
-          };
-        } catch (error) {
-          const failureCount = Math.max(0, Number.parseInt(String(state.metadata?.failureCount || 0), 10) || 0) + 1;
-          const retrySeconds = innerLifeRetrySeconds(pollSeconds, failureCount);
-          await this.exec(`
-            UPDATE innerlife_daemon_state
-            SET status = 'error',
-                last_tick_at = CURRENT_TIMESTAMP,
-                next_run_at = datetime('now', '+${retrySeconds} seconds'),
-                last_result = ${sqlString(`retry in ${retrySeconds}s`)},
-                last_error = ${sqlString(error.message || String(error))},
-                tick_count = tick_count + 1,
-                updated_at = CURRENT_TIMESTAMP,
-                metadata_json = ${jsonSql({
-                  pollSeconds,
-                  pendingInbox: pendingInbox.length,
-                  failureCount,
-                  retrySeconds,
-                  error: error.message || String(error)
-                })}
-            WHERE agent_id = ${sqlString(agentId)};
-          `);
-          throw error;
-        }
-      } finally {
-        innerLifeTickLocks.delete(lockKey);
-      }
+      return tickInnerLifeDaemon(this, input);
     }
   };
 }

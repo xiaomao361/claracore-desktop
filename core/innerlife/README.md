@@ -77,6 +77,14 @@ not generate duplicate share candidates. Enabling the daemon while inbox items
 are pending may immediately process that inbox instead of waiting for the next
 interval.
 
+`core/innerlife/services/daemon-tick.js` owns the tick orchestration policy:
+pause/due checks, per-Agent locking, source ingest, process-once dispatch,
+success/idle completion, and retry scheduling. It depends on explicit ports
+wired by the InnerLife composition root. The daemon repository owns
+daemon-state persistence and keeps the public
+`ProductDatabase.tickInnerLifeDaemon()` compatibility method as a thin service
+delegate.
+
 When an agent profile contains `autonomous_sources`, each due daemon tick first
 fetches those public RSS, Atom, or webpage sources, dedupes recent items, and
 writes new material to the InnerLife inbox before running the existing digest
