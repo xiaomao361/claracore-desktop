@@ -1,4 +1,4 @@
-const continuity = require("../../continuity");
+const { getGatewayContext } = require("../context");
 const { BUILD_FLAVOR, HAS_BUILT_IN_EMBEDDING } = require("../../build-flavor");
 
 async function handleSystemTool(name, args, context) {
@@ -40,7 +40,7 @@ async function handleSystemTool(name, args, context) {
             "",
             "1. Call claracore_connection_test once after installing or changing the MCP config.",
             "2. Read this gateway_docs guide.",
-            "3. Call gateway_context without lineId. If it returns SHARED_LINE_ID_REQUIRED, choose one of its candidates and retry with that explicit lineId.",
+            "3. Call gateway_context with detail=brief and without lineId. If it returns SHARED_LINE_ID_REQUIRED, choose one of its candidates and retry with that explicit lineId.",
             "4. Proactively tell the user the truthful connection result, what ClaraCore enables, and what resumable context you found.",
             "",
             "## What ClaraCore Lets You Do",
@@ -58,7 +58,7 @@ async function handleSystemTool(name, args, context) {
             "",
             "## Current Context",
             "",
-            "Call gateway_context directly. With zero or one Agent-owned active Shared Line it resolves safely; with multiple lines it returns actionable SHARED_LINE_ID_REQUIRED candidates for an explicit retry. Read only the context needed to help the user begin.",
+            "Call gateway_context with detail=brief. With zero or one Agent-owned active Shared Line it resolves safely; with multiple lines it returns actionable SHARED_LINE_ID_REQUIRED candidates for an explicit retry. Read only the context needed to help the user begin; request detail=full only for compatibility or a specific full-context need.",
             "",
             "## Identity And Safety",
             "",
@@ -89,7 +89,7 @@ async function handleSystemTool(name, args, context) {
             "",
             "### Resume work",
             "",
-            "1. Call gateway_context without lineId.",
+            "1. Call gateway_context with detail=brief and without lineId.",
             "2. If it returns SHARED_LINE_ID_REQUIRED, choose one of the returned candidates and retry with that lineId.",
             "3. Read the selected Shared Line and recent Memory, then continue from that state instead of starting a new thread of work.",
             "",
@@ -202,7 +202,7 @@ async function handleSystemTool(name, args, context) {
             "",
             "## Useful Startup Sequence",
             "",
-            "claracore_connection_test -> gateway_docs -> gateway_context(lineId only after SHARED_LINE_ID_REQUIRED)",
+            "claracore_connection_test -> gateway_docs -> gateway_context(detail=brief; lineId only after SHARED_LINE_ID_REQUIRED)",
             "",
             "## CLI Fallback",
             "",
@@ -244,7 +244,7 @@ async function handleSystemTool(name, args, context) {
         innerlife: daemonState?.status || "paused"
       },
       timestamp: new Date().toISOString(),
-      next: "Call gateway_docs, then gateway_context without lineId; retry with a returned candidate only after SHARED_LINE_ID_REQUIRED.",
+      next: "Call gateway_docs, then gateway_context with detail=brief and without lineId; retry with a returned candidate only after SHARED_LINE_ID_REQUIRED.",
       nextCalls: ["gateway_docs", "gateway_context"],
       afterOnboarding:
         "Tell the user what ClaraCore enables and summarize the current resumable context in the user's language."
@@ -252,7 +252,7 @@ async function handleSystemTool(name, args, context) {
   }
 
   if (name === "gateway_context") {
-    return textResult(await continuity.gatewayContext({ database }, args));
+    return textResult(await getGatewayContext({ database }, args));
   }
 
   if (name === "gateway_trace_list") {

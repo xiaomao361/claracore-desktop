@@ -53,6 +53,7 @@ const EXPECTED_TOOLS = [
   "shared_line_handoff_create",
   "innerlife_session_start",
   "innerlife_session_end",
+  "innerlife_afterthought_resolve",
   "innerlife_briefing",
   "innerlife_doctor",
   "innerlife_digest",
@@ -135,6 +136,17 @@ async function main() {
     ) {
       throw new Error("Gateway innerlife_session_end schema does not expose the session_id alias and structured summaries.");
     }
+    const afterthoughtResolveSchema = listedTools.find(
+      (tool) => tool.name === "innerlife_afterthought_resolve"
+    )?.inputSchema;
+    if (
+      !afterthoughtResolveSchema?.required?.includes("id") ||
+      !afterthoughtResolveSchema?.required?.includes("action") ||
+      !afterthoughtResolveSchema?.properties?.action?.enum?.includes("retry") ||
+      !afterthoughtResolveSchema?.properties?.action?.enum?.includes("acknowledge")
+    ) {
+      throw new Error("Gateway afterthought recovery schema must expose explicit retry and acknowledge actions.");
+    }
 
     const docsResponse = await client.callTool("gateway_docs");
     const docsText = docsResponse.result?.content?.[0]?.text || "";
@@ -201,9 +213,13 @@ async function main() {
       await client.callTool("gateway_context", {
         agentId: "my-agent",
         query: "Gateway context",
-        limit: 5
+        limit: 5,
+        detail: "brief"
       })
     );
+    if (gatewayContext.detail !== "brief") {
+      throw new Error(`Gateway context did not honor detail=brief: ${gatewayContext.detail}`);
+    }
     if (!gatewayContext.text?.includes("Gateway context phase position")) {
       throw new Error(`Gateway context text does not include Shared Line: ${gatewayContext.text}`);
     }

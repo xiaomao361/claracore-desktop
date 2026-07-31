@@ -53,12 +53,12 @@ async function main() {
     /not available in the Lite build/
   );
 
-  runtime.resetCachedDatabase();
+  await runtime.resetCachedDatabase();
   console.log(JSON.stringify({ ok: true, dataRoot, build: snapshot.build }, null, 2));
 }
 
-main().catch((error) => {
-  runtime.resetCachedDatabase();
+main().catch(async (error) => {
+  await runtime.resetCachedDatabase();
   console.error(error);
   process.exit(1);
 });

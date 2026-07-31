@@ -57,6 +57,19 @@ async function handleInnerLifeTool(name, args, context) {
     );
   }
 
+  if (name === "innerlife_afterthought_resolve") {
+    const agentId = currentMcpAgentId(args);
+    const resolution = await innerlife.resolveAfterthoughtFailure(core, args.id, {
+      action: args.action,
+      reason: args.reason || "",
+      agentId
+    });
+    return textResult({
+      ...resolution,
+      doctor: await innerlife.doctor(core, agentId)
+    });
+  }
+
   if (name === "innerlife_sessions") {
     return textResult({
       sessions: await innerlife.recentSessions(core, currentMcpAgentId(args), args.limit || 20)

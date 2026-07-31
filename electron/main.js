@@ -12,6 +12,12 @@ const { createSchedulers } = require("./schedulers");
 const { ipcChannel } = require("./ipc-contracts");
 const { registerIpcHandlers } = require("./ipc-handlers");
 const {
+  deferredGatewayProcessSample,
+  isResourceWarning,
+  systemMemorySnapshot,
+  shouldCollectGatewayProcessSample
+} = require("./resource-sampling");
+const {
   buildProductOverviewSnapshot,
   ensureProductCore,
   ensureProductDirectories,
@@ -66,9 +72,13 @@ let lastCpuSample = null;
 let schedulers = null;
 const appStartedAt = Date.now();
 const RESOURCE_SAMPLE_MAX_AGE_MS = 10 * 60 * 1000;
+const GATEWAY_PROCESS_SAMPLE_TTL_MS = 5 * 60 * 1000;
 let httpAgentGateway = null;
 let forceQuitTimer = null;
 const resourceMemorySamples = [];
+let resourceSnapshotInFlight = null;
+let gatewayProcessSampleCache = null;
+let gatewayProcessSampleInFlight = null;
 let uiPreferencesSaveQueue = Promise.resolve();
 
 function reportMainProcessError(label, error) {
@@ -318,32 +328,61 @@ async function getGatewayMemorySnapshot() {
       source: "unsupported"
     };
   }
-  try {
-    const { stdout } = await execFileAsync("/bin/ps", ["-axo", "rss=,command="], {
-      maxBuffer: 1024 * 1024
-    });
-    const rows = String(stdout || "")
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((line) => line.includes("--gateway") || line.includes("core/gateway/mcp-server.js"));
-    const rssBytes = rows.reduce((sum, line) => {
-      const rssKb = Number.parseInt(line.split(/\s+/)[0], 10) || 0;
-      return sum + rssKb * 1024;
-    }, 0);
+  const sampledAt = Date.now();
+  if (
+    gatewayProcessSampleCache &&
+    sampledAt - gatewayProcessSampleCache.sampledAt < GATEWAY_PROCESS_SAMPLE_TTL_MS
+  ) {
     return {
-      rssBytes,
-      rssText: rssBytes > 0 ? formatBytes(rssBytes) : "-",
-      processCount: rows.length,
-      source: "ps"
-    };
-  } catch (_error) {
-    return {
-      rssBytes: 0,
-      rssText: "-",
-      processCount: 0,
-      source: "unavailable"
+      ...gatewayProcessSampleCache.value,
+      source: gatewayProcessSampleCache.value.source === "ps" ? "ps-cache" : gatewayProcessSampleCache.value.source,
+      sampledAt: gatewayProcessSampleCache.sampledAt
     };
   }
+  if (gatewayProcessSampleInFlight) return gatewayProcessSampleInFlight;
+  const request = (async () => {
+    try {
+      const { stdout } = await execFileAsync("/bin/ps", ["-axo", "rss=,command="], {
+        maxBuffer: 1024 * 1024
+      });
+      const rows = String(stdout || "")
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.includes("--gateway") || line.includes("core/gateway/mcp-server.js"));
+      const rssBytes = rows.reduce((sum, line) => {
+        const rssKb = Number.parseInt(line.split(/\s+/)[0], 10) || 0;
+        return sum + rssKb * 1024;
+      }, 0);
+      return {
+        rssBytes,
+        rssText: rssBytes > 0 ? formatBytes(rssBytes) : "-",
+        processCount: rows.length,
+        source: "ps"
+      };
+    } catch (_error) {
+      return {
+        rssBytes: 0,
+        rssText: "-",
+        processCount: 0,
+        source: "unavailable"
+      };
+    }
+  })()
+    .then((value) => {
+      gatewayProcessSampleCache = {
+        sampledAt,
+        value
+      };
+      return {
+        ...value,
+        sampledAt
+      };
+    })
+    .finally(() => {
+      if (gatewayProcessSampleInFlight === request) gatewayProcessSampleInFlight = null;
+    });
+  gatewayProcessSampleInFlight = request;
+  return request;
 }
 
 function rememberResourceMemorySample(sample) {
@@ -391,17 +430,48 @@ async function getDiskSnapshot(targetPath) {
   };
 }
 
-async function getResourceSnapshot() {
+async function buildResourceSnapshot() {
   const dataRoot = (await ensureProductDirectories(app)).dataRoot;
-  const totalMem = os.totalmem();
-  const freeMem = os.freemem();
-  const usedMem = Math.max(0, totalMem - freeMem);
-  const disk = await getDiskSnapshot(dataRoot);
+  let electronMemory = null;
+  if (typeof process.getSystemMemoryInfo === "function") {
+    try {
+      electronMemory = process.getSystemMemoryInfo();
+    } catch (_error) {
+      // Fall back to Node's portable counters when the Electron host cannot
+      // provide its richer system-memory snapshot.
+    }
+  }
+  const memory = electronMemory
+    ? systemMemorySnapshot({
+        ...electronMemory,
+        platform: process.platform,
+        source: "electron-system-memory",
+        unit: "kilobytes"
+      })
+    : systemMemorySnapshot({
+        total: os.totalmem(),
+        free: os.freemem(),
+        platform: process.platform,
+        source: "node-os"
+      });
+  const memoryPercent = memory.percent;
   const mainMemory = process.memoryUsage();
-  const [rendererMemory, gatewayMemory] = await Promise.all([
-    getRendererMemorySnapshot(),
-    getGatewayMemorySnapshot()
+  const [disk, rendererMemory] = await Promise.all([
+    getDiskSnapshot(dataRoot),
+    getRendererMemorySnapshot()
   ]);
+  const collectGatewayProcessSample = shouldCollectGatewayProcessSample({
+    diskPercent: disk.percent,
+    isGatewayMode,
+    memoryPercent
+  });
+  const warning = isResourceWarning({
+    diskPercent: disk.percent,
+    memoryPercent
+  });
+  const gatewayMemory = collectGatewayProcessSample
+    ? await getGatewayMemorySnapshot()
+    : deferredGatewayProcessSample();
   const totalProcessRssBytes =
     mainMemory.rss +
     Number(rendererMemory?.rssBytes || 0) +
@@ -433,15 +503,25 @@ async function getResourceSnapshot() {
     uptime: formatDuration(Date.now() - appStartedAt),
     cpuPercent: sampleCpu(),
     memory: {
-      total: totalMem,
-      used: usedMem,
-      percent: totalMem > 0 ? Math.round((usedMem / totalMem) * 100) : null,
-      text: `${formatBytes(usedMem)} / ${formatBytes(totalMem)}`
+      ...memory,
+      percent: memoryPercent,
+      text: `${formatBytes(memory.used)} / ${formatBytes(memory.total)}`
     },
     processMemory,
     disk,
+    diagnosticProcessSample: collectGatewayProcessSample,
+    warning,
     localTime: new Date().toLocaleString()
   };
+}
+
+function getResourceSnapshot() {
+  if (resourceSnapshotInFlight) return resourceSnapshotInFlight;
+  const request = buildResourceSnapshot().finally(() => {
+    if (resourceSnapshotInFlight === request) resourceSnapshotInFlight = null;
+  });
+  resourceSnapshotInFlight = request;
+  return request;
 }
 
 async function getRuntimeSnapshot() {
@@ -761,7 +841,15 @@ function createWindow() {
 }
 
 function runtimeChangeScopes(reason) {
-  if (reason === "product-json-import") return ["snapshot", "memory", "shared-line", "innerlife", "logs", "data"];
+  if (reason === "product-json-import" || reason === "demo-data") {
+    return ["snapshot", "memory", "shared-line", "innerlife", "logs", "data"];
+  }
+  if (reason.startsWith("memory-maintenance")) {
+    return ["snapshot", "memory", "innerlife", "logs"];
+  }
+  if (reason.startsWith("innerlife-session-afterthought")) {
+    return ["snapshot", "innerlife", "logs"];
+  }
   if (reason.startsWith("memory-") || reason === "old-memoria-import") return ["snapshot", "memory"];
   if (reason.startsWith("innerlife-") || reason === "old-innerlife-import") return ["snapshot", "innerlife"];
   if (reason === "old-continuity-import") return ["snapshot", "shared-line"];
@@ -878,7 +966,9 @@ if (!isGatewayMode && hasSingleInstanceLock) {
     if (httpAgentGateway) httpAgentGateway.stop();
     stopSiblingGatewayProcesses();
     if (schedulers) schedulers.stop();
-    resetCachedDatabase();
+    resetCachedDatabase().catch((error) => {
+      console.error("Failed to close Product Core:", error);
+    });
   });
   app.on("will-quit", () => {
     if (forceQuitTimer) {

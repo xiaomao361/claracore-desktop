@@ -1,7 +1,11 @@
 const path = require("path");
 const fs = require("fs/promises");
 const { quoteIdentifier } = require("../../import-preview");
-const { removeSqliteSidecars } = require("../backup");
+const {
+  assertSqliteQuickCheck,
+  recoverSqliteDatabaseFromBackup,
+  replaceSqliteDatabase
+} = require("../backup");
 const {
   safeArchiveString,
   normalizeArchiveLabels,
@@ -33,7 +37,14 @@ const {
   summarizeProductTables
 } = require("./helpers");
 
-function createProductArchiveRuntime({ createProductBackup, ensureProductCore, productVersion, resetCachedDatabase, sqlString, timestampForFilename }) {
+function createProductArchiveRuntime({
+  createProductBackupFromCore,
+  ensureProductCore,
+  productVersion,
+  sqlString,
+  timestampForFilename,
+  withExclusiveProductCore
+}) {
   async function exportProductDataJson(app, input = {}) {
     const { paths, database } = await ensureProductCore(app);
     const createdAt = new Date().toISOString();
@@ -82,7 +93,6 @@ function createProductArchiveRuntime({ createProductBackup, ensureProductCore, p
     if (exported?.format !== "claracore.product.export" || exported?.version !== 1 || !exported.tables || typeof exported.tables !== "object") {
       throw new Error("Unsupported product JSON export format.");
     }
-    const safetyBackup = await createProductBackup(app);
     const { paths, database } = await ensureProductCore(app);
     const tempPath = path.join(paths.runtimeDir, `product-json-import-${timestampForFilename(new Date(importedAt))}.db`);
     await fs.rm(tempPath, { force: true });
@@ -109,43 +119,62 @@ function createProductArchiveRuntime({ createProductBackup, ensureProductCore, p
       // the destination WAL/SHM sidecars so the swapped file is read cleanly
       // instead of through a stale connection's -wal.
       tempDatabase.close();
-      if (typeof resetCachedDatabase === "function") resetCachedDatabase();
-      await removeSqliteSidecars(paths.databasePath);
-      await fs.copyFile(tempPath, paths.databasePath);
-      await removeSqliteSidecars(paths.databasePath);
-      const restoredDatabase = new database.constructor(paths.databasePath);
-      await restoredDatabase.initialize();
-      const restoredSafetyBackup = await restoredDatabase.registerBackupRecord({
-        id: safetyBackup.id,
-        path: safetyBackup.path,
-        status: safetyBackup.status,
-        metadata: {
-          ...(safetyBackup.metadata || {}),
-          restoredDatabaseRegistered: true,
-          restoredAfterProductJsonPath: filePath
+      return await withExclusiveProductCore(app, async ({ paths: exclusivePaths, ensure, invalidate }) => {
+        const safetyBackup = await createProductBackupFromCore(await ensure());
+        try {
+          await invalidate();
+          await replaceSqliteDatabase(tempPath, exclusivePaths.databasePath);
+          const { database: restoredDatabase } = await ensure();
+          await assertSqliteQuickCheck(restoredDatabase, "Imported Product Core database");
+          const restoredSafetyBackup = await restoredDatabase.registerBackupRecord({
+            id: safetyBackup.id,
+            path: safetyBackup.path,
+            status: safetyBackup.status,
+            metadata: {
+              ...(safetyBackup.metadata || {}),
+              restoredDatabaseRegistered: true,
+              restoredAfterProductJsonPath: filePath
+            }
+          });
+          await restoredDatabase.recordRuntimeEvent({
+            level: "info",
+            source: "data",
+            message: "Product database imported from JSON",
+            metadata: {
+              filePath,
+              exportedAt: exported.exportedAt || "",
+              safetyBackupId: restoredSafetyBackup.id,
+              safetyBackupPath: restoredSafetyBackup.path,
+              counts: exported.counts || summarizeProductTables(exported.tables)
+            }
+          });
+          return {
+            imported: true,
+            filePath,
+            quickCheck,
+            safetyBackup: restoredSafetyBackup,
+            counts: exported.counts || summarizeProductTables(exported.tables),
+            summary: await restoredDatabase.getSummary()
+          };
+        } catch (error) {
+          try {
+            await recoverSqliteDatabaseFromBackup({
+              backup: safetyBackup,
+              databasePath: exclusivePaths.databasePath,
+              ensure,
+              invalidate,
+              metadata: {
+                failedProductJsonPath: filePath
+              }
+            });
+          } catch (fileRecoveryError) {
+            error.fileRecoveryError = fileRecoveryError;
+          }
+          throw error;
         }
       });
-      await restoredDatabase.recordRuntimeEvent({
-        level: "info",
-        source: "data",
-        message: "Product database imported from JSON",
-        metadata: {
-          filePath,
-          exportedAt: exported.exportedAt || "",
-          safetyBackupId: restoredSafetyBackup.id,
-          safetyBackupPath: restoredSafetyBackup.path,
-          counts: exported.counts || summarizeProductTables(exported.tables)
-        }
-      });
-      return {
-        imported: true,
-        filePath,
-        quickCheck,
-        safetyBackup: restoredSafetyBackup,
-        counts: exported.counts || summarizeProductTables(exported.tables),
-        summary: await restoredDatabase.getSummary()
-      };
     } finally {
+      tempDatabase.close();
       await fs.rm(tempPath, { force: true }).catch(() => {});
     }
   }

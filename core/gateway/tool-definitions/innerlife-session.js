@@ -81,6 +81,36 @@ const innerlifeSessionToolDefinitions = [
     }
   },
   {
+    "name": "innerlife_afterthought_resolve",
+    "title": "Resolve Failed InnerLife Afterthought",
+    "description": "Explicitly resolve one terminal persisted session-afterthought failure owned by the authenticated Agent. Use retry after repairing the model path to requeue the preserved original input with a fresh bounded attempt budget. Use acknowledge with a reason to close the failure without claiming generation succeeded; its placeholder pending share is discarded and the evidence remains until normal processed-inbox retention.",
+    "inputSchema": {
+      "type": "object",
+      "required": [
+        "id",
+        "action"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The failed session_end_afterthought inbox job id returned by innerlife_status(detail=true)."
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "retry",
+            "acknowledge"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "description": "Required for acknowledge; optional audit note for retry."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
     "name": "innerlife_sessions",
     "title": "List InnerLife Sessions",
     "description": "List recent Desktop-owned InnerLife sessions.",

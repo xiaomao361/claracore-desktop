@@ -13,31 +13,7 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..", "db");
 
-const FILES = [
-  "database.js",
-  "migrations/index.js",
-  "migrations/002_product_additions.js",
-  "repositories/system.js",
-  "repositories/system/agent-activity.js",
-  "repositories/system/gateway-traces.js",
-  "repositories/continuity.js",
-  "repositories/continuity/agents.js",
-  "repositories/memoria.js",
-  "repositories/memoria/labels.js",
-  "repositories/memoria/links.js",
-  "repositories/memoria/records.js",
-  "repositories/memoria/embeddings.js",
-  "repositories/memoria/maintenance.js",
-  "repositories/innerlife.js",
-  "repositories/innerlife/profile.js",
-  "repositories/innerlife/inbox.js",
-  "repositories/innerlife/daemon.js",
-  "repositories/innerlife/history.js",
-  "repositories/innerlife/sessions.js",
-  "repositories/innerlife/shares.js"
-];
-
-const SQL_KEYWORDS = ["SELECT", "INSERT", "UPDATE", "DELETE", "PRAGMA", "ALTER", "CREATE", "WITH", "DROP"];
+const SQL_KEYWORDS = ["SELECT", "INSERT", "UPDATE", "DELETE", "PRAGMA", "ALTER", "CREATE", "WITH", "DROP", "BEGIN"];
 
 // Exact identifier names already known to be pre-built, fully-escaped SQL
 // fragments (composed elsewhere out of sqlString()/jsonSql() calls) or
@@ -90,6 +66,30 @@ const SAFE_IDENTIFIERS = new Set([
 // reviewed together. Keeping these exact prevents another repository from
 // gaining a same-named blanket escape hatch.
 const FILE_SAFE_EXPRESSIONS = new Map([
+  ["migrations/005_memory_controller_watermark.js", new Set([
+    "operation",
+    "operation.toUpperCase()",
+    "triggerSql()"
+  ])],
+  ["repositories/memory-controller.js", new Set([
+    "boundedInteger(input.searchLatencyMs || input.search_latency_ms, 0, 600000)",
+    "boundedInteger(input.totalLatencyMs || input.total_latency_ms, 0, 600000)",
+    "boundedInteger(input.estimatedTokens || input.estimated_tokens, 0, 100000)",
+    "maxAgeDays",
+    "feedbackMaxAgeDays",
+    "LEDGER_CLEANUP_BATCH_SIZE"
+  ])],
+  ["repositories/system/agent-identity.js", new Set([
+    "policy.columns.map((column) => sqlIdentifier(column)).join(\", \")",
+    "sqlIdentifier(reference.table)",
+    "sqlIdentifier(reference.column)",
+    "SINGLETON_SNAPSHOT_CONSTRAINT",
+    "conditions.join(\"\\n        AND \")",
+    "singletonSnapshotGuardSql",
+    "directUpdatesSql",
+    "tailLabelMigrationSql",
+    "noDirectReferencesSql"
+  ])],
   ["repositories/system/agent-activity.js", new Set([
     'membershipColumns("m.created_at")',
     'timeClause("m.created_at", thirtyDayPeriod)',
@@ -364,22 +364,46 @@ function findTemplateLiterals(source) {
 
 function looksLikeSql(body) {
   const trimmed = body.trimStart().toUpperCase();
-  return SQL_KEYWORDS.some((keyword) => trimmed === keyword || trimmed.startsWith(`${keyword} `) || trimmed.startsWith(`${keyword}\n`));
+  return SQL_KEYWORDS.some((keyword) => (
+    trimmed.startsWith(keyword) &&
+    (trimmed.length === keyword.length || !/[A-Z0-9_]/.test(trimmed[keyword.length]))
+  ));
 }
 
-function lintFile(relativePath) {
-  const filePath = path.join(ROOT, relativePath);
-  const source = fs.readFileSync(filePath, "utf8");
+function normalizeRelativePath(relativePath) {
+  return relativePath.split(path.sep).join("/");
+}
+
+function discoverJavaScriptFiles(root = ROOT) {
+  const files = [];
+  function visit(directory) {
+    const entries = fs.readdirSync(directory, { withFileTypes: true })
+      .sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
+    for (const entry of entries) {
+      const entryPath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        visit(entryPath);
+      } else if (entry.isFile() && entry.name.endsWith(".js")) {
+        files.push(normalizeRelativePath(path.relative(root, entryPath)));
+      }
+    }
+  }
+  visit(root);
+  return files;
+}
+
+function lintSource(source, relativePath) {
+  const normalizedPath = normalizeRelativePath(relativePath);
   const literals = findTemplateLiterals(source);
   const violations = [];
   for (const literal of literals) {
     if (!looksLikeSql(literal.body)) continue;
     const interpolations = extractInterpolations(literal.body);
     for (const { expr, offset } of interpolations) {
-      if (isSafeExpr(expr) || FILE_SAFE_EXPRESSIONS.get(relativePath)?.has(expr.trim())) continue;
+      if (isSafeExpr(expr) || FILE_SAFE_EXPRESSIONS.get(normalizedPath)?.has(expr.trim())) continue;
       const lineInLiteral = literal.body.slice(0, offset).split("\n").length - 1;
       violations.push({
-        file: relativePath,
+        file: normalizedPath,
         line: literal.line + lineInLiteral,
         expr: expr.trim()
       });
@@ -388,24 +412,44 @@ function lintFile(relativePath) {
   return violations;
 }
 
+function lintFile(relativePath, root = ROOT) {
+  const normalizedPath = normalizeRelativePath(relativePath);
+  const source = fs.readFileSync(path.join(root, normalizedPath), "utf8");
+  return lintSource(source, normalizedPath);
+}
+
+function lintDirectory(root = ROOT) {
+  const files = discoverJavaScriptFiles(root);
+  return {
+    files,
+    violations: files.flatMap((relativePath) => lintFile(relativePath, root))
+  };
+}
+
 function main() {
-  const allViolations = [];
-  for (const relativePath of FILES) {
-    allViolations.push(...lintFile(relativePath));
-  }
-  if (allViolations.length) {
-    console.error(`SQL interpolation lint found ${allViolations.length} unescaped interpolation(s):`);
-    for (const violation of allViolations) {
+  const result = lintDirectory();
+  if (result.violations.length) {
+    console.error(`SQL interpolation lint found ${result.violations.length} unescaped interpolation(s):`);
+    for (const violation of result.violations) {
       console.error(`  core/db/${violation.file}:${violation.line}  \${${violation.expr}}`);
     }
     console.error("\nWrap the value in sqlString()/jsonSql(), or if it is a verified pre-built SQL fragment,");
-    console.error("add its identifier to SAFE_IDENTIFIERS in core/tests/sql-interpolation-lint.js.");
+    console.error("add the narrowest exact, preferably file-scoped allowlist entry in core/tests/sql-interpolation-lint.js.");
     process.exit(1);
   }
-  console.log(`SQL interpolation lint: ok (${FILES.length} files checked, 0 unescaped interpolations)`);
+  console.log(`SQL interpolation lint: ok (${result.files.length} files checked, 0 unescaped interpolations)`);
 }
 
-module.exports = { findTemplateLiterals, extractInterpolations, looksLikeSql, isSafeExpr, lintFile };
+module.exports = {
+  discoverJavaScriptFiles,
+  extractInterpolations,
+  findTemplateLiterals,
+  isSafeExpr,
+  lintDirectory,
+  lintFile,
+  lintSource,
+  looksLikeSql
+};
 
 if (require.main === module) {
   main();

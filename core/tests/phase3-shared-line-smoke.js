@@ -118,6 +118,22 @@ async function main() {
     throw new Error("Agent-owned writes should not move or overwrite the global active Shared Line.");
   }
   const { database } = await runtime.ensureProductCore(app);
+  await database.exec(`
+    UPDATE continuity_snapshots
+    SET
+      created_at = '2026-01-01 00:00:00',
+      id = CASE
+        WHEN reason = 'save' THEN 'position_snapshot_z_same_second'
+        ELSE 'position_snapshot_a_same_second'
+      END
+    WHERE line_id = 'line_default';
+  `);
+  const sameSecondSnapshots = await database.listContinuitySnapshots(2, "line_default");
+  if (sameSecondSnapshots[0]?.reason !== "confirmed_overwrite") {
+    throw new Error(
+      `Same-second Shared Line snapshots did not preserve insertion order: ${JSON.stringify(sameSecondSnapshots)}`
+    );
+  }
   const secondCodexLine = await database.createContinuityLine({
     agentId: "codex",
     title: "Codex second active line",
@@ -217,7 +233,7 @@ async function main() {
     SELECT summary, interpretation_status, facts_used_json
     FROM continuity_position_history
     WHERE line_id = 'line_default'
-    ORDER BY created_at ASC, id ASC;
+    ORDER BY created_at ASC, rowid ASC;
   `);
   if (historyRows.length !== 2) {
     throw new Error(`Shared Line history was not written to SQLite: ${historyRows.length}`);
@@ -229,7 +245,7 @@ async function main() {
     SELECT summary, reason
     FROM continuity_snapshots
     WHERE line_id = 'line_default'
-    ORDER BY created_at ASC, id ASC;
+    ORDER BY created_at ASC, rowid ASC;
   `);
   if (snapshotRows.length !== 2) {
     throw new Error(`Shared Line snapshots were not written to SQLite: ${snapshotRows.length}`);

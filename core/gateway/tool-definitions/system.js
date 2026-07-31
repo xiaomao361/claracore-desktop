@@ -37,7 +37,7 @@ const systemToolDefinitions = [
   {
     "name": "gateway_context",
     "title": "Gateway Context",
-    "description": "Read one assembled agent context packet from Memory, Shared Line, InnerLife, and Doctor. Start without lineId; when the identified agent owns multiple active Shared Lines, the call returns SHARED_LINE_ID_REQUIRED with candidates instead of guessing. Retry with the chosen lineId.",
+    "description": "Read one assembled agent context packet from Memory, Shared Line, InnerLife, and Doctor. Use detail=brief for bounded startup and resume reads; omitted detail preserves the 0.6.4 full payload. Start without lineId; when the identified agent owns multiple active Shared Lines, the call returns SHARED_LINE_ID_REQUIRED with candidates instead of guessing. Retry with the chosen lineId.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -54,6 +54,14 @@ const systemToolDefinitions = [
           "type": "number",
           "minimum": 1,
           "maximum": 20
+        },
+        "detail": {
+          "type": "string",
+          "enum": [
+            "brief",
+            "full"
+          ],
+          "description": "Use brief for bounded startup context. Omit or use full for the 0.6.4 compatibility payload."
         }
       },
       "additionalProperties": false
@@ -88,7 +96,7 @@ const systemToolDefinitions = [
   {
     "name": "agent_identity_merge",
     "title": "Merge Agent Identity",
-    "description": "Merge one ClaraCore Desktop agent id into another across Desktop-owned data. Use this instead of editing SQLite directly.",
+    "description": "Merge one ClaraCore Desktop agent id into another across Desktop-owned data. Source-only singleton state is moved, semantically equivalent dual-sided state is deduplicated, and differing profile, daemon, or Continuity state blocks atomically with field-level conflict details. Use this instead of editing SQLite directly.",
     "inputSchema": {
       "type": "object",
       "required": [

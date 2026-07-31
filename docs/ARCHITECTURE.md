@@ -18,6 +18,9 @@ The Desktop runtime is Node/Electron.
     two surfaces aligned
   - `electron/http-agent-gateway.js`: token-protected localhost HTTP Agent
     Gateway lifecycle and request handling
+  - `electron/resource-sampling.js`: warning policy and cross-platform memory
+    normalization; macOS reclaimable file-backed/purgeable pages are excluded
+    from pressure before optional process diagnostics
   - `electron/schedulers.js`: InnerLife and Memoria maintenance timers
 - Product runtime facade: `core/runtime/index.js`
 - Memoria runtime workflows: `core/runtime/memoria.js`
@@ -30,6 +33,9 @@ The Desktop runtime is Node/Electron.
 - Product database: `core/db/`
 - Domain modules: `core/memoria`, `core/continuity`, `core/innerlife`
 - Agent Gateway: `core/gateway`
+  - `core/gateway/context.js`: cross-domain Gateway context composition,
+    Agent-scoped reads, and bounded `brief` projection. Omitted `detail`
+    preserves the 0.6.4 full packet.
 - CLI fallback: `core/cli.js`
 
 Agents should use Gateway MCP first, then CLI fallback when MCP is unavailable.
@@ -96,6 +102,8 @@ Focused renderer modules live under `app/`:
 - `app/shared-line-actions.js`: Shared Line tab, filter, line action, and resume copy wiring
 - `app/innerlife-actions.js`: InnerLife agent filter, daemon, profile save, and paginated load-more actions
 - `app/model-options.js`: provider model-list loading
+- `app/resource-refresh.js`: single-flight 30-second resource sampling,
+  visibility pause/resume, and explicit disposal
 - `app/view-registry.js`: view metadata only
 - `app/utils.js`: pure formatting and HTML helpers
 - `app/views/agent-setup.js`: Agent Access view
@@ -117,9 +125,12 @@ Focused renderer modules live under `app/`:
 New renderer work should go into a focused module, not into `app.js`.
 
 Runtime-change events carry bounded scopes such as `memory`, `shared-line`,
-`innerlife`, `logs`, and `data`. Every event refreshes the compact snapshot;
-focused Memory lists reload only for Memory-scoped events while the Memory view
-is active.
+`innerlife`, `logs`, and `data`. Every event refreshes the compact snapshot,
+but only owning views and derived consumers lose their hydrated detail.
+Unaffected pagination, graphs, full InnerLife, Trace, Logs, and backup state
+survive the merge. Snapshot-only or unknown events invalidate all views.
+Memory lists reload only for Memory-scoped events and Memory plus Agent Access
+avoid the generic empty view-detail IPC entirely.
 
 `styles.css` is an import entry. Shared and view-specific styles live under
 `styles/`; add new CSS near the view or component it serves instead of growing a
@@ -166,7 +177,8 @@ metadata, and renderer display.
 Runtime should coordinate cross-module workflows:
 
 - resolve paths
-- initialize the product database
+- delegate single-flight product database initialization, path switches, and
+  reset invalidation to `core/runtime/product-core-owner.js`
 - delegate Home/status snapshot assembly to `core/runtime/snapshot.js`
 - delegate Memoria runtime workflows, graph cache refresh, maintenance, and
   embedding batch processing to `core/runtime/memoria.js`
@@ -200,6 +212,16 @@ ingest, reflection, and snapshots only through explicit ports. Session start,
 end, and persisted afterthought orchestration live in
 `core/innerlife/services/session-lifecycle.js`; session SQL is isolated in a
 private store and the public repository is a thin compatibility adapter.
+Afterthought failure metadata and due times are durable, retries use bounded
+exponential backoff, attempt eight is a Doctor-visible protected terminal
+failure, and scheduler retry/terminal transitions emit runtime evidence. The
+authenticated Agent must explicitly resolve a terminal job: retry requeues the
+preserved input, while acknowledge records a reason and closes it without
+claiming generation succeeded. Each processing claim also carries an owner
+token, so a worker whose stale lease was recovered cannot overwrite the
+replacement worker's thought, share, or job receipt.
+Post-persistence convergence failure is a warning rather than a reason to
+regenerate an already-durable thought/share.
 Digest execution and share-timing decisions live in the focused
 `digest-run.js` and `share-timing.js` services. Their private stores own
 compound SQL, while `workflow-wiring.js` connects read-model, policy, and
@@ -239,7 +261,9 @@ database for this Desktop runtime.
 
 Current shape:
 
-- `core/db/database.js`: connection, initialization, and agent identity merge
+- `core/db/database.js`: connection and initialization
+- `core/db/agent-identity-references.js`: exhaustive registry of direct Agent
+  identity columns; its smoke test compares the registry with the live schema
 - `core/db/helpers.js`: shared repository/database helpers for SQL escaping,
   JSON parsing, agent identity normalization, label/date/value normalization,
   vector math, and JSON HTTP calls
@@ -255,12 +279,19 @@ Current shape:
   activity summaries derived from Gateway, Memoria, Shared Line, and InnerLife;
   its four periods share five 30-day source scans instead of rerunning one
   query per source and period
+- `core/db/repositories/system/agent-identity.js`: transactional Agent identity
+  merge across registered columns, typed live JSON/config references, and
+  canonically owned Memory labels; source-only singleton state is moved,
+  semantically equivalent dual-sided state is deduplicated, and conflicting
+  profile, daemon, or Continuity state blocks before mutation with field-level
+  resolution details; historical provenance snapshots are intentionally
+  preserved
 - `core/db/repositories/memoria.js`: Memoria persistence
 - `core/db/repositories/memoria/`: focused Memoria repository submodules,
   including label alias, canonicalization, structured record, and
   embedding/search/maintenance persistence
 - `core/db/repositories/continuity.js`: composition plus current position,
-  history, snapshots, handoffs, arc policy, and Gateway context persistence
+  history, snapshots, handoffs, arc policy, and resume packet persistence
 - `core/db/repositories/continuity/`: focused Shared Line repository
   submodules
 - `core/db/repositories/continuity/lines.js`: line lifecycle, active-line
@@ -311,6 +342,10 @@ Current shape:
 activity ownership out of the remaining system repository aggregator.
 `core/tests/continuity-repository-boundary-smoke.js` keeps line lifecycle,
 agent state, and model adjustment ownership in focused Continuity modules.
+`core/tests/gateway-context-service-smoke.js` keeps cross-domain context
+composition out of repositories, verifies full-payload compatibility, and
+proves the brief projection remains Agent-scoped and below 32 KiB under
+adversarial long-text input.
 `core/tests/repository-composition-smoke.js` verifies that every repository
 domain uses the shared installer, all installed methods are globally unique,
 and local factory groups reject duplicate ownership before installation.
@@ -362,12 +397,17 @@ itself contend when several stdio Agent processes open together.
 Multi-statement writes that must be atomic must wrap their SQL in an explicit
 `BEGIN; ... COMMIT;` block. The `exec()` helper runs multiple statements in
 one call but does not add an implicit transaction; partial writes will persist
-if an intermediate statement fails without a transaction boundary.
+if an intermediate statement fails without a transaction boundary. The CLI
+fallback runs with `-bail`, so its first SQL error stops before a later
+`COMMIT` and the closing CLI connection rolls the open transaction back.
 
-`ensureProductCore` caches the initialized `ProductDatabase` instance at module
-level so schema initialization and migrations only run once per process. Do not
-call `initializeProductDatabase` directly from code that runs on every request
-or IPC handler; route through `ensureProductCore` instead.
+`ensureProductCore` delegates to the Product Core owner. Concurrent cold calls
+for one resolved database path share one initialization; a warm call returns
+the adopted connection without directory creation or summary SQL. Reset and
+path changes invalidate stale initialization generations and close replaced
+connections. Do not call `initializeProductDatabase` directly from code that
+runs on every request or IPC handler; route through `ensureProductCore`
+instead.
 
 Repositories build SQL by string interpolation and escape values by
 convention (`sqlString()`/`jsonSql()` from `core/db/helpers.js`), not by
@@ -376,8 +416,8 @@ above: the `node:sqlite` path could bind parameters, but the `sqlite3` CLI
 fallback pipes a full SQL text blob over stdin and has no bind-parameter
 protocol, so both paths have to go through the same string-built `query(sql)`/
 `exec(sql)` interface. `core/tests/sql-interpolation-lint.js` (part of
-`npm run check`) statically checks every SQL template literal under
-`core/db/repositories/` and `core/db/database.js` and fails the build if a
+`npm run check`) recursively discovers every JavaScript file under
+`core/db/**/*.js`, statically checks each SQL template literal, and fails the build if a
 `${}` interpolation is not provably escaped, numeric, or an explicitly
 verified pre-built SQL fragment. Extend its allowlist only after reading
 where the flagged identifier is declared and confirming it cannot carry
@@ -528,7 +568,7 @@ Use these gates for current development:
   then runs SQL interpolation, IPC contract, and repository architecture
   gates. New source and test files do not require a manual syntax-check list.
 - `npm run test:architecture`: repository composition plus focused InnerLife,
-  System, and Continuity ownership boundaries.
+  System, Continuity, and Gateway-context ownership boundaries.
 - `npm run test:sqlite-binary`: packaged SQLite resource integrity and resolver
   check.
 - `npm run test:phase5`: InnerLife runtime, UI, and scheduler coverage.

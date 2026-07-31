@@ -3,8 +3,10 @@ const fs = require("fs");
 const path = require("path");
 const { ProductDatabase } = require("../db/database");
 const {
+  SESSION_AFTERTHOUGHT_MAX_ATTEMPTS,
   SESSION_LIFECYCLE_PORTS,
-  createInnerLifeSessionLifecycleService
+  createInnerLifeSessionLifecycleService,
+  sessionAfterthoughtRetrySeconds
 } = require("../innerlife/services/session-lifecycle");
 const { findInnerLifeRepositoryCycles } = require("./innerlife-repository-graph");
 
@@ -214,6 +216,41 @@ async function main() {
   assert.strictEqual(afterthoughtTransitions[0].shareDecision.reason, "distinct_shareable_thought");
   assert.strictEqual(convergenceInputs[0].sourceThoughtId, "thought-1");
 
+  let convergenceWarningCompleted = 0;
+  let convergenceWarningRetried = 0;
+  const convergenceWarningWorker = createInnerLifeSessionLifecycleService(createPorts({
+    claimAfterthoughts: async () => [{
+      id: "job-convergence-warning",
+      agentId: "codex",
+      body: "Session summary",
+      metadata: {
+        thoughtId: "thought-convergence-warning",
+        shareId: "share-convergence-warning",
+        template: "Session afterthought template",
+        attempts: 0
+      }
+    }],
+    completeAfterthought: async () => {
+      convergenceWarningCompleted += 1;
+    },
+    converge: async () => {
+      throw new Error("synthetic convergence failure");
+    },
+    retryAfterthought: async () => {
+      convergenceWarningRetried += 1;
+    }
+  }));
+  const convergenceWarning = await convergenceWarningWorker.processPendingSessionAfterthoughts({}, 5);
+  assert.strictEqual(convergenceWarning.processed, 1);
+  assert.strictEqual(convergenceWarning.results[0].status, "processed_with_warning");
+  assert(convergenceWarning.results[0].warning.includes("synthetic convergence failure"));
+  assert.strictEqual(convergenceWarningCompleted, 1);
+  assert.strictEqual(
+    convergenceWarningRetried,
+    0,
+    "A post-persistence convergence failure must not regenerate the afterthought."
+  );
+
   let retryInput = null;
   const failedWorker = createInnerLifeSessionLifecycleService(createPorts({
     claimAfterthoughts: async () => [{
@@ -231,8 +268,45 @@ async function main() {
   }));
   const failed = await failedWorker.processPendingSessionAfterthoughts({}, 5);
   assert.strictEqual(failed.processed, 0);
+  assert.strictEqual(failed.retrying, 1);
+  assert.strictEqual(failed.terminalFailures, 0);
   assert.strictEqual(failed.results[0].error, "synthetic persistence failure");
+  assert.strictEqual(failed.results[0].status, "retrying");
+  assert.strictEqual(failed.results[0].attempts, 3);
+  assert.strictEqual(failed.results[0].retrySeconds, sessionAfterthoughtRetrySeconds(3));
   assert.strictEqual(retryInput.job.id, "job-failure");
+  assert.strictEqual(retryInput.attempts, 3);
+  assert.strictEqual(retryInput.terminal, false);
+  assert(retryInput.nextRetryAt);
+
+  let terminalRetryInput = null;
+  const terminalWorker = createInnerLifeSessionLifecycleService(createPorts({
+    claimAfterthoughts: async () => [{
+      id: "job-terminal",
+      agentId: "codex",
+      body: "Session summary",
+      metadata: {
+        shareId: "share-terminal",
+        attempts: SESSION_AFTERTHOUGHT_MAX_ATTEMPTS - 1
+      }
+    }],
+    completeAfterthought: async () => {
+      throw new Error("synthetic terminal persistence failure");
+    },
+    retryAfterthought: async (_database, input) => {
+      terminalRetryInput = input;
+    }
+  }));
+  const terminal = await terminalWorker.processPendingSessionAfterthoughts({}, 5);
+  assert.strictEqual(terminal.processed, 0);
+  assert.strictEqual(terminal.retrying, 0);
+  assert.strictEqual(terminal.terminalFailures, 1);
+  assert.strictEqual(terminal.results[0].status, "failed");
+  assert.strictEqual(terminal.results[0].attempts, SESSION_AFTERTHOUGHT_MAX_ATTEMPTS);
+  assert.strictEqual(terminal.results[0].retrySeconds, 0);
+  assert.strictEqual(terminal.results[0].nextRetryAt, null);
+  assert.strictEqual(terminalRetryInput.terminal, true);
+  assert.strictEqual(terminalRetryInput.nextRetryAt, null);
 
   const serviceSource = fs.readFileSync(
     path.join(root, "core/innerlife/services/session-lifecycle.js"),

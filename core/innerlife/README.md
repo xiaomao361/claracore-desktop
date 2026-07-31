@@ -34,7 +34,11 @@ Desktop currently owns:
 
 Digest, manual process-once, exploration, convergence, and session-end
 afterthoughts run through the configured InnerLife model when one is set, and
-fall back to a deterministic template otherwise. Generation is tiered: `digest`
+use a deterministic template when no provider is configured. Synchronous
+generation paths retain their existing error fallback; persisted session
+afterthoughts instead record the generation error and retry on durable
+exponential backoff so a failed model call is not mistaken for completed work.
+Generation is tiered: `digest`
 follows its `mode` (deep mode uses the deep model), `converge` uses the deep
 model, and the rest use the light model.
 
@@ -45,11 +49,14 @@ Each generated record stores `generationSource` in its metadata:
 - `fallback`: a model was configured but the call failed; the template body is
   kept and tagged with `[InnerLife model fallback: <error>]`.
 
-Model failures never throw out of the generation step, so a degraded or
-unreachable model produces a clearly tagged waiting share instead of breaking
-the daemon tick or session lifecycle. The model client supports `ollama`
-(`/api/chat`) and `openai-compatible` (`/v1/chat/completions`) providers, reusing
-the same secret-ref pattern as Memory embeddings (`innerlife.llm.api_key`).
+For synchronous generation paths, model failures never throw out of the
+generation step, so a degraded or unreachable model produces a clearly tagged
+waiting share instead of breaking the daemon tick. Persisted session
+afterthoughts are the exception: a failed model call is not accepted as a
+completed share; the durable job records the error and follows the retry and
+terminal-failure policy below. The model client supports `ollama` (`/api/chat`)
+and `openai-compatible` (`/v1/chat/completions`) providers, reusing the same
+secret-ref pattern as Memory embeddings (`innerlife.llm.api_key`).
 
 The process-once path treats `continuity` inbox rows as context rather than a
 reason to speak, and it does not create a candidate when both inbox and operator
@@ -90,9 +97,25 @@ idempotent/best-effort session close behavior, and persisted afterthought
 processing. Its 16 explicit ports connect profile, briefing, share-quality,
 convergence, model generation, and the private session store without making
 the public session repository call those modules directly.
+
+Afterthought attempts wait 60, 120, 240, 480, 960, 1920, then 3600 seconds
+(capped) between failures. Attempt eight becomes a visible terminal `failed`
+record. The original summary/template and last error remain protected from
+processed-inbox retention; `innerlife_status` and Doctor expose retrying count,
+next retry time, and terminal failures. A terminal record never retries
+silently. Each atomic claim carries an owner token; if a stale claim is
+recovered, the expired worker may finish its model call but cannot overwrite
+the replacement worker's durable result. `innerlife_afterthought_resolve` is
+the explicit recovery boundary:
+`retry` requeues the preserved input with a fresh bounded attempt budget after
+the model path is repaired; `acknowledge` requires a reason, closes the failure
+without claiming success, and discards only its still-pending placeholder
+share. Convergence happens after the generated thought/share receipt is durable;
+a convergence failure is reported as a follow-up warning and never regenerates
+the already-persisted afterthought.
 `core/db/repositories/innerlife/session-store.js` owns session SQL and atomic
 job claiming. `core/db/repositories/innerlife/sessions.js` keeps the existing
-eight `ProductDatabase` methods as thin read and service adapters.
+nine `ProductDatabase` methods as thin read and service adapters.
 
 `core/innerlife/services/digest-run.js` owns digest context assembly,
 generation dispatch, write/prune ordering, and response composition through 11
@@ -144,6 +167,8 @@ Useful MCP tools include:
   returns a compact acknowledgement with the closed session, created ids,
   afterthought share, and converged/reason; full state comes from
   `innerlife_status` / `innerlife_briefing`)
+- `innerlife_afterthought_resolve` (explicitly `retry` or `acknowledge` one
+  terminal persisted afterthought owned by the authenticated Agent)
 - `innerlife_submit_inbox`
 - `innerlife_submit_fact`
 - `innerlife_submit_continuity`

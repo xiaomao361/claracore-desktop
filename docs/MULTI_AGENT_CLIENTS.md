@@ -141,7 +141,7 @@ line only by supplying its exact `lineId`. That explicit write records
 
 For a resume read:
 
-1. Call `gateway_context` without `lineId`.
+1. Call `gateway_context` with `detail: "brief"` and without `lineId`.
 2. If `SHARED_LINE_ID_REQUIRED` is returned, select one of its candidates and
    retry with that explicit `lineId`.
 
@@ -160,6 +160,7 @@ The following agent-facing tools are scoped to the authenticated caller:
 - `innerlife_pending_shares`
 - `innerlife_share_actions`
 - `innerlife_mark_share`
+- `innerlife_afterthought_resolve`
 
 Claude operating as `clara` cannot act on Lara's shares or sessions. Hermes
 operating as `lara` cannot act on Clara's or Codex's data. The Desktop UI may
@@ -175,7 +176,8 @@ still request an all-agent inspection snapshot.
 5. Omit `CLARACORE_CONVERSATION_ID` when one long-lived stdio process spans
    multiple Codex conversations.
 6. After changing caller configuration, reconnect and run
-   `claracore_connection_test`, `gateway_docs`, and `gateway_context`.
+   `claracore_connection_test`, `gateway_docs`, and
+   `gateway_context(detail=brief)`.
 
 ## Claude Migration Checklist
 

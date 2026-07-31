@@ -3,6 +3,7 @@ const fs = require("fs/promises");
 const os = require("os");
 const path = require("path");
 const { initializeProductDatabase } = require("../db/database");
+const { getGatewayContext } = require("../gateway/context");
 
 function percentile(values, ratio) {
   const sorted = [...values].sort((left, right) => left - right);
@@ -13,6 +14,28 @@ async function main() {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "claracore-gateway-context-performance-"));
   const database = await initializeProductDatabase(path.join(root, "claracore.db"));
   try {
+    const alphaLine = await database.createContinuityLine({
+      agentId: "agent-alpha",
+      title: "Agent Alpha performance line",
+      makeActive: false
+    });
+    await database.saveCurrentPosition({
+      lineId: alphaLine.id,
+      agentId: "agent-alpha",
+      summary: "Alpha current position ".repeat(150),
+      interpretationStatus: "confirmed",
+      metadata: {
+        confirmedGround: "Grounded context ".repeat(150),
+        boundaryNotes: "Performance fixture ".repeat(150)
+      }
+    });
+    for (let index = 0; index < 8; index += 1) {
+      await database.createMemory({
+        title: `Agent Alpha Memory ${index}`,
+        body: `Memory ${index} ${"bounded full context ".repeat(120)}`,
+        agentId: "agent-alpha"
+      });
+    }
     await database.submitInnerLifeInbox({ agentId: "agent-alpha", source: "smoke", body: "Alpha pending inbox" });
     await database.submitInnerLifeInbox({ agentId: "agent-beta", source: "smoke", body: "Beta must not leak" });
     await database.exec(`
@@ -32,25 +55,56 @@ async function main() {
       queryCalls += 1;
       return query(sql);
     };
-    const durations = [];
-    const calls = [];
+    const fullDurations = [];
+    const fullCalls = [];
+    const fullBytes = [];
     for (let index = 0; index < 20; index += 1) {
       queryCalls = 0;
       const startedAt = performance.now();
-      const context = await database.getGatewayContext({ agentId: "agent-alpha", limit: 5 });
-      durations.push(performance.now() - startedAt);
-      calls.push(queryCalls);
+      const context = await getGatewayContext({ database }, { agentId: "agent-alpha", limit: 5 });
+      fullDurations.push(performance.now() - startedAt);
+      fullCalls.push(queryCalls);
+      fullBytes.push(Buffer.byteLength(JSON.stringify(context), "utf8"));
+      assert.strictEqual(context.detail, "full");
       assert(context.innerLife.pendingInbox.every((item) => item.agentId === "agent-alpha"));
       assert(context.innerLife.pendingShares.every((item) => item.agent_id === "agent-alpha"));
       assert(!JSON.stringify(context).includes("Beta must not leak"), "Gateway context leaked another agent's data.");
     }
+    const briefDurations = [];
+    const briefCalls = [];
+    const briefBytes = [];
+    for (let index = 0; index < 20; index += 1) {
+      queryCalls = 0;
+      const startedAt = performance.now();
+      const context = await getGatewayContext(
+        { database },
+        { agentId: "agent-alpha", detail: "brief", limit: 20 }
+      );
+      briefDurations.push(performance.now() - startedAt);
+      briefCalls.push(queryCalls);
+      briefBytes.push(Buffer.byteLength(JSON.stringify(context), "utf8"));
+      assert.strictEqual(context.detail, "brief");
+      assert(context.memories.length <= 5);
+      assert(context.innerLife.pendingInbox.every((item) => item.agentId === "agent-alpha"));
+      assert(context.innerLife.pendingShares.every((item) => item.agentId === "agent-alpha"));
+      assert(!Object.hasOwn(context.sharedLine.currentPosition, "metadata"));
+      assert(!JSON.stringify(context).includes("Beta must not leak"), "Brief Gateway context leaked another agent's data.");
+    }
     database.query = query;
     const after = await fingerprint();
-    const p95Ms = percentile(durations, 0.95);
-    const maxQueryCalls = Math.max(...calls);
+    const fullP95Ms = percentile(fullDurations, 0.95);
+    const briefP95Ms = percentile(briefDurations, 0.95);
+    const maxFullQueryCalls = Math.max(...fullCalls);
+    const maxBriefQueryCalls = Math.max(...briefCalls);
+    const maxFullBytes = Math.max(...fullBytes);
+    const maxBriefBytes = Math.max(...briefBytes);
 
-    assert(maxQueryCalls <= 20, `Gateway context exceeded 20 SQL reads: ${maxQueryCalls}`);
-    assert(p95Ms <= 100, `Gateway context p95 exceeded 100 ms: ${p95Ms}`);
+    assert(maxFullQueryCalls <= 20, `Full Gateway context exceeded 20 SQL reads: ${maxFullQueryCalls}`);
+    assert(maxBriefQueryCalls <= 17, `Brief Gateway context exceeded 17 SQL reads: ${maxBriefQueryCalls}`);
+    assert(maxFullBytes <= 110 * 1024, `Full Gateway context exceeded 110 KiB: ${maxFullBytes}`);
+    assert(maxBriefBytes <= 32 * 1024, `Brief Gateway context exceeded 32 KiB: ${maxBriefBytes}`);
+    assert(fullP95Ms <= 100, `Full Gateway context p95 exceeded 100 ms: ${fullP95Ms}`);
+    assert(briefP95Ms <= 100, `Brief Gateway context p95 exceeded 100 ms: ${briefP95Ms}`);
     assert.strictEqual(before, after, "Gateway context mutated domain tables.");
 
     await database.exec(`
@@ -82,7 +136,10 @@ async function main() {
     };
     let ambiguityError = null;
     try {
-      await database.getGatewayContext({ agentId: "agent-ambiguous", limit: 5 });
+      await getGatewayContext(
+        { database },
+        { agentId: "agent-ambiguous", detail: "brief", limit: 5 }
+      );
     } catch (error) {
       ambiguityError = error;
     } finally {
@@ -96,12 +153,28 @@ async function main() {
 
     process.stdout.write(`${JSON.stringify({
       suite: "gateway-context-performance-smoke",
-      samples: durations.length,
-      maxQueryCalls,
+      samples: {
+        full: fullDurations.length,
+        brief: briefDurations.length
+      },
+      maxQueryCalls: {
+        full: maxFullQueryCalls,
+        brief: maxBriefQueryCalls
+      },
+      maxBytes: {
+        full: maxFullBytes,
+        brief: maxBriefBytes
+      },
       ambiguousQueryCalls,
-      p95Ms: Math.round(p95Ms * 1000) / 1000,
+      p95Ms: {
+        full: Math.round(fullP95Ms * 1000) / 1000,
+        brief: Math.round(briefP95Ms * 1000) / 1000
+      },
       preChangeReferenceQueryCalls: 51,
-      queryReductionPercent: Math.round((1 - maxQueryCalls / 51) * 1000) / 10
+      queryReductionPercent: {
+        full: Math.round((1 - maxFullQueryCalls / 51) * 1000) / 10,
+        brief: Math.round((1 - maxBriefQueryCalls / 51) * 1000) / 10
+      }
     }, null, 2)}\n`);
   } finally {
     database.close();

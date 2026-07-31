@@ -72,6 +72,7 @@ async function main() {
       return path.join(tempRoot, name);
     }
   };
+  const httpContextInputs = [];
   const ensureProductCore = async () => ({
     paths: {
       appRoot: path.resolve(__dirname, "../.."),
@@ -95,7 +96,10 @@ async function main() {
         mcpConfig: JSON.stringify({ mcpServers: {} })
       }
     }),
-    getProductGatewayContext: async () => ({ ok: true }),
+    getProductGatewayContext: async (_app, input) => {
+      httpContextInputs.push(input);
+      return { ok: true, detail: input.detail };
+    },
     port
   });
 
@@ -145,12 +149,31 @@ async function main() {
       ["claracore_connection_test", "gateway_docs", "gateway_context"],
       "Agent setup should expose the canonical first-connection sequence"
     );
+    assert(
+      setup.firstCalls[2].includes("detail=brief"),
+      "Agent setup should request bounded Gateway context explicitly."
+    );
     assert.deepStrictEqual(Object.keys(setup.capabilities), ["memory", "sharedLine", "innerLife", "gateway"]);
     assert(setup.afterConnect?.includes("proactively"), "Agent setup should require a proactive user handoff");
     assert.strictEqual(setup.userIntroductionRequirements?.length, 5);
     assert(setup.memoriaUsage?.confirmedChange?.includes("memoria_supersede"), "Agent setup should explain confirmed Memory replacement");
     assert(setup.memoriaUsage?.unresolvedConflict?.includes("contradicts"), "Agent setup should preserve unresolved conflicts");
     assert(setup.memoriaUsage?.recall?.includes("timeView=current"), "Agent setup should explain current and historical recall");
+    const httpBriefResponse = await fetch(`http://127.0.0.1:${port}/gateway/context?detail=brief`, {
+      headers: { Authorization: headers.Authorization }
+    });
+    assert.strictEqual(httpBriefResponse.status, 200);
+    assert.strictEqual((await httpBriefResponse.json()).detail, "brief");
+    const httpFullResponse = await fetch(`http://127.0.0.1:${port}/gateway/context`, {
+      headers: { Authorization: headers.Authorization }
+    });
+    assert.strictEqual(httpFullResponse.status, 200);
+    assert.strictEqual((await httpFullResponse.json()).detail, "full");
+    assert.deepStrictEqual(
+      httpContextInputs.map((input) => input.detail),
+      ["brief", "full"],
+      "Legacy HTTP context must support brief while preserving the omitted-detail full default."
+    );
     const initialized = await postMcp({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} });
     assert.strictEqual(initialized.result.serverInfo.name, "claracore-desktop");
     assert(initialized.result.instructions.includes("Search Memoria and Shared Line"), "initialize should describe selective context reads");
@@ -233,10 +256,22 @@ async function main() {
       jsonrpc: "2.0",
       id: 33,
       method: "tools/call",
-      params: { name: "gateway_context", arguments: {} }
+      params: { name: "gateway_context", arguments: { detail: "brief" } }
     });
     const contextPacket = JSON.parse(contextCall.result.content[0].text);
+    assert.strictEqual(contextPacket.detail, "brief");
     assert(contextPacket.sharedLine || contextPacket.shared_line || contextPacket.continuity, "First onboarding should return context truth");
+    const compatibilityContextCall = await postMcp({
+      jsonrpc: "2.0",
+      id: 34,
+      method: "tools/call",
+      params: { name: "gateway_context", arguments: {} }
+    });
+    assert.strictEqual(
+      JSON.parse(compatibilityContextCall.result.content[0].text).detail,
+      "full",
+      "Omitted Gateway detail must preserve the 0.6.4 full payload."
+    );
     const contentAfterOnboarding = await database.getSummary();
     assert.strictEqual(contentAfterOnboarding.memories_count, contentBeforeOnboarding.memories_count);
     assert.strictEqual(contentAfterOnboarding.continuity_lines_count, contentBeforeOnboarding.continuity_lines_count);

@@ -309,7 +309,7 @@ function renderSelectedHistory(sharedLine = {}) {
 
 function renderMemoryList() {
   const snapshot = getSnapshot();
-  const memories = snapshot?.memories || [];
+  const memories = snapshot?.memories || snapshot?.recentMemories || [];
   state.activeMemoryAgentFilter = renderAgentFilter(memoryAgentFilter, memories.map(memoryAgentId), state.activeMemoryAgentFilter);
   renderMemoryResults(filterByAgent(memories, state.activeMemoryAgentFilter, memoryAgentId));
 }

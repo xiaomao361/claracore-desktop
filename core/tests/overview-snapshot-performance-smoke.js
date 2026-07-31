@@ -21,6 +21,21 @@ async function main() {
   const database = await initializeProductDatabase(paths.databasePath);
   try {
     await database.updateInnerLifeProfile({ agentId: "overview-agent", displayName: "Overview Agent" });
+    for (let index = 0; index < 20; index += 1) {
+      await database.createMemory({
+        title: `Overview payload memory ${index}`,
+        body: `payload-${String(index).padStart(2, "0")}-`.padEnd(4000, "x"),
+        agentId: "overview-agent",
+        labels: ["overview-payload"]
+      });
+    }
+    for (let index = 0; index < 5; index += 1) {
+      await database.submitInnerLifeInbox({
+        agentId: "overview-agent",
+        source: "overview-smoke",
+        body: `inbox-${String(index).padStart(2, "0")}-`.padEnd(3000, "y")
+      });
+    }
     await database.exec(`
       INSERT INTO innerlife_events (id, agent_id, kind, body, status)
       VALUES ('overview-event', 'overview-agent', 'smoke', 'overview', 'processed');
@@ -35,6 +50,7 @@ async function main() {
     `);
     const liteSnapshot = await database.getInnerLifeSnapshotLite("all");
     assert(!Object.hasOwn(liteSnapshot, "recentShares"), "Lite snapshot should not load recent shares");
+    assert(Object.hasOwn(liteSnapshot, "pendingInbox"), "Domain lite snapshot must retain its pendingInbox contract");
     let queryCalls = 0;
     const shareQueries = [];
     const query = database.query.bind(database);
@@ -52,10 +68,14 @@ async function main() {
     const payloadBytes = Buffer.byteLength(JSON.stringify(snapshot));
 
     assert(queryCalls <= 30, `Overview exceeded 30 SQL reads: ${queryCalls}`);
-    assert(payloadBytes <= 200 * 1024, `Overview exceeded 200 KiB: ${payloadBytes}`);
+    assert(payloadBytes <= 135 * 1024, `Overview exceeded 135 KiB: ${payloadBytes}`);
     assert.strictEqual(snapshot.overview, true);
     assert.strictEqual(snapshot.sharedLine.overview, true);
     assert.strictEqual(snapshot.innerLife.overview, true);
+    assert.strictEqual(Object.hasOwn(snapshot, "memories"), false, "Overview must not duplicate recentMemories as memories");
+    assert.strictEqual(snapshot.recentMemories.length, 20, "Overview recent Memory sample changed");
+    assert.strictEqual(Object.hasOwn(snapshot.innerLife, "pendingInbox"), false, "Overview must expose waiting inbox rows once");
+    assert.strictEqual(snapshot.innerLife.inbox.length, 5, "Overview inbox sample changed");
     assert.strictEqual(shareQueries.filter((status) => status === "pending").length, 1, "Lite snapshot should query pending shares once");
     assert.strictEqual(shareQueries.filter((status) => status === "all").length, 1, "Overview should query recent shares once at the view boundary");
     assert(snapshot.innerLife.pendingShares.some((share) => share.body === "pending overview share"));
@@ -64,7 +84,8 @@ async function main() {
     process.stdout.write(`${JSON.stringify({
       suite: "overview-snapshot-performance-smoke",
       snapshotQueryCalls: queryCalls,
-      payloadBytes
+      payloadBytes,
+      thresholdBytes: 135 * 1024
     }, null, 2)}\n`);
   } finally {
     database.close();

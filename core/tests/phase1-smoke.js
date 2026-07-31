@@ -93,6 +93,7 @@ async function main() {
     "memory.embedding.base_url": "http://127.0.0.1:11436",
     "memory.embedding.model": "bge-m3-phase1-smoke",
     "memory.embedding.dimension": "768",
+    "memory.maintenance.hour": 0,
     "innerlife.provider": "openai-compatible",
     "innerlife.base_url": "http://127.0.0.1:11439",
     "innerlife.light_model": "phase1-light",
@@ -116,6 +117,9 @@ async function main() {
   }
   if (snapshot.configuration.memoria.dimension !== "768") {
     throw new Error("Saved Memoria dimension did not read back from SQLite.");
+  }
+  if (snapshot.configuration.memoria.maintenanceHour !== 0) {
+    throw new Error("Midnight maintenance hour did not read back from SQLite.");
   }
   if (snapshot.configuration.innerlife.backend !== "openai-compatible") {
     throw new Error("Saved InnerLife provider did not read back from SQLite.");

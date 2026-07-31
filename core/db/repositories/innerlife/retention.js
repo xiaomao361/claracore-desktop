@@ -20,7 +20,7 @@ function createInnerLifeRetentionRepository({ sqlString }) {
       const rows = await this.query(`
         SELECT
           (SELECT COUNT(*) FROM innerlife_inbox WHERE status = 'processed') AS processed_inbox,
-          (SELECT COUNT(*) FROM innerlife_inbox WHERE status IN ('pending', 'processing')) AS protected_inbox,
+          (SELECT COUNT(*) FROM innerlife_inbox WHERE status IN ('pending', 'processing', 'failed')) AS protected_inbox,
           (SELECT COUNT(*) FROM innerlife_sessions WHERE status = 'ended') AS ended_sessions,
           (SELECT COUNT(*) FROM innerlife_sessions WHERE status = 'active') AS active_sessions,
           (SELECT COUNT(*) FROM innerlife_share_checks) AS share_checks,

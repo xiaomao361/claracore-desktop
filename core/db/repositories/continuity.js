@@ -271,7 +271,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
         SELECT id, line_id, position_id, summary, interpretation_status, facts_used_json, reason, created_at
         FROM continuity_snapshots
         WHERE line_id = ${sqlString(lineId)}
-        ORDER BY created_at DESC, id DESC
+        ORDER BY created_at DESC, rowid DESC
         LIMIT ${safeLimit};
       `);
       return rows.map((row) => ({
@@ -293,7 +293,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
         SELECT id, line_id, position_id, summary, interpretation_status, facts_used_json, source, created_at
         FROM continuity_position_history
         WHERE line_id = ${sqlString(lineId)}
-        ORDER BY created_at DESC, id DESC
+        ORDER BY created_at DESC, rowid DESC
         LIMIT ${safeLimit};
       `);
       return rows.map((row) => ({
@@ -315,7 +315,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
         SELECT id, line_id, objective, completed_json, open_items_json, next_step, created_at
         FROM continuity_handoffs
         WHERE line_id = ${sqlString(lineId)}
-        ORDER BY created_at DESC, id DESC
+        ORDER BY created_at DESC, rowid DESC
         LIMIT ${safeLimit};
       `);
       return rows.map((row) => ({
@@ -507,91 +507,6 @@ function installContinuityRepository(ProductDatabase, helpers) {
         positionHistory: { before: beforeHistory.length, after: afterHistory.length, removed: beforeHistory.length - afterHistory.length },
         protectedAffective: beforeTrace.filter(isProtectedAffective).length,
         currentPosition: await this.getCurrentPosition(lineId)
-      };
-    },
-
-    async getGatewayContext(input = {}) {
-      const identity = resolveAgentIdentity(input || {});
-      const agentId = identity.id;
-      const query = String(input.query || "").trim();
-      const limit = Math.max(1, Math.min(Number.parseInt(String(input.limit || 5), 10) || 5, 20));
-      // Resolve Shared Line first so an ambiguous caller fails before unrelated
-      // Memory and InnerLife reads start. The error already carries candidates
-      // for an explicit retry.
-      const sharedLine = await this.getResumePacket(
-        input.lineId ? { lineId: input.lineId, lite: true } : { agentId, lite: true }
-      );
-      const [memories, innerLife, pendingInbox, recentShares, recentThoughts] = await Promise.all([
-        query ? this.searchMemories(query, limit).then((result) => result.results.slice(0, limit)) : this.listMemories(limit),
-        this.getInnerLifeSnapshotLite(agentId),
-        this.listInnerLifeInboxForAgent(agentId, "pending", limit, { excludeSources: ["session_end_afterthought"] }),
-        this.listInnerLifeShares("all", limit, agentId),
-        this.listInnerLifeRecentThoughts(agentId, limit)
-      ]);
-      const doctor = innerLife.doctor || { status: "ok", summary: "InnerLife is not configured for this agent.", issues: [] };
-      const pendingShares = (innerLife.pendingShares || []).slice(0, limit);
-      const memoryText = memories.length
-        ? memories.map((memory, index) => `${index + 1}. ${memory.title || memory.body.slice(0, 80)} [${memory.id}]`).join("\n")
-        : "(none)";
-      const shareText = pendingShares.length
-        ? pendingShares.map((share, index) => `${index + 1}. ${String(share.body || "").split("\n")[0]} [${share.id}]`).join("\n")
-        : "(none)";
-      const inboxText = pendingInbox.length
-        ? pendingInbox.map((item, index) => `${index + 1}. ${item.source}: ${item.body}`).join("\n")
-        : "(none)";
-      const doctorText = doctor.issues.length
-        ? doctor.issues.map((issue, index) => `${index + 1}. ${issue.level}/${issue.code}: ${issue.message} Action: ${issue.action}`).join("\n")
-        : "No recovery action is needed.";
-      const text = [
-        "# ClaraCore Gateway Context",
-        "",
-        `Agent: ${agentId}`,
-        `Generated at: ${new Date().toISOString()}`,
-        `Doctor: ${doctor.status} - ${doctor.summary}`,
-        "",
-        "## Shared Line",
-        sharedLine.text,
-        "",
-        "## Recent Memory",
-        memoryText,
-        "",
-        "## InnerLife",
-        `Daemon: ${innerLife.daemon?.status || "paused"}`,
-        `Pending shares: ${innerLife.counts?.pending_shares_count || 0}`,
-        `Pending inbox: ${innerLife.counts?.pending_inbox_count || 0}`,
-        "Pending shares:",
-        shareText,
-        "Pending inbox:",
-        inboxText,
-        "",
-        "## Recovery",
-        doctorText,
-        "",
-        "## Agent Guidance",
-        "Use Shared Line as the current position, Memory as durable facts, and InnerLife waiting shares only when they fit the current moment."
-      ].join("\n");
-      return {
-        agentId,
-        generatedAt: new Date().toISOString(),
-        query,
-        sharedLine,
-        memories,
-        innerLife: {
-          counts: innerLife.counts,
-          daemon: innerLife.daemon,
-          doctor,
-          pendingShares,
-          pendingInbox,
-          recentShares,
-          recentThoughts
-        },
-        guidance: {
-          useSharedLine: "Treat Shared Line as the current resumable position.",
-          useMemory: "Treat Memory as durable reviewed facts.",
-          useInnerLife: "Use this agent's InnerLife waiting shares only when they fit the current moment.",
-          oldServices: "Do not read or mutate old ClaraCore service databases from this Gateway context."
-        },
-        text
       };
     }
   };

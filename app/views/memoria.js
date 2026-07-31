@@ -3,6 +3,7 @@ function createClaraCoreMemoriaView(context) {
     dom,
     t,
     getSnapshot,
+    getSnapshotGeneration = () => 0,
     escapeHtml,
     renderMarkdownPreview,
     formatLocalDateTime,
@@ -33,6 +34,10 @@ function createClaraCoreMemoriaView(context) {
   const loadedMemoryTabs = { all: false, graph: false };
   const memoryPaging = { pageSize: 20, all: { loaded: 0 } };
   let snapshot = null;
+  const memoryHydration = window.createClaraCoreMemoryHydrationCoordinator({
+    getGeneration: getSnapshotGeneration,
+    getSnapshot
+  });
 
   function syncSnapshot() {
     snapshot = getSnapshot();
@@ -101,7 +106,8 @@ function renderMemoryResults(memories, target = memoryList, options = {}) {
 
 function renderMemoryList() {
   syncSnapshot();
-  renderMemoryResults(filterByAgent(snapshot?.memories || [], activeMemoryAgentFilter, memoryAgentId));
+  const memories = snapshot?.memories || snapshot?.recentMemories || [];
+  renderMemoryResults(filterByAgent(memories, activeMemoryAgentFilter, memoryAgentId));
 }
 
 function selectMemory(memoryId, options = {}) {
@@ -141,29 +147,50 @@ function renderLoadMore(kind) {
   );
 }
 
-async function loadMemoryTabData(tabName, options = {}) {
-  syncSnapshot();
-  if (!snapshot) return;
+function loadMemoryTabData(tabName, options = {}) {
+  const targetSnapshot = syncSnapshot();
+  if (!targetSnapshot) {
+    return Promise.resolve({ applied: false, skipped: true, stale: false });
+  }
   const force = Boolean(options.force);
   const append = Boolean(options.append);
   if ((tabName === "all" || tabName === "search") && (force || append || !loadedMemoryTabs.all)) {
     const offset = append ? memoryPaging.all.loaded : 0;
-    const rows = await window.ClaraCoreDesktop.getMemories({ limit: memoryPaging.pageSize, offset, agentId: activeMemoryAgentFilter });
-    snapshot.memories = append ? [...(snapshot.memories || []), ...rows] : rows;
-    memoryPaging.all.loaded = snapshot.memories.length;
-    loadedMemoryTabs.all = true;
-    renderMemoryResults(filterByAgent(snapshot.memories || [], activeMemoryAgentFilter, memoryAgentId));
-    memoryAllHint.textContent = t("memory.list.sample", {
-      shown: snapshot?.memories?.length || 0,
-      total: snapshot?.memoryStats?.activeCount ?? 0
+    const requestAgentId = activeMemoryAgentFilter;
+    return memoryHydration.run("all", {
+      force: force || append,
+      load: () => window.ClaraCoreDesktop.getMemories({
+        limit: memoryPaging.pageSize,
+        offset,
+        agentId: requestAgentId
+      }),
+      apply: (rows, requestSnapshot) => {
+        requestSnapshot.memories = append ? [...(requestSnapshot.memories || []), ...rows] : rows;
+        snapshot = requestSnapshot;
+        memoryPaging.all.loaded = requestSnapshot.memories.length;
+        loadedMemoryTabs.all = true;
+        renderMemoryResults(filterByAgent(requestSnapshot.memories, activeMemoryAgentFilter, memoryAgentId));
+        memoryAllHint.textContent = t("memory.list.sample", {
+          shown: requestSnapshot.memories.length,
+          total: requestSnapshot?.memoryStats?.activeCount ?? 0
+        });
+        renderLoadMore("all");
+      }
     });
-    renderLoadMore("all");
   }
   if (tabName === "graph" && (force || !loadedMemoryTabs.graph)) {
-    snapshot.memoryGraph = await window.ClaraCoreDesktop.getMemoryGraph({ limit: 400 });
-    loadedMemoryTabs.graph = true;
-    renderMemoryGraph();
+    return memoryHydration.run("graph", {
+      force,
+      load: () => window.ClaraCoreDesktop.getMemoryGraph({ limit: 400 }),
+      apply: (graph, requestSnapshot) => {
+        requestSnapshot.memoryGraph = graph;
+        snapshot = requestSnapshot;
+        loadedMemoryTabs.graph = true;
+        renderMemoryGraph();
+      }
+    });
   }
+  return Promise.resolve({ applied: false, skipped: true, stale: false });
 }
 
 function renderMemoryLabels(labels) {
@@ -905,6 +932,7 @@ function renderMemoryOverview() {
     memoryGraphPan = { x: 0, y: 0 };
   }
   const stats = snapshot?.memoryStats || {};
+  const memories = snapshot?.memories || snapshot?.recentMemories || [];
   const labels = stats.labels || [];
   const agentIds = labels
     .map((item) => String(item.label || ""))
@@ -917,7 +945,7 @@ function renderMemoryOverview() {
   activeMemoryAgentFilter = renderAgentFilter(memoryAgentFilter, agentIds.length ? agentIds : fallbackAgentIds, activeMemoryAgentFilter);
   renderMemoryLabels(labels);
   memoryAllHint.textContent = t("memory.list.sample", {
-    shown: snapshot?.memories?.length || 0,
+    shown: memories.length,
     total: stats.activeCount ?? 0
   });
   if (loadedMemoryTabs.graph) renderMemoryGraph();
@@ -1232,6 +1260,7 @@ function renderMemoryGraph() {
 }
 
   function resetLoadedTabs() {
+    memoryHydration.invalidate();
     loadedMemoryTabs.all = false;
     loadedMemoryTabs.graph = false;
     memoryPaging.all.loaded = 0;

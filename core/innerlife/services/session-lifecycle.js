@@ -5,6 +5,10 @@ const {
   isNoShareInnerLifeOutput
 } = require("../policy");
 
+const SESSION_AFTERTHOUGHT_MAX_ATTEMPTS = 8;
+const SESSION_AFTERTHOUGHT_RETRY_BASE_SECONDS = 60;
+const SESSION_AFTERTHOUGHT_RETRY_MAX_SECONDS = 60 * 60;
+
 const SESSION_LIFECYCLE_PORTS = [
   "claimAfterthoughts",
   "closeSession",
@@ -23,6 +27,17 @@ const SESSION_LIFECYCLE_PORTS = [
   "resolveAgentIdentity",
   "retryAfterthought"
 ];
+
+function sessionAfterthoughtRetrySeconds(attempts) {
+  const safeAttempts = Math.max(
+    1,
+    Math.min(Number.parseInt(String(attempts), 10) || 1, SESSION_AFTERTHOUGHT_MAX_ATTEMPTS)
+  );
+  return Math.min(
+    SESSION_AFTERTHOUGHT_RETRY_MAX_SECONDS,
+    SESSION_AFTERTHOUGHT_RETRY_BASE_SECONDS * 2 ** (safeAttempts - 1)
+  );
+}
 
 function normalizeSessionSummary(value) {
   if (typeof value === "string") return value.trim();
@@ -225,6 +240,11 @@ function createInnerLifeSessionLifecycleService(inputPorts = {}) {
             prompt: template,
             template
           });
+          if (generated?.error) {
+            const generationError = new Error(String(generated.error));
+            generationError.code = "INNERLIFE_AFTERTHOUGHT_GENERATION_FAILED";
+            throw generationError;
+          }
           const noShareOutput = isNoShareInnerLifeOutput(generated.body);
           const duplicate = noShareOutput
             ? null
@@ -243,39 +263,91 @@ function createInnerLifeSessionLifecycleService(inputPorts = {}) {
               : { create: true, reason: "distinct_shareable_thought" };
           metadata.shareDecision = shareDecision;
         }
-        await ports.completeAfterthought(database, {
+        const completion = await ports.completeAfterthought(database, {
           job,
           metadata,
           generated,
           share,
           shareDecision
         });
-        const convergence = metadata.shareDecision?.create === false
-          ? null
-          : await ports.converge(database, {
+        if (completion?.completed === false) {
+          results.push({
+            id: job.id,
+            ok: false,
+            status: "stale_claim",
+            error: "The afterthought lease expired before this worker completed; its output was discarded."
+          });
+          continue;
+        }
+        let convergence = null;
+        let convergenceError = "";
+        if (metadata.shareDecision?.create !== false) {
+          try {
+            convergence = await ports.converge(database, {
               agentId: job.agentId,
               sourceThoughtId: metadata.thoughtId,
               automated: true,
               reason: "session_end"
             });
+          } catch (error) {
+            // The generated thought/share and job receipt are already durable.
+            // Requeueing here would regenerate the same afterthought and could
+            // duplicate a share. Surface convergence as a follow-up warning.
+            convergenceError = error.message || String(error);
+          }
+        }
         results.push({
           id: job.id,
           ok: true,
+          status: convergenceError ? "processed_with_warning" : "processed",
           shareId: metadata.shareId,
           source: generated.source,
-          converged: Boolean(convergence?.converged)
+          converged: Boolean(convergence?.converged),
+          ...(convergenceError ? { warning: `Convergence failed after persistence: ${convergenceError}` } : {})
         });
       } catch (error) {
-        await ports.retryAfterthought(database, {
+        const attempts = Math.max(0, Number.parseInt(String(metadata.attempts || 0), 10) || 0) + 1;
+        const terminal = attempts >= SESSION_AFTERTHOUGHT_MAX_ATTEMPTS;
+        const failedAt = new Date();
+        const retrySeconds = terminal ? 0 : sessionAfterthoughtRetrySeconds(attempts);
+        const nextRetryAt = terminal
+          ? null
+          : new Date(failedAt.getTime() + retrySeconds * 1000).toISOString();
+        const retry = await ports.retryAfterthought(database, {
           job,
           metadata,
-          error: error.message || String(error)
+          attempts,
+          error: error.message || String(error),
+          failedAt: failedAt.toISOString(),
+          nextRetryAt,
+          retrySeconds,
+          terminal
         });
-        results.push({ id: job.id, ok: false, error: error.message || String(error) });
+        if (retry?.updated === false) {
+          results.push({
+            id: job.id,
+            ok: false,
+            status: "stale_claim",
+            error: "The afterthought lease expired before this worker recorded its failure."
+          });
+          continue;
+        }
+        results.push({
+          id: job.id,
+          ok: false,
+          error: error.message || String(error),
+          status: terminal ? "failed" : "retrying",
+          attempts,
+          retrySeconds,
+          nextRetryAt
+        });
       }
     }
     return {
       processed: results.filter((item) => item.ok).length,
+      retrying: results.filter((item) => item.status === "retrying").length,
+      terminalFailures: results.filter((item) => item.status === "failed").length,
+      staleClaims: results.filter((item) => item.status === "stale_claim").length,
       results
     };
   }
@@ -288,6 +360,10 @@ function createInnerLifeSessionLifecycleService(inputPorts = {}) {
 }
 
 module.exports = {
+  SESSION_AFTERTHOUGHT_MAX_ATTEMPTS,
+  SESSION_AFTERTHOUGHT_RETRY_BASE_SECONDS,
+  SESSION_AFTERTHOUGHT_RETRY_MAX_SECONDS,
   SESSION_LIFECYCLE_PORTS,
-  createInnerLifeSessionLifecycleService
+  createInnerLifeSessionLifecycleService,
+  sessionAfterthoughtRetrySeconds
 };

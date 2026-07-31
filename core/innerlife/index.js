@@ -22,6 +22,16 @@ async function inbox(core, input = {}) {
   return core.database.listInnerLifeInboxPage(input);
 }
 
+async function pendingInbox(core, agentId, limit = 20) {
+  return core.database.listInnerLifeInboxForAgent(agentId, "pending", limit, {
+    excludeSources: ["session_end_afterthought"]
+  });
+}
+
+async function recentThoughts(core, agentId, limit = 5) {
+  return core.database.listInnerLifeRecentThoughts(agentId, limit);
+}
+
 async function doctor(core, agentId = "codex") {
   return core.database.getInnerLifeDoctor(agentId);
 }
@@ -52,6 +62,10 @@ async function startSession(core, input) {
 
 async function endSession(core, sessionId, input) {
   return core.database.endInnerLifeSession(sessionId, input);
+}
+
+async function resolveAfterthoughtFailure(core, id, input) {
+  return core.database.resolveInnerLifeSessionAfterthoughtFailure(id, input);
 }
 
 async function processOnce(core, input) {
@@ -140,10 +154,13 @@ module.exports = {
   inbox,
   markShare,
   pendingShares,
+  pendingInbox,
   processOnce,
   profiles,
+  recentThoughts,
   recentSessions,
   reviewShare,
+  resolveAfterthoughtFailure,
   sessions,
   setDaemon,
   shareActions,

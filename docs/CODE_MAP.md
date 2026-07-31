@@ -32,15 +32,22 @@ SQLite database.
   registration and enforced against the sandboxed preload by contract lint.
 - `index.html`: static renderer shell, navigation, page sections, and script
   ordering, plus the renderer CSP.
-- `app.js`: renderer state, refresh loop, cross-view event wiring, and view
-  orchestration.
+- `app.js`: renderer state, scope-to-view invalidation, hydration-preserving
+  Overview merges, cross-view event wiring, and view orchestration.
+- `app/resource-refresh.js`: visible-window resource sampling owner with
+  single-flight refresh, 30-second cadence, and explicit stop lifecycle.
 - `core/runtime/index.js`: public runtime facade used by Electron, CLI,
   Gateway-facing workflows, and tests.
+- `core/runtime/product-core-owner.js`: per-process single-flight database
+  owner, warm zero-I/O cache, path-switch disposal, and reset generation guard.
 - `electron/http-agent-gateway.js`: localhost HTTP helper and Streamable HTTP MCP endpoint.
+- `electron/resource-sampling.js`: resource warning thresholds and the policy
+  that defers external Gateway `/bin/ps` discovery until diagnostics are
+  needed.
 - `core/gateway/mcp-server.js`: stdio MCP fallback process used by agents; reads
   process-scoped agent, client, and optional conversation identity.
-- `core/runtime/snapshot.js`: generates the copyable stdio configuration,
-  including packaged launch environment and multi-agent caller placeholders.
+- `core/runtime/snapshot.js`: bounded Overview, focused view snapshots, full
+  compatibility snapshot, and copyable Agent connection configuration.
 - `core/cli.js`: local CLI fallback for product operations.
 
 ## Read Paths By Task
@@ -163,6 +170,13 @@ Repository ownership:
   and delivered InnerLife shares. It scans those five sources once over the
   30-day superset, preserves the existing calendar/rolling window semantics,
   and buckets results into all four Home periods without repeated SQL.
+- `core/db/agent-identity-references.js`: live-schema-checked registry of every
+  direct Agent identity column.
+- `core/db/repositories/system/agent-identity.js`: transactional identity merge
+  policy for direct references, typed live JSON/config fields, session
+  collisions, canonically owned Memory labels, and lossless singleton handling:
+  source-only rows move, equivalent dual-sided rows deduplicate, and differing
+  rows block with actionable conflict details.
 - `core/db/migrations/003_multi_agent_caller_context.js`: additive v0.5
   migration for Gateway trace `client_id` / `conversation_id` columns and
   legacy `session_id` backfill.
@@ -177,12 +191,19 @@ Repository ownership:
   persistence.
 - `core/db/repositories/continuity.js`: composition plus current position,
   writer provenance, history, snapshots, handoffs, affective arc policy,
-  resume packets, and Gateway context composition.
+  and resume packet persistence.
 - `core/db/repositories/continuity/lines.js`: Shared Line lifecycle,
   active-line selection, explicit and agent-owned line resolution, and bounded
   line listing.
 - `core/db/repositories/continuity/agents.js`: Shared Line agent state and
   model adjustment persistence.
+- `core/gateway/context.js`: cross-domain Gateway context service. It composes
+  Memoria, Shared Line, and InnerLife facades, keeps omitted `detail` as the
+  0.6.4 full contract, and provides the bounded Agent-scoped `brief`
+  projection used during onboarding and resume.
+- `core/tests/gateway-context-service-smoke.js`: SQL-free service contract,
+  repository-ownership gate, UTF-8 bounding, Agent isolation, and brief/full
+  compatibility coverage.
 - `core/db/repositories/innerlife.js`: composition-only installer for focused
   InnerLife repository modules and domain-service ports. It must not own SQL or
   workflow logic.
@@ -190,8 +211,9 @@ Repository ownership:
   per-Agent locking, due/paused decisions, process dispatch, and retry policy
   through explicit persistence and domain ports.
 - `core/innerlife/services/session-lifecycle.js`: session start packet, close,
-  persisted afterthought quality/convergence, and retry orchestration through
-  explicit ports.
+  persisted afterthought quality/convergence, durable exponential retry,
+  lease-owner enforcement, terminal-failure policy, and post-persistence
+  warning isolation through explicit ports.
 - `core/innerlife/services/digest-run.js`: digest context assembly, generation,
   compound-write/prune ordering, and response composition through explicit
   ports.
@@ -225,9 +247,10 @@ Repository ownership:
   `core/innerlife/policy.js`.
 - `core/db/repositories/innerlife/session-store.js`: private session SQL,
   canonical internal/external lookup, lifecycle transitions, and atomic
-  afterthought job claiming.
-- `core/db/repositories/innerlife/sessions.js`: thin eight-method public
-  adapter for session reads and lifecycle services.
+  due-time afterthought claiming plus retry/success/recovery receipts.
+- `core/db/repositories/innerlife/sessions.js`: thin nine-method public adapter
+  for session reads, lifecycle services, and explicit terminal-failure
+  resolution.
 - `core/db/repositories/innerlife/shares.js`: InnerLife share list,
   review/mark actions, apply-to-Memory/Shared-Line persistence, and a thin
   timing-service adapter.

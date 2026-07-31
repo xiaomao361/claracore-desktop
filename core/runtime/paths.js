@@ -50,8 +50,7 @@ function resolveProductPaths(app) {
   };
 }
 
-async function ensureProductDirectories(app) {
-  const paths = resolveProductPaths(app);
+async function ensureResolvedProductDirectories(paths) {
   await Promise.all([
     fs.mkdir(paths.dataRoot, { recursive: true }),
     fs.mkdir(paths.backupsDir, { recursive: true }),
@@ -62,9 +61,14 @@ async function ensureProductDirectories(app) {
   return paths;
 }
 
+async function ensureProductDirectories(app) {
+  return ensureResolvedProductDirectories(resolveProductPaths(app));
+}
+
 module.exports = {
   desktopSettingsPath,
   ensureProductDirectories,
+  ensureResolvedProductDirectories,
   readDesktopSettings,
   resolveDataRoot,
   resolveProductPaths

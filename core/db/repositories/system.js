@@ -1,4 +1,5 @@
 const { createAgentActivityRepository } = require("./system/agent-activity");
+const { createAgentIdentityRepository } = require("./system/agent-identity");
 const { createGatewayTraceRepository } = require("./system/gateway-traces");
 const { composeRepositoryMethods } = require("../repository-installer");
 
@@ -14,6 +15,7 @@ function createSystemRepository(helpers) {
     normalizeSettingValue,
     parseJson,
     postJson,
+    resolveMaintenanceHour,
     sqlString
   } = helpers;
   const {
@@ -265,7 +267,7 @@ function createSystemRepository(helpers) {
           dimension: String(settings["memory.embedding.dimension"] || 512),
           maxChars: String(settings["memory.embedding.max_chars"] || 2000),
           maintenanceEnabled: settings["memory.maintenance.enabled"] !== false,
-          maintenanceHour: Number.parseInt(String(settings["memory.maintenance.hour"] ?? 3), 10) || 3,
+          maintenanceHour: resolveMaintenanceHour(settings["memory.maintenance.hour"]),
           maintenanceLastRunDate: settings["memory.maintenance.last_run_date"] || "",
           apiKeyStatus: secrets["memory.embedding.api_key"]?.status || "not-configured",
           apiKeyRef: secrets["memory.embedding.api_key"]?.ref || "",
@@ -597,6 +599,7 @@ function createSystemRepository(helpers) {
   return composeRepositoryMethods("system", [
     ["gateway-traces", createGatewayTraceRepository(helpers)],
     ["agent-activity", createAgentActivityRepository(helpers)],
+    ["agent-identity", createAgentIdentityRepository(helpers)],
     ["system", systemMethods]
   ]);
 }

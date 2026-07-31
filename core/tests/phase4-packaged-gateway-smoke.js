@@ -259,7 +259,7 @@ async function main() {
     );
   } finally {
     await client.close();
-    runtime.resetCachedDatabase();
+    await runtime.resetCachedDatabase();
   }
 }
 

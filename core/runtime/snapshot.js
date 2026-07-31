@@ -201,8 +201,12 @@ function compactSharedLinePacket(packet = {}, lines = [], archivedLines = []) {
 }
 
 function compactInnerLifeSnapshot(snapshot = {}) {
+  const {
+    pendingInbox = [],
+    ...overview
+  } = snapshot;
   return {
-    ...snapshot,
+    ...overview,
     profiles: (snapshot.profiles || []).map((profile) => ({
       agentId: profile.agentId,
       displayName: profile.displayName,
@@ -219,7 +223,7 @@ function compactInnerLifeSnapshot(snapshot = {}) {
     })),
     sessions: [],
     digestRuns: [],
-    inbox: (snapshot.pendingInbox || []).map((item) => ({ ...item })),
+    inbox: pendingInbox.map((item) => ({ ...item })),
     shareChecks: [],
     history: [],
     experiences: [],
@@ -283,7 +287,6 @@ function createSnapshotRuntime({ ensureProductCore }) {
       health,
       connections: productAgentSetup(app, paths),
       configuration,
-      memories: recentMemories,
       recentMemories,
       memoryStats,
       memoryMaintenance,

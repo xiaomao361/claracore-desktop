@@ -1,5 +1,9 @@
 # Memory Controller Trusted Context Canary Handoff
 
+> Historical handoff snapshot from 2026-07-23. Version and live-runtime facts
+> below are evidence from that checkpoint, not current release truth. See
+> [Version Branching](VERSION_BRANCHING.md) for the current boundary.
+
 ## Status
 
 - Decision date: 2026-07-23

@@ -37,7 +37,7 @@ After MCP is installed, connected, or restarted, run this sequence:
 
 1. `claracore_connection_test`
 2. `gateway_docs`
-3. `gateway_context` without `lineId`
+3. `gateway_context` with `detail: "brief"` and without `lineId`
 
 If the context call returns `SHARED_LINE_ID_REQUIRED`, choose one of the
 returned candidates and retry with its explicit `lineId`. Use
@@ -51,7 +51,10 @@ when appropriate. Do not wait for the user to ask how to use ClaraCore.
 
 `gateway_docs` explains the product boundary and available tools.
 `gateway_context` returns the current working packet: Shared Line, recent
-Memory, InnerLife state, Doctor guidance, and recovery advice.
+Memory, InnerLife state, Doctor guidance, and recovery advice. Use
+`detail: "brief"` for bounded startup and resume reads. Omit `detail`, or pass
+`detail: "full"`, only when a 0.6.4 compatibility client or a specific task
+needs the complete packet.
 
 Do not invent tool names. If a tool name is uncertain, call `gateway_docs` and
 use the names listed there.
@@ -60,7 +63,7 @@ use the names listed there.
 
 ### Resume Work
 
-1. Call `gateway_context` without `lineId`.
+1. Call `gateway_context` with `detail: "brief"` and without `lineId`.
 2. If it returns `SHARED_LINE_ID_REQUIRED`, choose the intended candidate and
    retry with its `lineId`.
 3. Read the selected Shared Line and recent Memory.
@@ -131,6 +134,10 @@ use the names listed there.
    Pass `detail: true` only when you need full sessions, digest runs, or
    history.
 6. Call `innerlife_doctor` when InnerLife seems idle, paused, or misconfigured.
+   For a terminal persisted afterthought, inspect its job id with
+   `innerlife_status(detail=true)`, then use
+   `innerlife_afterthought_resolve` explicitly: retry after repair, or
+   acknowledge with a reason when no generated share is required.
 
 ### Diagnose Gateway State
 

@@ -130,7 +130,7 @@ async function main() {
     }
   } finally {
     await client.close();
-    runtime.resetCachedDatabase();
+    await runtime.resetCachedDatabase();
     if (!providedDataRoot && process.env.CLARACORE_LONG_RUN_KEEP_DATA !== "1") {
       await fs.rm(dataRoot, { recursive: true, force: true });
     }

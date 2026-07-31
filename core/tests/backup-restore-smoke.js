@@ -4,6 +4,227 @@ const path = require("path");
 const { ProductDatabase } = require("../db/database");
 const runtime = require("../runtime");
 
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
+async function runSafetyBackupBarrierRace({ app, databasePath, label, operation, writeInput }) {
+  const resolvedDatabasePath = path.resolve(databasePath);
+  const backupEntered = deferred();
+  const releaseBackup = deferred();
+  const copyEntered = deferred();
+  const releaseCopy = deferred();
+  const originalCreateDatabaseBackup = ProductDatabase.prototype.createDatabaseBackup;
+  const originalCopyFile = fs.copyFile;
+  const originalInitialize = ProductDatabase.prototype.initialize;
+  let backupIntercepted = false;
+  let copyIntercepted = false;
+  let copyBlocked = false;
+  let mainInitializationsWhileCopyBlocked = 0;
+  let operationPromise = null;
+  let writePromise = null;
+  let concurrentEnsure = null;
+
+  ProductDatabase.prototype.createDatabaseBackup = async function instrumentedCreateDatabaseBackup(...args) {
+    if (!backupIntercepted && path.resolve(this.dbPath) === resolvedDatabasePath) {
+      backupIntercepted = true;
+      backupEntered.resolve();
+      await releaseBackup.promise;
+    }
+    return originalCreateDatabaseBackup.apply(this, args);
+  };
+  fs.copyFile = async (...args) => {
+    const destination = path.resolve(String(args[1] || ""));
+    if (!copyIntercepted && destination === resolvedDatabasePath) {
+      copyIntercepted = true;
+      copyBlocked = true;
+      copyEntered.resolve();
+      await releaseCopy.promise;
+    }
+    return originalCopyFile(...args);
+  };
+  ProductDatabase.prototype.initialize = async function instrumentedInitialize(...args) {
+    if (copyBlocked && path.resolve(this.dbPath) === resolvedDatabasePath) {
+      mainInitializationsWhileCopyBlocked += 1;
+    }
+    return originalInitialize.apply(this, args);
+  };
+
+  try {
+    operationPromise = Promise.resolve().then(operation);
+    operationPromise.then(
+      () => {
+        if (!backupIntercepted) backupEntered.reject(new Error(`${label} completed without creating an exclusive safety backup.`));
+        if (!copyIntercepted) copyEntered.reject(new Error(`${label} completed without replacing the Product Core database.`));
+      },
+      (error) => {
+        backupEntered.reject(error);
+        copyEntered.reject(error);
+      }
+    );
+    await backupEntered.promise;
+
+    let writeSettled = false;
+    writePromise = runtime.createProductMemory(app, writeInput);
+    writePromise.then(
+      () => {
+        writeSettled = true;
+      },
+      () => {
+        writeSettled = true;
+      }
+    );
+    await new Promise((resolve) => setImmediate(resolve));
+    if (writeSettled) {
+      throw new Error(`${label} allowed a concurrent write to cross the safety-backup barrier.`);
+    }
+
+    releaseBackup.resolve();
+    await copyEntered.promise;
+    let concurrentEnsureSettled = false;
+    concurrentEnsure = runtime.ensureProductCore(app);
+    concurrentEnsure.then(
+      () => {
+        concurrentEnsureSettled = true;
+      },
+      () => {
+        concurrentEnsureSettled = true;
+      }
+    );
+    await new Promise((resolve) => setImmediate(resolve));
+    if (mainInitializationsWhileCopyBlocked !== 0) {
+      throw new Error(
+        `${label} allowed ${mainInitializationsWhileCopyBlocked} Product Core initialization(s) during file replacement.`
+      );
+    }
+    if (concurrentEnsureSettled || writeSettled) {
+      throw new Error(`${label} released a queued ensure or write before file replacement finished.`);
+    }
+
+    copyBlocked = false;
+    releaseCopy.resolve();
+    const [result, writtenMemory, concurrentCore] = await Promise.all([
+      operationPromise,
+      writePromise,
+      concurrentEnsure
+    ]);
+    const warmCore = await runtime.ensureProductCore(app);
+    if (concurrentCore.database !== warmCore.database) {
+      throw new Error(`${label} did not release the concurrent ensure onto the adopted replacement database.`);
+    }
+    const finalSearch = await runtime.searchProductMemories(app, writeInput.title);
+    if (!finalSearch.results.some((memory) => memory.id === writtenMemory.id)) {
+      throw new Error(`${label} lost the write that waited behind the safety-backup barrier.`);
+    }
+
+    const safetyDatabase = new ProductDatabase(result.safetyBackup.path);
+    try {
+      const safetyMemories = await safetyDatabase.listMemories(1000);
+      if (safetyMemories.some((memory) => memory.id === writtenMemory.id)) {
+        throw new Error(`${label} let the waiting write enter the pre-close safety backup.`);
+      }
+    } finally {
+      safetyDatabase.close();
+    }
+    return result;
+  } finally {
+    releaseBackup.resolve();
+    copyBlocked = false;
+    releaseCopy.resolve();
+    ProductDatabase.prototype.createDatabaseBackup = originalCreateDatabaseBackup;
+    ProductDatabase.prototype.initialize = originalInitialize;
+    fs.copyFile = originalCopyFile;
+    if (operationPromise) await operationPromise.catch(() => {});
+    if (writePromise) await writePromise.catch(() => {});
+    if (concurrentEnsure) await concurrentEnsure.catch(() => {});
+  }
+}
+
+async function assertFailedProductCoreSwapRecovers({ app, databasePath, label, operation }) {
+  const resolvedDatabasePath = path.resolve(databasePath);
+  const originalCopyFile = fs.copyFile;
+  const injectedError = new Error(`planned ${label} replacement failure`);
+  let injected = false;
+
+  fs.copyFile = async (...args) => {
+    const destination = path.resolve(String(args[1] || ""));
+    if (!injected && destination === resolvedDatabasePath) {
+      injected = true;
+      throw injectedError;
+    }
+    return originalCopyFile(...args);
+  };
+
+  let failure = null;
+  try {
+    await operation();
+  } catch (error) {
+    failure = error;
+  } finally {
+    fs.copyFile = originalCopyFile;
+  }
+
+  if (!injected) throw new Error(`${label} did not reach Product Core file replacement.`);
+  if (failure !== injectedError) {
+    throw new Error(`${label} did not preserve the original replacement error after recovery.`);
+  }
+  const { database } = await runtime.ensureProductCore(app);
+  const quickRows = await database.query("PRAGMA quick_check;");
+  const quickCheck = quickRows[0]?.quick_check || quickRows[0]?.["quick_check"] || Object.values(quickRows[0] || {})[0];
+  if (quickCheck !== "ok") {
+    throw new Error(`${label} left Product Core unusable after a failed replacement: ${quickCheck}`);
+  }
+}
+
+async function assertPostOpenFailureRollsBack({
+  app,
+  databasePath,
+  label,
+  methodName,
+  operation,
+  verifyRecoveredData
+}) {
+  const resolvedDatabasePath = path.resolve(databasePath);
+  const originalMethod = ProductDatabase.prototype[methodName];
+  const injectedError = new Error(`planned ${label} ${methodName} failure`);
+  let injected = false;
+
+  ProductDatabase.prototype[methodName] = async function instrumentedPostOpenFailure(...args) {
+    if (!injected && path.resolve(this.dbPath) === resolvedDatabasePath) {
+      injected = true;
+      throw injectedError;
+    }
+    return originalMethod.apply(this, args);
+  };
+
+  let failure = null;
+  try {
+    await operation();
+  } catch (error) {
+    failure = error;
+  } finally {
+    ProductDatabase.prototype[methodName] = originalMethod;
+  }
+
+  if (!injected) throw new Error(`${label} did not reach post-open metadata method ${methodName}.`);
+  if (failure !== injectedError) {
+    throw new Error(`${label} did not preserve the post-open metadata error after rollback.`);
+  }
+  const { database } = await runtime.ensureProductCore(app);
+  const quickRows = await database.query("PRAGMA quick_check;");
+  const quickCheck = quickRows[0]?.quick_check || quickRows[0]?.["quick_check"] || Object.values(quickRows[0] || {})[0];
+  if (quickCheck !== "ok") {
+    throw new Error(`${label} left Product Core unusable after post-open metadata rollback: ${quickCheck}`);
+  }
+  await verifyRecoveredData();
+}
+
 async function main() {
   const dataRoot = await fs.mkdtemp(path.join(os.tmpdir(), "claracore-backup-restore-"));
   process.env.CLARACORE_DESKTOP_DATA_DIR = dataRoot;
@@ -92,7 +313,42 @@ async function main() {
     throw new Error(`Restore preview does not show post-backup Memory removal: ${JSON.stringify(preview.memoryDiff)}`);
   }
 
-  const restored = await runtime.restoreProductBackup(app, backup.id);
+  await assertFailedProductCoreSwapRecovers({
+    app,
+    databasePath: sourceDatabase.dbPath,
+    label: "restore",
+    operation: () => runtime.restoreProductBackup(app, backup.id)
+  });
+  const failedRestoreSearch = await runtime.searchProductMemories(app, "Backup restore after B");
+  if (!failedRestoreSearch.results.some((memory) => memory.id === after.id)) {
+    throw new Error("A failed restore did not recover the pre-restore Product Core data.");
+  }
+
+  await assertPostOpenFailureRollsBack({
+    app,
+    databasePath: sourceDatabase.dbPath,
+    label: "restore",
+    methodName: "registerBackupRecord",
+    operation: () => runtime.restoreProductBackup(app, backup.id),
+    async verifyRecoveredData() {
+      const recoveredSearch = await runtime.searchProductMemories(app, "Backup restore after B");
+      if (!recoveredSearch.results.some((memory) => memory.id === after.id)) {
+        throw new Error("Restore metadata failure did not roll back the pre-restore Product Core data.");
+      }
+    }
+  });
+
+  const restored = await runSafetyBackupBarrierRace({
+    app,
+    databasePath: sourceDatabase.dbPath,
+    label: "restore",
+    operation: () => runtime.restoreProductBackup(app, backup.id),
+    writeInput: {
+      title: "Restore barrier write",
+      body: "This write must wait for restore and then persist.",
+      labels: "backup, barrier"
+    }
+  });
   if (!restored.restored) throw new Error("Restore result did not report restored=true.");
   if (!restored.safetyBackup?.id || restored.safetyBackup.status !== "verified") {
     throw new Error("Restore did not create a verified safety backup.");
@@ -162,7 +418,42 @@ async function main() {
     stageAReason: "ordinary_task",
     resultStatus: "completed"
   });
-  const jsonImported = await runtime.importProductDataJson(app, { filePath: productJson.path });
+  await assertFailedProductCoreSwapRecovers({
+    app,
+    databasePath: sourceDatabase.dbPath,
+    label: "product JSON import",
+    operation: () => runtime.importProductDataJson(app, { filePath: productJson.path })
+  });
+  const failedImportSearch = await runtime.searchProductMemories(app, "Product JSON after C");
+  if (!failedImportSearch.results.some((memory) => memory.id === afterJson.id)) {
+    throw new Error("A failed Product JSON import did not recover the pre-import Product Core data.");
+  }
+
+  await assertPostOpenFailureRollsBack({
+    app,
+    databasePath: sourceDatabase.dbPath,
+    label: "product JSON import",
+    methodName: "recordRuntimeEvent",
+    operation: () => runtime.importProductDataJson(app, { filePath: productJson.path }),
+    async verifyRecoveredData() {
+      const recoveredSearch = await runtime.searchProductMemories(app, "Product JSON after C");
+      if (!recoveredSearch.results.some((memory) => memory.id === afterJson.id)) {
+        throw new Error("Product JSON metadata failure did not roll back the pre-import Product Core data.");
+      }
+    }
+  });
+
+  const jsonImported = await runSafetyBackupBarrierRace({
+    app,
+    databasePath: sourceDatabase.dbPath,
+    label: "product JSON import",
+    operation: () => runtime.importProductDataJson(app, { filePath: productJson.path }),
+    writeInput: {
+      title: "Product JSON barrier write",
+      body: "This write must wait for import and then persist.",
+      labels: "json, barrier"
+    }
+  });
   if (!jsonImported.imported || jsonImported.quickCheck !== "ok") {
     throw new Error(`Product JSON import failed: ${JSON.stringify(jsonImported)}`);
   }
@@ -231,7 +522,21 @@ async function main() {
         productJsonPath: productJson.path,
         safetyBackupPath: restored.safetyBackup.path,
         restoredMemoryId: before.id,
-        removedMemoryId: after.id
+        removedMemoryId: after.id,
+        races: [
+          "restore-blocks-concurrent-ensure",
+          "product-json-import-blocks-concurrent-ensure"
+        ],
+        failureRecovery: [
+          "restore-rolls-back-to-safety-backup",
+          "restore-post-open-failure-rolls-back",
+          "product-json-import-rolls-back-to-safety-backup",
+          "product-json-import-post-open-failure-rolls-back"
+        ],
+        barrierWrites: [
+          "restore-write-waits-and-persists",
+          "product-json-import-write-waits-and-persists"
+        ]
       },
       null,
       2

@@ -1,5 +1,9 @@
+const { resolveMaintenanceHour } = require("../core/config");
+
 const INNERLIFE_SCHEDULER_INTERVAL_MS = 60 * 1000;
 const EMBEDDING_SCHEDULER_INTERVAL_MS = 15 * 1000;
+const MEMORY_MAINTENANCE_RETRY_BASE_MS = 5 * 60 * 1000;
+const MEMORY_MAINTENANCE_RETRY_MAX_MS = 6 * 60 * 60 * 1000;
 
 function localDateKey(date = new Date()) {
   const year = date.getFullYear();
@@ -9,15 +13,23 @@ function localDateKey(date = new Date()) {
 }
 
 function nextMemoryMaintenanceDelayMs(settings, now = new Date()) {
-  const hour = Math.max(0, Math.min(23, Number.parseInt(String(settings["memory.maintenance.hour"] ?? 3), 10) || 3));
+  const hour = resolveMaintenanceHour(settings?.["memory.maintenance.hour"]);
   const today = localDateKey(now);
   const nextRun = new Date(now);
   nextRun.setMinutes(0, 0, 0);
   nextRun.setHours(hour);
-  if (String(settings["memory.maintenance.last_run_date"] || "") === today) {
+  if (String(settings?.["memory.maintenance.last_run_date"] || "") === today) {
     nextRun.setDate(nextRun.getDate() + 1);
   }
   return Math.max(0, nextRun.getTime() - now.getTime());
+}
+
+function memoryMaintenanceRetryDelayMs(failureCount) {
+  const safeFailureCount = Math.max(1, Number.parseInt(String(failureCount || 1), 10) || 1);
+  return Math.min(
+    MEMORY_MAINTENANCE_RETRY_MAX_MS,
+    MEMORY_MAINTENANCE_RETRY_BASE_MS * (2 ** Math.min(10, safeFailureCount - 1))
+  );
 }
 
 function createSchedulers({
@@ -27,7 +39,10 @@ function createSchedulers({
   notifyRuntimeChanged,
   runProductMemoryMaintenance,
   saveProductSettings,
-  tickProductInnerLifeDaemon
+  tickProductInnerLifeDaemon,
+  now = () => new Date(),
+  setMaintenanceTimeout = setTimeout,
+  clearMaintenanceTimeout = clearTimeout
 }) {
   let innerLifeScheduler = null;
   let innerLifeSchedulerBusy = false;
@@ -35,13 +50,23 @@ function createSchedulers({
   let embeddingSchedulerBusy = false;
   let memoryMaintenanceScheduler = null;
   let memoryMaintenanceSchedulerBusy = false;
+  let memoryMaintenanceFailureCount = 0;
+  let memoryMaintenanceActive = false;
+  let memoryMaintenanceGeneration = 0;
+  let memoryMaintenanceSchedulePromise = null;
 
   async function runInnerLifeScheduledTick() {
     if (innerLifeSchedulerBusy || isQuitting()) return;
     innerLifeSchedulerBusy = true;
     try {
       const { database } = await ensureProductCore(app);
-      let afterthoughts = { processed: 0, results: [] };
+      let afterthoughts = {
+        processed: 0,
+        retrying: 0,
+        terminalFailures: 0,
+        staleClaims: 0,
+        results: []
+      };
       try {
         afterthoughts = await database.processPendingSessionAfterthoughts(5);
       } catch (error) {
@@ -50,11 +75,24 @@ function createSchedulers({
           error: error.message || String(error)
         });
       }
-      if (afterthoughts.processed > 0) {
+      const afterthoughtActivity =
+        Number(afterthoughts.processed || 0) +
+        Number(afterthoughts.retrying || 0) +
+        Number(afterthoughts.terminalFailures || 0) +
+        Number(afterthoughts.staleClaims || 0);
+      if (afterthoughtActivity > 0) {
+        const hasTerminalFailure = Number(afterthoughts.terminalFailures || 0) > 0;
+        const hasWarning =
+          Number(afterthoughts.retrying || 0) > 0 ||
+          afterthoughts.results.some((item) => !item.ok || item.warning);
         await database.recordRuntimeEvent({
-          level: afterthoughts.results.some((item) => !item.ok) ? "warn" : "info",
+          level: hasTerminalFailure ? "error" : hasWarning ? "warn" : "info",
           source: "innerlife",
-          message: "Processed pending session afterthoughts",
+          message: hasTerminalFailure
+            ? "Session afterthought reached its retry limit"
+            : hasWarning
+              ? "Session afterthought requires follow-up"
+              : "Processed pending session afterthoughts",
           metadata: afterthoughts
         });
         notifyRuntimeChanged("innerlife-session-afterthought", afterthoughts);
@@ -150,12 +188,13 @@ function createSchedulers({
   }
 
   async function runMemoryMaintenanceScheduledTick() {
-    if (memoryMaintenanceSchedulerBusy || isQuitting()) return;
+    if (isQuitting()) return { ok: false, skipped: "quitting" };
+    if (memoryMaintenanceSchedulerBusy) return { ok: false, skipped: "busy" };
     memoryMaintenanceSchedulerBusy = true;
     try {
       const { database } = await ensureProductCore(app);
       const settings = await database.getSettings();
-      const today = localDateKey();
+      const today = localDateKey(now());
       const memoriaMaintenanceEnabled = settings["memory.maintenance.enabled"] !== false;
       const result = memoriaMaintenanceEnabled
         ? await runProductMemoryMaintenance(app, { scheduled: true })
@@ -205,48 +244,123 @@ function createSchedulers({
         gatewayTraceRetention,
         innerLifeRetention
       });
-      return { memoriaMaintenanceEnabled, memoria: result, controllerRetention, gatewayTraceRetention, innerLifeRetention };
+      return {
+        ok: true,
+        memoriaMaintenanceEnabled,
+        memoria: result,
+        controllerRetention,
+        gatewayTraceRetention,
+        innerLifeRetention
+      };
     } catch (error) {
       console.error("Memory maintenance scheduler failed:", error);
       notifyRuntimeChanged("memory-maintenance-error", {
         error: error.message || String(error)
       });
+      return {
+        ok: false,
+        error: error.message || String(error)
+      };
     } finally {
       memoryMaintenanceSchedulerBusy = false;
     }
   }
 
-  async function scheduleNextMemoryMaintenance() {
-    if (memoryMaintenanceScheduler || isQuitting()) return;
-    let delayMs = 24 * 60 * 60 * 1000;
-    try {
-      const { database } = await ensureProductCore(app);
-      const settings = await database.getSettings();
-      delayMs = nextMemoryMaintenanceDelayMs(settings);
-    } catch (error) {
-      console.error("Failed to schedule Memoria maintenance:", error);
+  function scheduleNextMemoryMaintenance(options = {}) {
+    if (
+      !memoryMaintenanceActive ||
+      memoryMaintenanceScheduler ||
+      memoryMaintenanceSchedulePromise ||
+      isQuitting()
+    ) {
+      return memoryMaintenanceSchedulePromise || Promise.resolve();
     }
-    memoryMaintenanceScheduler = setTimeout(async () => {
-      memoryMaintenanceScheduler = null;
-      await runMemoryMaintenanceScheduledTick();
-      scheduleNextMemoryMaintenance().catch(console.error);
-    }, delayMs);
-    if (typeof memoryMaintenanceScheduler.unref === "function") memoryMaintenanceScheduler.unref();
+    const generation = memoryMaintenanceGeneration;
+    const pending = (async () => {
+      const requestedDelayMs = Number(options.delayMs);
+      let delayMs;
+      let scheduleError = null;
+      if (Number.isFinite(requestedDelayMs) && requestedDelayMs >= 0) {
+        delayMs = requestedDelayMs;
+      } else {
+        try {
+          const { database } = await ensureProductCore(app);
+          const settings = await database.getSettings();
+          delayMs = nextMemoryMaintenanceDelayMs(settings, now());
+        } catch (error) {
+          scheduleError = error;
+        }
+      }
+      if (
+        !memoryMaintenanceActive ||
+        generation !== memoryMaintenanceGeneration ||
+        memoryMaintenanceScheduler ||
+        isQuitting()
+      ) {
+        return;
+      }
+      if (scheduleError) {
+        console.error("Failed to schedule Memoria maintenance:", scheduleError);
+        memoryMaintenanceFailureCount += 1;
+        delayMs = memoryMaintenanceRetryDelayMs(memoryMaintenanceFailureCount);
+      }
+      memoryMaintenanceScheduler = setMaintenanceTimeout(async () => {
+        if (!memoryMaintenanceActive || generation !== memoryMaintenanceGeneration || isQuitting()) return;
+        memoryMaintenanceScheduler = null;
+        const outcome = await runMemoryMaintenanceScheduledTick();
+        if (
+          !memoryMaintenanceActive ||
+          generation !== memoryMaintenanceGeneration ||
+          isQuitting() ||
+          outcome?.skipped === "quitting"
+        ) {
+          return;
+        }
+        if (outcome?.ok) {
+          memoryMaintenanceFailureCount = 0;
+          await scheduleNextMemoryMaintenance();
+          return;
+        }
+        if (outcome?.skipped !== "busy") {
+          memoryMaintenanceFailureCount += 1;
+        }
+        await scheduleNextMemoryMaintenance({
+          delayMs: memoryMaintenanceRetryDelayMs(Math.max(1, memoryMaintenanceFailureCount))
+        });
+      }, delayMs);
+      if (typeof memoryMaintenanceScheduler.unref === "function") memoryMaintenanceScheduler.unref();
+    })();
+    memoryMaintenanceSchedulePromise = pending;
+    return pending.finally(() => {
+      if (memoryMaintenanceSchedulePromise === pending) {
+        memoryMaintenanceSchedulePromise = null;
+      }
+    });
   }
 
   function startMemoryMaintenance() {
-    scheduleNextMemoryMaintenance().catch(console.error);
+    if (memoryMaintenanceActive) {
+      return memoryMaintenanceSchedulePromise || Promise.resolve();
+    }
+    memoryMaintenanceActive = true;
+    memoryMaintenanceGeneration += 1;
+    return scheduleNextMemoryMaintenance().catch(console.error);
   }
 
   function stopMemoryMaintenance() {
-    if (!memoryMaintenanceScheduler) return;
-    clearTimeout(memoryMaintenanceScheduler);
-    memoryMaintenanceScheduler = null;
+    memoryMaintenanceActive = false;
+    memoryMaintenanceGeneration += 1;
+    memoryMaintenanceSchedulePromise = null;
+    if (memoryMaintenanceScheduler) {
+      clearMaintenanceTimeout(memoryMaintenanceScheduler);
+      memoryMaintenanceScheduler = null;
+    }
   }
 
   function rescheduleMemoryMaintenance() {
     stopMemoryMaintenance();
-    startMemoryMaintenance();
+    memoryMaintenanceFailureCount = 0;
+    return startMemoryMaintenance();
   }
 
   function start() {
@@ -271,11 +385,13 @@ function createSchedulers({
     stopMemoryMaintenance,
     runInnerLifeScheduledTick,
     runEmbeddingScheduledTick,
-    runMemoryMaintenanceScheduledTick
+    runMemoryMaintenanceScheduledTick,
+    scheduleNextMemoryMaintenance
   };
 }
 
 module.exports = {
   createSchedulers,
+  memoryMaintenanceRetryDelayMs,
   nextMemoryMaintenanceDelayMs
 };

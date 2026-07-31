@@ -8,7 +8,8 @@ const SESSION_STORE_METHODS = [
   "count",
   "get",
   "list",
-  "listCompact"
+  "listCompact",
+  "resolveAfterthoughtFailure"
 ];
 
 function createInnerLifeSessionRepository(_helpers, dependencies = {}) {
@@ -73,6 +74,10 @@ function createInnerLifeSessionRepository(_helpers, dependencies = {}) {
 
     async processPendingSessionAfterthoughts(limit = 5) {
       return sessionLifecycle.processPendingSessionAfterthoughts(this, limit);
+    },
+
+    async resolveInnerLifeSessionAfterthoughtFailure(id, input = {}) {
+      return sessionStore.resolveAfterthoughtFailure(this, id, input);
     }
   };
 }

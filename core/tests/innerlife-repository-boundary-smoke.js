@@ -38,7 +38,8 @@ const factoryServices = {
       count: async () => 0,
       get: async () => null,
       list: async () => [],
-      listCompact: async () => []
+      listCompact: async () => [],
+      resolveAfterthoughtFailure: async () => ({})
     }
   },
   shares: {

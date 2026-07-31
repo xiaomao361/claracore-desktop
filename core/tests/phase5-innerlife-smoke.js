@@ -480,6 +480,54 @@ async function main() {
     throw new Error(`Afterthought failure was not surfaced independently: ${JSON.stringify(isolatedNotifications)}`);
   }
 
+  const retryEvents = [];
+  const retryNotifications = [];
+  let afterthoughtStateIndex = 0;
+  const retryVisibilitySchedulers = createSchedulers({
+    app,
+    ensureProductCore: async () => ({
+      database: {
+        processPendingSessionAfterthoughts: async () => {
+          afterthoughtStateIndex += 1;
+          return afterthoughtStateIndex === 1
+            ? {
+                processed: 0,
+                retrying: 1,
+                terminalFailures: 0,
+                results: [{ id: "retrying-job", ok: false, status: "retrying" }]
+              }
+            : {
+                processed: 0,
+                retrying: 0,
+                terminalFailures: 1,
+                results: [{ id: "terminal-job", ok: false, status: "failed" }]
+              };
+        },
+        recordRuntimeEvent: async (event) => retryEvents.push(event),
+        listEnabledInnerLifeDaemonAgentIds: async () => []
+      }
+    }),
+    isQuitting: () => false,
+    notifyRuntimeChanged: (scope, detail) => retryNotifications.push({ scope, detail }),
+    runProductMemoryMaintenance: async () => ({}),
+    saveProductSettings: async () => ({}),
+    tickProductInnerLifeDaemon: async () => ({ ran: false, reason: "idle" })
+  });
+  await retryVisibilitySchedulers.runInnerLifeScheduledTick();
+  await retryVisibilitySchedulers.runInnerLifeScheduledTick();
+  if (
+    retryEvents.map((event) => event.level).join(",") !== "warn,error" ||
+    !retryEvents[0]?.message.includes("follow-up") ||
+    !retryEvents[1]?.message.includes("retry limit")
+  ) {
+    throw new Error(`Afterthought retry states were not recorded visibly: ${JSON.stringify(retryEvents)}`);
+  }
+  if (
+    retryNotifications.filter((item) => item.scope === "innerlife-session-afterthought").length !== 2
+  ) {
+    throw new Error(`Afterthought retry states did not refresh the UI: ${JSON.stringify(retryNotifications)}`);
+  }
+
   console.log(
     JSON.stringify(
       {

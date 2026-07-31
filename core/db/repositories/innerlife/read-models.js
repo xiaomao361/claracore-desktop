@@ -36,6 +36,51 @@ function createInnerLifeReadModelRepository(helpers) {
         SELECT
           (SELECT COUNT(*) FROM innerlife_inbox WHERE status = 'pending' AND source != 'session_end_afterthought'${agentClause}) AS pending_inbox_count,
           (SELECT COUNT(*) FROM innerlife_inbox WHERE status = 'processed'${agentClause}) AS processed_inbox_count,
+          (SELECT COUNT(*) FROM innerlife_inbox
+            WHERE source = 'session_end_afterthought'
+              AND status IN ('pending', 'processing')
+              AND CASE
+                WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.retryState')
+                ELSE NULL
+              END = 'retrying'${agentClause}) AS afterthought_retrying_count,
+          (SELECT COUNT(*) FROM innerlife_inbox
+            WHERE source = 'session_end_afterthought'
+              AND status = 'failed'${agentClause}) AS afterthought_terminal_failure_count,
+          (SELECT MIN(
+              CASE
+                WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.nextRetryAt')
+                ELSE NULL
+              END
+            )
+            FROM innerlife_inbox
+            WHERE source = 'session_end_afterthought'
+              AND status = 'pending'
+              AND CASE
+                WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.retryState')
+                ELSE NULL
+              END = 'retrying'${agentClause}) AS afterthought_next_retry_at,
+          (SELECT CASE
+              WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.lastError')
+              ELSE ''
+            END
+            FROM innerlife_inbox
+            WHERE source = 'session_end_afterthought'
+              AND status IN ('pending', 'processing', 'failed')
+              AND COALESCE(
+                CASE
+                  WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.lastError')
+                  ELSE NULL
+                END,
+                ''
+              ) != ''${agentClause}
+            ORDER BY datetime(COALESCE(
+              CASE
+                WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.lastAttemptAt')
+                ELSE NULL
+              END,
+              created_at
+            )) DESC, id DESC
+            LIMIT 1) AS afterthought_last_error,
           (SELECT COUNT(*) FROM innerlife_events WHERE 1 = 1${agentClause}) AS events_count,
           (SELECT COUNT(*) FROM innerlife_thoughts WHERE event_id IN (
             SELECT id FROM innerlife_events WHERE 1 = 1${agentClause}
@@ -95,7 +140,11 @@ function createInnerLifeReadModelRepository(helpers) {
             counts: {
               pendingInbox: counts.pending_inbox_count || 0,
               pendingShares: counts.pending_shares_count || 0,
-              activeSessions: counts.active_sessions_count || 0
+              activeSessions: counts.active_sessions_count || 0,
+              afterthoughtRetrying: counts.afterthought_retrying_count || 0,
+              afterthoughtTerminalFailures: counts.afterthought_terminal_failure_count || 0,
+              afterthoughtNextRetryAt: counts.afterthought_next_retry_at || null,
+              afterthoughtLastError: counts.afterthought_last_error || ""
             }
           })
         : { status: "ok", summary: "No InnerLife profiles configured.", issues: [], nextActions: [] };
@@ -252,7 +301,15 @@ function createInnerLifeReadModelRepository(helpers) {
           counts: {
             pendingInbox: 0,
             pendingShares: 0,
-            activeSessions: 0
+            activeSessions: 0,
+            afterthoughtRetrying: 0,
+            afterthoughtTerminalFailures: 0
+          },
+          afterthought: {
+            retryingCount: 0,
+            terminalFailureCount: 0,
+            nextRetryAt: null,
+            lastError: ""
           },
           daemon: {
             status: "paused",
@@ -273,11 +330,72 @@ function createInnerLifeReadModelRepository(helpers) {
           SELECT
             (SELECT COUNT(*) FROM innerlife_inbox WHERE agent_id = ${sqlString(profile.agent_id)} AND status = 'pending' AND source != 'session_end_afterthought') AS pending_inbox_count,
             (SELECT COUNT(*) FROM innerlife_shares WHERE agent_id = ${sqlString(profile.agent_id)} AND status = 'pending') AS pending_shares_count,
-            (SELECT COUNT(*) FROM innerlife_sessions WHERE agent_id = ${sqlString(profile.agent_id)} AND status = 'active') AS active_sessions_count;
+            (SELECT COUNT(*) FROM innerlife_sessions WHERE agent_id = ${sqlString(profile.agent_id)} AND status = 'active') AS active_sessions_count,
+            (SELECT COUNT(*) FROM innerlife_inbox
+              WHERE agent_id = ${sqlString(profile.agent_id)}
+                AND source = 'session_end_afterthought'
+                AND status IN ('pending', 'processing')
+                AND CASE
+                  WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.retryState')
+                  ELSE NULL
+                END = 'retrying') AS afterthought_retrying_count,
+            (SELECT COUNT(*) FROM innerlife_inbox
+              WHERE agent_id = ${sqlString(profile.agent_id)}
+                AND source = 'session_end_afterthought'
+                AND status = 'failed') AS afterthought_terminal_failure_count,
+            (SELECT MIN(
+                CASE
+                  WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.nextRetryAt')
+                  ELSE NULL
+                END
+              )
+              FROM innerlife_inbox
+              WHERE agent_id = ${sqlString(profile.agent_id)}
+                AND source = 'session_end_afterthought'
+                AND status = 'pending'
+                AND CASE
+                  WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.retryState')
+                  ELSE NULL
+                END = 'retrying') AS afterthought_next_retry_at,
+            (SELECT CASE
+                WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.lastError')
+                ELSE ''
+              END
+              FROM innerlife_inbox
+              WHERE agent_id = ${sqlString(profile.agent_id)}
+                AND source = 'session_end_afterthought'
+                AND status IN ('pending', 'processing', 'failed')
+                AND COALESCE(
+                  CASE
+                    WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.lastError')
+                    ELSE NULL
+                  END,
+                  ''
+                ) != ''
+              ORDER BY datetime(COALESCE(
+                CASE
+                  WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.lastAttemptAt')
+                  ELSE NULL
+                END,
+                created_at
+              )) DESC, id DESC
+              LIMIT 1) AS afterthought_last_error;
         `))[0] || {};
       const pendingInboxCount = resolvedCounts.pendingInbox ?? resolvedCounts.pending_inbox_count ?? 0;
       const pendingSharesCount = resolvedCounts.pendingShares ?? resolvedCounts.pending_shares_count ?? 0;
       const activeSessionsCount = resolvedCounts.activeSessions ?? resolvedCounts.active_sessions_count ?? 0;
+      const afterthoughtRetryingCount = resolvedCounts.afterthoughtRetrying
+        ?? resolvedCounts.afterthought_retrying_count
+        ?? 0;
+      const afterthoughtTerminalFailureCount = resolvedCounts.afterthoughtTerminalFailures
+        ?? resolvedCounts.afterthought_terminal_failure_count
+        ?? 0;
+      const afterthoughtNextRetryAt = resolvedCounts.afterthoughtNextRetryAt
+        ?? resolvedCounts.afterthought_next_retry_at
+        ?? null;
+      const afterthoughtLastError = resolvedCounts.afterthoughtLastError
+        ?? resolvedCounts.afterthought_last_error
+        ?? "";
       const issues = [];
       const failureCount = Number.parseInt(String(daemon.metadata?.failureCount || 0), 10) || 0;
       const retrySeconds = Number.parseInt(String(daemon.metadata?.retrySeconds || 0), 10) || 0;
@@ -287,6 +405,24 @@ function createInnerLifeReadModelRepository(helpers) {
           code: "daemon_retrying",
           message: daemon.lastError || "InnerLife daemon failed and is waiting before retry.",
           action: `Review the last error, keep pending inbox intact, and retry after ${retrySeconds}s or pause the daemon.`
+        });
+      }
+      if (afterthoughtTerminalFailureCount > 0) {
+        issues.push({
+          level: "error",
+          code: "afterthought_terminal_failure",
+          message: `${afterthoughtTerminalFailureCount} session afterthought job(s) reached the retry limit. ${afterthoughtLastError || ""}`.trim(),
+          action: "Inspect the preserved job in innerlife_status(detail=true). After repairing the model path, call innerlife_afterthought_resolve with action=retry; or call it with action=acknowledge and a reason to close the failure without claiming generation succeeded."
+        });
+      }
+      if (afterthoughtRetryingCount > 0) {
+        issues.push({
+          level: "warn",
+          code: "afterthought_retrying",
+          message: `${afterthoughtRetryingCount} session afterthought job(s) are waiting for a bounded retry. ${afterthoughtLastError || ""}`.trim(),
+          action: afterthoughtNextRetryAt
+            ? `Keep the original input intact and retry no earlier than ${afterthoughtNextRetryAt}.`
+            : "Keep the original input intact and allow the persisted worker to retry."
         });
       }
       if (daemon.enabled && String(settings["innerlife.provider"] || "disabled") === "disabled") {
@@ -325,7 +461,15 @@ function createInnerLifeReadModelRepository(helpers) {
         counts: {
           pendingInbox: pendingInboxCount,
           pendingShares: pendingSharesCount,
-          activeSessions: activeSessionsCount
+          activeSessions: activeSessionsCount,
+          afterthoughtRetrying: afterthoughtRetryingCount,
+          afterthoughtTerminalFailures: afterthoughtTerminalFailureCount
+        },
+        afterthought: {
+          retryingCount: afterthoughtRetryingCount,
+          terminalFailureCount: afterthoughtTerminalFailureCount,
+          nextRetryAt: afterthoughtNextRetryAt,
+          lastError: afterthoughtLastError
         },
         daemon: {
           status: daemon.status,

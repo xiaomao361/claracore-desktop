@@ -314,7 +314,7 @@ async function main() {
     console.log(JSON.stringify({ ok: true, packaged: Boolean(packagedExecutable), initial, advanced, controllerSetting, canaryController, disabledController, desktopLayout, narrowLayout }, null, 2));
   } finally {
     if (app) await app.close();
-    runtime.resetCachedDatabase();
+    await runtime.resetCachedDatabase();
     await fs.rm(dataRoot, { recursive: true, force: true });
   }
 }

@@ -14,7 +14,7 @@ async function main() {
     isPackaged: false
   };
   await runtime.saveProductSettings(runtimeApp, { "memory.controller.mode": "observe" });
-  runtime.resetCachedDatabase();
+  await runtime.resetCachedDatabase();
   const client = createGatewayClient(dataRoot, {
     env: {
       CLARACORE_AGENT_ID: "phase2-agent",

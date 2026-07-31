@@ -1,26 +1,28 @@
 # ClaraCore Desktop macOS Packaging
 
-## Current Target
+## Current Release Boundary
 
-The current public stable package line is `v0.6.3`. Its small-audience
-distribution is unsigned macOS arm64 Lite.
+The current development and public stable line is `0.6.4`. The `v0.6.4`
+release contains signed and Apple-notarized Full/Lite macOS arm64 DMGs,
+unsigned Full/Lite Windows x64 installers, and checksum files. Treat
+[Version Branching](VERSION_BRANCHING.md) and
+[v0.6.4 Release Notes](RELEASE_NOTES_V0.6.4.md) as the current release truth.
+Changes on a post-release maintenance branch are not part of the immutable
+`v0.6.4` tag unless they are separately versioned and released.
 
-The current development line is `0.6.4`. Its local unsigned arm64 Lite app at
-`dist-lite/mac-arm64/ClaraCore Desktop.app` is a validated owner-installation
-artifact (293.0 MiB). No `0.6.4` DMG, tag, GitHub Release, or update-channel
-entry exists. The current published asset remains
-`ClaraCore-Desktop-0.6.3-lite-arm64.dmg`. Full, Windows, and Intel macOS
-artifacts are not part of the `0.6.4` local checkpoint.
+## Historical Pre-Release Checkpoint
 
-It is enough for:
+The paths and validation notes below preserve the earlier local unsigned
+`0.6.4` Lite checkpoint that preceded the public release. That checkpoint was
+enough for:
 
 - Opening the Desktop app on the local Mac.
 - Verifying the Desktop-owned SQLite data directory.
 - Verifying the packaged Gateway MCP entry.
 - Testing agent setup before code signing and notarization.
 
-The published unsigned packages are suitable for the current small tester group
-but not a signed/notarized general-public distribution.
+Those historical unsigned checkpoint packages were suitable only for the
+small tester group at that time, not for general-public distribution.
 
 ## Commands
 
@@ -82,9 +84,9 @@ install anything.
 Run `npm run test:update` for mocked release and Settings UI coverage before
 performing a live published-Release check.
 
-`v0.6.3` is published at
-`https://github.com/xiaomao361/claracore-desktop/releases/tag/v0.6.3` with the
-macOS arm64 Lite DMG and `SHA256SUMS.txt`.
+The earlier `v0.6.3` release remains historical. Current `v0.6.4` assets and
+checksums are documented in
+[v0.6.4 Release Notes](RELEASE_NOTES_V0.6.4.md).
 
 ## Gateway In Packaged Mode
 
@@ -126,7 +128,12 @@ node core/gateway/mcp-server.js
 
 ## Validation Status
 
-Validated locally for the unpacked `0.6.4` Lite checkpoint:
+Current released-artifact evidence is recorded in
+[v0.6.4 Release Notes](RELEASE_NOTES_V0.6.4.md).
+
+### Historical unpacked `0.6.4` Lite checkpoint
+
+Validated locally before the public release:
 
 - bundle version and packaged metadata are `0.6.4` and `lite`;
 - the executable is arm64 and the App is 293.0 MiB;
@@ -193,11 +200,9 @@ Previously validated packaging behavior retained by this build:
 - the last installed Streamable HTTP MCP validation used v0.5.0 and recorded separated
   `agentId`, `clientId`, and `conversationId` trace context
 
-Known remaining release work:
+Known remaining distribution work:
 
-- Add code signing.
-- Add notarization.
 - Complete real Windows x64 installation acceptance.
 - Validate the real installed Windows Full build against a local Ollama model.
-- Consider automatic update installation only after signing and the release
-  workflow are stable.
+- Consider automatic update installation only after per-platform signing and
+  the release workflow are stable.

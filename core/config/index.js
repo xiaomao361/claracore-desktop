@@ -64,6 +64,12 @@ const WRITABLE_SETTINGS = new Set([
   "innerlife.loop_seconds"
 ]);
 
+function resolveMaintenanceHour(value) {
+  const parsed = Number.parseInt(String(value ?? DEFAULT_SETTINGS["memory.maintenance.hour"]), 10);
+  if (!Number.isFinite(parsed)) return DEFAULT_SETTINGS["memory.maintenance.hour"];
+  return Math.max(0, Math.min(23, parsed));
+}
+
 function normalizeSettingValue(key, value) {
   if (key === "memory.embedding.provider") {
     const provider = String(value || "").trim().toLowerCase();
@@ -126,5 +132,6 @@ module.exports = {
   DEFAULT_INNERLIFE_API_KEY,
   DEFAULT_SETTINGS,
   WRITABLE_SETTINGS,
-  normalizeSettingValue
+  normalizeSettingValue,
+  resolveMaintenanceHour
 };

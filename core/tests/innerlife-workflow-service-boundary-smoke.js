@@ -383,7 +383,8 @@ async function main() {
   for (const methodName of [
     "runInnerLifeDigest",
     "pruneInnerLifeDigestRuns",
-    "checkInnerLifeShareTiming"
+    "checkInnerLifeShareTiming",
+    "resolveInnerLifeSessionAfterthoughtFailure"
   ]) {
     assert.strictEqual(
       typeof ProductDatabase.prototype[methodName],
@@ -392,10 +393,10 @@ async function main() {
     );
   }
   const installed = listInstalledRepositoryMethods(ProductDatabase);
-  assert.strictEqual(installed.length, 175, "The repository public API count must remain stable.");
+  assert.strictEqual(installed.length, 177, "The repository public API count must remain stable.");
   assert.strictEqual(
     installed.filter((entry) => entry.owner === "innerlife").length,
-    64,
+    65,
     "The InnerLife public API count must remain stable."
   );
 

@@ -136,7 +136,7 @@ async function main() {
       privacy: "Only maintained synthetic fixture ids and timing/count metadata are emitted; live Memory content and ids are not output."
     }, null, 2));
   } finally {
-    runtime.resetCachedDatabase();
+    await runtime.resetCachedDatabase();
     await fs.rm(dataRoot, { recursive: true, force: true });
   }
 }

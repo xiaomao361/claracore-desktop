@@ -239,8 +239,8 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
         id: "gateway-context-json",
         method: "GET",
         url: `${currentBaseUrl}/gateway/context`,
-        openUrl: `${currentBaseUrl}/gateway/context?token=${encodeURIComponent(state.token)}`,
-        copyUrl: `${currentBaseUrl}/gateway/context?token=${encodeURIComponent(state.token)}`,
+        openUrl: `${currentBaseUrl}/gateway/context?detail=brief&token=${encodeURIComponent(state.token)}`,
+        copyUrl: `${currentBaseUrl}/gateway/context?detail=brief&token=${encodeURIComponent(state.token)}`,
         healthUrl: `${currentBaseUrl}/health`,
         auth: "bearer-token",
         authHeader: `Authorization: Bearer ${state.token}`,
@@ -760,7 +760,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
         firstCalls: [
           "Call claracore_connection_test after installing or changing the MCP connection.",
           "Call gateway_docs and read First Connection and What ClaraCore Lets You Do.",
-          "Call gateway_context without lineId; if it returns SHARED_LINE_ID_REQUIRED, choose a returned candidate and retry with that explicit lineId."
+          "Call gateway_context with detail=brief and without lineId; if it returns SHARED_LINE_ID_REQUIRED, choose a returned candidate and retry with that explicit lineId."
         ],
         capabilities: {
           memory: "Remember and retrieve durable facts, preferences, decisions, and prior knowledge when they matter.",
@@ -790,7 +790,8 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
     }
     if (requestUrl.pathname === "/gateway/context") {
       const agentId = requestUrl.searchParams.get("agentId") || process.env.CLARACORE_AGENT_ID || "http-agent";
-      sendJson(response, 200, await getProductGatewayContext(app, { agentId }));
+      const detail = requestUrl.searchParams.get("detail") || "full";
+      sendJson(response, 200, await getProductGatewayContext(app, { agentId, detail }));
       return;
     }
     sendJson(response, 404, { error: "not_found" });

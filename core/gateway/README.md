@@ -48,9 +48,14 @@ fallback when MCP is unavailable.
   stdio Gateway process. Restart the agent client, or stop stale packaged
   `--gateway` processes, before trusting new traces.
 - Use `agent_identity_merge` to consolidate data after renaming an agent id.
+  Its result reports each singleton action. If both ids own differing profile,
+  daemon, or Continuity state, it fails with table/field conflict details and
+  leaves every record, including the source Agent, unchanged.
 - First connection order is `claracore_connection_test` -> `gateway_docs` ->
-  `gateway_context`. Start without `lineId`; if multiple Agent-owned lines make
-  the read ambiguous, choose a returned candidate and retry explicitly.
+  `gateway_context(detail=brief)`. Start without `lineId`; if multiple
+  Agent-owned lines make the read ambiguous, choose a returned candidate and
+  retry explicitly. Omitted `detail` remains the 0.6.4 full-payload
+  compatibility contract.
   After reading context, the agent proactively explains ClaraCore's useful
   capabilities and the actual resumable context to the user.
 
@@ -136,8 +141,8 @@ fallback config from Agent Access.
 - Fully quit and restart Claude Desktop after config or identity changes so the
   stdio Gateway process is relaunched.
 - Verify with `claracore_connection_test`, read `gateway_docs`, then call
-  `gateway_context` without `lineId`. Retry with a returned candidate only when
-  the read reports `SHARED_LINE_ID_REQUIRED`.
+  `gateway_context` with `detail=brief` and without `lineId`. Retry with a
+  returned candidate only when the read reports `SHARED_LINE_ID_REQUIRED`.
 
 ## Shared Line Rules
 

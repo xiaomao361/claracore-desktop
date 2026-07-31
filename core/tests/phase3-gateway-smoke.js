@@ -49,7 +49,7 @@ async function main() {
       !docsText.includes("shared_line_archive") ||
       !docsText.includes("SHARED_LINE_ID_REQUIRED") ||
       !docsText.includes("shared_line_list with status=active") ||
-      !docsText.includes("Call gateway_context without lineId")
+      !docsText.includes("Call gateway_context with detail=brief and without lineId")
     ) {
       throw new Error("Gateway docs do not include Shared Line tools.");
     }

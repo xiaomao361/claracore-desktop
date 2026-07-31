@@ -2,6 +2,10 @@
 
 Date: 2026-07-17
 
+> Historical version snapshot: the Home behavior remains a current design
+> contract, but release/version statements below describe the date above. See
+> [Version Branching](VERSION_BRANCHING.md) for current release truth.
+
 Status: current Home product and performance contract, introduced in `0.5.8`
 and carried forward by the `0.6.2` development line.
 

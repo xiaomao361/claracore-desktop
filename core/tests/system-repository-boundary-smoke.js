@@ -6,6 +6,7 @@ const { ProductDatabase } = require("../db/database");
 const root = path.resolve(__dirname, "../..");
 const aggregatorPath = path.join(root, "core/db/repositories/system.js");
 const modules = {
+  "agent-identity": ["agentReferenceCounts", "mergeAgentIdentity"],
   "agent-activity": ["getAgentActivitySummary"],
   "gateway-traces": [
     "cleanupGatewayTraces",
@@ -39,7 +40,8 @@ const aggregatorLines = aggregatorSource.trimEnd().split("\n").length;
 assert(aggregatorLines <= 650, `System repository aggregator grew to ${aggregatorLines} lines.`);
 assert(
   aggregatorSource.includes('["gateway-traces", createGatewayTraceRepository(helpers)]') &&
-    aggregatorSource.includes('["agent-activity", createAgentActivityRepository(helpers)]'),
+    aggregatorSource.includes('["agent-activity", createAgentActivityRepository(helpers)]') &&
+    aggregatorSource.includes('["agent-identity", createAgentIdentityRepository(helpers)]'),
   "System repository must compose the extracted Trace modules."
 );
 for (const methodName of owners.keys()) {

@@ -80,17 +80,105 @@ async function main() {
     }
 
     const scopedRefresh = await page.evaluate(async () => {
-      document.querySelector("[data-view='innerlife']")?.click();
+      const hooks = window.ClaraCoreTestHooks;
+      const state = () => hooks.runtimeRefreshState();
+      const detailReads = (viewName) => Number(state().detailReads?.[viewName] || 0);
+      const waitFor = async (predicate, label, timeoutMs = 8000) => {
+        const deadline = Date.now() + timeoutMs;
+        while (Date.now() < deadline) {
+          if (predicate()) return;
+          await new Promise((resolve) => setTimeout(resolve, 25));
+        }
+        throw new Error(`Timed out waiting for ${label}: ${JSON.stringify(state())}`);
+      };
+      const openView = async (viewName) => {
+        document.querySelector(`[data-view='${viewName}']`)?.click();
+        await waitFor(() => state().hydratedViews.includes(viewName), `${viewName} hydration`);
+      };
+
+      await waitFor(() => state().hydratedViews.includes("home"), "initial Home hydration");
+      await openView("trace");
+      await openView("innerlife");
+      await openView("memory");
+      await openView("agent-setup");
+      await openView("memory");
+
+      const beforeInnerLife = state();
       const memoryListBefore = document.querySelector("#memoryList")?.innerHTML || "";
-      window.ClaraCoreTestHooks.handleRuntimeChanged({ scopes: ["snapshot", "innerlife"] });
-      await new Promise((resolve) => setTimeout(resolve, 400));
+      hooks.handleRuntimeChanged({ scopes: ["snapshot", "innerlife"] });
+      await waitFor(
+        () => state().runtimeRefreshCompletedRevision > beforeInnerLife.runtimeRefreshCompletedRevision,
+        "InnerLife scoped refresh"
+      );
+      await waitFor(() => state().hydratedViews.includes("memory"), "unrelated Memory preservation");
+      const afterInnerLife = state();
+
+      await openView("innerlife");
+      await openView("trace");
+      await openView("memory");
+      const beforeData = state();
+      hooks.handleRuntimeChanged({ scopes: ["snapshot", "data"] });
+      await waitFor(
+        () => state().runtimeRefreshCompletedRevision > beforeData.runtimeRefreshCompletedRevision,
+        "Data scoped refresh"
+      );
+      await waitFor(() => state().hydratedViews.includes("memory"), "Memory preservation after Data refresh");
+      const afterData = state();
+
       return {
         activeView: document.querySelector(".active-view")?.id,
-        memoryListPreserved: (document.querySelector("#memoryList")?.innerHTML || "") === memoryListBefore
+        memoryListPreserved: (document.querySelector("#memoryList")?.innerHTML || "") === memoryListBefore,
+        localOnlyReads: {
+          memory: detailReads("memory"),
+          agentSetup: detailReads("agent-setup")
+        },
+        innerLifeInvalidation: {
+          beforeInnerLifeReads: Number(beforeInnerLife.detailReads?.innerlife || 0),
+          afterHiddenRefreshReads: Number(afterInnerLife.detailReads?.innerlife || 0),
+          afterReopenReads: Number(beforeData.detailReads?.innerlife || 0)
+        },
+        traceInvalidation: {
+          beforeInnerLifeReads: Number(beforeInnerLife.detailReads?.trace || 0),
+          afterHiddenRefreshReads: Number(afterInnerLife.detailReads?.trace || 0),
+          afterReopenReads: Number(beforeData.detailReads?.trace || 0)
+        },
+        dataPreservation: {
+          before: beforeData.detailReads,
+          after: afterData.detailReads,
+          hydratedViews: afterData.hydratedViews
+        },
+        snapshotShape: afterData.snapshotShape
       };
     });
-    if (scopedRefresh.activeView !== "innerlifeView" || !scopedRefresh.memoryListPreserved) {
+    if (scopedRefresh.activeView !== "memoryView" || !scopedRefresh.memoryListPreserved) {
       throw new Error(`Scoped runtime refresh disturbed an unrelated view: ${JSON.stringify(scopedRefresh)}`);
+    }
+    if (scopedRefresh.localOnlyReads.memory !== 0 || scopedRefresh.localOnlyReads.agentSetup !== 0) {
+      throw new Error(`Local-only views issued empty detail IPC: ${JSON.stringify(scopedRefresh)}`);
+    }
+    if (
+      scopedRefresh.innerLifeInvalidation.afterHiddenRefreshReads !== scopedRefresh.innerLifeInvalidation.beforeInnerLifeReads ||
+      scopedRefresh.innerLifeInvalidation.afterReopenReads !== scopedRefresh.innerLifeInvalidation.beforeInnerLifeReads + 1 ||
+      scopedRefresh.traceInvalidation.afterHiddenRefreshReads !== scopedRefresh.traceInvalidation.beforeInnerLifeReads ||
+      scopedRefresh.traceInvalidation.afterReopenReads !== scopedRefresh.traceInvalidation.beforeInnerLifeReads + 1
+    ) {
+      throw new Error(`Scoped dependent views did not invalidate lazily: ${JSON.stringify(scopedRefresh)}`);
+    }
+    if (
+      JSON.stringify(scopedRefresh.dataPreservation.before) !== JSON.stringify(scopedRefresh.dataPreservation.after) ||
+      !["memory", "innerlife", "trace", "agent-setup"].every((viewName) =>
+        scopedRefresh.dataPreservation.hydratedViews.includes(viewName)
+      )
+    ) {
+      throw new Error(`Data scope invalidated an unrelated hydrated view: ${JSON.stringify(scopedRefresh)}`);
+    }
+    if (
+      scopedRefresh.snapshotShape.hasMemories ||
+      !scopedRefresh.snapshotShape.hasRecentMemories ||
+      !scopedRefresh.snapshotShape.hasInnerLifeInbox ||
+      scopedRefresh.snapshotShape.hasInnerLifePendingInbox
+    ) {
+      throw new Error(`Overview snapshot shape regressed: ${JSON.stringify(scopedRefresh.snapshotShape)}`);
     }
 
     const hiddenState = await app.evaluate(async ({ BrowserWindow, app: electronApp }) => {

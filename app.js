@@ -187,8 +187,30 @@ let runtimeRefreshTimer = null;
 const pendingRuntimeScopes = new Set();
 const hydratedViews = new Set();
 const hydratingViews = new Map();
+const viewDetailReadCounts = new Map();
+const localOnlyHydrationViews = new Set(["memory", "agent-setup"]);
+const viewOwnedSnapshotFields = {
+  memory: ["memories", "memoryGraph", "restrictedMemoryGraph"],
+  home: ["agentActivitySummary"],
+  innerlife: ["innerLife"],
+  trace: ["trace", "memoryController"],
+  logs: ["decayAudit", "runtimeEvents"],
+  settings: ["backups"]
+};
+const runtimeScopeInvalidations = {
+  memory: ["memory", "home", "trace", "logs"],
+  "shared-line": ["shared-line", "home", "trace", "logs"],
+  innerlife: ["innerlife", "home", "trace", "logs"],
+  logs: ["logs"],
+  data: ["settings"],
+  "agent-setup": [],
+  home: ["home"],
+  trace: ["trace"],
+  settings: ["settings"]
+};
 let snapshotGeneration = 0;
 let runtimeRefreshRevision = 0;
+let runtimeRefreshCompletedRevision = 0;
 const appearance = window.createClaraCoreAppearance({
   desktop: window.ClaraCoreDesktop,
   onSystemPreferenceChange: () => renderSettings()
@@ -226,10 +248,11 @@ const memoriaView = window.createClaraCoreMemoriaView({
   dom: window.ClaraCoreDom,
   t,
   getSnapshot: () => snapshot,
+  getSnapshotGeneration: () => snapshotGeneration,
   escapeHtml,
   renderMarkdownPreview,
   formatLocalDateTime,
-  refreshRuntimeSnapshotOnly,
+  refreshRuntimeSnapshotOnly: () => refreshForRuntimeScopes(["snapshot", "memory"]),
   appendLiveLogLine,
   setEmbeddingProgress
 });
@@ -581,15 +604,10 @@ function renderSnapshot() {
   renderBackups();
 }
 
-const RESOURCE_WARN_MEMORY_PERCENT = 85;
-const RESOURCE_WARN_DISK_PERCENT = 90;
-
 function renderResourceSnapshot(resources) {
   const memoryPercent = Number(resources.memory?.percent);
   const diskPercent = Number(resources.disk?.percent);
-  const warning =
-    (Number.isFinite(memoryPercent) && memoryPercent >= RESOURCE_WARN_MEMORY_PERCENT) ||
-    (Number.isFinite(diskPercent) && diskPercent >= RESOURCE_WARN_DISK_PERCENT);
+  const warning = resources.warning === true;
   if (resourceMonitor) resourceMonitor.hidden = !warning;
   if (!warning) return;
   if (monitorRam) {
@@ -649,12 +667,62 @@ function setView(viewName) {
   if (snapshot) hydrateView(nextView).catch(console.error);
 }
 
+function allViewNames() {
+  return Object.keys(views);
+}
+
+function invalidatedViewsForRuntimeScopes(scopes = []) {
+  const normalizedScopes = [...new Set(
+    (Array.isArray(scopes) ? scopes : [])
+      .map((scope) => String(scope || "").trim())
+      .filter(Boolean)
+  )];
+  const specificScopes = normalizedScopes.filter((scope) => scope !== "snapshot");
+  if (specificScopes.length === 0 || specificScopes.includes("all")) {
+    return new Set(allViewNames());
+  }
+  const invalidated = new Set();
+  for (const scope of specificScopes) {
+    const affectedViews = runtimeScopeInvalidations[scope];
+    if (!affectedViews) return new Set(allViewNames());
+    affectedViews.forEach((viewName) => invalidated.add(viewName));
+  }
+  return invalidated;
+}
+
+function mergeHydratedViewState(nextSnapshot, sourceSnapshot, invalidatedViews) {
+  const merged = { ...nextSnapshot };
+  if (!sourceSnapshot || typeof sourceSnapshot !== "object") return merged;
+  for (const [viewName, fields] of Object.entries(viewOwnedSnapshotFields)) {
+    if (!hydratedViews.has(viewName) || invalidatedViews.has(viewName)) continue;
+    for (const field of fields) {
+      if (Object.prototype.hasOwnProperty.call(sourceSnapshot, field)) {
+        merged[field] = sourceSnapshot[field];
+      }
+    }
+  }
+  return merged;
+}
+
 async function hydrateView(viewName, { force = false } = {}) {
   if (!snapshot) return;
   if (!force && hydratedViews.has(viewName)) return;
   const generation = snapshotGeneration;
   const existing = hydratingViews.get(viewName);
   if (existing?.generation === generation) return existing.request;
+  if (localOnlyHydrationViews.has(viewName)) {
+    const request = (async () => {
+      if (viewName === "memory") {
+        const result = await loadMemoryTabData(memoriaView.getActiveTab());
+        if (result?.stale) return;
+      }
+      if (generation === snapshotGeneration) hydratedViews.add(viewName);
+    })().finally(() => {
+      if (hydratingViews.get(viewName)?.request === request) hydratingViews.delete(viewName);
+    });
+    hydratingViews.set(viewName, { generation, request });
+    return request;
+  }
   const sharedLineCatalog = snapshot.sharedLine;
   const request = (async () => {
     if (viewName === "shared-line") {
@@ -665,6 +733,7 @@ async function hydrateView(viewName, { force = false } = {}) {
       return;
     }
     if (typeof window.ClaraCoreDesktop.getViewSnapshot !== "function") return;
+    viewDetailReadCounts.set(viewName, (viewDetailReadCounts.get(viewName) || 0) + 1);
     const detail = await window.ClaraCoreDesktop.getViewSnapshot(viewName);
     if (generation !== snapshotGeneration || !detail || typeof detail !== "object") return;
     snapshot = { ...snapshot, ...detail };
@@ -717,6 +786,8 @@ async function hydrateUiPreferences() {
 
 async function refresh() {
   const refreshRevision = ++runtimeRefreshRevision;
+  snapshotGeneration += 1;
+  hydratedViews.clear();
   const [nextSnapshot, dataRootPreference] = await Promise.all([
     window.ClaraCoreDesktop.getRuntimeSnapshot(),
     window.ClaraCoreDesktop.getDataRootPreference()
@@ -724,38 +795,35 @@ async function refresh() {
   if (refreshRevision !== runtimeRefreshRevision) return;
   snapshot = nextSnapshot;
   rendererState.dataRootPreference = dataRootPreference;
-  snapshotGeneration += 1;
   sharedLineActions.syncSelectedLineCatalog(snapshot.sharedLine);
   hydratedViews.clear();
   memoriaView.resetLoadedTabs();
   renderSnapshot();
   if (activeView === "home") hydrateView(activeView).catch(console.error);
   else await hydrateView(activeView);
-  loadMemoryTabData(memoriaView.getActiveTab()).catch(console.error);
+  runtimeRefreshCompletedRevision = refreshRevision;
 }
 
-async function refreshRuntimeSnapshotOnly() {
+async function refreshRuntimeSnapshotOnly(
+  scopes = [],
+  invalidatedViews = invalidatedViewsForRuntimeScopes(scopes)
+) {
   const refreshRevision = ++runtimeRefreshRevision;
-  const previousSnapshot = snapshot;
+  snapshotGeneration += 1;
+  invalidatedViews.forEach((viewName) => hydratedViews.delete(viewName));
   const [nextSnapshot, dataRootPreference] = await Promise.all([
     window.ClaraCoreDesktop.getRuntimeSnapshot(),
     window.ClaraCoreDesktop.getDataRootPreference()
   ]);
   if (refreshRevision !== runtimeRefreshRevision) return;
-  if (previousSnapshot?.memoryGraph && !nextSnapshot.memoryGraph) {
-    nextSnapshot.memoryGraph = previousSnapshot.memoryGraph;
-  }
-  if (previousSnapshot?.restrictedMemoryGraph && !nextSnapshot.restrictedMemoryGraph) {
-    nextSnapshot.restrictedMemoryGraph = previousSnapshot.restrictedMemoryGraph;
-  }
-  snapshot = nextSnapshot;
+  invalidatedViews.forEach((viewName) => hydratedViews.delete(viewName));
+  snapshot = mergeHydratedViewState(nextSnapshot, snapshot, invalidatedViews);
   rendererState.dataRootPreference = dataRootPreference;
-  snapshotGeneration += 1;
   sharedLineActions.syncSelectedLineCatalog(snapshot.sharedLine);
-  hydratedViews.clear();
   renderSnapshot();
   if (activeView === "home") hydrateView(activeView).catch(console.error);
   else await hydrateView(activeView);
+  runtimeRefreshCompletedRevision = refreshRevision;
 }
 
 async function refreshLogsSnapshot() {
@@ -772,10 +840,11 @@ async function refreshLogsSnapshot() {
 }
 
 async function refreshForRuntimeScopes(scopes = []) {
-  await refreshRuntimeSnapshotOnly();
-  if (scopes.includes("memory") && activeView === "memory") {
-    memoriaView.resetLoadedTabs();
-    await loadMemoryTabData(memoriaView.getActiveTab());
+  const invalidatedViews = invalidatedViewsForRuntimeScopes(scopes);
+  if (invalidatedViews.has("memory")) memoriaView.resetLoadedTabs();
+  await refreshRuntimeSnapshotOnly(scopes, invalidatedViews);
+  if (invalidatedViews.has("logs") && activeView === "logs") {
+    await refreshLogsSnapshot();
   }
 }
 
@@ -783,10 +852,15 @@ function syncLogRefreshTimer() {
   logsView.syncRefreshTimer(activeView);
 }
 
-async function refreshResources() {
-  const resources = await window.ClaraCoreDesktop.getResourceSnapshot();
-  renderResourceSnapshot(resources);
-}
+const resourceRefreshLoop = window.createClaraCoreResourceRefreshLoop({
+  documentRef: document,
+  fetchSnapshot: () => window.ClaraCoreDesktop.getResourceSnapshot(),
+  renderSnapshot: renderResourceSnapshot,
+  handleError: (error) => {
+    console.error(error);
+    if (resourceMonitor) resourceMonitor.hidden = true;
+  }
+});
 
 function scheduleRuntimeRefresh(scopes = ["snapshot"]) {
   scopes.forEach((scope) => pendingRuntimeScopes.add(scope));
@@ -837,7 +911,6 @@ document.addEventListener("click", (event) => {
     target.textContent = t("memory.embedding.processing");
     memoriaView
       .processEmbeddings()
-      .then(() => refreshRuntimeSnapshotOnly())
       .finally(() => {
         target.disabled = false;
         target.textContent = previousText;
@@ -851,7 +924,7 @@ async function runDemoDataAction(button, action, busyKey) {
   if (demoDataNotice) demoDataNotice.textContent = t(busyKey);
   try {
     await action();
-    await refreshRuntimeSnapshotOnly();
+    await refreshForRuntimeScopes(["snapshot"]);
   } catch (error) {
     console.error(error);
     if (demoDataNotice) demoDataNotice.textContent = t("home.onboarding.demo.failed");
@@ -890,7 +963,7 @@ saveAgentGatewayConfig?.addEventListener("click", async () => {
   appearanceSettingsNotice.textContent = t("common.checking");
   try {
     await window.ClaraCoreDesktop.updateAgentGatewayConfig(settingsView.collectAgentGatewayConfigForm());
-    await refreshRuntimeSnapshotOnly();
+    await refreshForRuntimeScopes(["snapshot", "agent-setup", "logs"]);
     appearanceSettingsNotice.textContent = t("settings.agentGatewaySaved");
   } catch (error) {
     appearanceSettingsNotice.textContent = t("settings.agentGatewaySaveFailed", { error: error?.message || String(error) });
@@ -904,7 +977,7 @@ saveMemoryControllerMode?.addEventListener("click", async () => {
   if (memoryControllerSettingsNotice) memoryControllerSettingsNotice.textContent = t("common.checking");
   try {
     await window.ClaraCoreDesktop.saveSettings(settingsView.collectMemoryControllerSettingsForm());
-    await refreshRuntimeSnapshotOnly();
+    await refreshForRuntimeScopes(["snapshot", "trace"]);
     if (memoryControllerSettingsNotice) memoryControllerSettingsNotice.textContent = t("settings.memoryControllerSaved");
   } catch (error) {
     console.error(error);
@@ -1132,7 +1205,21 @@ openDesignPlan?.addEventListener("click", () => {
 window.ClaraCoreTestHooks = {
   refresh: () => refresh(),
   handleRuntimeChanged: (payload = {}) => scheduleRuntimeRefresh(Array.isArray(payload.scopes) ? payload.scopes : ["snapshot"]),
-  homeVision: () => homeView.getVisionDebugState()
+  homeVision: () => homeView.getVisionDebugState(),
+  runtimeRefreshState: () => ({
+    activeView,
+    detailReads: Object.fromEntries(viewDetailReadCounts),
+    hydratedViews: [...hydratedViews].sort(),
+    runtimeRefreshCompletedRevision,
+    runtimeRefreshRevision,
+    snapshotGeneration,
+    snapshotShape: {
+      hasMemories: Object.prototype.hasOwnProperty.call(snapshot || {}, "memories"),
+      hasRecentMemories: Object.prototype.hasOwnProperty.call(snapshot || {}, "recentMemories"),
+      hasInnerLifeInbox: Object.prototype.hasOwnProperty.call(snapshot?.innerLife || {}, "inbox"),
+      hasInnerLifePendingInbox: Object.prototype.hasOwnProperty.call(snapshot?.innerLife || {}, "pendingInbox")
+    }
+  })
 };
 
 refresh().catch((error) => {
@@ -1140,13 +1227,8 @@ refresh().catch((error) => {
   if (rootPath) rootPath.textContent = t("runtime.unableSnapshot");
 });
 
-refreshResources().catch((error) => {
-  console.error(error);
-  if (resourceMonitor) resourceMonitor.hidden = true;
-});
-window.setInterval(() => {
-  refreshResources().catch(console.error);
-}, 5000);
+resourceRefreshLoop.start();
+window.addEventListener("beforeunload", () => resourceRefreshLoop.stop(), { once: true });
 
 applyStaticTranslations();
 appearance.initialize();

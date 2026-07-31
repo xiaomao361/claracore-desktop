@@ -114,7 +114,12 @@ Included:
   the right. Selecting a line only changes reviewed detail, never Agent-active
   state; history, snapshots, metadata, and Agent evidence stay under Advanced.
 - Desktop-owned InnerLife storage, agent profiles, inbox, sessions, events, thoughts, shares, digest runs, exploration, convergence, and daemon state
-- Model-backed InnerLife generation for digest, process-once, exploration, convergence, and session afterthoughts, with deterministic template fallback when no model is configured or a model call fails
+- Model-backed InnerLife generation for digest, process-once, exploration,
+  convergence, and session afterthoughts. No-provider paths use deterministic
+  templates. A failed persisted session-afterthought model call uses durable
+  exponential backoff instead of silently accepting a fallback as success;
+  stale workers cannot overwrite a replacement lease, and terminal failures
+  require an explicit authenticated retry or acknowledged closure.
 - Fresh installs enable InnerLife by default with the bundled DeepSeek-compatible model/key settings
 - Agent-managed InnerLife access through Gateway MCP and CLI fallback; the Desktop UI is primarily for inspection and runtime control
 - InnerLife share timing checks connect against the current Shared Line context
@@ -153,12 +158,13 @@ Included:
 - Chinese and English UI switching
 - macOS menu bar / Windows tray entry
 - Unified ClaraCore app, tray, favicon, README, and packaging icon assets
-- Warning-only resource bar that appears when RAM exceeds 85% or disk exceeds 90%
+- Warning-only resource bar that appears when non-reclaimable RAM exceeds 85%
+  or disk exceeds 90%; on macOS, Electron-reported file-backed and purgeable
+  pages count as reclaimable instead of creating a permanent false warning
 
 Not included yet:
 
 - LAN Agent Gateway mode and HTTP management console for the Desktop-owned Gateway
-- Signed and notarized public macOS release artifact
 - Signed public Windows release artifact
 - Old Memoria REST API compatibility
 
@@ -316,7 +322,8 @@ contract by themselves. If a client supports Streamable HTTP MCP, use the
 current endpoint and bearer header from Agent Access or Settings > General >
 Agent Gateway. If it only supports local stdio MCP, use the generated fallback
 config, fully quit and restart the client, then run
-`claracore_connection_test` followed by `gateway_context`.
+`claracore_connection_test` followed by `gateway_context(detail=brief)`.
+Omitting `detail` remains the 0.6.4 full-payload compatibility path.
 
 The old ClaraCore Gateway web console remains a reference for useful overview
 ideas, but its service Web UI launcher/supervisor model is not the Desktop

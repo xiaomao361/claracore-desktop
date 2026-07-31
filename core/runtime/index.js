@@ -1,6 +1,13 @@
 const { initializeProductDatabase } = require("../db/database");
 const { previewImportSources } = require("../import-preview");
-const { desktopSettingsPath, ensureProductDirectories, readDesktopSettings, resolveProductPaths } = require("./paths");
+const {
+  desktopSettingsPath,
+  ensureProductDirectories,
+  ensureResolvedProductDirectories,
+  readDesktopSettings,
+  resolveProductPaths
+} = require("./paths");
+const { createProductCoreOwner } = require("./product-core-owner");
 const { createBackupRuntime } = require("./backup");
 const { createImportRuntime } = require("./imports");
 const { createSnapshotRuntime } = require("./snapshot");
@@ -9,6 +16,7 @@ const { createDecayRuntime } = require("./decay");
 const { seedDemoFixture, clearDemoFixture } = require("./demo-data");
 const { PRODUCT_VERSION } = require("../version");
 const continuity = require("../continuity");
+const { getGatewayContext } = require("../gateway/context");
 const innerlife = require("../innerlife");
 
 function timestampForFilename(date = new Date()) {
@@ -21,45 +29,41 @@ function sqlString(value) {
 
 
 
-let _cachedDatabase = null;
-let _cachedDatabasePath = null;
+const productCoreOwner = createProductCoreOwner({
+  ensureResolvedProductDirectories,
+  initializeProductDatabase,
+  resolveProductPaths
+});
 
 function resetCachedDatabase() {
-  if (_cachedDatabase && typeof _cachedDatabase.close === "function") {
-    _cachedDatabase.close();
-  }
-  _cachedDatabase = null;
-  _cachedDatabasePath = null;
+  return productCoreOwner.reset();
 }
 
-async function ensureProductCore(app) {
-  const paths = await ensureProductDirectories(app);
-  if (!_cachedDatabase || _cachedDatabasePath !== paths.databasePath) {
-    _cachedDatabase = await initializeProductDatabase(paths.databasePath);
-    _cachedDatabasePath = paths.databasePath;
-  }
-  return {
-    paths,
-    database: _cachedDatabase,
-    summary: await _cachedDatabase.getSummary()
-  };
+function ensureProductCore(app) {
+  return productCoreOwner.ensure(app);
+}
+
+function withExclusiveProductCore(app, operation) {
+  return productCoreOwner.withExclusiveAccess(app, operation);
 }
 
 const backupRuntime = createBackupRuntime({
   ensureProductCore,
   productVersion: PRODUCT_VERSION,
-  resetCachedDatabase,
   sqlString,
-  timestampForFilename
+  timestampForFilename,
+  withExclusiveProductCore
 });
 
 const importRuntime = createImportRuntime({
   createProductBackup,
+  createProductBackupFromCore: backupRuntime.createProductBackupFromCore,
   ensureProductCore,
   productVersion: PRODUCT_VERSION,
   resetCachedDatabase,
   sqlString,
-  timestampForFilename
+  timestampForFilename,
+  withExclusiveProductCore
 });
 
 const snapshotRuntime = createSnapshotRuntime({
@@ -187,7 +191,7 @@ async function getProductSharedLine(app, input = {}) {
 }
 
 async function getProductGatewayContext(app, input = {}) {
-  return continuity.gatewayContext(await ensureProductCore(app), input);
+  return getGatewayContext(await ensureProductCore(app), input);
 }
 
 async function saveProductSharedLine(app, input) {

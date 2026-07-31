@@ -6,10 +6,6 @@ async function list(core, input = {}) {
   return core.database.listContinuityLines(input || {});
 }
 
-async function gatewayContext(core, input = {}) {
-  return core.database.getGatewayContext(input || {});
-}
-
 async function save(core, input, options = {}) {
   const currentPosition = await core.database.saveCurrentPosition(input);
   return core.database.getResumePacket({
@@ -106,7 +102,6 @@ module.exports = {
   create,
   createHandoff,
   deleteModelAdjustment,
-  gatewayContext,
   get,
   list,
   modelAdjustment,

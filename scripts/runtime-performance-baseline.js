@@ -80,7 +80,7 @@ async function main() {
         const snapshot = await window.ClaraCoreDesktop.getRuntimeSnapshot();
         return {
           durationMs: performance.now() - startedAt,
-          memoryRows: snapshot.memories?.length || 0,
+          memoryRows: snapshot.recentMemories?.length || snapshot.memories?.length || 0,
           gatewayTraceRows: snapshot.gatewayTraces?.length || 0,
           runtimeEventRows: snapshot.runtimeEvents?.length || 0,
           controllerEventCount: snapshot.memoryController?.eventCount || 0
