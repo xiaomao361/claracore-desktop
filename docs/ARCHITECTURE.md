@@ -252,7 +252,9 @@ Current shape:
 - `core/db/repositories/system/gateway-traces.js`: Gateway trace
   compatibility, bounded request persistence, lookup, and retention
 - `core/db/repositories/system/agent-activity.js`: bounded cross-domain Agent
-  activity summaries derived from Gateway, Memoria, Shared Line, and InnerLife
+  activity summaries derived from Gateway, Memoria, Shared Line, and InnerLife;
+  its four periods share five 30-day source scans instead of rerunning one
+  query per source and period
 - `core/db/repositories/memoria.js`: Memoria persistence
 - `core/db/repositories/memoria/`: focused Memoria repository submodules,
   including label alias, canonicalization, structured record, and

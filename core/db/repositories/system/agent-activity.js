@@ -19,21 +19,35 @@ function createAgentActivityRepository(helpers) {
       startOfSevenDays.setDate(startOfSevenDays.getDate() - 7);
       const startOfThirtyDays = new Date(now);
       startOfThirtyDays.setDate(startOfThirtyDays.getDate() - 30);
-      const windows = {
-        yesterday: { start: startOfYesterday, end: startOfToday },
-        today: { start: startOfToday, end: startOfTomorrow },
-        "7d": { start: startOfSevenDays, end: null },
-        "30d": { start: startOfThirtyDays, end: null }
-      };
+      // Yesterday/today are half-open calendar days. The rolling periods
+      // intentionally keep their existing lower-bound-only contract.
+      const periodSpecs = [
+        { key: "yesterday", flag: "in_yesterday", count: "yesterday_count", start: startOfYesterday, end: startOfToday },
+        { key: "today", flag: "in_today", count: "today_count", start: startOfToday, end: startOfTomorrow },
+        { key: "7d", flag: "in_7d", count: "seven_days_count", start: startOfSevenDays, end: null },
+        { key: "30d", flag: "in_30d", count: "thirty_days_count", start: startOfThirtyDays, end: null }
+      ];
 
       function sqlDate(date) {
         return date.toISOString();
       }
 
-      function timeClause(column, window) {
-        const start = sqlString(sqlDate(window.start));
-        const end = window.end ? sqlString(sqlDate(window.end)) : null;
+      function timeClause(column, period) {
+        const start = sqlString(sqlDate(period.start));
+        const end = period.end ? sqlString(sqlDate(period.end)) : null;
         return `julianday(${column}) >= julianday(${start})${end ? ` AND julianday(${column}) < julianday(${end})` : ""}`;
+      }
+
+      function membershipColumns(column) {
+        return periodSpecs
+          .map((period) => `CASE WHEN ${timeClause(column, period)} THEN 1 ELSE 0 END AS ${period.flag}`)
+          .join(",\n              ");
+      }
+
+      function aggregateColumns(column) {
+        return periodSpecs
+          .map((period) => `SUM(CASE WHEN ${timeClause(column, period)} THEN 1 ELSE 0 END) AS ${period.count}`)
+          .join(",\n              ");
       }
 
       function normalizeAgentLabel(label = "") {
@@ -43,91 +57,133 @@ function createAgentActivityRepository(helpers) {
         return "";
       }
 
-      async function rowsForPeriod(window) {
-        const memoryTimeClause = timeClause("m.created_at", window);
-        const linkTimeClause = timeClause("k.created_at", window);
-        const shareTimeClause = timeClause("a.created_at", window);
-        const historyTimeClause = timeClause("h.created_at", window);
-        const traceTimeClause = timeClause("created_at", window);
-        const [memories, links, shares, lineUpdates, gatewayCalls] = await Promise.all([
-          this.query(`
-            SELECT m.id AS id, l.label AS label
-            FROM memories m
-            JOIN memory_labels l ON l.memory_id = m.id
-            WHERE m.status = 'active'
-              AND (l.label LIKE 'agent-id:%' OR l.label LIKE 'agent:%')
-              AND ${memoryTimeClause}
-          `),
-          this.query(`
-            SELECT k.id AS id, labels.label AS label
-            FROM memory_links k
-            JOIN (
-              SELECT memory_id, label FROM memory_labels WHERE label LIKE 'agent-id:%' OR label LIKE 'agent:%'
-            ) labels ON labels.memory_id = k.from_memory_id OR labels.memory_id = k.to_memory_id
-            WHERE ${linkTimeClause}
-          `),
-          this.query(`
-            SELECT s.id AS share_id, s.agent_id AS agent_id, a.metadata_json AS metadata_json
-            FROM innerlife_share_actions a
-            JOIN innerlife_shares s ON s.id = a.share_id
-            WHERE a.action = 'used'
-              AND ${shareTimeClause};
-          `),
-          this.query(`
-            SELECT l.agent_id AS agent_id, COUNT(h.id) AS count
-            FROM continuity_position_history h
-            JOIN continuity_lines l ON l.id = h.line_id
-            WHERE ${historyTimeClause}
-            GROUP BY l.agent_id;
-          `),
-          this.query(`
-            SELECT agent_id AS agent_id, COUNT(*) AS count
-            FROM gateway_traces
-            WHERE ${traceTimeClause}
-            GROUP BY agent_id;
-          `)
-        ]);
+      const thirtyDayPeriod = periodSpecs.find((period) => period.key === "30d");
+      // Scan each source once over the largest window, then assign each row or
+      // aggregate count to every period it belongs to.
+      const [memories, links, shares, lineUpdates, gatewayCalls] = await Promise.all([
+        this.query(`
+          SELECT
+            m.id AS id,
+            l.label AS label,
+            ${membershipColumns("m.created_at")}
+          FROM memories m
+          JOIN memory_labels l ON l.memory_id = m.id
+          WHERE m.status = 'active'
+            AND (l.label LIKE 'agent-id:%' OR l.label LIKE 'agent:%')
+            AND ${timeClause("m.created_at", thirtyDayPeriod)}
+        `),
+        this.query(`
+          SELECT
+            k.id AS id,
+            labels.label AS label,
+            ${membershipColumns("k.created_at")}
+          FROM memory_links k
+          JOIN (
+            SELECT memory_id, label FROM memory_labels WHERE label LIKE 'agent-id:%' OR label LIKE 'agent:%'
+          ) labels ON labels.memory_id = k.from_memory_id OR labels.memory_id = k.to_memory_id
+          WHERE ${timeClause("k.created_at", thirtyDayPeriod)}
+        `),
+        this.query(`
+          SELECT
+            s.id AS share_id,
+            s.agent_id AS agent_id,
+            a.metadata_json AS metadata_json,
+            ${membershipColumns("a.created_at")}
+          FROM innerlife_share_actions a
+          JOIN innerlife_shares s ON s.id = a.share_id
+          WHERE a.action = 'used'
+            AND ${timeClause("a.created_at", thirtyDayPeriod)};
+        `),
+        this.query(`
+          SELECT
+            l.agent_id AS agent_id,
+            ${aggregateColumns("h.created_at")}
+          FROM continuity_position_history h
+          JOIN continuity_lines l ON l.id = h.line_id
+          WHERE ${timeClause("h.created_at", thirtyDayPeriod)}
+          GROUP BY l.agent_id;
+        `),
+        this.query(`
+          SELECT
+            agent_id AS agent_id,
+            ${aggregateColumns("created_at")}
+          FROM gateway_traces
+          WHERE ${timeClause("created_at", thirtyDayPeriod)}
+          GROUP BY agent_id;
+        `)
+      ]);
 
-        const agents = new Map();
-        function ensure(agentId) {
-          const id = String(agentId || "").trim() || DEFAULT_AGENT_ID;
-          if (!agents.has(id)) {
-            agents.set(id, {
-              agentId: id,
-              newMemories: 0,
-              formedConnections: 0,
-              confirmedShares: 0,
-              sharedLineUpdates: 0,
-              gatewayCalls: 0
-            });
-          }
-          return agents.get(id);
+      const agentsByPeriod = new Map(periodSpecs.map((period) => [period.key, new Map()]));
+      const seenByPeriod = new Map(periodSpecs.map((period) => [period.key, {
+        newMemories: new Set(),
+        formedConnections: new Set(),
+        confirmedShares: new Set()
+      }]));
+
+      function ensure(periodKey, agentId) {
+        const agents = agentsByPeriod.get(periodKey);
+        const id = String(agentId || "").trim() || DEFAULT_AGENT_ID;
+        if (!agents.has(id)) {
+          agents.set(id, {
+            agentId: id,
+            newMemories: 0,
+            formedConnections: 0,
+            confirmedShares: 0,
+            sharedLineUpdates: 0,
+            gatewayCalls: 0
+          });
         }
-        function addUnique(rows, metric) {
-          const seen = new Set();
-          for (const row of rows) {
-            const agentId = normalizeAgentLabel(row.label);
-            if (!agentId || !row.id) continue;
+        return agents.get(id);
+      }
+
+      function forIncludedPeriods(row, visit) {
+        for (const period of periodSpecs) {
+          if (Number(row[period.flag] || 0) > 0) visit(period);
+        }
+      }
+
+      function addUnique(rows, metric) {
+        for (const row of rows) {
+          const agentId = normalizeAgentLabel(row.label);
+          if (!agentId || !row.id) continue;
+          forIncludedPeriods(row, (period) => {
             const key = `${agentId}:${row.id}`;
-            if (seen.has(key)) continue;
+            const seen = seenByPeriod.get(period.key)[metric];
+            if (seen.has(key)) return;
             seen.add(key);
-            ensure(agentId)[metric] += 1;
-          }
+            ensure(period.key, agentId)[metric] += 1;
+          });
         }
-        addUnique(memories, "newMemories");
-        addUnique(links, "formedConnections");
-        const confirmedShareIds = new Set();
-        for (const row of shares) {
-          const evidence = parseJson(row.metadata_json, {}).deliveryEvidence || {};
-          if (!evidence.conversationId || !evidence.responseExcerpt || !evidence.sharedAt) continue;
+      }
+
+      addUnique(memories, "newMemories");
+      addUnique(links, "formedConnections");
+      for (const row of shares) {
+        const evidence = parseJson(row.metadata_json, {}).deliveryEvidence || {};
+        if (!evidence.conversationId || !evidence.responseExcerpt || !evidence.sharedAt) continue;
+        forIncludedPeriods(row, (period) => {
           const key = `${row.agent_id}:${row.share_id}`;
-          if (confirmedShareIds.has(key)) continue;
-          confirmedShareIds.add(key);
-          ensure(row.agent_id).confirmedShares += 1;
+          const seen = seenByPeriod.get(period.key).confirmedShares;
+          if (seen.has(key)) return;
+          seen.add(key);
+          ensure(period.key, row.agent_id).confirmedShares += 1;
+        });
+      }
+      for (const row of lineUpdates) {
+        for (const period of periodSpecs) {
+          const count = Number(row[period.count] || 0);
+          if (count > 0) ensure(period.key, row.agent_id).sharedLineUpdates += count;
         }
-        for (const row of lineUpdates) ensure(row.agent_id).sharedLineUpdates += Number(row.count || 0);
-        for (const row of gatewayCalls) ensure(row.agent_id).gatewayCalls += Number(row.count || 0);
-        return Array.from(agents.values())
+      }
+      for (const row of gatewayCalls) {
+        for (const period of periodSpecs) {
+          const count = Number(row[period.count] || 0);
+          if (count > 0) ensure(period.key, row.agent_id).gatewayCalls += count;
+        }
+      }
+
+      function sortedActiveAgents(periodKey) {
+        return Array.from(agentsByPeriod.get(periodKey).values())
           .filter((agent) =>
             agent.newMemories || agent.formedConnections || agent.confirmedShares || agent.sharedLineUpdates || agent.gatewayCalls
           )
@@ -139,11 +195,11 @@ function createAgentActivityRepository(helpers) {
       }
 
       const periods = {};
-      for (const [key, window] of Object.entries(windows)) {
-        periods[key] = {
-          start: window.start.toISOString(),
-          end: window.end ? window.end.toISOString() : now.toISOString(),
-          agents: await rowsForPeriod.call(this, window)
+      for (const period of periodSpecs) {
+        periods[period.key] = {
+          start: period.start.toISOString(),
+          end: period.end ? period.end.toISOString() : now.toISOString(),
+          agents: sortedActiveAgents(period.key)
         };
       }
       return {

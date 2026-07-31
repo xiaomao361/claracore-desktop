@@ -46,7 +46,10 @@ Large surfaces must page or lazy-load:
   be a separate paged surface before trace volume grows.
 
 Refreshing the Home page must not imply refreshing every record in the product
-database.
+database. Home Agent activity scans its five source domains once per summary,
+then assigns rows or aggregate counts to yesterday, today, 7-day, and 30-day
+periods in memory. The maintained budget is exactly five warm SQL reads and at
+most six cold reads including Gateway trace compatibility.
 
 ## Resource Ownership
 

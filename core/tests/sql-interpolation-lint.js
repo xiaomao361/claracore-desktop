@@ -18,6 +18,8 @@ const FILES = [
   "migrations/index.js",
   "migrations/002_product_additions.js",
   "repositories/system.js",
+  "repositories/system/agent-activity.js",
+  "repositories/system/gateway-traces.js",
   "repositories/continuity.js",
   "repositories/continuity/agents.js",
   "repositories/memoria.js",
@@ -82,6 +84,24 @@ const SAFE_IDENTIFIERS = new Set([
   "SQLITE_BUSY_TIMEOUT_MS",
   "table",
   "CONTINUITY_LINE_SELECT"
+]);
+
+// File-scoped fragments whose builders and literal column arguments were
+// reviewed together. Keeping these exact prevents another repository from
+// gaining a same-named blanket escape hatch.
+const FILE_SAFE_EXPRESSIONS = new Map([
+  ["repositories/system/agent-activity.js", new Set([
+    'membershipColumns("m.created_at")',
+    'timeClause("m.created_at", thirtyDayPeriod)',
+    'membershipColumns("k.created_at")',
+    'timeClause("k.created_at", thirtyDayPeriod)',
+    'membershipColumns("a.created_at")',
+    'timeClause("a.created_at", thirtyDayPeriod)',
+    'aggregateColumns("h.created_at")',
+    'timeClause("h.created_at", thirtyDayPeriod)',
+    'aggregateColumns("created_at")',
+    'timeClause("created_at", thirtyDayPeriod)'
+  ])]
 ]);
 
 function isSafeBareIdentifier(name) {
@@ -356,7 +376,7 @@ function lintFile(relativePath) {
     if (!looksLikeSql(literal.body)) continue;
     const interpolations = extractInterpolations(literal.body);
     for (const { expr, offset } of interpolations) {
-      if (isSafeExpr(expr)) continue;
+      if (isSafeExpr(expr) || FILE_SAFE_EXPRESSIONS.get(relativePath)?.has(expr.trim())) continue;
       const lineInLiteral = literal.body.slice(0, offset).split("\n").length - 1;
       violations.push({
         file: relativePath,

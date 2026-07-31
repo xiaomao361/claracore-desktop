@@ -160,7 +160,9 @@ Repository ownership:
   retention.
 - `core/db/repositories/system/agent-activity.js`: bounded per-period Agent
   activity summary across Gateway calls, Memory, links, Shared Line updates,
-  and delivered InnerLife shares.
+  and delivered InnerLife shares. It scans those five sources once over the
+  30-day superset, preserves the existing calendar/rolling window semantics,
+  and buckets results into all four Home periods without repeated SQL.
 - `core/db/migrations/003_multi_agent_caller_context.js`: additive v0.5
   migration for Gateway trace `client_id` / `conversation_id` columns and
   legacy `session_id` backfill.

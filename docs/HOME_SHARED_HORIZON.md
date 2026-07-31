@@ -143,6 +143,15 @@ Current renderer limits:
 - offscreen atmosphere sprites: zero;
 - Agent signals: at most three.
 
+Current Home data limits:
+
+- Agent activity: five warm SQL reads, or at most six on the first call that
+  performs Gateway trace compatibility;
+- one 30-day superset scan per source, bucketed into yesterday, today, 7-day,
+  and 30-day views without repeated source queries;
+- maintained Agent activity p95: at most 100 ms on the isolated boundary
+  fixture.
+
 Measured on 2026-07-17 in a real Electron window at 1440×900, DPR 2, using
 30-second samples:
 
@@ -159,6 +168,7 @@ Validated in this revision with:
 - `npm run test:home`;
 - `npm run test:onboarding`;
 - `npm run test:home:performance`;
+- `TZ=Asia/Shanghai node core/tests/agent-activity-performance-smoke.js`;
 - real Electron screenshots for active/wide, empty/wide, and dark/900×720;
 - reduced motion, arrival settling, stable Agent colors, and away-from-Home
   scheduler assertions.
