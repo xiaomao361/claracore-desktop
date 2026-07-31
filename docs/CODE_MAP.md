@@ -147,10 +147,15 @@ Repository ownership:
 - `core/db/helpers.js`: shared helper functions injected into database
   repositories, including SQL escaping, JSON/date parsing, agent identity,
   label/value normalization, vector math, and JSON HTTP calls.
-- `core/db/repositories/system.js`: settings, secrets, configuration,
-  runtime events, Gateway traces with agent/client/conversation identity,
-  backup records, LLM calls, database summary persistence, and the bounded
-  cross-domain Trace aggregate.
+- `core/db/repositories/system.js`: composition plus settings, secrets,
+  configuration, runtime events, backup records, LLM calls, database summary
+  persistence, and the bounded cross-domain Trace aggregate.
+- `core/db/repositories/system/gateway-traces.js`: Gateway trace compatibility,
+  bounded request persistence, agent/client/conversation identity, lookup, and
+  retention.
+- `core/db/repositories/system/agent-activity.js`: bounded per-period Agent
+  activity summary across Gateway calls, Memory, links, Shared Line updates,
+  and delivered InnerLife shares.
 - `core/db/migrations/003_multi_agent_caller_context.js`: additive v0.5
   migration for Gateway trace `client_id` / `conversation_id` columns and
   legacy `session_id` backfill.
@@ -320,16 +325,19 @@ review, or daemon recovery belongs in explicit agent or human actions.
 
 Start here:
 
-1. `core/db/repositories/system.js`
-2. `core/runtime/snapshot.js`
-3. `app/views/trace.js`
-4. `styles/views/trace.css`
-5. `core/tests/trace-ui-smoke.js`
+1. `core/db/repositories/system/gateway-traces.js`
+2. `core/db/repositories/system/agent-activity.js`
+3. `core/db/repositories/system.js`
+4. `core/runtime/snapshot.js`
+5. `app/views/trace.js`
+6. `styles/views/trace.css`
+7. `core/tests/trace-ui-smoke.js`
 
 Use this path for the separate product page named Trace / 痕迹. Its aggregate
 is read-only and bounded; it does not add a schema, write path, ranking, streak,
 or synthetic identifier. Maintained metric definitions live in
-`docs/TRACE_PAGE.md`.
+`docs/TRACE_PAGE.md`. `core/tests/system-repository-boundary-smoke.js` prevents
+the extracted persistence methods from drifting back into `system.js`.
 
 ## Change Placement Rules
 

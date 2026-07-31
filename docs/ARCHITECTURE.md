@@ -230,8 +230,12 @@ Current shape:
   JSON parsing, agent identity normalization, label/date/value normalization,
   vector math, and JSON HTTP calls
 - `core/db/migrations/`: explicit migrations
-- `core/db/repositories/system.js`: settings, configuration, runtime events,
-  gateway traces, backup records, LLM calls, and database summary
+- `core/db/repositories/system.js`: composition plus settings, configuration,
+  runtime events, backup records, LLM calls, and database summary
+- `core/db/repositories/system/gateway-traces.js`: Gateway trace
+  compatibility, bounded request persistence, lookup, and retention
+- `core/db/repositories/system/agent-activity.js`: bounded cross-domain Agent
+  activity summaries derived from Gateway, Memoria, Shared Line, and InnerLife
 - `core/db/repositories/memoria.js`: Memoria persistence
 - `core/db/repositories/memoria/`: focused Memoria repository submodules,
   including label alias, canonicalization, structured record, and
@@ -253,6 +257,9 @@ Current shape:
   and convergence workflows using policy from `core/innerlife/policy.js`
 - `core/db/repositories/innerlife/retention.js`: age and per-Agent capacity
   retention for processed inbox, ended sessions, share checks, and digest runs
+
+`core/tests/system-repository-boundary-smoke.js` keeps Gateway Trace and Agent
+activity ownership out of the remaining system repository aggregator.
 
 `core/db/migrations/index.js` runs ordered, idempotent migration modules in
 `before-schema` or `after-schema` phases and records each successful id in
