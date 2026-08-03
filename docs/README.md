@@ -23,10 +23,10 @@ instructions.
 - [Memory Controller Canary Handoff](MEMORY_CONTROLLER_CANARY_HANDOFF.md):
   confirmed authenticated multi-Agent trusted-context boundary, implementation slices,
   evidence contract, and first-canary acceptance.
-- [v0.6.4 Release Notes](RELEASE_NOTES_V0.6.4.md): current stable macOS Apple
-  Silicon and Windows x64 Full/Lite release.
-- [v0.6.3 Release Notes](RELEASE_NOTES_V0.6.3.md): previous small-audience
-  release and validation boundary.
+- [v0.6.5 Release Notes](RELEASE_NOTES_V0.6.5.md): current signed and notarized
+  macOS Apple Silicon Lite maintenance release.
+- [v0.6.4 Release Notes](RELEASE_NOTES_V0.6.4.md): previous macOS Apple Silicon
+  and Windows x64 Full/Lite release.
 - [Hermes v0.6.2 Update](HERMES_V0.6.2_UPDATE.md): copy-ready Lara/Hermes
   reconnect, Memory Controller, lifecycle, and overload contract.
 - [v0.6.2 Performance Hardening](V0.6.2_PERFORMANCE_HARDENING_PLAN.md):
@@ -48,10 +48,10 @@ instructions.
 
 - [macOS Packaging](mac-packaging.md): current Full/Lite packaging commands and
   packaged Gateway checks.
-- [v0.6.4 Release Notes](RELEASE_NOTES_V0.6.4.md): current stable GitHub
-  Release for macOS Apple Silicon and Windows x64.
-- [v0.6.3 Release Notes](RELEASE_NOTES_V0.6.3.md): previous GitHub Release for
-  unsigned macOS arm64 Lite.
+- [v0.6.5 Release Notes](RELEASE_NOTES_V0.6.5.md): current signed and notarized
+  macOS Apple Silicon Lite GitHub Release.
+- [v0.6.4 Release Notes](RELEASE_NOTES_V0.6.4.md): previous GitHub Release for
+  macOS Apple Silicon and Windows x64 Full/Lite.
 - [v0.5.8 Release Notes](RELEASE_NOTES_V0.5.8.md): previous cross-platform
   public release.
 

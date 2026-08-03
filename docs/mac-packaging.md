@@ -2,13 +2,13 @@
 
 ## Current Release Boundary
 
-The current development line is `0.6.5`; the current public stable release is
-`0.6.4`. The `v0.6.4` release contains signed and Apple-notarized Full/Lite macOS arm64 DMGs,
-unsigned Full/Lite Windows x64 installers, and checksum files. Treat
+The current development and public stable release is `0.6.5`. The `v0.6.5`
+release contains a Developer ID signed and Apple-notarized macOS arm64 Lite
+DMG plus its checksum file. Treat
 [Version Branching](VERSION_BRANCHING.md) and
-[v0.6.4 Release Notes](RELEASE_NOTES_V0.6.4.md) as the current release truth.
+[v0.6.5 Release Notes](RELEASE_NOTES_V0.6.5.md) as the current release truth.
 Changes on a post-release maintenance branch are not part of the immutable
-`v0.6.4` tag unless they are separately versioned and released.
+`v0.6.5` tag unless they are separately versioned and released.
 
 ## Historical Pre-Release Checkpoint
 
@@ -38,6 +38,16 @@ Create a Lite `.dmg`:
 npm run dist:mac:lite
 ```
 
+Create the explicit Developer ID signed, notarized, and stapled release DMG:
+
+```bash
+npm run release:mac:lite
+```
+
+The release command requires the `Developer ID Application` identity and the
+`claracore-notary` notarytool keychain profile. Local `pack`/`dist` commands do
+not submit test packages to Apple.
+
 Current App output and future DMG output:
 
 ```text
@@ -45,9 +55,8 @@ dist-lite/mac-arm64/ClaraCore Desktop.app
 dist-lite/ClaraCore-Desktop-0.6.5-lite-arm64.dmg
 ```
 
-Historical signed and notarized `0.6.4` release artifacts are recorded in the
-release notes. Post-release maintenance packages built from another branch are
-local test artifacts unless they are separately versioned and released.
+The signed and notarized `0.6.5` Lite artifact is recorded in the release
+notes. Packages built with the local `dist` command remain test artifacts.
 
 Run `npm run test:package:lite` after creating the unpacked Lite App. The check
 validates the Lite package independently; when a matching unpacked Full App is
@@ -60,10 +69,12 @@ available in GitHub Release `v0.5.8`.
 ## Manual Release Update Channel
 
 The manual update check reads the latest public stable GitHub Release, then
-opens or copies the generic Release page so the user chooses Full/Lite and the
-correct platform. Build publishable assets with `npm run dist:mac`,
-`npm run dist:mac:lite`, `npm run dist:win`, and `npm run dist:win:lite`, then
-upload them to the same `v<version>` GitHub Release. Use these names:
+opens or copies the generic Release page so the user chooses an available
+flavor and platform. Local matrix builds use `npm run dist:mac`, `npm run
+dist:mac:lite`, `npm run dist:win`, and `npm run dist:win:lite`. A public signed
+macOS Lite asset must use `npm run release:mac:lite`; do not upload the ad-hoc
+local `dist:mac:lite` artifact. Use these names when a release includes the
+corresponding platform/flavor:
 
 ```text
 ClaraCore-Desktop-<version>-arm64.dmg
@@ -135,9 +146,9 @@ node core/gateway/mcp-server.js
 ## Validation Status
 
 Current released-artifact evidence is recorded in
-[v0.6.4 Release Notes](RELEASE_NOTES_V0.6.4.md).
+[v0.6.5 Release Notes](RELEASE_NOTES_V0.6.5.md).
 
-### Local `0.6.5` Lite test checkpoint
+### `0.6.5` Lite release checkpoint
 
 Validated locally for installation testing:
 
@@ -151,8 +162,9 @@ Validated locally for installation testing:
   version `0.6.5`;
 - the mounted packaged Gateway smoke passes with the Memory Controller off by
   default, and the mounted Lite settings UI covers fresh and migrated data;
-- the artifact is ad-hoc signed only. It has not been Developer ID signed,
-  notarized, installed, uploaded, tagged, or published as a public release.
+- the final release artifact is Developer ID signed, Apple-notarized, stapled,
+  Gatekeeper accepted, checksum-verified after upload, and published as
+  `v0.6.5`.
 
 ### Historical unpacked `0.6.4` Lite checkpoint
 
