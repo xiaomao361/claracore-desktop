@@ -791,7 +791,19 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
     if (requestUrl.pathname === "/gateway/context") {
       const agentId = requestUrl.searchParams.get("agentId") || process.env.CLARACORE_AGENT_ID || "http-agent";
       const detail = requestUrl.searchParams.get("detail") || "full";
-      sendJson(response, 200, await getProductGatewayContext(app, { agentId, detail }));
+      const lineId = requestUrl.searchParams.get("lineId") || undefined;
+      try {
+        sendJson(response, 200, await getProductGatewayContext(app, { agentId, detail, lineId }));
+      } catch (error) {
+        if (error?.code !== "SHARED_LINE_ID_REQUIRED") throw error;
+        sendJson(response, 409, {
+          error: "shared_line_id_required",
+          code: error.code,
+          message: "Choose one candidate and retry with its lineId query parameter.",
+          agentId: error.agentId || agentId,
+          candidates: Array.isArray(error.candidates) ? error.candidates : []
+        });
+      }
       return;
     }
     sendJson(response, 404, { error: "not_found" });

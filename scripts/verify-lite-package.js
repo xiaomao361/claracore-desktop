@@ -35,17 +35,21 @@ function packagedMetadata(appPath) {
   return JSON.parse(content.toString("utf8"));
 }
 
-assert(fs.existsSync(fullApp), `Full package is missing: ${fullApp}`);
 assert(fs.existsSync(liteApp), `Lite package is missing: ${liteApp}`);
 
-const fullEntries = asarEntries(fullApp).map((entry) => entry.replaceAll("\\", "/"));
+const hasFullPackage = fs.existsSync(fullApp);
+const fullEntries = hasFullPackage
+  ? asarEntries(fullApp).map((entry) => entry.replaceAll("\\", "/"))
+  : [];
 const liteEntries = asarEntries(liteApp).map((entry) => entry.replaceAll("\\", "/"));
-const fullResources = resourcesPath(fullApp);
+const fullResources = hasFullPackage ? resourcesPath(fullApp) : null;
 const liteResources = resourcesPath(liteApp);
 const forbidden = ["@xenova", "onnxruntime", "/sharp/", "/node_modules/"];
 
-assert(fullEntries.some((entry) => entry.includes("/node_modules/@xenova/transformers")), "Full package lost the built-in embedding runtime.");
-assert(fs.existsSync(path.join(fullResources, "models")), "Full package lost the built-in model resources.");
+if (hasFullPackage) {
+  assert(fullEntries.some((entry) => entry.includes("/node_modules/@xenova/transformers")), "Full package lost the built-in embedding runtime.");
+  assert(fs.existsSync(path.join(fullResources, "models")), "Full package lost the built-in model resources.");
+}
 assert(!fs.existsSync(path.join(liteResources, "models")), "Lite package still contains built-in model resources.");
 assert(!fs.existsSync(path.join(liteResources, "app.asar.unpacked")), "Lite package still contains unpacked production dependencies.");
 for (const marker of forbidden) {
@@ -55,20 +59,23 @@ for (const marker of forbidden) {
 const metadata = packagedMetadata(liteApp);
 assert.equal(metadata.buildFlavor, "lite");
 
-const fullKb = installedKilobytes(fullApp);
+const fullKb = hasFullPackage ? installedKilobytes(fullApp) : null;
 const liteKb = installedKilobytes(liteApp);
-const savedKb = fullKb - liteKb;
+const savedKb = hasFullPackage ? fullKb - liteKb : null;
 const maxLiteMiB = windows ? 420 : 330;
 const minSavedMiB = windows ? 220 : 180;
 assert(liteKb <= maxLiteMiB * 1024, `Lite app exceeds ${maxLiteMiB} MiB: ${(liteKb / 1024).toFixed(1)} MiB`);
-assert(savedKb >= minSavedMiB * 1024, `Lite app saves less than ${minSavedMiB} MiB: ${(savedKb / 1024).toFixed(1)} MiB`);
+if (hasFullPackage) {
+  assert(savedKb >= minSavedMiB * 1024, `Lite app saves less than ${minSavedMiB} MiB: ${(savedKb / 1024).toFixed(1)} MiB`);
+}
 
 console.log(JSON.stringify({
   ok: true,
   platform: platformArg,
-  fullMiB: Number((fullKb / 1024).toFixed(1)),
+  fullComparison: hasFullPackage,
+  fullMiB: hasFullPackage ? Number((fullKb / 1024).toFixed(1)) : null,
   liteMiB: Number((liteKb / 1024).toFixed(1)),
-  savedMiB: Number((savedKb / 1024).toFixed(1)),
+  savedMiB: hasFullPackage ? Number((savedKb / 1024).toFixed(1)) : null,
   buildFlavor: metadata.buildFlavor,
   liteAsarEntries: liteEntries.length
 }, null, 2));

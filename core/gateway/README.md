@@ -72,6 +72,12 @@ Do not expose this endpoint beyond localhost without a separate security review.
 Users can change the port, save a custom token, generate a random token, and
 copy a complete agent config from Settings > General > Agent Gateway.
 
+The authenticated `GET /gateway/context` compatibility helper accepts
+`detail`, `agentId`, and an optional `lineId`. When an Agent owns multiple
+active Shared Lines and no line is selected, it returns HTTP `409` with
+`SHARED_LINE_ID_REQUIRED` and bounded candidates. Retry with the chosen
+candidate's `lineId`; the helper never guesses which line to read.
+
 Tool backpressure applies both a global active-call cap and a per-Agent cap, so
 one Agent cannot occupy every active slot. The bounded shared wait queue and
 timeout remain global; `/health` stays outside tool-call backpressure.

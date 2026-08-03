@@ -98,7 +98,17 @@ async function main() {
     }),
     getProductGatewayContext: async (_app, input) => {
       httpContextInputs.push(input);
-      return { ok: true, detail: input.detail };
+      if (input.agentId === "ambiguous" && !input.lineId) {
+        const error = new Error("An explicit Shared Line is required.");
+        error.code = "SHARED_LINE_ID_REQUIRED";
+        error.agentId = input.agentId;
+        error.candidates = [
+          { lineId: "line_a", title: "Alpha", summary: "First candidate", updatedAt: "2026-08-01T00:00:00.000Z" },
+          { lineId: "line_b", title: "Beta", summary: "Second candidate", updatedAt: "2026-08-02T00:00:00.000Z" }
+        ];
+        throw error;
+      }
+      return { ok: true, detail: input.detail, lineId: input.lineId || null };
     },
     port
   });
@@ -174,6 +184,27 @@ async function main() {
       ["brief", "full"],
       "Legacy HTTP context must support brief while preserving the omitted-detail full default."
     );
+    const ambiguousContextResponse = await fetch(
+      `http://127.0.0.1:${port}/gateway/context?detail=brief&agentId=ambiguous`,
+      { headers: { Authorization: headers.Authorization } }
+    );
+    assert.strictEqual(ambiguousContextResponse.status, 409, "Ambiguous Shared Line selection should be recoverable");
+    const ambiguousContext = await ambiguousContextResponse.json();
+    assert.strictEqual(ambiguousContext.error, "shared_line_id_required");
+    assert.strictEqual(ambiguousContext.code, "SHARED_LINE_ID_REQUIRED");
+    assert.strictEqual(ambiguousContext.agentId, "ambiguous");
+    assert.deepStrictEqual(
+      ambiguousContext.candidates.map((candidate) => candidate.lineId),
+      ["line_a", "line_b"],
+      "The recovery response should preserve selectable candidates"
+    );
+    const selectedContextResponse = await fetch(
+      `http://127.0.0.1:${port}/gateway/context?detail=brief&agentId=ambiguous&lineId=line_b`,
+      { headers: { Authorization: headers.Authorization } }
+    );
+    assert.strictEqual(selectedContextResponse.status, 200);
+    assert.strictEqual((await selectedContextResponse.json()).lineId, "line_b");
+    assert.strictEqual(httpContextInputs.at(-1).lineId, "line_b", "The selected lineId must reach the context provider");
     const initialized = await postMcp({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} });
     assert.strictEqual(initialized.result.serverInfo.name, "claracore-desktop");
     assert(initialized.result.instructions.includes("Search Memoria and Shared Line"), "initialize should describe selective context reads");

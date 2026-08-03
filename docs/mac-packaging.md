@@ -45,8 +45,14 @@ dist-lite/mac-arm64/ClaraCore Desktop.app
 dist-lite/ClaraCore-Desktop-0.6.4-lite-arm64.dmg
 ```
 
-The `0.6.4` App has been produced and validated locally. The `0.6.4` DMG has
-not been built.
+Historical signed and notarized `0.6.4` release artifacts are recorded in the
+release notes. Post-release maintenance packages built from another branch are
+local test artifacts unless they are separately versioned and released.
+
+Run `npm run test:package:lite` after creating the unpacked Lite App. The check
+validates the Lite package independently; when a matching unpacked Full App is
+also present, it additionally verifies the Full runtime boundary and the
+Full-to-Lite size saving.
 
 The previous `0.5.8` Full/Lite arm64 DMGs and Windows x64 NSIS installers remain
 available in GitHub Release `v0.5.8`.
