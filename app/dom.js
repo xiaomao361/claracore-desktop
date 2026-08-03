@@ -56,6 +56,7 @@ window.ClaraCoreDom = {
   homeAgentActivityTabs: Array.from(document.querySelectorAll("[data-agent-activity-period]")),
   homeAgentViewList: document.querySelector("#homeAgentViewList"),
   homeTraceList: document.querySelector("#homeTraceList"),
+  homePresence: document.querySelector(".home-presence"),
   homePresenceTitle: document.querySelector("#homePresenceTitle"),
   homePresenceDetail: document.querySelector("#homePresenceDetail"),
   homePresenceEmptyAction: document.querySelector("#homePresenceEmptyAction"),

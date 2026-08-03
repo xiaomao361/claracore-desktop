@@ -28,27 +28,6 @@ async function main() {
     "这里展示的是当前共同位置的预览，不应该随着正文增长而不断向下扩张，挤压地平线、智能体存在和内在活动区域。",
     "完整内容继续保留在共同线页面，首页只承担快速恢复上下文的职责。"
   ].join(" ");
-  await runtime.saveProductSharedLine(appShim, {
-    lineTitle: "Home presence direction",
-    summary: longSharedLineSummary,
-    interpretationStatus: "confirmed"
-  });
-  await database.submitInnerLifeInbox({
-    agentId: "codex",
-    source: "home-presence-smoke",
-    body: "A long emerging thought remains readable beside the bounded Shared Line preview without either column covering the horizon, the presence markers, or the edge of the Home surface."
-  });
-  for (const agentId of ["codex", "clara", "hermes", "fourth-agent", "fifth-agent"]) {
-    await database.recordGatewayTrace({
-      agentId,
-      toolName: "gateway_context",
-      status: "ok",
-      durationMs: 8,
-      request: {},
-      responseSummary: "Observed activity for Home presence smoke."
-    });
-  }
-
   let app;
   try {
     app = await electron.launch({
@@ -68,6 +47,122 @@ async function main() {
       if (message.type() === "error") rendererErrors.push(message.text());
     });
     page.on("pageerror", (error) => rendererErrors.push(error.message));
+    await page.waitForFunction(() => document.querySelector(".home-presence")?.dataset.state === "empty", null, { timeout: 15000 });
+    const empty = await page.evaluate(() => {
+      const presence = document.querySelector(".home-presence");
+      const action = document.querySelector("#homePresenceEmptyAction");
+      return {
+        state: presence.dataset.state,
+        busy: presence.getAttribute("aria-busy"),
+        title: document.querySelector("#homePresenceTitle")?.textContent || "",
+        detail: document.querySelector("#homePresenceDetail")?.textContent || "",
+        horizon: document.querySelector("#homeHorizonLabel")?.textContent || "",
+        actionVisible: !action.hidden,
+        actionTarget: action.dataset.viewTarget || "",
+        issueHidden: document.querySelector("#homeActionableIssue").hidden,
+        agentCount: document.querySelectorAll("#homePresenceAgents .home-presence-agent").length,
+        horizontalOverflow: presence.scrollWidth > presence.clientWidth
+      };
+    });
+    if (
+      empty.state !== "empty" ||
+      empty.busy !== "false" ||
+      !empty.title.includes("共同位置") ||
+      empty.detail.includes("共同线仍然保持") ||
+      empty.horizon !== "共同线" ||
+      !empty.actionVisible ||
+      empty.actionTarget !== "agent-setup" ||
+      !empty.issueHidden ||
+      empty.agentCount !== 0 ||
+      empty.horizontalOverflow
+    ) {
+      throw new Error(`Empty Home presence contract failed: ${JSON.stringify(empty)}`);
+    }
+    if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
+      await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "empty") });
+    }
+
+    await page.evaluate(() => window.ClaraCoreTestHooks.setHomeState("loading"));
+    const loading = await page.evaluate(() => {
+      const presence = document.querySelector(".home-presence");
+      return {
+        state: presence.dataset.state,
+        busy: presence.getAttribute("aria-busy"),
+        detail: document.querySelector("#homePresenceDetail")?.textContent || "",
+        actionHidden: document.querySelector("#homePresenceEmptyAction").hidden,
+        sharedLineHidden: document.querySelector("#homeSharedLineSection").hidden,
+        issueHidden: document.querySelector("#homeActionableIssue").hidden
+      };
+    });
+    if (
+      loading.state !== "loading" ||
+      loading.busy !== "true" ||
+      !loading.detail ||
+      !loading.actionHidden ||
+      !loading.sharedLineHidden ||
+      !loading.issueHidden
+    ) {
+      throw new Error(`Loading Home presence contract failed: ${JSON.stringify(loading)}`);
+    }
+    if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
+      await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "loading") });
+    }
+
+    await page.evaluate(() => window.ClaraCoreTestHooks.setHomeState("error"));
+    const errorState = await page.evaluate(() => {
+      const presence = document.querySelector(".home-presence");
+      const action = document.querySelector("#homePresenceEmptyAction");
+      const issue = document.querySelector("#homeActionableIssue");
+      return {
+        state: presence.dataset.state,
+        busy: presence.getAttribute("aria-busy"),
+        actionVisible: !action.hidden,
+        action: action.dataset.homeAction || "",
+        actionTarget: action.dataset.viewTarget || "",
+        issueRole: issue.getAttribute("role"),
+        issueVisible: !issue.hidden,
+        horizontalOverflow: presence.scrollWidth > presence.clientWidth
+      };
+    });
+    if (
+      errorState.state !== "error" ||
+      errorState.busy !== "false" ||
+      !errorState.actionVisible ||
+      errorState.action !== "retry" ||
+      errorState.actionTarget ||
+      errorState.issueRole !== "alert" ||
+      !errorState.issueVisible ||
+      errorState.horizontalOverflow
+    ) {
+      throw new Error(`Error Home presence contract failed: ${JSON.stringify(errorState)}`);
+    }
+    if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
+      await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "error") });
+    }
+    await page.click("#homePresenceEmptyAction");
+    await page.waitForFunction(() => document.querySelector(".home-presence")?.dataset.state === "empty");
+
+    await runtime.saveProductSharedLine(appShim, {
+      lineTitle: "Home presence direction",
+      summary: longSharedLineSummary,
+      interpretationStatus: "confirmed"
+    });
+    await database.submitInnerLifeInbox({
+      agentId: "codex",
+      source: "home-presence-smoke",
+      body: "A long emerging thought remains readable beside the bounded Shared Line preview without either column covering the horizon, the presence markers, or the edge of the Home surface."
+    });
+    for (const agentId of ["codex", "clara", "hermes", "fourth-agent", "fifth-agent"]) {
+      await database.recordGatewayTrace({
+        agentId,
+        toolName: "gateway_context",
+        status: "ok",
+        durationMs: 8,
+        request: {},
+        responseSummary: "Observed activity for Home presence smoke."
+      });
+    }
+    await page.evaluate(() => window.ClaraCoreTestHooks.refresh());
     await page.waitForFunction(
       () => document.querySelectorAll("#homePresenceAgents .home-presence-agent").length === 3 && window.ClaraCoreTestHooks?.homeVision,
       null,
@@ -244,9 +339,29 @@ async function main() {
       await page.waitForTimeout(200);
       await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "dark-narrow") });
     }
+    await page.evaluate(() => window.ClaraCoreTestHooks.setHomeState("error"));
+    const narrowError = await page.evaluate(() => {
+      const presence = document.querySelector(".home-presence");
+      const title = document.querySelector("#homePresenceTitle").getBoundingClientRect();
+      const issue = document.querySelector("#homeActionableIssue").getBoundingClientRect();
+      return {
+        issueBelowTitle: issue.top >= title.bottom,
+        issueInside: issue.right <= presence.getBoundingClientRect().right,
+        horizontalOverflow: presence.scrollWidth > presence.clientWidth,
+        retryVisible: !document.querySelector("#homePresenceEmptyAction").hidden
+      };
+    });
+    if (!narrowError.issueBelowTitle || !narrowError.issueInside || narrowError.horizontalOverflow || !narrowError.retryVisible) {
+      throw new Error(`Narrow error Home presence layout failed: ${JSON.stringify(narrowError)}`);
+    }
+    if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
+      await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "error-narrow") });
+    }
+    await page.click("#homePresenceEmptyAction");
+    await page.waitForFunction(() => ["ready", "attention"].includes(document.querySelector(".home-presence")?.dataset.state));
     if (rendererErrors.length) throw new Error(`Renderer errors: ${rendererErrors.join(" | ")}`);
 
-    console.log(JSON.stringify({ ok: true, initial, away, returned, reduced, arrivalSettled, narrow }, null, 2));
+    console.log(JSON.stringify({ ok: true, empty, loading, errorState, initial, away, returned, reduced, arrivalSettled, narrow, narrowError }, null, 2));
   } finally {
     if (app) await app.close();
     await Promise.resolve(database.close?.()).catch(() => {});

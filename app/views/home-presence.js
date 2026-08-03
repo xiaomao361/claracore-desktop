@@ -114,6 +114,7 @@ function createClaraCoreHomePresence({ t, actionableGatewayErrors }) {
     const sharedLine = currentSharedLine(snapshot);
     const issue = actionableIssue(snapshot);
     const dominant = agents[0] || null;
+    const hasSharedLine = Boolean(sharedLine.summary);
     const coreState = issue ? "error" : agents.some((agent) => agent.presence === "active") ? "active" : agents.length ? "recent" : "quiet";
     const title = dominant
       ? dominant.presence === "active"
@@ -121,12 +122,16 @@ function createClaraCoreHomePresence({ t, actionableGatewayErrors }) {
         : dominant.presence === "recent"
           ? t("home.presence.agentJustHere", { agent: dominant.label })
           : t("home.presence.agentRecentlyHere", { agent: dominant.label })
-      : t("home.presence.noRecentAgents");
+      : hasSharedLine
+        ? t("home.presence.noRecentAgents")
+        : t("home.presence.emptyTitle");
     const detail = dominant?.toolName
       ? t("home.presence.observedThrough", { tool: dominant.toolName })
       : agents.length
         ? t("home.presence.observedActivity")
-        : t("home.presence.quietDetail");
+        : hasSharedLine
+          ? t("home.presence.quietDetail")
+          : t("home.presence.emptyDetail");
 
     return {
       core: {
@@ -139,6 +144,7 @@ function createClaraCoreHomePresence({ t, actionableGatewayErrors }) {
       title,
       detail,
       agents,
+      empty: !agents.length && !hasSharedLine,
       actionableIssue: issue
     };
   }

@@ -4,9 +4,14 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- Current development version: `0.6.4`.
+- Current development version: `0.6.5`.
 - Current public release: `0.6.4`.
 - Tag `v0.6.4` is the current stable GitHub Release.
+
+`0.6.5` is the current local test checkpoint for the post-`0.6.4`
+architecture and Home-state work. A local `0.6.5` package is not a public
+release until it is separately closed, tagged, signed/notarized where
+required, and published.
 
 `0.6.4` is the current stable release. It provides signed and Apple-notarized
 macOS Apple Silicon Full/Lite DMGs and unsigned Windows x64 Full/Lite NSIS

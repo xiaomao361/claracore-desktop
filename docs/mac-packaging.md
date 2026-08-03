@@ -2,8 +2,8 @@
 
 ## Current Release Boundary
 
-The current development and public stable line is `0.6.4`. The `v0.6.4`
-release contains signed and Apple-notarized Full/Lite macOS arm64 DMGs,
+The current development line is `0.6.5`; the current public stable release is
+`0.6.4`. The `v0.6.4` release contains signed and Apple-notarized Full/Lite macOS arm64 DMGs,
 unsigned Full/Lite Windows x64 installers, and checksum files. Treat
 [Version Branching](VERSION_BRANCHING.md) and
 [v0.6.4 Release Notes](RELEASE_NOTES_V0.6.4.md) as the current release truth.
@@ -42,7 +42,7 @@ Current App output and future DMG output:
 
 ```text
 dist-lite/mac-arm64/ClaraCore Desktop.app
-dist-lite/ClaraCore-Desktop-0.6.4-lite-arm64.dmg
+dist-lite/ClaraCore-Desktop-0.6.5-lite-arm64.dmg
 ```
 
 Historical signed and notarized `0.6.4` release artifacts are recorded in the
@@ -136,6 +136,23 @@ node core/gateway/mcp-server.js
 
 Current released-artifact evidence is recorded in
 [v0.6.4 Release Notes](RELEASE_NOTES_V0.6.4.md).
+
+### Local `0.6.5` Lite test checkpoint
+
+Validated locally for installation testing:
+
+- source version, lockfile version, bundle version, and packaged Gateway version
+  are `0.6.5`;
+- `npm run check`, `npm run test:home`, `npm run test:lite`, and `npm run
+  test:update` pass;
+- the Lite package boundary check passes at 293.3 MiB and confirms the package
+  does not contain the Full built-in embedding dependency closure;
+- the arm64 DMG passes `hdiutil verify`, and the mounted application reports
+  version `0.6.5`;
+- the mounted packaged Gateway smoke passes with the Memory Controller off by
+  default, and the mounted Lite settings UI covers fresh and migrated data;
+- the artifact is ad-hoc signed only. It has not been Developer ID signed,
+  notarized, installed, uploaded, tagged, or published as a public release.
 
 ### Historical unpacked `0.6.4` Lite checkpoint
 

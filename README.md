@@ -64,7 +64,7 @@ Read these before adding new features:
 
 ## Current Status
 
-The current development version is `0.6.4`; the current public stable version
+The current development version is `0.6.5`; the current public stable version
 is `0.6.4`. The development line is a working desktop shell with a
 product-owned local data store, Desktop-native Memoria, Shared Line, InnerLife,
 a Desktop-owned Gateway, with model configuration merged into the Settings

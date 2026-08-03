@@ -36,6 +36,7 @@ const {
   homeCognitiveSystems,
   homeAgentViewList,
   homeTraceList,
+  homePresenceEmptyAction,
   viewTitle,
   viewSubtitle,
   resourceMonitor,
@@ -918,6 +919,12 @@ document.addEventListener("click", (event) => {
   }
 });
 
+homePresenceEmptyAction?.addEventListener("click", () => {
+  if (homePresenceEmptyAction.dataset.homeAction !== "retry") return;
+  homeView.renderLoading();
+  refresh().catch(handleHomeRefreshError);
+});
+
 async function runDemoDataAction(button, action, busyKey) {
   if (!button) return;
   button.disabled = true;
@@ -1204,6 +1211,10 @@ openDesignPlan?.addEventListener("click", () => {
 
 window.ClaraCoreTestHooks = {
   refresh: () => refresh(),
+  setHomeState: (state) => {
+    if (state === "loading") homeView.renderLoading();
+    if (state === "error") homeView.renderLoadError();
+  },
   handleRuntimeChanged: (payload = {}) => scheduleRuntimeRefresh(Array.isArray(payload.scopes) ? payload.scopes : ["snapshot"]),
   homeVision: () => homeView.getVisionDebugState(),
   runtimeRefreshState: () => ({
@@ -1222,10 +1233,15 @@ window.ClaraCoreTestHooks = {
   })
 };
 
-refresh().catch((error) => {
+function handleHomeRefreshError(error) {
+  console.error(error);
+  homeView.renderLoadError();
   if (runtimeMode) runtimeMode.textContent = t("runtime.unavailable");
   if (rootPath) rootPath.textContent = t("runtime.unableSnapshot");
-});
+}
+
+homeView.renderLoading();
+refresh().catch(handleHomeRefreshError);
 
 resourceRefreshLoop.start();
 window.addEventListener("beforeunload", () => resourceRefreshLoop.stop(), { once: true });

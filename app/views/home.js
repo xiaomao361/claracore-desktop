@@ -25,6 +25,7 @@ function createClaraCoreHomeView(context) {
     homeAgentActivityTabs,
     homeAgentViewList,
     homeTraceList,
+    homePresence,
     homePresenceTitle,
     homePresenceDetail,
     homePresenceEmptyAction,
@@ -71,6 +72,71 @@ function createClaraCoreHomeView(context) {
     fallback: homeVisionFallback
   });
   let activeAgentActivityPeriod = "7d";
+
+  function emptyVisionModel(state = "quiet") {
+    return {
+      core: {
+        state,
+        dominantColor: state === "error" ? "#c85d63" : "#7f95ad",
+        currentLineTitle: "",
+        currentSummary: "",
+        emergingThought: ""
+      },
+      agents: []
+    };
+  }
+
+  function setHomeAction({ hidden = true, labelKey = "", viewTarget = "", action = "" } = {}) {
+    if (!homePresenceEmptyAction) return;
+    homePresenceEmptyAction.hidden = hidden;
+    homePresenceEmptyAction.disabled = false;
+    if (labelKey) {
+      homePresenceEmptyAction.dataset.i18n = labelKey;
+      homePresenceEmptyAction.textContent = t(labelKey);
+    } else {
+      delete homePresenceEmptyAction.dataset.i18n;
+    }
+    if (viewTarget) homePresenceEmptyAction.dataset.viewTarget = viewTarget;
+    else delete homePresenceEmptyAction.dataset.viewTarget;
+    if (action) homePresenceEmptyAction.dataset.homeAction = action;
+    else delete homePresenceEmptyAction.dataset.homeAction;
+  }
+
+  function clearHomeDetailSections() {
+    homeSharedLineSection.hidden = true;
+    homeEmergingSection.hidden = true;
+    homeActionableIssue.hidden = true;
+    homeActionableIssue.textContent = "";
+    homeActionableIssue.className = "home-presence-issue";
+    homeActionableIssue.removeAttribute("role");
+    homePresenceAgents.innerHTML = "";
+  }
+
+  function renderLoading() {
+    homePresence.dataset.state = "loading";
+    homePresence.setAttribute("aria-busy", "true");
+    homePresenceTitle.textContent = t("home.presence.loading");
+    homePresenceDetail.textContent = t("home.presence.loadingDetail");
+    homeHorizonLabel.textContent = t("home.presence.horizon");
+    setHomeAction();
+    clearHomeDetailSections();
+    homeVision.setModel(emptyVisionModel());
+  }
+
+  function renderLoadError() {
+    homePresence.dataset.state = "error";
+    homePresence.setAttribute("aria-busy", "false");
+    homePresenceTitle.textContent = t("home.presence.loadErrorTitle");
+    homePresenceDetail.textContent = t("home.presence.loadErrorDetail");
+    homeHorizonLabel.textContent = t("home.presence.horizon");
+    setHomeAction({ hidden: false, labelKey: "home.presence.retry", action: "retry" });
+    clearHomeDetailSections();
+    homeActionableIssue.hidden = false;
+    homeActionableIssue.textContent = t("home.presence.loadErrorNotice");
+    homeActionableIssue.className = "home-presence-issue error";
+    homeActionableIssue.setAttribute("role", "alert");
+    homeVision.setModel(emptyVisionModel("error"));
+  }
 
   function serviceBadge(module) {
     if (module.state === "planned") {
@@ -596,10 +662,16 @@ function createClaraCoreHomeView(context) {
     const snapshot = getSnapshot();
     if (!snapshot) return;
     const model = presenceBuilder.build(snapshot);
+    homePresence.dataset.state = model.empty ? "empty" : model.actionableIssue ? "attention" : "ready";
+    homePresence.setAttribute("aria-busy", "false");
     homePresenceTitle.textContent = model.title;
     homePresenceDetail.textContent = model.detail;
-    homePresenceEmptyAction.hidden = model.agents.length > 0;
-    homeHorizonLabel.textContent = model.core.currentLineTitle
+    setHomeAction({
+      hidden: model.agents.length > 0,
+      labelKey: "home.presence.openAgentAccess",
+      viewTarget: "agent-setup"
+    });
+    homeHorizonLabel.textContent = model.core.currentSummary && model.core.currentLineTitle
       ? `${t("home.presence.horizon")} · ${model.core.currentLineTitle}`
       : t("home.presence.horizon");
     homeSharedLineSection.hidden = !model.core.currentSummary;
@@ -610,6 +682,9 @@ function createClaraCoreHomeView(context) {
     homeEmergingText.textContent = model.core.emergingThought;
     homeActionableIssue.hidden = !model.actionableIssue;
     homeActionableIssue.textContent = model.actionableIssue?.text || "";
+    homeActionableIssue.className = `home-presence-issue ${model.actionableIssue?.tone || ""}`.trim();
+    if (model.actionableIssue?.tone === "error") homeActionableIssue.setAttribute("role", "alert");
+    else homeActionableIssue.removeAttribute("role");
     homePresenceAgents.innerHTML = model.agents
       .map(
         (agent) => `
@@ -898,6 +973,8 @@ function createClaraCoreHomeView(context) {
     renderModules,
     renderEvents,
     renderHomeDashboard,
+    renderLoading,
+    renderLoadError,
     renderHealth,
     renderConnections,
     actionableGatewayErrorCount,
