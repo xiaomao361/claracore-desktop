@@ -16,18 +16,28 @@ const ASK_SIGNAL_ZH = /分享|需要|使用|记得|回忆|问题|想法|你怎�
 const PREVIEW_TOKEN_FLOOR = 3;
 const ASK_SIGNAL_BOOST = 0.15;
 const MAX_RELEVANCE = 1;
+// A single shared common word is not a topic match. Two distinct overlapping
+// terms is the floor before any ratio is trusted.
+const MIN_OVERLAP_TOKENS = 2;
 
-// Relevance is coverage of the share by the prompt, not raw overlap: a long
-// prompt should not score higher just for containing more words. Dividing by
-// the share's own token count asks "how much of what this share is about did
-// the user actually bring up".
-function coverage(promptTokens, shareTokens) {
-  if (!shareTokens.size) return 0;
-  let hit = 0;
-  for (const token of new Set(promptTokens)) {
-    if (shareTokens.has(token)) hit += 1;
+// Relevance answers "of the distinctive words the user just used, how many does
+// this share also talk about" — so the denominator is the prompt, not the share.
+//
+// Dividing by the share's own token count was the first attempt and it is
+// wrong: it penalises length. A thoughtful three-sentence share has 25-40
+// tokens, so it would have needed a dozen overlapping words to clear the
+// threshold, which no ordinary question produces. Measured against real bodies
+// that scored 0.2 where a near-paraphrase scored 0.55, meaning only a share
+// that restated the prompt could ever be delivered and the feature would have
+// silently never fired.
+function promptCoverage(promptTokens, shareTokens) {
+  const distinct = new Set(promptTokens);
+  if (!distinct.size || !shareTokens.size) return { ratio: 0, overlap: 0 };
+  let overlap = 0;
+  for (const token of distinct) {
+    if (shareTokens.has(token)) overlap += 1;
   }
-  return hit / shareTokens.size;
+  return { ratio: overlap / distinct.size, overlap };
 }
 
 function createInnerLifeRelevanceScorer(ports = {}) {
@@ -51,25 +61,27 @@ function createInnerLifeRelevanceScorer(ports = {}) {
       };
     }
 
-    const shareCoverage = coverage(promptTokens, shareTokens);
+    const { ratio, overlap } = promptCoverage(promptTokens, shareTokens);
+    if (overlap < MIN_OVERLAP_TOKENS) {
+      return {
+        relevance: 0,
+        signals: { overlap, coverage: Number(ratio.toFixed(4)), askSignal: false, reason: "below_overlap_floor" }
+      };
+    }
+
     const askSignal = ASK_SIGNAL_EN.test(promptText) || ASK_SIGNAL_ZH.test(promptText);
     // An explicit ask raises an already-connected share; it never manufactures
     // relevance on its own, or "有什么想说的" would surface an unrelated share.
-    const boost = askSignal && shareCoverage > 0 ? ASK_SIGNAL_BOOST : 0;
-    const relevance = Math.min(MAX_RELEVANCE, Number((shareCoverage + boost).toFixed(4)));
-
-    let overlap = 0;
-    for (const token of new Set(promptTokens)) {
-      if (shareTokens.has(token)) overlap += 1;
-    }
+    const boost = askSignal ? ASK_SIGNAL_BOOST : 0;
+    const relevance = Math.min(MAX_RELEVANCE, Number((ratio + boost).toFixed(4)));
 
     return {
       relevance,
       signals: {
         overlap,
-        coverage: Number(shareCoverage.toFixed(4)),
+        coverage: Number(ratio.toFixed(4)),
         askSignal,
-        reason: relevance > 0 ? "token_coverage" : "no_overlap"
+        reason: "prompt_coverage"
       }
     };
   };
@@ -77,6 +89,7 @@ function createInnerLifeRelevanceScorer(ports = {}) {
 
 module.exports = {
   ASK_SIGNAL_BOOST,
+  MIN_OVERLAP_TOKENS,
   PREVIEW_TOKEN_FLOOR,
   createInnerLifeRelevanceScorer
 };

@@ -73,6 +73,50 @@ async function checkRelevanceIsReadOnly() {
   // or "有什么想说的" would surface anything at all.
   const askOnly = scorer("你有什么想说的吗", share("s3", "completely unrelated stored thought about disk alerts"));
   assert.strictEqual(askOnly.relevance, 0, "An ask signal alone must not create relevance.");
+
+  // Relevance must not collapse on length. Dividing by the share's own tokens
+  // was the first attempt: a real multi-sentence thought scored 0.2 against a
+  // 0.5 threshold, so nothing but a near-paraphrase could ever be delivered and
+  // the feature would have silently never fired.
+  const realistic = scorer(
+    "how does the shared line ambiguity refusal bound its candidates",
+    share(
+      "s4",
+      "Worth keeping: the ambiguity refusal now bounds its candidates and reports a true total count, so an agent can choose without pulling the whole catalog. It refuses rather than guessing."
+    )
+  );
+  assert.ok(
+    realistic.relevance >= 0.5,
+    `A realistic multi-sentence share scored ${realistic.relevance}; the scorer must not penalise length.`
+  );
+
+  // One shared common word is not a topic match.
+  const oneWord = scorer(
+    "how does the shared line ambiguity refusal bound its candidates",
+    share("s5", "The candidates for the election were announced yesterday in the news")
+  );
+  assert.strictEqual(oneWord.signals.reason, "prompt_coverage");
+  assert.ok(oneWord.relevance < 0.5, "A single incidental term must not clear the threshold.");
+  const belowFloor = scorer("candidates", share("s6", "candidates only here nothing else at all"));
+  assert.strictEqual(belowFloor.signals.reason, "below_overlap_floor");
+
+  // KNOWN FALSE POSITIVE, recorded rather than hidden: when the InnerLife
+  // provider is disabled, processInnerLifeOnce stores a template that embeds the
+  // operator prompt verbatim, so such a share scores high against a similar
+  // prompt. That is InnerLife content quality, not relevance scoring, and is not
+  // papered over here — fixing it inside the scorer would mean string-matching
+  // the template.
+  const templateEcho = scorer(
+    "shared line ambiguity refusal bounded candidates",
+    share(
+      "s7",
+      "Manual InnerLife review\n\nCurrent position: none\n\nOperator prompt: shared line ambiguity refusal bounded candidates"
+    )
+  );
+  assert.ok(
+    templateEcho.relevance >= 0.5,
+    "Template echo currently scores high; this assertion exists so the behaviour is visible if it changes."
+  );
 }
 
 async function checkCollectionShape() {
