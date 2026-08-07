@@ -75,6 +75,21 @@ Current packaging commands and artifact checks live in
 [macOS Packaging](mac-packaging.md). Current public-release details live in
 [v0.6.5 Release Notes](RELEASE_NOTES_V0.6.5.md).
 
+## Current Checkpoint
+
+`0.6.6` is a **source checkpoint with a verified local Lite package**, not a
+public release. It is on `main`; there is no tag, no GitHub Release, and no
+signing or notarization.
+
+- 2026-08-07: context budget work landed. See
+  [v0.6.6 Release Notes](RELEASE_NOTES_V0.6.6.md) and
+  [v0.6.6 Context Budget Plan](V0.6.6_CONTEXT_BUDGET_PLAN.md).
+- Local artifact: `dist-lite/ClaraCore-Desktop-0.6.6-lite-arm64.dmg`
+  (unsigned, arm64 Lite, sha256
+  `d3461ebf6cd2f1184d53f6bf463e5972ad34885efe0dc29e68e5939ba5a0b019`),
+  verified with `npm run test:package:lite` and the packaged Gateway smoke.
+- `v0.6.5` remains the newest signed, notarized public release.
+
 ## History
 
 Detailed checkpoint history through the start of `0.5.7` is preserved in

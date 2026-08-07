@@ -2,12 +2,21 @@
 
 ## Status
 
-`v0.6.6` is a **source checkpoint only**. The version in `package.json` and
-`package-lock.json` is `0.6.6`, and the full source suite passes. Packaging,
-installation, signing, notarization, tagging, and publication have not been
-performed and are separate acceptance layers. Passing source tests does not
-prove the installed app, the signed package, the release asset, or a real host
-integration.
+`v0.6.6` is a **source checkpoint with a verified local Lite package**, not a
+public release.
+
+- `package.json` and `package-lock.json` are `0.6.6`; the full source suite
+  passes.
+- A local unsigned macOS arm64 Lite DMG was built and verified:
+  `dist-lite/ClaraCore-Desktop-0.6.6-lite-arm64.dmg`, sha256
+  `d3461ebf6cd2f1184d53f6bf463e5972ad34885efe0dc29e68e5939ba5a0b019`,
+  293.5 MiB installed.
+- The packaged runtime was driven directly (not only the source tree) through
+  `core/tests/phase4-packaged-gateway-smoke.js`.
+
+**Not done:** signing, notarization, tagging, GitHub Release, and publication.
+Those remain separate acceptance layers and were not authorized here. `v0.6.5`
+is still the newest signed, notarized public release.
 
 ## Theme
 
@@ -94,6 +103,14 @@ decision synthesis and drops any thought body that duplicates a share body.
 Reading candidates still marks nothing: delivery and use remain separate states
 that require evidence.
 
+### Session start carries the same contracts
+
+`innerlife_session_start` bundles its own briefing and Shared Line packet, and
+it — not the individual tools — is what a host hook injects at the top of every
+session. It now returns the shaped forms, so the largest per-session payload
+actually shrinks. Against the worst-case fixtures the injected pair drops from
+68,384 to 5,876 bytes.
+
 ### One automatic winner
 
 `gateway_auto_context` arbitrates automatic per-prompt injection. Memory and
@@ -101,9 +118,11 @@ InnerLife candidates compete for one bounded delivery slot with a 600-token
 target and a 900-token hard limit, and the arbiter selects one winner or
 abstains. It records every discard reason and never claims delivery or use.
 
-**Host hooks are not updated by this release.** The Codex, Claude, and Hermes
-hooks live outside this repository and must be pointed at
-`gateway_auto_context`; until they are, live turn behavior is unchanged.
+**No host hook routes through it yet.** The first-party hooks live in
+`ClaraCore/tools/creflex`, one level above this repository. They were updated
+for the changed payload contracts (see Client Hooks below), but they still
+inject Memory and InnerLife independently. Until a hook calls
+`gateway_auto_context`, automatic turn behavior is unchanged.
 
 ## Compatibility
 
@@ -125,12 +144,36 @@ hooks live outside this repository and must be pointed at
 - Fixed: `phase4-gateway-trace-ui-smoke` did not pin the InnerLife provider, so
   it depended on live model output and was flaky.
 
+## Client Hooks
+
+Two payload contracts that host hooks depend on changed under them. The
+first-party `creflex` hooks in `ClaraCore/tools/creflex` were updated and now
+work against a desktop on either side of this release:
+
+- `innerlife_pending_shares` returns three previews and caps `limit` at ten, so
+  `shares.length` is no longer the pending total — read `totalPending`.
+- `memoria_search` is summary-first: results carry `bodyPreview` instead of
+  `body`, and `related` is omitted unless `detail: "full"` is requested.
+
+A hook that post-processes a response and injects only a short summary should
+ask for full detail: the cost stays in the hook, not in model context.
+
+Still open on the client side: the per-prompt hook injects a Memory Controller
+block and a pending-share nudge independently. Routing it through
+`gateway_auto_context` is what makes them compete for one bounded slot, and
+that work is not done.
+
 ## Verification
 
-`npm run check`, `npm run test:context-budget`, `npm run test:gateway:http`,
-`npm run test:agent-access`, `npm run test:phase2` through `test:phase5`,
-`npm run test:memory-controller`, `npm run test:smoke`, and
-`git diff --check` all pass on the source tree.
+Source tree: `npm run check`, `npm run test:context-budget`,
+`npm run test:gateway:http`, `npm run test:agent-access`, `npm run test:phase1`
+through `test:phase5`, `npm run test:memory-controller`, `npm run test:smoke`,
+and `git diff --check` all pass.
 
-Package, installed-runtime, signing, notarization, and publication verification
-are not part of this checkpoint.
+Package: `npm run test:lite`, `npm run test:package:lite`, and
+`core/tests/phase4-packaged-gateway-smoke.js` driven against the Lite build all
+pass. The packaged runtime resolves the core profile to 26 tools under 12 KB and
+reports it truthfully through `claracore_connection_test`.
+
+Signing, notarization, and publication verification are not part of this
+checkpoint.
