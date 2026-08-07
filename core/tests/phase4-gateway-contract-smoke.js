@@ -290,6 +290,11 @@ async function main() {
     // the tail is what proves the raw prompt is not persisted.
     const SECRET_TAIL = "zztailmustnotbestoredzz";
     const SECRET_PROMPT = `remember this private detail ${"x".repeat(120)} ${SECRET_TAIL}`;
+    // Chinese is the case that broke the bound: slice() counts UTF-16 units, so
+    // 80 Chinese characters were persisted as 240 bytes under a constant named
+    // BYTES.
+    const CJK_TAIL = "尾巴不许入库";
+    const CJK_PROMPT = `记住这个私密细节${"中".repeat(120)}${CJK_TAIL}`;
     const autoContext = parseTextResult(
       await client.callTool("gateway_auto_context", { prompt: SECRET_PROMPT })
     );
@@ -322,6 +327,20 @@ async function main() {
     }
     if (Buffer.byteLength(autoTrace.request.prompt.preview, "utf8") > 80) {
       throw new Error(`Trace preview exceeded its 80-byte bound: ${autoTrace.request.prompt.preview.length}`);
+    }
+
+    await client.callTool("gateway_auto_context", { prompt: CJK_PROMPT });
+    const cjkTraces = parseTextResult(await client.callTool("gateway_trace_list", { limit: 20 })).traces || [];
+    const cjkTrace = cjkTraces.find(
+      (trace) => trace.toolName === "gateway_auto_context" && trace.request?.prompt?.bytes > 300
+    );
+    if (!cjkTrace) throw new Error("The Chinese gateway_auto_context call was not traced.");
+    const cjkPreviewBytes = Buffer.byteLength(cjkTrace.request.prompt.preview, "utf8");
+    if (cjkPreviewBytes > 80) {
+      throw new Error(`Chinese trace preview is ${cjkPreviewBytes} bytes; the bound is bytes, not characters.`);
+    }
+    if (JSON.stringify(cjkTrace.request).includes(CJK_TAIL)) {
+      throw new Error("Gateway trace persisted the raw Chinese prompt.");
     }
 
     const traceList = parseTextResult(

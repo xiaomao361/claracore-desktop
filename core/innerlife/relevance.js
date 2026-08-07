@@ -14,6 +14,7 @@ const ASK_SIGNAL_EN = /\b(ask|asked|question|share|need|use|recall|remember|thou
 const ASK_SIGNAL_ZH = /分享|需要|使用|记得|回忆|问题|想法|你怎么看|有什么想说/u;
 
 const PREVIEW_TOKEN_FLOOR = 3;
+const LATIN_TOKEN_FLOOR = 3;
 const ASK_SIGNAL_BOOST = 0.15;
 const MAX_RELEVANCE = 1;
 // A single shared common word is not a topic match. Two distinct overlapping
@@ -40,11 +41,39 @@ function promptCoverage(promptTokens, shareTokens) {
   return { ratio: overlap / distinct.size, overlap };
 }
 
-function createInnerLifeRelevanceScorer(ports = {}) {
-  const tokenize = ports.meaningfulTokens;
-  if (typeof tokenize !== "function") {
-    throw new Error("InnerLife relevance scorer requires a meaningfulTokens port.");
+// Tokenisation is relevance policy, so it lives here rather than being borrowed.
+//
+// The shared `meaningfulTokens` helper splits on everything that is not a
+// latin/digit/CJK character, which means an unpunctuated Chinese sentence stays
+// a single token. Coverage would then be 1 with an overlap of 1, fall under the
+// two-token floor, and score 0 — Chinese relevance was dead in every case.
+// Chinese runs are emitted as character bigrams instead, which is the cheap
+// standard for CJK matching and makes the overlap floor meaningful again.
+const CJK = "\\u4e00-\\u9fa5\\u3040-\\u30ff\\uac00-\\ud7af";
+const CJK_RUN = new RegExp(`[${CJK}]+`, "gu");
+const LATIN_RUN = /[a-z0-9]+/gu;
+
+function relevanceTokens(text) {
+  const lowered = String(text || "").toLowerCase();
+  const tokens = [];
+  for (const match of lowered.matchAll(LATIN_RUN)) {
+    if (match[0].length >= LATIN_TOKEN_FLOOR) tokens.push(match[0]);
   }
+  for (const match of lowered.matchAll(CJK_RUN)) {
+    const run = match[0];
+    if (run.length === 1) {
+      tokens.push(run);
+      continue;
+    }
+    for (let index = 0; index < run.length - 1; index += 1) {
+      tokens.push(run.slice(index, index + 2));
+    }
+  }
+  return tokens.slice(0, 200);
+}
+
+function createInnerLifeRelevanceScorer(ports = {}) {
+  const tokenize = typeof ports.tokenize === "function" ? ports.tokenize : relevanceTokens;
 
   // Returns a 0..1 score plus the signals behind it. Signals are kept so a
   // trace can explain a decision without storing the prompt.
@@ -91,5 +120,6 @@ module.exports = {
   ASK_SIGNAL_BOOST,
   MIN_OVERLAP_TOKENS,
   PREVIEW_TOKEN_FLOOR,
-  createInnerLifeRelevanceScorer
+  createInnerLifeRelevanceScorer,
+  relevanceTokens
 };

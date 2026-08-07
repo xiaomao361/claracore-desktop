@@ -7,10 +7,10 @@ const {
   TURN_BUDGET_MS,
   createTurnContextService
 } = require("../gateway/turn-context");
-const { createInnerLifeRelevanceScorer } = require("../innerlife/relevance");
+const { createInnerLifeRelevanceScorer, relevanceTokens } = require("../innerlife/relevance");
 const { meaningfulTokens } = require("../db/helpers");
 
-const scoreShareRelevance = createInnerLifeRelevanceScorer({ meaningfulTokens });
+const scoreShareRelevance = createInnerLifeRelevanceScorer();
 
 function share(id, body, overrides = {}) {
   return { id, agent_id: "clara", status: "pending", body, ...overrides };
@@ -54,9 +54,8 @@ function checkPortContract() {
 async function checkRelevanceIsReadOnly() {
   // The scorer must be a pure function of its inputs. If it ever needs a
   // database it has become innerlife_share_check, which writes a row per check.
-  const scorer = createInnerLifeRelevanceScorer({ meaningfulTokens });
+  const scorer = createInnerLifeRelevanceScorer();
   assert.strictEqual(scorer.length, 2, "The relevance scorer takes only a prompt and a share.");
-  assert.throws(() => createInnerLifeRelevanceScorer({}), /meaningfulTokens port/);
 
   const related = scorer(
     "how does the shared line ambiguity refusal bound its candidates",
@@ -117,6 +116,84 @@ async function checkRelevanceIsReadOnly() {
     templateEcho.relevance >= 0.5,
     "Template echo currently scores high; this assertion exists so the behaviour is visible if it changes."
   );
+}
+
+function checkChineseRelevance() {
+  // The shared meaningfulTokens helper keeps an unpunctuated Chinese sentence as
+  // a single token, so coverage was 1 with an overlap of 1, fell under the
+  // two-token floor, and scored 0. Chinese relevance was dead in every case.
+  assert.strictEqual(
+    meaningfulTokens("共享线歧义拒绝").length,
+    1,
+    "Guard: the shared tokenizer still collapses Chinese, which is why relevance owns its own."
+  );
+  assert.ok(
+    relevanceTokens("共享线歧义拒绝").length > 1,
+    "Relevance tokenisation must split Chinese into matchable units."
+  );
+
+  const scorer = createInnerLifeRelevanceScorer();
+  const body = "共享线歧义拒绝现在会返回有界候选和真实总数，agent 可以自己选，不用把整个目录拉下来。";
+  for (const fragment of ["共享线歧义拒绝", "返回有界候选", "真实总数"]) {
+    const scored = scorer(fragment, share("zh", body));
+    assert.strictEqual(scored.signals.coverage, 1, `Fragment ${fragment} should be fully covered.`);
+    assert.ok(scored.relevance >= 0.5, `Fragment ${fragment} scored ${scored.relevance}; Chinese must be deliverable.`);
+  }
+  assert.strictEqual(scorer("今天中午吃什么好呢", share("zh", body)).relevance, 0, "Unrelated Chinese must score zero.");
+
+  // Mixed script must not lose the latin half.
+  const mixed = scorer("the ambiguity refusal 有界候选", share("zh2", "ambiguity refusal 返回有界候选"));
+  assert.ok(mixed.relevance > 0, "Mixed-script prompts must still match.");
+}
+
+function checkMemoryScoreIsReal() {
+  // Hardcoding Memory relevance to 1 made any injected Memory outrank every
+  // share permanently, so InnerLife could never win a turn while Memory was
+  // live.
+  const weakMemory = {
+    decisionId: "d1",
+    action: "INJECT_TOP1",
+    policyMode: "canary",
+    context: "a weakly related memory",
+    stageB: { selectedIds: ["m1"] },
+    candidates: [{ id: "m1", score: 0.4, stateRole: "current" }]
+  };
+  const strongShare = {
+    domain: "innerlife",
+    id: "s1",
+    agentId: "clara",
+    status: "pending",
+    selected: true,
+    relevance: 0.9,
+    preview: "a strongly related waiting thought"
+  };
+  const decided = arbitrateAutomaticContext({
+    agentId: "clara",
+    memoryCandidates: [{ ...weakMemory, agentId: "clara", relevance: 0.4, stateRole: "current", sensitivity: "normal", id: "m1" }],
+    shareCandidates: [strongShare]
+  });
+  assert.strictEqual(decided.selected.domain, "innerlife", "A 0.9 share must beat a 0.4 Memory.");
+}
+
+async function checkCollectorForwardsRealScore() {
+  const service = serviceWith({
+    runMemoryController: async () => ({
+      decisionId: "d1",
+      action: "INJECT_TOP1",
+      policyMode: "canary",
+      context: "injected memory body",
+      stageB: { selectedIds: ["m1"] },
+      candidates: [{ id: "m1", score: 0.42, stateRole: "current" }]
+    }),
+    listPendingShares: async () => []
+  });
+  const collected = await service.collect({}, { prompt: "anything here at all", agentId: "clara" });
+  assert.strictEqual(
+    collected.memoryCandidates[0].relevance,
+    0.42,
+    "Collection must forward the Controller's real score, not a hardcoded 1."
+  );
+  assert.strictEqual(collected.memoryCandidates[0].id, "m1", "The candidate id must be the selected Memory, not the decision id.");
 }
 
 async function checkCollectionShape() {
@@ -211,6 +288,9 @@ async function checkControllerVerdictIsNotWidened() {
 async function main() {
   checkBudgetArithmetic();
   checkPortContract();
+  checkChineseRelevance();
+  checkMemoryScoreIsReal();
+  await checkCollectorForwardsRealScore();
   await checkRelevanceIsReadOnly();
   await checkCollectionShape();
   await checkPartialFailure();

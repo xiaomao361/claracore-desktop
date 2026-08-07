@@ -43,10 +43,26 @@ function createGatewayTraceRepository(helpers) {
   // plainly whether anything was actually withheld.
   const REDACTED_PREVIEW_BYTES = 80;
 
+  function boundedUtf8Preview(text, maxBytes) {
+    if (Buffer.byteLength(text, "utf8") <= maxBytes) return text;
+    const characters = Array.from(text);
+    let low = 0;
+    let high = characters.length;
+    while (low < high) {
+      const middle = Math.ceil((low + high) / 2);
+      if (Buffer.byteLength(characters.slice(0, middle).join(""), "utf8") <= maxBytes) low = middle;
+      else high = middle - 1;
+    }
+    return characters.slice(0, low).join("");
+  }
+
   function redactedField(value) {
     const text = typeof value === "string" ? value : JSON.stringify(value ?? "");
     const collapsed = text.replace(/\s+/g, " ").trim();
-    const preview = collapsed.slice(0, REDACTED_PREVIEW_BYTES);
+    // slice() counts UTF-16 code units, so the previous version let 80 Chinese
+    // characters through as 240 bytes while the constant claimed 80. Cut on the
+    // real byte boundary without splitting a character.
+    const preview = boundedUtf8Preview(collapsed, REDACTED_PREVIEW_BYTES);
     return {
       redacted: true,
       bytes: Buffer.byteLength(text, "utf8"),

@@ -67,19 +67,23 @@ function createTurnContextService(inputPorts = {}) {
   async function collectMemory(core, { prompt, agentId }) {
     const packet = await ports.runMemoryController(core, { prompt, agentId });
     const context = typeof packet?.context === "string" ? packet.context : "";
-    // The Controller's own gates decide eligibility. This service must not
-    // widen them, so it forwards the Controller's verdict verbatim and lets the
-    // arbiter apply the same discard rules it applies to a host-supplied
-    // candidate.
+    // Forward the Controller's real similarity score. Hardcoding 1 here made
+    // any injected Memory outrank every share permanently: a 0.4 Memory beat a
+    // 0.9 share, so InnerLife could never win a turn while Memory was live.
+    // The Controller only injects above its own 0.72 vector floor, well clear
+    // of the arbiter's 0.35, so the true score never costs a valid candidate.
+    const selectedId = packet?.stageB?.selectedIds?.[0] || packet?.injectedIds?.[0] || "";
+    const selected = (packet?.candidates || []).find((candidate) => candidate.id === selectedId);
+    const score = Number(selected?.score);
     return [
       {
-        id: packet?.decisionId || packet?.injectedIds?.[0] || "",
+        id: selectedId || packet?.decisionId || "",
         agentId,
         action: packet?.action || "",
         policyMode: packet?.policyMode || "",
-        stateRole: "current",
+        stateRole: selected?.stateRole || "current",
         sensitivity: "normal",
-        relevance: context ? 1 : 0,
+        relevance: context ? (Number.isFinite(score) ? score : 0) : 0,
         context
       }
     ].filter((candidate) => candidate.id || candidate.context);

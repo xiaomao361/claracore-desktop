@@ -5,7 +5,6 @@ const { createTurnContextService } = require("../turn-context");
 const { createInnerLifeRelevanceScorer } = require("../../innerlife/relevance");
 const { runMemoryContext } = require("./memory-controller");
 const innerlife = require("../../innerlife");
-const { meaningfulTokens } = require("../../db/helpers");
 
 // One wiring of the collection ports. Memory retrieval reuses the Memory
 // Controller handler's own gate logic; InnerLife relevance uses the read-only
@@ -14,7 +13,7 @@ const turnContextService = createTurnContextService({
   runMemoryController: (core, input) => runMemoryContext({ prompt: input.prompt }, core.handlerContext),
   listPendingShares: (core, agentId, limit) =>
     innerlife.pendingShares(core, "pending", limit, agentId),
-  scoreShareRelevance: createInnerLifeRelevanceScorer({ meaningfulTokens })
+  scoreShareRelevance: createInnerLifeRelevanceScorer()
 });
 
 async function handleSystemTool(name, args, context) {
