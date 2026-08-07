@@ -20,6 +20,12 @@ instructions.
   Shared Line contracts for Codex, Claude, and Hermes.
 - [Runtime Memory Policy](RUNTIME_MEMORY_POLICY.md): bounded snapshots,
   pagination, resource ownership, and long-run behavior.
+- [v0.6.6 Context Budget Plan](V0.6.6_CONTEXT_BUDGET_PLAN.md): MCP interface
+  and everyday Agent-context reduction, progressive disclosure, byte budgets,
+  compatibility, and staged acceptance. Phases 0-5 implemented.
+- [v0.6.6 Release Notes](RELEASE_NOTES_V0.6.6.md): tool profiles, progressive
+  docs, summary-first Memory, Shared Line resume packets, selective InnerLife,
+  and the one-winner automatic-context arbiter.
 - [Memory Controller Canary Handoff](MEMORY_CONTROLLER_CANARY_HANDOFF.md):
   confirmed authenticated multi-Agent trusted-context boundary, implementation slices,
   evidence contract, and first-canary acceptance.

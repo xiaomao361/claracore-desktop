@@ -149,7 +149,7 @@ async function main() {
     if (defaults.innerlifeBackend !== "openai-compatible") throw new Error(`Unexpected InnerLife backend: ${defaults.innerlifeBackend}`);
     if (defaults.innerlifeEndpoint !== "https://api.deepseek.com") throw new Error(`Unexpected InnerLife endpoint: ${defaults.innerlifeEndpoint}`);
     if (defaults.innerlifeApiKeyReadonly) throw new Error("InnerLife API key reference should be editable.");
-    if (defaults.innerlifeLoop !== "15") throw new Error(`Unexpected InnerLife loop minutes: ${defaults.innerlifeLoop}`);
+    if (defaults.innerlifeLoop !== "60") throw new Error(`Unexpected InnerLife loop minutes: ${defaults.innerlifeLoop}`);
     if (!defaults.timeZone.includes(defaults.expectedTimeZone)) {
       throw new Error(`Settings should show the current system time zone: ${JSON.stringify(defaults)}`);
     }

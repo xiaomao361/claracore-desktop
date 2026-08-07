@@ -36,11 +36,20 @@ Authorization: Bearer <token>
 X-ClaraCore-Agent-ID: <stable-persona-id>
 X-ClaraCore-Client-ID: <host-client-id>
 X-ClaraCore-Conversation-ID: <current-host-conversation-id>
+X-ClaraCore-Tool-Profile: core|full
 ```
 
 `X-ClaraCore-Session-ID` remains a compatibility alias for the caller
 conversation. New integrations should use `X-ClaraCore-Conversation-ID` so it
 cannot be confused with an InnerLife `sessionId` tool argument.
+
+`X-ClaraCore-Tool-Profile` is new in v0.6.6 and optional. It selects which
+manifest `tools/list` returns. Omitting it, or sending an unknown value, gives
+the smaller `core` manifest; only an explicit `full` broadens the surface.
+The stdio equivalent is `CLARACORE_TOOL_PROFILE`. Every tool still executes
+when called by name under either profile — the profile changes what is
+advertised, not what is authorized. Clients that depend on the full manifest
+being advertised must select `full` during the compatibility window.
 
 For stdio fallback, set:
 
@@ -166,6 +175,33 @@ Claude operating as `clara` cannot act on Lara's shares or sessions. Hermes
 operating as `lara` cannot act on Clara's or Codex's data. The Desktop UI may
 still request an all-agent inspection snapshot.
 
+## v0.6.6 Default Payload Changes
+
+Every domain default read is smaller. Clients that parsed the old shapes must
+adapt or pass the explicit detail argument during the compatibility window:
+
+- `memoria_search` returns 3 bounded summaries with `bodyPreview`, not whole
+  bodies; pass `detail: "full"` for the previous shape.
+- `shared_line_get` and the Shared Line write acknowledgements return a resume
+  packet with top-level `summary` / `interpretationStatus` / `factsUsed`, not a
+  nested `currentPosition`. Pass `detail: "full"` for the previous shape.
+- `agentState` is absent from every line packet. Read it once per session with
+  `shared_line_agent_state`.
+- `innerlife_status` returns operational state only; pass `detail: true` for the
+  previous snapshot.
+- `innerlife_pending_shares` returns 3 previews; pass `detail: "full"` for whole
+  bodies.
+- `innerlife_briefing` returns a decision synthesis with `counts` and no `text`
+  block; pass `detail: "full"` for the previous aggregate.
+- `gateway_context(detail=brief)` embeds the resume packet and the InnerLife
+  status shape. Its `text` field is now a short orientation summary and no
+  longer repeats the structured content.
+
+Hosts that inject context per prompt should route Memory and InnerLife
+candidates through `gateway_auto_context` so at most one bounded block enters a
+turn. That hook change is client-side work and is not done by upgrading Desktop.
+
+
 ## Codex Migration Checklist
 
 1. Keep `agentId=codex` stable.
@@ -176,8 +212,10 @@ still request an all-agent inspection snapshot.
 5. Omit `CLARACORE_CONVERSATION_ID` when one long-lived stdio process spans
    multiple Codex conversations.
 6. After changing caller configuration, reconnect and run
-   `claracore_connection_test`, `gateway_docs`, and
-   `gateway_context(detail=brief)`.
+   `claracore_connection_test` then `gateway_context(detail=brief)`.
+   `gateway_docs` is now an on-demand read, not a startup step.
+7. Codex maintenance workflows that need the import/export, graph, or retention
+   tools advertised must send `X-ClaraCore-Tool-Profile: full`.
 
 ## Claude Migration Checklist
 
@@ -214,7 +252,9 @@ still request an all-agent inspection snapshot.
 9. For stdio, set `CLARACORE_CLIENT_ID=hermes`; omit the conversation variable
    when Hermes cannot refresh the MCP process per session.
 10. After upgrading Desktop, restart the Hermes MCP connection, run
-    `claracore_connection_test`, and read the live `gateway_docs` and tool list.
+    `claracore_connection_test`, and read the live `tools/list`. Read
+    `gateway_docs` only when the usage guide is actually needed; it now returns
+    a bounded summary and takes a `section` argument.
 11. Treat `memory_context` as observe-only. Call it per non-empty prompt only
     when Hermes has a verified per-prompt hook; never inject its empty context.
 12. Without that hook, keep explicit `memoria_search` for real recall requests

@@ -344,11 +344,25 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
     return { jsonrpc: "2.0", id, result };
   }
 
-  function jsonRpcError(id, code, message) {
+  function jsonRpcError(id, code, message, data) {
     return {
       jsonrpc: "2.0",
       id: id === undefined ? null : id,
-      error: { code, message }
+      error: data === undefined ? { code, message } : { code, message, data }
+    };
+  }
+
+  // Bounded structured recovery detail for a coded refusal. The message stays
+  // the primary contract because not every host surfaces JSON-RPC error data.
+  function recoveryData(error) {
+    if (!error?.code) return undefined;
+    return {
+      code: error.code,
+      ...(error.agentId ? { agentId: error.agentId } : {}),
+      ...(Array.isArray(error.candidates) ? { candidates: error.candidates } : {}),
+      ...(error.candidateCount ? { candidateCount: error.candidateCount } : {}),
+      ...(error.totalCount ? { totalCount: error.totalCount } : {}),
+      ...(error.detailRef ? { detailRef: error.detailRef } : {})
     };
   }
 
@@ -379,6 +393,14 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
         request.headers["x-claracore-session-id"] ||
         requestUrl.searchParams.get("conversationId") ||
         requestUrl.searchParams.get("sessionId") ||
+        ""
+    ).trim();
+  }
+
+  function currentHttpToolProfile(request, requestUrl) {
+    return String(
+      request.headers["x-claracore-tool-profile"] ||
+        requestUrl.searchParams.get("toolProfile") ||
         ""
     ).trim();
   }
@@ -541,7 +563,8 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
       currentCallerContext: () => caller,
       gatewayLaunchConfig,
       runtimeAppForGateway: () => app,
-      textResult
+      textResult,
+      toolProfile: () => currentHttpToolProfile(request, requestUrl)
     });
     try {
       const result = await callToolBody(name, callArgs, paths, database);
@@ -637,7 +660,8 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
           currentMcpAgentId: () => currentHttpAgentId(request, requestUrl),
           gatewayLaunchConfig,
           runtimeAppForGateway: () => app,
-          textResult
+          textResult,
+          toolProfile: () => currentHttpToolProfile(request, requestUrl)
         });
         sendJson(response, 200, jsonRpcResult(message.id, { tools: toolDefinitions() }));
         return;
@@ -675,7 +699,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
       }
       sendJson(response, 200, jsonRpcError(message.id, -32601, `Unsupported method: ${message.method}`));
     } catch (error) {
-      sendJson(response, 200, jsonRpcError(message.id, -32000, error.message || String(error)));
+      sendJson(response, 200, jsonRpcError(message.id, -32000, error.message || String(error), recoveryData(error)));
     }
   }
 
@@ -759,9 +783,22 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
         },
         firstCalls: [
           "Call claracore_connection_test after installing or changing the MCP connection.",
-          "Call gateway_docs and read First Connection and What ClaraCore Lets You Do.",
-          "Call gateway_context with detail=brief and without lineId; if it returns SHARED_LINE_ID_REQUIRED, choose a returned candidate and retry with that explicit lineId."
+          "Call gateway_context with detail=brief and without lineId; if it returns SHARED_LINE_ID_REQUIRED, choose a returned candidate and retry with that explicit lineId.",
+          "Call gateway_docs only when you need the usage guide; it returns a short summary by default and takes a section argument."
         ],
+        toolProfiles: {
+          default: "core",
+          available: ["core", "full"],
+          httpHeader: "X-ClaraCore-Tool-Profile",
+          stdioEnv: "CLARACORE_TOOL_PROFILE",
+          note: "core carries the normal connection, recall, continuation, and sharing surface. An unknown or missing value resolves to core."
+        },
+        contextStates: {
+          connected: "The MCP handshake succeeded. This proves nothing about what the host injects per prompt.",
+          contextRead: "A tool was explicitly called and returned a bounded payload.",
+          automaticInjection: "Host-side behavior. Without a ClaraCore host hook nothing is injected, however healthy this connection is.",
+          actualUse: "The content reached the response. Report use only with the evidence the tool requires."
+        },
         capabilities: {
           memory: "Remember and retrieve durable facts, preferences, decisions, and prior knowledge when they matter.",
           sharedLine: "Find where ongoing work stopped and continue without starting over.",
@@ -799,9 +836,12 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
         sendJson(response, 409, {
           error: "shared_line_id_required",
           code: error.code,
-          message: "Choose one candidate and retry with its lineId query parameter.",
+          message: "Choose one candidate and retry with its lineId query parameter. Nothing was read or written.",
           agentId: error.agentId || agentId,
-          candidates: Array.isArray(error.candidates) ? error.candidates : []
+          candidates: Array.isArray(error.candidates) ? error.candidates : [],
+          candidateCount: Number(error.candidateCount || 0),
+          totalCount: Number(error.totalCount || 0),
+          detailRef: error.detailRef || { tool: "shared_line_list", arguments: { agentId, status: "active" } }
         });
       }
       return;

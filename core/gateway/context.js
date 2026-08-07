@@ -1,10 +1,22 @@
 const continuity = require("../continuity");
 const innerlife = require("../innerlife");
 const memoria = require("../memoria");
+const { shapeSharedLinePacket } = require("../continuity/resume-detail");
+const { shapeInnerLifeStatus } = require("../innerlife/selective");
 const { resolveAgentIdentity } = require("../db/helpers");
 
-const BRIEF_MEMORY_LIMIT = 5;
-const BRIEF_TEXT_BYTES = 3072;
+// v0.6.6: brief context composes the new default domain contracts instead of
+// carrying a second, larger copy of each one. One canonical representation per
+// fact: the text field is a genuinely small summary, not a restatement.
+const BRIEF_MEMORY_LIMIT = 3;
+const BRIEF_TEXT_BYTES = 1024;
+// The aggregate is orientation, not the record. Each domain already exposes a
+// detailRef, so previews here are tighter than the per-domain default read.
+const BRIEF_MEMORY_BODY_BYTES = 480;
+const BRIEF_SHARE_PREVIEW_BYTES = 400;
+const BRIEF_LINE_BOUNDS = Object.freeze({ summary: 480, title: 160, fact: 96, factLimit: 6, handoff: 240, nextStep: 240 });
+const BRIEF_DOCTOR_ISSUE_LIMIT = 2;
+const BRIEF_DOCTOR_ISSUE_BYTES = 200;
 
 const GUIDANCE = Object.freeze({
   useSharedLine: "Treat Shared Line as the current resumable position.",
@@ -89,14 +101,14 @@ function compactSharedLine(sharedLine) {
   };
 }
 
-function compactMemory(memory) {
-  const body = truncateUtf8(memory?.body, 1200);
+function compactMemory(memory, bodyBytes = 1200) {
+  const body = truncateUtf8(memory?.body, bodyBytes);
   return {
     id: memory?.id || "",
     title: boundedText(memory?.title || memory?.body, 256),
     bodyPreview: body.text,
     bodyTruncated: body.truncated,
-    labels: (memory?.labels || []).slice(0, 6).map((label) => boundedText(label, 96)),
+    labels: (memory?.labels || []).slice(0, 6).map((label) => boundedText(label, 64)),
     status: memory?.status || "active",
     sensitivity: memory?.sensitivity || "normal",
     updatedAt: memory?.updated_at || memory?.updatedAt || null,
@@ -120,54 +132,36 @@ function belongsToAgent(item, agentId) {
   return String(item?.agentId || item?.agent_id || "") === agentId;
 }
 
+// v0.6.6: the aggregate carries InnerLife operational state plus at most one
+// candidate preview. Inbox bodies and the share catalog are explicit reads.
 function compactInnerLife(innerLife, limit, agentId = "") {
-  const boundedLimit = Math.min(limit, 3);
-  const pendingShares = (innerLife?.pendingShares || [])
-    .filter((share) => belongsToAgent(share, agentId))
-    .slice(0, boundedLimit)
-    .map((share) => ({
-      id: share.id,
-      agentId: share.agent_id || share.agentId || "",
-      status: share.status,
-      preview: boundedText(share.preview || share.body, 500),
-      createdAt: share.created_at || share.createdAt || null
-    }));
-  const pendingInbox = (innerLife?.pendingInbox || [])
-    .filter((item) => belongsToAgent(item, agentId))
-    .slice(0, boundedLimit)
-    .map((item) => ({
-      id: item.id,
-      agentId: item.agentId || item.agent_id || "",
-      source: boundedText(item.source, 96),
-      bodyPreview: boundedText(item.body, 500),
-      createdAt: item.createdAt || item.created_at || null
-    }));
-  const doctor = innerLife?.doctor || {
-    status: "ok",
-    summary: "InnerLife is not configured for this agent.",
-    issues: []
+  const scoped = {
+    ...innerLife,
+    pendingShares: (innerLife?.pendingShares || []).filter((share) => belongsToAgent(share, agentId)),
+    pendingInbox: (innerLife?.pendingInbox || []).filter((item) => belongsToAgent(item, agentId))
   };
-  const daemon = innerLife?.daemon || {};
+  const status = shapeInnerLifeStatus(scoped);
+  const pendingShares = scoped.pendingShares.slice(0, Math.max(1, Math.min(limit, 1))).map((share) => ({
+    id: share.id,
+    agentId: share.agent_id || share.agentId || "",
+    status: share.status,
+    preview: boundedText(share.preview || share.body, BRIEF_SHARE_PREVIEW_BYTES),
+    createdAt: share.created_at || share.createdAt || null
+  }));
   return {
-    counts: innerLife?.counts || {},
-    daemon: {
-      agentId: daemon.agentId || "",
-      status: daemon.status || "paused",
-      enabled: Boolean(daemon.enabled),
-      lastTickAt: daemon.lastTickAt || null,
-      nextRunAt: daemon.nextRunAt || null,
-      lastResult: boundedText(daemon.lastResult, 300),
-      lastError: boundedText(daemon.lastError, 300),
-      tickCount: Number(daemon.tickCount || 0),
-      updatedAt: daemon.updatedAt || null
-    },
+    counts: status.counts,
+    daemon: status.daemon,
     doctor: {
-      status: doctor.status || "ok",
-      summary: boundedText(doctor.summary, 600),
-      issues: (doctor.issues || []).slice(0, 3).map(compactIssue)
+      ...status.doctor,
+      summary: boundedText(status.doctor.summary, 300),
+      issues: status.doctor.issues.slice(0, BRIEF_DOCTOR_ISSUE_LIMIT).map((issue) => ({
+        level: issue.level,
+        code: issue.code,
+        message: boundedText(issue.message, BRIEF_DOCTOR_ISSUE_BYTES)
+      }))
     },
+    work: status.work,
     pendingShares,
-    pendingInbox,
     detailRef: {
       tool: "innerlife_status",
       arguments: { agentId, detail: true }
@@ -223,30 +217,16 @@ function fullText({ agentId, doctor, generatedAt, innerLife, memories, pendingIn
   ].join("\n");
 }
 
+// A genuinely small orientation summary, not a second copy of the structured
+// fields. Bodies, previews, and summaries live once, in the structured packet.
 function briefText({ agentId, doctor, innerLife, memories, sharedLine, generatedAt }) {
-  const memoryText = memories.length
-    ? memories.map((memory, index) => `${index + 1}. ${memory.title || memory.id} [${memory.id}]`).join("\n")
-    : "(none)";
-  const shareText = innerLife.pendingShares.length
-    ? innerLife.pendingShares.map((share, index) => `${index + 1}. ${share.preview} [${share.id}]`).join("\n")
-    : "(none)";
   const text = [
     "# ClaraCore Gateway Context (brief)",
-    `Agent: ${agentId}`,
-    `Generated at: ${generatedAt}`,
-    `Doctor: ${doctor.status} - ${doctor.summary}`,
-    "",
-    "## Shared Line",
-    `${sharedLine.lineTitle || sharedLine.lineId}: ${sharedLine.currentPosition.summary || "(empty)"}`,
-    `Next step: ${sharedLine.nextStep || "(none)"}`,
-    "",
-    "## Recent Memory",
-    memoryText,
-    "",
-    "## InnerLife waiting shares",
-    shareText,
-    "",
-    "Use detailRef entries or call gateway_context with detail=full only when the full record is needed."
+    `Agent: ${agentId} | Generated at: ${generatedAt}`,
+    `Doctor: ${doctor.status}`,
+    `Shared Line: ${sharedLine.lineTitle || sharedLine.lineId || "(none selected)"}`,
+    `Memory summaries: ${memories.length} | InnerLife share candidates: ${innerLife.pendingShares.length}`,
+    "Read the structured fields above. Use detailRef entries for a full record; detail=full is a compatibility payload."
   ].join("\n");
   return boundedText(text, BRIEF_TEXT_BYTES);
 }
@@ -273,15 +253,19 @@ function createGatewayContextService(ports) {
         const [memoryResult, innerLifeResult] = await Promise.all([memoryPromise, innerLifePromise]);
         const rawMemories = Array.isArray(memoryResult) ? memoryResult : memoryResult?.results || [];
         const generatedAt = (ports.now || (() => new Date()))().toISOString();
-        const compactLine = compactSharedLine(sharedLine);
-        const memories = rawMemories.slice(0, BRIEF_MEMORY_LIMIT).map(compactMemory);
-        const compactLife = compactInnerLife(innerLifeResult, limit, agentId);
+        // One Shared Line resume packet, up to three Memory summaries, and
+        // InnerLife status with at most one candidate preview.
+        const resumeLine = shapeSharedLinePacket(sharedLine, "resume", { bounds: BRIEF_LINE_BOUNDS });
+        const memories = rawMemories
+          .slice(0, BRIEF_MEMORY_LIMIT)
+          .map((memory) => compactMemory(memory, BRIEF_MEMORY_BODY_BYTES));
+        const compactLife = compactInnerLife(innerLifeResult, 1, agentId);
         return {
           detail,
           agentId,
           generatedAt,
           query,
-          sharedLine: compactLine,
+          sharedLine: resumeLine,
           memories,
           memoryPage: {
             requestedLimit: limit,
@@ -297,7 +281,7 @@ function createGatewayContextService(ports) {
             doctor: compactLife.doctor,
             innerLife: compactLife,
             memories,
-            sharedLine: compactLine,
+            sharedLine: resumeLine,
             generatedAt
           })
         };

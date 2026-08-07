@@ -154,14 +154,30 @@ async function main() {
     });
     assert.strictEqual(setupResponse.status, 200, "Agent setup should be readable with the bearer token");
     const setup = await setupResponse.json();
+    // v0.6.6: the guide is no longer a mandatory startup read, so the sequence
+    // goes straight from the handshake to bounded context.
     assert.deepStrictEqual(
       setup.firstCalls.map((item) => item.match(/claracore_connection_test|gateway_docs|shared_line_list|gateway_context/)?.[0]),
-      ["claracore_connection_test", "gateway_docs", "gateway_context"],
+      ["claracore_connection_test", "gateway_context", "gateway_docs"],
       "Agent setup should expose the canonical first-connection sequence"
     );
     assert(
-      setup.firstCalls[2].includes("detail=brief"),
+      setup.firstCalls[1].includes("detail=brief"),
       "Agent setup should request bounded Gateway context explicitly."
+    );
+    assert.strictEqual(setup.toolProfiles?.default, "core", "Agent setup should document the core default profile.");
+    assert.deepStrictEqual(setup.toolProfiles?.available, ["core", "full"]);
+    assert.strictEqual(setup.toolProfiles?.httpHeader, "X-ClaraCore-Tool-Profile");
+    assert.strictEqual(setup.toolProfiles?.stdioEnv, "CLARACORE_TOOL_PROFILE");
+    // Connected, context read, automatic injection, and actual use stay distinct.
+    assert.deepStrictEqual(
+      Object.keys(setup.contextStates || {}),
+      ["connected", "contextRead", "automaticInjection", "actualUse"],
+      "Agent setup must distinguish connection from injection from use."
+    );
+    assert(
+      /proves nothing about what the host injects/.test(setup.contextStates.connected),
+      "Agent setup must not claim MCP connectivity proves per-prompt host injection."
     );
     assert.deepStrictEqual(Object.keys(setup.capabilities), ["memory", "sharedLine", "innerLife", "gateway"]);
     assert(setup.afterConnect?.includes("proactively"), "Agent setup should require a proactive user handoff");
@@ -266,7 +282,8 @@ async function main() {
     });
     assert(called.result.content[0].text.includes("claracore-desktop"), "tool response should mention product");
     const connectionPacket = JSON.parse(called.result.content[0].text);
-    assert.deepStrictEqual(connectionPacket.nextCalls, ["gateway_docs", "gateway_context"]);
+    assert.deepStrictEqual(connectionPacket.nextCalls, ["gateway_context"]);
+    assert.strictEqual(connectionPacket.toolProfile, "core", "HTTP must report the resolved tool profile truthfully.");
     assert(connectionPacket.afterOnboarding.includes("Tell the user"));
     const contentBeforeOnboarding = await database.getSummary();
     const docsCall = await postMcp({
@@ -275,7 +292,19 @@ async function main() {
       method: "tools/call",
       params: { name: "gateway_docs", arguments: {} }
     });
-    assert(docsCall.result.content[0].text.includes("## What ClaraCore Lets You Do"));
+    const defaultDocsText = docsCall.result.content[0].text;
+    assert(defaultDocsText.includes("## Sections"), "Default docs should offer the section index.");
+    assert(
+      Buffer.byteLength(defaultDocsText, "utf8") <= 4096,
+      `Default docs are ${Buffer.byteLength(defaultDocsText, "utf8")} bytes, over the 4 KB ceiling.`
+    );
+    const docsSectionCall = await postMcp({
+      jsonrpc: "2.0",
+      id: 311,
+      method: "tools/call",
+      params: { name: "gateway_docs", arguments: { section: "start" } }
+    });
+    assert(docsSectionCall.result.content[0].text.includes("## First Connection"));
     const linesCall = await postMcp({
       jsonrpc: "2.0",
       id: 32,
@@ -306,7 +335,7 @@ async function main() {
     const contentAfterOnboarding = await database.getSummary();
     assert.strictEqual(contentAfterOnboarding.memories_count, contentBeforeOnboarding.memories_count);
     assert.strictEqual(contentAfterOnboarding.continuity_lines_count, contentBeforeOnboarding.continuity_lines_count);
-    const traces = await database.listGatewayTraces({ limit: 5 });
+    const traces = await database.listGatewayTraces({ limit: 10 });
     const trace = traces.find((item) => item.toolName === "claracore_connection_test");
     assert(trace, "Streamable HTTP tools/call should record a Gateway trace");
     assert.strictEqual(trace.agentId, "clara");

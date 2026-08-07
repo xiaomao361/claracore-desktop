@@ -1,0 +1,190 @@
+#!/usr/bin/env node
+//
+// v0.6.6 context-budget baseline.
+//
+// Serializes representative deterministic fixtures and emits machine-readable
+// JSON describing how many UTF-8 bytes each default Agent-facing surface costs.
+// Byte counts are the testable metric; token estimates are diagnostic only,
+// because tokenization belongs to the receiving host and model.
+//
+// Usage:
+//   node scripts/context-budget-baseline.js            # human summary
+//   node scripts/context-budget-baseline.js --json     # machine-readable JSON
+
+const { profileToolDefinitions } = require("../core/gateway/tool-profiles");
+const { createGatewayContextService } = require("../core/gateway/context");
+const { DOCS_SECTIONS, buildGatewayDocs } = require("../core/gateway/docs");
+const memoria = require("../core/memoria");
+const { shapeSharedLinePacket } = require("../core/continuity/resume-detail");
+const {
+  shapeInnerLifeBriefing,
+  shapeInnerLifeStatus,
+  shapePendingShares
+} = require("../core/innerlife/selective");
+const { CONTEXT_BUDGET_CEILINGS } = require("../core/tests/fixtures/context-budget-ceilings");
+const {
+  ambiguousSharedLineFixture,
+  gatewayLaunchFixture,
+  innerLifeBriefingFixture,
+  innerLifeSharesFixture,
+  innerLifeSnapshotLiteFixture,
+  memorySearchCore,
+  memorySearchRows,
+  pathsFixture,
+  sharedLinePacketFixture
+} = require("../core/tests/fixtures/context-budget-fixtures");
+
+const BYTES_PER_TOKEN_ESTIMATE = 4;
+
+function bytes(value) {
+  const text = typeof value === "string" ? value : JSON.stringify(value);
+  return Buffer.byteLength(text ?? "", "utf8");
+}
+
+function measurement(name, value, ceiling) {
+  const size = bytes(value);
+  return {
+    name,
+    bytes: size,
+    tokenEstimate: Math.round(size / BYTES_PER_TOKEN_ESTIMATE),
+    ceiling: ceiling ?? null,
+    withinCeiling: ceiling == null ? null : size <= ceiling
+  };
+}
+
+async function collect() {
+  const core = profileToolDefinitions("core");
+  const full = profileToolDefinitions("full");
+  const docsArgs = { launch: gatewayLaunchFixture, paths: pathsFixture, toolProfile: "core" };
+
+  const toolProfiles = [
+    { ...measurement("tools/list core", core, CONTEXT_BUDGET_CEILINGS.coreToolsList), toolCount: core.length },
+    { ...measurement("tools/list full", full, null), toolCount: full.length }
+  ];
+
+  const docs = [measurement("gateway_docs default", buildGatewayDocs(docsArgs).text, CONTEXT_BUDGET_CEILINGS.docsDefault)];
+  for (const section of DOCS_SECTIONS) {
+    docs.push(
+      measurement(
+        `gateway_docs section=${section}`,
+        buildGatewayDocs({ ...docsArgs, section }).text,
+        CONTEXT_BUDGET_CEILINGS.docsSection
+      )
+    );
+  }
+
+  const ambiguity = ambiguousSharedLineFixture();
+  const errors = [
+    measurement("shared line ambiguity payload", ambiguity.payload, CONTEXT_BUDGET_CEILINGS.ambiguityPayload),
+    ...ambiguity.payload.candidates.map((candidate, index) =>
+      measurement(`ambiguity candidate[${index}] summaryPreview`, candidate.summaryPreview, CONTEXT_BUDGET_CEILINGS.ambiguityCandidatePreview)
+    )
+  ];
+
+  const memoryCore = memorySearchCore();
+  const memoryDefault = await memoria.searchSummary(memoryCore, { query: "fixture recall" });
+  const memoryFull = await memoria.searchSummary(memoryCore, { query: "fixture recall", detail: "full", limit: 3 });
+  const memory = [
+    measurement("memoria_search default", memoryDefault, CONTEXT_BUDGET_CEILINGS.memoriaSearchDefault),
+    measurement("memoria_search detail=full", memoryFull, null)
+  ];
+
+  const storedPacket = sharedLinePacketFixture();
+  const sharedLine = [
+    measurement("shared_line_get resume", shapeSharedLinePacket(storedPacket), CONTEXT_BUDGET_CEILINGS.sharedLineGetDefault),
+    measurement(
+      "shared_line_get context",
+      shapeSharedLinePacket(storedPacket, "context"),
+      CONTEXT_BUDGET_CEILINGS.sharedLineGetContext
+    ),
+    measurement("shared_line_get full", shapeSharedLinePacket(storedPacket, "full"), null)
+  ];
+
+  const storedSnapshot = innerLifeSnapshotLiteFixture();
+  const storedBriefing = innerLifeBriefingFixture();
+  const innerLife = [
+    measurement(
+      "innerlife_status default",
+      shapeInnerLifeStatus(storedSnapshot),
+      CONTEXT_BUDGET_CEILINGS.innerlifeStatusDefault
+    ),
+    measurement("innerlife_status detail=full", shapeInnerLifeStatus(storedSnapshot, "full"), null),
+    measurement(
+      "innerlife_pending_shares default",
+      shapePendingShares(innerLifeSharesFixture()),
+      CONTEXT_BUDGET_CEILINGS.innerlifePendingSharesDefault
+    ),
+    measurement(
+      "innerlife_briefing default",
+      shapeInnerLifeBriefing(storedBriefing),
+      CONTEXT_BUDGET_CEILINGS.innerlifeBriefingDefault
+    ),
+    measurement(
+      "innerlife_briefing ambiguous line",
+      shapeInnerLifeBriefing(innerLifeBriefingFixture({ ambiguous: true })),
+      CONTEXT_BUDGET_CEILINGS.innerlifeBriefingDefault
+    ),
+    measurement("innerlife_briefing detail=full", shapeInnerLifeBriefing(storedBriefing, "full"), null)
+  ];
+
+  // Compose the aggregate from the same fixtures the domain measurements use.
+  const contextService = createGatewayContextService({
+    getSharedLine: async () => sharedLinePacketFixture(),
+    searchMemories: async (unusedCore, input) => ({ results: memorySearchRows(input.limit) }),
+    listMemories: async (unusedCore, input) => memorySearchRows(input.limit),
+    getInnerLifeSnapshot: async () => storedSnapshot,
+    listInnerLifeInbox: async () => storedSnapshot.pendingInbox,
+    listInnerLifeShares: async () => storedSnapshot.pendingShares,
+    listInnerLifeThoughts: async () => storedBriefing.recentThoughts,
+    now: () => new Date("2026-08-07T01:32:46.786Z")
+  });
+  const briefWithQuery = await contextService.get({}, { agentId: "fixture-agent", detail: "brief", query: "fixture" });
+  const briefNoQuery = await contextService.get({}, { agentId: "fixture-agent", detail: "brief" });
+  const aggregate = [
+    measurement("gateway_context brief (query)", briefWithQuery, CONTEXT_BUDGET_CEILINGS.gatewayContextBrief),
+    measurement("gateway_context brief (no query)", briefNoQuery, CONTEXT_BUDGET_CEILINGS.gatewayContextBrief),
+    measurement("gateway_context full", await contextService.get({}, { agentId: "fixture-agent", detail: "full" }), null)
+  ];
+
+  const groups = { toolProfiles, docs, errors, memory, sharedLine, innerLife, aggregate };
+  const all = [...toolProfiles, ...docs, ...errors, ...memory, ...sharedLine, ...innerLife, ...aggregate];
+  return {
+    generatedAt: new Date().toISOString(),
+    bytesPerTokenEstimate: BYTES_PER_TOKEN_ESTIMATE,
+    ceilings: CONTEXT_BUDGET_CEILINGS,
+    groups,
+    failures: all.filter((entry) => entry.withinCeiling === false).map((entry) => entry.name)
+  };
+}
+
+function printHuman(report) {
+  for (const [group, entries] of Object.entries(report.groups)) {
+    process.stdout.write(`\n${group}\n`);
+    for (const entry of entries) {
+      const ceiling = entry.ceiling == null ? "-" : String(entry.ceiling);
+      const mark = entry.withinCeiling === false ? "FAIL" : entry.withinCeiling === true ? "ok" : "    ";
+      const count = entry.toolCount == null ? "" : ` (${entry.toolCount} tools)`;
+      process.stdout.write(
+        `  ${mark}  ${entry.name.padEnd(34)} ${String(entry.bytes).padStart(6)} B  ~${String(entry.tokenEstimate).padStart(5)} tok  ceiling ${ceiling}${count}\n`
+      );
+    }
+  }
+  process.stdout.write(
+    report.failures.length ? `\nover ceiling: ${report.failures.join(", ")}\n` : "\nall measured default surfaces are within ceiling\n"
+  );
+}
+
+if (require.main === module) {
+  collect()
+    .then((report) => {
+      if (process.argv.includes("--json")) process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+      else printHuman(report);
+      process.exit(report.failures.length ? 1 : 0);
+    })
+    .catch((error) => {
+      process.stderr.write(`${error.stack || error.message || error}\n`);
+      process.exit(1);
+    });
+}
+
+module.exports = { collect };

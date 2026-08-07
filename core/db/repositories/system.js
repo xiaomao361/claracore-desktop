@@ -295,7 +295,7 @@ function createSystemRepository(helpers) {
           baseUrl: settings["innerlife.base_url"] || "http://127.0.0.1:11434",
           lightModel: settings["innerlife.light_model"] || "",
           deepModel: settings["innerlife.deep_model"] || "",
-          pollSeconds: String(settings["innerlife.loop_seconds"] || 900),
+          pollSeconds: String(settings["innerlife.loop_seconds"] || 3600),
           lightIdleSeconds: "",
           deepIdleSeconds: "",
           autonomyEnabled: String(Boolean(settings["innerlife.enabled"])),

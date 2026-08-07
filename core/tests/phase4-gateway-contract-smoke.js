@@ -106,11 +106,16 @@ async function main() {
     throw new Error("Agent setup references old Gateway data.");
   }
 
+  // This is the full-contract compatibility smoke: it asserts every canonical
+  // tool name and schema survives. v0.6.6 keeps that surface behind the
+  // explicit full profile, so this client selects it. Core-profile behavior is
+  // asserted separately below and in core/tests/context-budget-smoke.js.
   const client = createGatewayClient(dataRoot, {
     env: {
       CLARACORE_AGENT_ID: "my-agent",
       CLARACORE_CLIENT_ID: "contract-smoke",
-      CLARACORE_CONVERSATION_ID: "phase4-conversation"
+      CLARACORE_CONVERSATION_ID: "phase4-conversation",
+      CLARACORE_TOOL_PROFILE: "full"
     }
   });
   try {
@@ -148,31 +153,48 @@ async function main() {
       throw new Error("Gateway afterthought recovery schema must expose explicit retry and acknowledge actions.");
     }
 
-    const docsResponse = await client.callTool("gateway_docs");
+    // v0.6.6: the default docs read is a bounded summary plus a section index.
+    // The full handbook is one explicit section and no longer restates
+    // tools/list.
+    const defaultDocsText = (await client.callTool("gateway_docs")).result?.content?.[0]?.text || "";
+    if (Buffer.byteLength(defaultDocsText, "utf8") > 4096) {
+      throw new Error(
+        `Default Gateway docs are ${Buffer.byteLength(defaultDocsText, "utf8")} bytes, over the 4 KB ceiling.`
+      );
+    }
+    for (const section of ["start", "memory", "shared-line", "innerlife", "diagnostics", "full"]) {
+      if (!defaultDocsText.includes(section)) {
+        throw new Error(`Default Gateway docs do not offer the ${section} section.`);
+      }
+    }
+    const docsResponse = await client.callTool("gateway_docs", { section: "full" });
     const docsText = docsResponse.result?.content?.[0]?.text || "";
-    for (const tool of EXPECTED_TOOLS) {
-      if (!docsText.includes(tool)) throw new Error(`Gateway docs do not include ${tool}.`);
+    if (Buffer.byteLength(docsText, "utf8") > 8192) {
+      throw new Error(`Gateway docs section=full is ${Buffer.byteLength(docsText, "utf8")} bytes, over the 8 KB ceiling.`);
     }
     if (!docsText.includes(dataRoot)) throw new Error("Gateway docs do not include the active data root.");
     if (!docsText.includes("Keep old ClaraCore service processes untouched")) {
       throw new Error("Gateway docs do not include old-service isolation guidance.");
     }
-    if (!docsText.includes("Shared Line context is optional for InnerLife digestion")) {
+    if (!docsText.includes("Shared Line context is optional")) {
       throw new Error("Gateway docs do not explain InnerLife Shared Line ambiguity handling.");
     }
     if (!docsText.includes("CLARACORE_CLIENT_ID") || !docsText.includes("CLARACORE_CONVERSATION_ID")) {
       throw new Error("Gateway docs do not include the complete stdio caller context config.");
     }
+    if (!docsText.includes("CLARACORE_TOOL_PROFILE")) {
+      throw new Error("Gateway docs do not document the stdio tool-profile setting.");
+    }
     if (!docsText.includes("stale id")) {
       throw new Error("Gateway docs do not explain the process-scoped stdio conversation limitation.");
     }
     const firstConnectionIndex = docsText.indexOf("## First Connection");
-    const capabilityIndex = docsText.indexOf("## What ClaraCore Lets You Do");
+    const identityIndex = docsText.indexOf("## Identity");
     const detailIndex = docsText.indexOf("## MCP Config");
-    if (firstConnectionIndex < 0 || capabilityIndex < firstConnectionIndex || detailIndex < capabilityIndex) {
-      throw new Error("Gateway docs do not front-load first connection and product capabilities.");
+    if (firstConnectionIndex < 0 || identityIndex < firstConnectionIndex || detailIndex < identityIndex) {
+      throw new Error("Gateway docs do not front-load first connection and identity.");
     }
-    if (!docsText.toLowerCase().includes("proactively") || !docsText.includes("user's current language")) {
+    if (!defaultDocsText.includes("truthful connection result")) {
       throw new Error("Gateway docs do not require the first-connection user introduction.");
     }
     if (docsText.includes(`${path.sep}.claracore${path.sep}gateway`) || docsText.includes(`${path.sep}.claracore${path.sep}memoria`)) {
@@ -186,8 +208,12 @@ async function main() {
       throw new Error("Gateway status did not expose stdio transport.");
     }
     const connection = parseTextResult(await client.callTool("claracore_connection_test"));
+    // v0.6.6: the guide is no longer a mandatory startup read, so onboarding
+    // points straight at bounded context. The resolved profile is reported
+    // truthfully so a host can tell which manifest it received.
     if (
-      JSON.stringify(connection.nextCalls) !== JSON.stringify(["gateway_docs", "gateway_context"]) ||
+      JSON.stringify(connection.nextCalls) !== JSON.stringify(["gateway_context"]) ||
+      connection.toolProfile !== "full" ||
       !connection.afterOnboarding?.includes("Tell the user")
     ) {
       throw new Error(`Connection test onboarding contract drifted: ${JSON.stringify(connection)}`);
@@ -206,7 +232,8 @@ async function main() {
         factsUsed: [contextMemory.id]
       })
     );
-    if (!contextSharedLine.currentPosition?.summary?.includes("Gateway context phase position")) {
+    // v0.6.6: write acknowledgements return the resume packet shape.
+    if (!contextSharedLine.summary?.includes("Gateway context phase position")) {
       throw new Error("Gateway setup failed to create context Shared Line.");
     }
     const gatewayContext = parseTextResult(
@@ -220,8 +247,16 @@ async function main() {
     if (gatewayContext.detail !== "brief") {
       throw new Error(`Gateway context did not honor detail=brief: ${gatewayContext.detail}`);
     }
-    if (!gatewayContext.text?.includes("Gateway context phase position")) {
-      throw new Error(`Gateway context text does not include Shared Line: ${gatewayContext.text}`);
+    // v0.6.6: the text field is a small orientation summary. Domain content
+    // lives once, in the structured fields.
+    if (!gatewayContext.sharedLine?.summary?.includes("Gateway context phase position")) {
+      throw new Error(`Gateway context did not include the Shared Line position: ${JSON.stringify(gatewayContext.sharedLine)}`);
+    }
+    if (gatewayContext.text?.includes("Gateway context phase position")) {
+      throw new Error("Gateway context text must not repeat the structured Shared Line summary.");
+    }
+    if (gatewayContext.sharedLine?.detail !== "resume") {
+      throw new Error(`Gateway brief context must embed the Shared Line resume packet: ${gatewayContext.sharedLine?.detail}`);
     }
     if (!gatewayContext.memories?.some((memory) => memory.id === contextMemory.id)) {
       throw new Error(`Gateway context did not include matching Memory: ${JSON.stringify(gatewayContext.memories)}`);
@@ -335,15 +370,32 @@ async function main() {
     if (aliasEnded.session.id !== aliasStarted.session.id || aliasEnded.session.status !== "ended") {
       throw new Error("Gateway innerlife_session_end did not accept the session_id compatibility alias.");
     }
+    // v0.6.6: the briefing is a decision synthesis with counts, not an
+    // aggregate dump with a parallel text block.
     const briefing = parseTextResult(await client.callTool("innerlife_briefing", { agentId: "my-agent" }));
-    if (!briefing.text.includes("Pending shares") || briefing.sharedLineContext?.status !== "ambiguous") {
-      throw new Error("Gateway innerlife_briefing did not return briefing text.");
+    if (briefing.detail !== "summary" || typeof briefing.counts?.pendingShares !== "number") {
+      throw new Error(`Gateway innerlife_briefing did not return the decision synthesis: ${JSON.stringify(briefing)}`);
+    }
+    if (briefing.sharedLineContext?.status !== "ambiguous" || "sharedLine" in briefing) {
+      throw new Error("Ambiguous innerlife_briefing must not select a Shared Line.");
+    }
+    if ("text" in briefing || Array.isArray(briefing.pendingShares) || Array.isArray(briefing.pendingInbox)) {
+      throw new Error("Default innerlife_briefing must not return the aggregate dump.");
+    }
+    const fullBriefing = parseTextResult(
+      await client.callTool("innerlife_briefing", { agentId: "my-agent", detail: "full" })
+    );
+    if (!fullBriefing.text.includes("Pending shares") || fullBriefing.sharedLineContext?.status !== "ambiguous") {
+      throw new Error("Gateway innerlife_briefing detail=full did not return briefing text.");
     }
     const explicitBriefing = parseTextResult(
       await client.callTool("innerlife_briefing", { agentId: "my-agent", lineId: activeLine.id })
     );
-    if (explicitBriefing.sharedLineContext?.status !== "selected" || explicitBriefing.sharedLineContext?.lineId !== activeLine.id) {
+    if (explicitBriefing.sharedLineContext?.status !== "selected") {
       throw new Error(`Gateway innerlife_briefing did not honor explicit lineId: ${JSON.stringify(explicitBriefing.sharedLineContext)}`);
+    }
+    if (explicitBriefing.sharedLine?.lineId !== activeLine.id) {
+      throw new Error(`Gateway innerlife_briefing did not select the requested line: ${JSON.stringify(explicitBriefing.sharedLine)}`);
     }
     const doctor = parseTextResult(await client.callTool("innerlife_doctor", { agentId: "my-agent" }));
     if (!["ok", "warn"].includes(doctor.status) || !Array.isArray(doctor.nextActions)) {
@@ -379,9 +431,16 @@ async function main() {
     ) {
       throw new Error("Gateway innerlife_digest did not create a digest record from pending inbox.");
     }
+    // v0.6.6: the default status read is operational state only.
     const liteStatus = parseTextResult(await client.callTool("innerlife_status"));
-    if (liteStatus.mode !== "lite" || liteStatus.sessions || liteStatus.digestRuns) {
-      throw new Error(`Gateway innerlife_status should default to a lite snapshot: ${JSON.stringify(Object.keys(liteStatus))}`);
+    if (liteStatus.mode !== "status" || liteStatus.sessions || liteStatus.digestRuns) {
+      throw new Error(`Gateway innerlife_status should default to operational state: ${JSON.stringify(Object.keys(liteStatus))}`);
+    }
+    if (liteStatus.pendingShares || liteStatus.pendingInbox) {
+      throw new Error("Default innerlife_status must not return share or Inbox bodies.");
+    }
+    if (typeof liteStatus.work?.hasPendingShares !== "boolean" || typeof liteStatus.work?.pendingInboxCount !== "number") {
+      throw new Error(`Default innerlife_status must report pending-work indicators: ${JSON.stringify(liteStatus.work)}`);
     }
     const fullStatus = parseTextResult(await client.callTool("innerlife_status", { detail: true }));
     if (!Array.isArray(fullStatus.sessions) || !Array.isArray(fullStatus.digestRuns)) {

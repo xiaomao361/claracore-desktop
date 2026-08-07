@@ -51,7 +51,7 @@ async function main() {
   }
   const migrations = await database.query("SELECT id FROM schema_migrations ORDER BY id;");
   const migrationIds = migrations.map((row) => row.id);
-  for (const expectedId of ["000_gateway_trace_compatibility", "001_product_core_schema", "002_product_additions", "004_memory_controller_ledger", "005_memory_controller_watermark"]) {
+  for (const expectedId of ["000_gateway_trace_compatibility", "001_product_core_schema", "002_product_additions", "004_memory_controller_ledger", "005_memory_controller_watermark", "006_innerlife_hourly_default"]) {
     if (!migrationIds.includes(expectedId)) throw new Error(`Missing applied migration: ${expectedId}`);
   }
 
@@ -67,7 +67,7 @@ async function main() {
     "innerlife.base_url": "https://api.deepseek.com",
     "innerlife.light_model": "deepseek-v4-flash",
     "innerlife.deep_model": "deepseek-v4-flash",
-    "innerlife.loop_seconds": 900,
+    "innerlife.loop_seconds": 3600,
     "gateway.enabled": true,
     "gateway.transport": "stdio",
     "gateway.local_only": true,

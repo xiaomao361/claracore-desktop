@@ -62,29 +62,41 @@ async function main() {
     await page.click("#copyAgentSetup");
     await page.waitForFunction(() => document.querySelector("#agentSetupNotice")?.textContent.trim().length > 0);
     const copied = await app.evaluate(() => globalThis.__claracoreAgentSetupClipboard || "");
+    // v0.6.6: the brief is a one-time connection artifact. It points at the
+    // small docs/startup path and no longer reproduces the Memory Controller
+    // playbook, which now lives in gateway_docs section=memory.
     const required = [
       "Streamable HTTP MCP",
       "Authorization: Bearer",
       "stdio MCP",
       "claracore_connection_test",
-      "gateway_docs",
-      "shared_line_list",
-      "status=active",
       "gateway_context",
-      "Current Memory Controller Contract",
-      "memory_context",
-      "trusted canary",
-      "available to every authenticated Agent",
-      "belonging to that same Agent",
-      "project-scoped Memory",
-      "memoria_search",
+      "gateway_docs",
+      "X-ClaraCore-Tool-Profile",
+      "CLARACORE_TOOL_PROFILE",
+      "Keep four states separate",
+      "proves nothing about what your host injects per prompt",
       "proactively report"
     ];
     for (const marker of required) {
       if (!copied.includes(marker)) throw new Error(`Copied setup brief is missing: ${marker}`);
     }
-    for (const forbidden of ["## Module Playbook", "## Runtime Paths", "## HTTP Management Endpoints"] ) {
+    for (const forbidden of [
+      "## Module Playbook",
+      "## Runtime Paths",
+      "## HTTP Management Endpoints",
+      "## Current Memory Controller Contract"
+    ]) {
       if (copied.includes(forbidden)) throw new Error(`Copied setup brief contains detailed reference material: ${forbidden}`);
+    }
+    // A4: bounded excluding generated credentials and config.
+    const withoutGenerated = copied
+      .replace(/```json[\s\S]*?```/g, "")
+      .replace(/Authorization: Bearer \S+/g, "")
+      .replace(/http:\/\/\S+/g, "");
+    const briefBytes = Buffer.byteLength(withoutGenerated, "utf8");
+    if (briefBytes > 4096) {
+      throw new Error(`Copied setup brief is ${briefBytes} bytes excluding generated config, over the 4 KB ceiling.`);
     }
 
     await page.click("[data-view='settings']");

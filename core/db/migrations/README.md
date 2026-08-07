@@ -22,3 +22,5 @@ Current feature migrations:
   triggers covering Memory, label/alias, link, and embedding writes. The
   controller uses it to reject cache entries created before any eligibility or
   retrieval-source change; existing domain rows are not rewritten.
+- `006_innerlife_hourly_default`: moves the former 15-minute InnerLife interval
+  to the new one-hour default while preserving every non-default custom value.

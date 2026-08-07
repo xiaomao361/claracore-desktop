@@ -121,7 +121,7 @@ function createInnerLifeDaemonRepository(helpers, services = {}) {
       const pause = action === "pause" || action === "disable" || action === "stop" || input.enabled === false;
       if (!enable && !pause) throw new Error("InnerLife daemon action must be enable or pause.");
       const settings = await this.getSettings();
-      const pollSeconds = Math.max(1, Number.parseInt(String(settings["innerlife.loop_seconds"] || 900), 10) || 900);
+      const pollSeconds = Math.max(1, Number.parseInt(String(settings["innerlife.loop_seconds"] || 3600), 10) || 3600);
       const pendingInbox = enable ? await this.listInnerLifeInbox("pending", 1) : [];
       const nextRunSql = enable && pendingInbox.length > 0 ? "CURRENT_TIMESTAMP" : `datetime('now', '+${pollSeconds} seconds')`;
       await this.updateSettings({ "innerlife.enabled": enable });
@@ -181,7 +181,7 @@ function createInnerLifeDaemonRepository(helpers, services = {}) {
 
     async completeInnerLifeDaemonTickIdle(input = {}) {
       const identity = resolveAgentIdentity(input.agentId || DEFAULT_AGENT_ID);
-      const pollSeconds = Math.max(1, Number.parseInt(String(input.pollSeconds || 900), 10) || 900);
+      const pollSeconds = Math.max(1, Number.parseInt(String(input.pollSeconds || 3600), 10) || 3600);
       await this.exec(`
         UPDATE innerlife_daemon_state
         SET status = 'enabled',
@@ -208,7 +208,7 @@ function createInnerLifeDaemonRepository(helpers, services = {}) {
         0,
         Number.parseInt(String(input.pendingInboxCount || 0), 10) || 0
       );
-      const pollSeconds = Math.max(1, Number.parseInt(String(input.pollSeconds || 900), 10) || 900);
+      const pollSeconds = Math.max(1, Number.parseInt(String(input.pollSeconds || 3600), 10) || 3600);
       const result = input.result || {};
       await this.exec(`
         UPDATE innerlife_daemon_state
@@ -244,7 +244,7 @@ function createInnerLifeDaemonRepository(helpers, services = {}) {
         0,
         Number.parseInt(String(input.pendingInboxCount || 0), 10) || 0
       );
-      const pollSeconds = Math.max(1, Number.parseInt(String(input.pollSeconds || 900), 10) || 900);
+      const pollSeconds = Math.max(1, Number.parseInt(String(input.pollSeconds || 3600), 10) || 3600);
       const failureCount = Math.max(1, Number.parseInt(String(input.failureCount || 1), 10) || 1);
       const retrySeconds = Math.max(1, Number.parseInt(String(input.retrySeconds || 1), 10) || 1);
       const error = String(input.error || "InnerLife daemon tick failed.");

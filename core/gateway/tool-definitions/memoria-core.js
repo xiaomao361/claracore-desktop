@@ -18,7 +18,7 @@ const memoriaCoreToolDefinitions = [
   {
     "name": "memoria_search",
     "title": "Search Memories",
-    "description": "Search ClaraCore Desktop memory records with keyword and vector search when available. Search before writing a potentially changed fact. Defaults to current facts; use timeView=historical or all only when the question needs prior state. Results expose stateRole, supersedes, supersededBy, and related links.",
+    "description": "Search ClaraCore Desktop memory records with keyword and vector search when available. Search before writing a potentially changed fact. Returns three bounded summaries by default; each result carries stateRole, supersedes, supersededBy, and a memoria_get detail reference. Defaults to current facts; use timeView=historical or all only when the question needs prior state.",
     "inputSchema": {
       "type": "object",
       "required": [
@@ -31,12 +31,18 @@ const memoriaCoreToolDefinitions = [
         "limit": {
           "type": "number",
           "minimum": 1,
-          "maximum": 100
+          "maximum": 25,
+          "description": "Default 3. Raise it only when one read genuinely needs more candidates."
         },
         "timeView": {
           "type": "string",
           "enum": ["current", "historical", "all"],
           "description": "State view for recall. current (default) returns active facts, historical returns superseded facts, and all returns both."
+        },
+        "detail": {
+          "type": "string",
+          "enum": ["summary", "full"],
+          "description": "summary (default) returns bounded previews. full returns whole bodies, related links, and embedding operational metadata."
         }
       },
       "additionalProperties": false

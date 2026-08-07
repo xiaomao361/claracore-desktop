@@ -22,6 +22,9 @@ async function main() {
       throw new Error("Gateway initialize did not return ClaraCore Desktop server info.");
     }
 
+    // v0.6.6: stdio defaults to the core tool profile. Core carries the normal
+    // continuation surface; the maintenance surface stays available under the
+    // explicit full profile.
     const tools = await client.request("tools/list");
     const toolNames = new Set((tools.result?.tools || []).map((tool) => tool.name));
     for (const tool of [
@@ -30,42 +33,85 @@ async function main() {
       "shared_line_list",
       "shared_line_create",
       "shared_line_activate",
-      "shared_line_rename",
-      "shared_line_archive",
-      "shared_line_restore",
       "shared_line_update",
       "shared_line_handoff_create"
     ]) {
-      if (!toolNames.has(tool)) throw new Error(`Gateway missing tool: ${tool}`);
+      if (!toolNames.has(tool)) throw new Error(`Core profile missing tool: ${tool}`);
+    }
+    for (const tool of ["shared_line_rename", "shared_line_archive", "shared_line_restore"]) {
+      if (toolNames.has(tool)) throw new Error(`Core profile should not advertise maintenance tool: ${tool}`);
     }
 
+    const fullProfileClient = createGatewayClient(dataRoot, {
+      env: { CLARACORE_AGENT_ID: "", CLARACORE_TOOL_PROFILE: "full" }
+    });
+    try {
+      const fullTools = await fullProfileClient.request("tools/list");
+      const fullToolNames = new Set((fullTools.result?.tools || []).map((tool) => tool.name));
+      for (const tool of ["shared_line_rename", "shared_line_archive", "shared_line_restore"]) {
+        if (!fullToolNames.has(tool)) throw new Error(`Full profile missing tool: ${tool}`);
+      }
+      if (fullToolNames.size <= toolNames.size) {
+        throw new Error("Full profile must expose more tools than core.");
+      }
+    } finally {
+      await fullProfileClient.close();
+    }
+
+    // Default docs are a small summary plus a section index; they no longer
+    // restate the tools/list manifest.
     const docs = await client.callTool("gateway_docs");
     const docsText = docs.result?.content?.[0]?.text || "";
     if (
-      !docsText.includes("shared_line_get") ||
-      !docsText.includes("shared_line_update") ||
-      !docsText.includes("shared_line_handoff_create") ||
-      !docsText.includes("shared_line_create") ||
-      !docsText.includes("shared_line_archive") ||
-      !docsText.includes("SHARED_LINE_ID_REQUIRED") ||
-      !docsText.includes("shared_line_list with status=active") ||
-      !docsText.includes("Call gateway_context with detail=brief and without lineId")
+      !docsText.includes("Shared Line") ||
+      !docsText.includes("shared-line") ||
+      !docsText.includes("claracore_connection_test")
     ) {
-      throw new Error("Gateway docs do not include Shared Line tools.");
+      throw new Error("Default Gateway docs lost the Shared Line role or the section index.");
+    }
+    if (Buffer.byteLength(docsText, "utf8") > 4096) {
+      throw new Error(`Default Gateway docs are ${Buffer.byteLength(docsText, "utf8")} bytes, over the 4 KB ceiling.`);
+    }
+
+    const sharedLineDocs = await client.callTool("gateway_docs", { section: "shared-line" });
+    const sharedLineDocsText = sharedLineDocs.result?.content?.[0]?.text || "";
+    if (
+      !sharedLineDocsText.includes("shared_line_get") ||
+      !sharedLineDocsText.includes("shared_line_update") ||
+      !sharedLineDocsText.includes("shared_line_handoff_create") ||
+      !sharedLineDocsText.includes("SHARED_LINE_ID_REQUIRED") ||
+      !sharedLineDocsText.includes("shared_line_list with status=active") ||
+      !sharedLineDocsText.includes("gateway_context detail=brief")
+    ) {
+      throw new Error("Gateway docs shared-line section does not include Shared Line tools.");
     }
     if (docsText.includes(`${path.sep}.claracore${path.sep}continuity`)) {
       throw new Error("Gateway docs point at old Continuity data.");
     }
 
+    // v0.6.6: shared_line_get returns a resume packet by default; the stored
+    // packet is still reachable with detail=full.
     const initialResponse = await client.callTool("shared_line_get");
     const initial = parseTextResult(initialResponse);
+    if (initial.detail !== "resume") {
+      throw new Error(`shared_line_get should default to the resume packet: ${initial.detail}`);
+    }
     if (initial.lineId !== "line_default") {
       throw new Error(`Unexpected initial Shared Line id: ${initial.lineId}`);
     }
-    if (initial.currentPosition.summary !== "") {
+    if (initial.summary !== "") {
       throw new Error("Fresh Gateway Shared Line should be empty.");
     }
-    if (initial.lines.length || initial.archivedLines.length || initial.agentStates.length) {
+    for (const absent of ["lines", "archivedLines", "agentStates", "agentState", "text", "history", "snapshots"]) {
+      if (absent in initial) {
+        throw new Error(`Resume packet should not carry ${absent}.`);
+      }
+    }
+    const initialFull = parseTextResult(await client.callTool("shared_line_get", { detail: "full" }));
+    if (initialFull.detail !== "full" || initialFull.currentPosition.summary !== "") {
+      throw new Error("shared_line_get detail=full did not restore the stored packet.");
+    }
+    if (initialFull.lines.length || initialFull.archivedLines.length || initialFull.agentStates.length) {
       throw new Error("Gateway shared_line_get should not repeat cross-line catalogs or other agent states.");
     }
 
@@ -75,19 +121,20 @@ async function main() {
       factsUsed: ["gateway-fact-1", "gateway-fact-2"]
     });
     const updated = parseTextResult(updatedResponse);
-    if (updated.currentPosition.summary !== "Gateway Phase 3 position: agents should resume from this Desktop-owned line.") {
+    if (updated.summary !== "Gateway Phase 3 position: agents should resume from this Desktop-owned line.") {
       throw new Error("Gateway shared_line_update did not persist summary.");
     }
-    if (updated.currentPosition.interpretationStatus !== "confirmed") {
+    if (updated.interpretationStatus !== "confirmed") {
       throw new Error("Gateway shared_line_update did not persist interpretation status.");
     }
-    if (!updated.currentPosition.factsUsed.includes("gateway-fact-1")) {
+    if (!updated.factsUsed.includes("gateway-fact-1")) {
       throw new Error("Gateway shared_line_update did not persist factsUsed.");
     }
-    if (!updated.text.includes("Gateway Phase 3 position")) {
+    const updatedFull = parseTextResult(await client.callTool("shared_line_get", { detail: "full" }));
+    if (!updatedFull.text.includes("Gateway Phase 3 position")) {
       throw new Error("Gateway resume packet did not include saved summary.");
     }
-    if (!Array.isArray(updated.history) || updated.history.length !== 1) {
+    if (!Array.isArray(updatedFull.history) || updatedFull.history.length !== 1) {
       throw new Error("Gateway shared_line_update did not return Shared Line history.");
     }
 
@@ -111,13 +158,24 @@ async function main() {
       confirmOverwrite: true
     });
     const second = parseTextResult(secondResponse);
-    if (second.history.length !== 2) {
-      throw new Error(`Gateway Shared Line history should contain two entries, got ${second.history.length}.`);
+    // History and snapshots moved behind detail=full; the resume packet reports
+    // that they exist so the Agent knows an explicit read is available.
+    if (
+      second.omitted.snapshots < 1 ||
+      second.omitted.handoffs !== 0 ||
+      second.omitted.agentState !== "shared_line_agent_state" ||
+      second.omitted.detailRef?.arguments?.detail !== "full"
+    ) {
+      throw new Error(`Resume packet did not report omitted detail truthfully: ${JSON.stringify(second.omitted)}`);
     }
-    if (!second.text.includes("Recent history:") || !second.text.includes("Gateway Phase 3 second position")) {
+    const secondFull = parseTextResult(await client.callTool("shared_line_get", { detail: "full" }));
+    if (secondFull.history.length !== 2) {
+      throw new Error(`Gateway Shared Line history should contain two entries, got ${secondFull.history.length}.`);
+    }
+    if (!secondFull.text.includes("Recent history:") || !secondFull.text.includes("Gateway Phase 3 second position")) {
       throw new Error("Gateway resume packet did not include recent history.");
     }
-    if (!Array.isArray(second.snapshots) || second.snapshots[0]?.reason !== "confirmed_overwrite") {
+    if (!Array.isArray(secondFull.snapshots) || secondFull.snapshots[0]?.reason !== "confirmed_overwrite") {
       throw new Error("Gateway shared_line_update did not return confirmed overwrite snapshot.");
     }
     const handoffResponse = await client.callTool("shared_line_handoff_create", {
@@ -130,20 +188,30 @@ async function main() {
     if (handoffResult.handoff.objective !== "Gateway handoff objective") {
       throw new Error("Gateway handoff create did not persist objective.");
     }
-    if (!handoffResult.sharedLine.text.includes("Recent handoffs:") || !handoffResult.sharedLine.text.includes("Gateway handoff objective")) {
+    if (handoffResult.sharedLine.recentHandoff?.objective !== "Gateway handoff objective") {
       throw new Error("Gateway handoff was not included in Shared Line resume packet.");
+    }
+    const handoffFull = parseTextResult(await client.callTool("shared_line_get", { detail: "full" }));
+    if (!handoffFull.text.includes("Recent handoffs:") || !handoffFull.text.includes("Gateway handoff objective")) {
+      throw new Error("Gateway handoff was not included in the full Shared Line packet.");
     }
 
     const rereadResponse = await client.callTool("shared_line_get");
     const reread = parseTextResult(rereadResponse);
-    if (reread.currentPosition.summary !== second.currentPosition.summary) {
+    if (reread.summary !== second.summary) {
       throw new Error("Gateway shared_line_get did not read back the saved position.");
     }
-    if (reread.history.length !== 2) {
+    const rereadFull = parseTextResult(await client.callTool("shared_line_get", { detail: "full" }));
+    if (rereadFull.history.length !== 2) {
       throw new Error("Gateway shared_line_get did not read back Shared Line history.");
     }
-    if (reread.handoffs.length !== 1) {
+    if (rereadFull.handoffs.length !== 1) {
       throw new Error("Gateway shared_line_get did not read back Shared Line handoffs.");
+    }
+    // context adds relevant Shared Reality without restoring Agent-level state.
+    const rereadContext = parseTextResult(await client.callTool("shared_line_get", { detail: "context" }));
+    if (rereadContext.detail !== "context" || !rereadContext.sharedReality || "agentState" in rereadContext) {
+      throw new Error("shared_line_get detail=context did not return the expected shape.");
     }
     const createdLine = parseTextResult(
       await client.callTool("shared_line_create", {
@@ -271,7 +339,7 @@ async function main() {
         summary: "Gateway explicit selection reached line B."
       })
     );
-    if (explicitGatewayWrite.currentPosition.lineId !== ambiguousLineB.id) {
+    if (explicitGatewayWrite.lineId !== ambiguousLineB.id) {
       throw new Error("Gateway explicit Shared Line write did not use the requested lineId.");
     }
 
@@ -287,11 +355,19 @@ async function main() {
         summary: "An explicit collaborator updated this line without taking ownership."
       })
     );
-    if (crossAgentWrite.currentPosition.agentId !== "owner-agent") {
-      throw new Error(`Cross-agent write changed Shared Line owner: ${JSON.stringify(crossAgentWrite.currentPosition)}`);
+    // Line ownership stays visible in the resume packet. Writer provenance is
+    // per-write position metadata, so it is recovered through detail=full.
+    if (crossAgentWrite.agentId !== "owner-agent") {
+      throw new Error(`Cross-agent write changed Shared Line owner: ${JSON.stringify(crossAgentWrite)}`);
     }
-    if (crossAgentWrite.currentPosition.metadata?.writerAgentId !== "writer-agent") {
-      throw new Error(`Cross-agent write did not preserve writer provenance: ${JSON.stringify(crossAgentWrite.currentPosition.metadata)}`);
+    const crossAgentFull = parseTextResult(
+      await writerClient.callTool("shared_line_get", { lineId: ownedLine.id, detail: "full" })
+    );
+    if (crossAgentFull.currentPosition.agentId !== "owner-agent") {
+      throw new Error(`Cross-agent write changed Shared Line owner: ${JSON.stringify(crossAgentFull.currentPosition)}`);
+    }
+    if (crossAgentFull.currentPosition.metadata?.writerAgentId !== "writer-agent") {
+      throw new Error(`Cross-agent write did not preserve writer provenance: ${JSON.stringify(crossAgentFull.currentPosition.metadata)}`);
     }
 
     const statusResponse = await client.callTool("claracore_status");
@@ -306,8 +382,8 @@ async function main() {
           ok: true,
           dataRoot,
           lineId: second.lineId,
-          positionId: second.currentPosition.positionId,
-          historyCount: second.history.length,
+          positionId: secondFull.currentPosition.positionId,
+          historyCount: secondFull.history.length,
           handoffId: handoffResult.handoff.id,
           tools: [...toolNames].filter((name) => name.startsWith("shared_line_"))
         },

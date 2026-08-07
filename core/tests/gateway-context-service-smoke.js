@@ -175,20 +175,29 @@ async function main() {
   assert.strictEqual(brief.memoryPage.appliedLimit, BRIEF_MEMORY_LIMIT);
   assert.strictEqual(brief.memoryPage.requestCapped, true);
   assert.strictEqual(brief.memoryPage.mayHaveMore, true);
-  assert(!Object.hasOwn(brief.sharedLine.currentPosition, "metadata"));
+  // v0.6.6: brief embeds the Shared Line resume packet and the InnerLife status
+  // shape instead of a second, larger copy of each domain.
+  assert.strictEqual(brief.sharedLine.detail, "resume");
+  assert(!Object.hasOwn(brief.sharedLine, "currentPosition"));
   assert(!Object.hasOwn(brief.sharedLine, "snapshots"));
-  assert.strictEqual(Buffer.byteLength(brief.memories[0].bodyPreview, "utf8"), 1200);
+  assert(!Object.hasOwn(brief.sharedLine, "agentState"));
+  assert(!JSON.stringify(brief.sharedLine).includes("privateFullMetadata"));
+  // Multibyte text cannot split a character, so the cut lands at or below the bound.
+  assert(Buffer.byteLength(brief.memories[0].bodyPreview, "utf8") <= 480);
+  assert(Buffer.byteLength(brief.memories[0].bodyPreview, "utf8") > 400);
   assert.strictEqual(brief.memories[0].bodyTruncated, true);
-  assert(Buffer.byteLength(brief.text, "utf8") <= 4096);
-  assert(Buffer.byteLength(JSON.stringify(brief), "utf8") <= 32 * 1024);
-  assert.deepStrictEqual(brief.sharedLine.detailRef, {
+  assert(Buffer.byteLength(brief.text, "utf8") <= 1024);
+  assert(Buffer.byteLength(JSON.stringify(brief), "utf8") <= 8 * 1024);
+  assert.deepStrictEqual(brief.sharedLine.omitted.detailRef, {
     tool: "shared_line_get",
-    arguments: { lineId: "line-alpha" }
+    arguments: { lineId: "line-alpha", detail: "full" }
   });
   assert.deepStrictEqual(brief.innerLife.detailRef, {
     tool: "innerlife_status",
     arguments: { agentId: "agent-alpha", detail: true }
   });
+  assert(!Object.hasOwn(brief.innerLife, "pendingInbox"), "Brief must not carry Inbox bodies.");
+  assert(brief.innerLife.pendingShares.length <= 1, "Brief carries at most one candidate preview.");
   assert(!JSON.stringify(brief).includes("Beta must not leak"), "Brief context leaked another Agent's data.");
   assert(!briefCalls.some(([name]) => name === "listInnerLifeInbox"));
   assert(!briefCalls.some(([name]) => name === "listInnerLifeShares"));

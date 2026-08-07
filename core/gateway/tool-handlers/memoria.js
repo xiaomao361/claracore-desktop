@@ -28,7 +28,7 @@ async function handleMemoriaTool(name, args, context) {
   }
 
   if (name === "memoria_search") {
-    return textResult(await memoria.search(core, withoutAgentFilter(args)));
+    return textResult(await memoria.searchSummary(core, withoutAgentFilter(args)));
   }
 
   if (name === "memoria_get") {

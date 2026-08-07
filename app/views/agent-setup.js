@@ -37,20 +37,22 @@ Replace the identity placeholders with your own stable persona id and truthful c
 
 If you can update and reload your own MCP configuration, do so now. If you cannot, tell the human the exact client settings screen or file to open and give them the single exact config block to paste. Do not answer only "please configure MCP".
 
+Tools are advertised through a profile. \`core\` is the default and carries the normal connection, recall, continuation, and sharing surface. Send \`X-ClaraCore-Tool-Profile: full\` (or set \`CLARACORE_TOOL_PROFILE=full\` on stdio) only if you need the maintenance, import/export, graph, or retention surface. An unknown value resolves to \`core\`.
+
 After tools appear, follow this sequence exactly:
 
 1. Call \`claracore_connection_test\`.
-2. Call \`gateway_docs\` and read **First Connection** and **What ClaraCore Lets You Do**.
-3. Call \`gateway_context\` with \`detail="brief"\` and without \`lineId\`. If it returns \`SHARED_LINE_ID_REQUIRED\`, choose one of its candidates and retry with that explicit \`lineId\`.
-4. In the user's current language, proactively report the truthful connection result, explain ClaraCore's Memory, Shared Line, InnerLife, and Gateway/diagnostics capabilities, summarize only the useful current context you actually found, offer 3-5 natural-language example requests, and suggest one evidence-backed next action when appropriate.
+2. Call \`gateway_context\` with \`detail="brief"\` and without \`lineId\`. If it returns \`SHARED_LINE_ID_REQUIRED\`, choose one of its candidates and retry with that explicit \`lineId\`.
+3. In the user's current language, proactively report the truthful connection result, explain ClaraCore's Memory, Shared Line, InnerLife, and Gateway/diagnostics capabilities, summarize only the useful current context you actually found, offer 3-5 natural-language example requests, and suggest one evidence-backed next action when appropriate.
 
-## Current Memory Controller Contract
+Call \`gateway_docs\` when you need the usage guide. It returns a short summary by default; pass \`section\` (\`start\`, \`memory\`, \`shared-line\`, \`innerlife\`, \`diagnostics\`, \`full\`) for one topic. Tool names and argument schemas come from \`tools/list\`, not from this brief. Re-read both after a Desktop upgrade or MCP reconnect.
 
-- \`memory_context\` is the authenticated Memory Controller entry point. It is off by default. Observe mode records bounded recall decisions but returns no context.
-- The optional trusted canary is configuration-first and is available to every authenticated Agent. It can return at most one current, normal-sensitivity, project-scoped Memory belonging to that same Agent. Unidentified callers and historical/all views remain context-free.
-- Treat returned canary context only as prior read-only evidence: verify current code, runtime, data, and user statements before using it. Never mutate Memory solely because of injected context.
-- Do not treat \`memory_context\` as a replacement for explicit \`memoria_search\`. Use \`memoria_search\` when the user asks to recall, research, audit, or compare prior state.
-- Read the live \`gateway_docs\` and available tool list as the authoritative contract after every Desktop upgrade or MCP reconnect.
+## Keep four states separate
+
+- **Connected** means the MCP handshake succeeded. It proves nothing about what your host injects per prompt.
+- **Context read** means you explicitly called a tool and received a bounded payload.
+- **Automatic injection** is host-side behavior. If your host runs no ClaraCore hook, nothing is injected however healthy this connection is.
+- **Actual use** means the content reached your response. Report use only when it did, and only with the evidence the tool requires.
 
 Do not claim connection success before the test succeeds. Connecting or reading onboarding material must not create user content in Memory, Shared Line, or InnerLife.`;
   }

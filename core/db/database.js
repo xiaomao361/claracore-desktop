@@ -19,6 +19,7 @@ const { createMemoryControllerRepository } = require("./repositories/memory-cont
 const { installRepositoryMethods } = require("./repository-installer");
 const { recordMigration, runMigrations } = require("./migrations");
 const {
+  ambiguousSharedLineError,
   cosineSimilarity,
   innerLifeRetrySeconds,
   jsonSql,
@@ -247,6 +248,7 @@ installMemoriaRepository(ProductDatabase, {
 
 installContinuityRepository(ProductDatabase, {
   DEFAULT_AGENT_ID,
+  ambiguousSharedLineError,
   jsonSql,
   newId,
   parseJson,
