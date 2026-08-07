@@ -31,7 +31,11 @@ const CONTEXT_BUDGET_CEILINGS = Object.freeze({
   innerlifePendingSharesDefault: 3 * 1024,
   innerlifeBriefingDefault: 6 * 1024,
   gatewayContextBrief: 8 * 1024,
-  gatewayContextBriefStretch: 5 * 1024,
+  // The plan listed a 5 KB stretch target. Dropped by decision on 2026-08-07:
+  // brief sits at ~7.8 KB, and the remaining headroom could only come out of
+  // the Shared Line resume packet or the Memory previews, which is a usability
+  // cost for no budget problem. 8 KB is the enforced contract.
+  gatewayContextBriefStretch: null,
   automaticContextHardLimitTokens: 900,
   automaticContextTargetTokens: 600,
   automaticContextHardLimitBytes: 900 * 4

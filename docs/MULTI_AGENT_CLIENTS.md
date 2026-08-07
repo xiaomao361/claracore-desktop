@@ -213,8 +213,11 @@ adapt or pass the explicit detail argument during the compatibility window:
   nested `currentPosition`. Pass `detail: "full"` for the previous shape.
 - `agentState` is absent from every line packet. Read it once per session with
   `shared_line_agent_state`.
-- `innerlife_status` returns operational state only; pass `detail: true` for the
-  previous snapshot.
+- `innerlife_status` returns operational state only; pass `detail: "full"` (or
+  the boolean `true` alias) for the previous snapshot. **Its `mode` value
+  changed**: the default read now reports `mode: "status"` and the full read
+  reports `mode: "full"`. The pre-0.6.6 `mode: "lite"` is retired — branch on
+  `detail`, not on `mode`.
 - `innerlife_pending_shares` returns 3 previews; pass `detail: "full"` for whole
   bodies.
 - `innerlife_briefing` returns a decision synthesis with `counts` and no `text`

@@ -76,6 +76,14 @@ function checkCoreProfile() {
     assert.strictEqual(tool.inputSchema?.type, "object", `Core tool ${tool.name} must keep an object schema.`);
   }
 
+  // Deprecated contract names must not survive in what an Agent reads.
+  for (const tool of profileToolDefinitions("full")) {
+    assert.ok(
+      !/\blite\b/i.test(JSON.stringify(tool)),
+      `Tool ${tool.name} still advertises the deprecated "lite" contract name.`
+    );
+  }
+
   // The core manifest advertises fewer arguments, but handlers are shared and
   // Gateway input is not schema-validated, so every core tool must still be a
   // real tool with an unchanged handler contract.
@@ -355,6 +363,19 @@ function checkInnerLifeSelective() {
   const status = shapeInnerLifeStatus(snapshot);
   assertWithin("innerlife_status default", status, CONTEXT_BUDGET_CEILINGS.innerlifeStatusDefault);
   assert.strictEqual(status.detail, "summary");
+
+  // The old `lite` contract is deprecated explicitly, not silently reused.
+  // `mode` is stated by the shape rather than inherited from the read model,
+  // and the boolean argument stays a documented alias for the named level.
+  assert.strictEqual(status.mode, "status", "The default status read must not still report mode=lite.");
+  assert.strictEqual(shapeInnerLifeStatus(snapshot, "full").mode, "full");
+  assert.strictEqual(shapeInnerLifeStatus(snapshot, true).detail, "full", "detail=true must alias the full level.");
+  assert.strictEqual(shapeInnerLifeStatus(snapshot, false).detail, "summary");
+  assert.strictEqual(shapeInnerLifeStatus(snapshot, "summary").detail, "summary");
+  assert.throws(() => shapeInnerLifeStatus(snapshot, "lite"), /detail must be one of/, "lite must not resolve as a detail level.");
+  for (const shape of [status, shapeInnerLifeStatus(snapshot, "full")]) {
+    assert.notStrictEqual(shape.mode, "lite", "No InnerLife status shape may still report the pre-0.6.6 lite mode.");
+  }
 
   // Operational state only: no share catalog, no Inbox bodies.
   assert.ok(!("pendingShares" in status), "Default status must not return a share catalog.");

@@ -143,8 +143,11 @@ const innerlifeSessionToolDefinitions = [
       "type": "object",
       "properties": {
         "detail": {
-          "type": "boolean",
-          "description": "Return the full snapshot instead of the lite summary."
+          "oneOf": [
+            { "type": "string", "enum": ["summary", "full"] },
+            { "type": "boolean" }
+          ],
+          "description": "summary (default) is operational state only; full returns the complete snapshot. Boolean true is a compatibility alias for full. Responses report mode=status or mode=full; clients that branched on the pre-0.6.6 mode value must use detail instead."
         }
       },
       "additionalProperties": false

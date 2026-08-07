@@ -53,7 +53,11 @@ function bounded(value, maxBytes) {
 // and five Inbox bodies to answer "is this healthy".
 function shapeInnerLifeStatus(snapshot, detailInput) {
   const detail = normalizeInnerLifeDetail(detailInput);
-  if (detail === "full") return { detail, ...snapshot };
+  // `mode` is stated by the shape, not inherited from whichever read model was
+  // used. Before 0.6.6 the default read reported mode="lite"; it now reports
+  // mode="status" and the full read reports mode="full". Clients that branched
+  // on "lite" must move to `detail`.
+  if (detail === "full") return { ...snapshot, detail, mode: "full" };
 
   const counts = snapshot?.counts || {};
   const daemon = snapshot?.daemon || {};

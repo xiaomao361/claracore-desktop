@@ -59,7 +59,7 @@ explicit call that recovers the full record.
 | `memoria_search` | 3 results, bounded body previews, no embedding metadata, no related records | `detail: "full"`, or `memoria_get(id)` per result |
 | `shared_line_get` | `resume` packet: line id/title, summary, interpretation status, facts used, next step, updated time, at most one recent handoff | `detail: "context"` adds relevant Shared Reality; `detail: "full"` restores history, snapshots, arcs, agent state, and the stored text |
 | `shared_line_update` / `create` / `activate` / `handoff_create` | acknowledgement uses the same `resume` shape | `detail: "full"`, or a follow-up `shared_line_get` |
-| `innerlife_status` | operational state only: counts, daemon, doctor, pending-work indicators | `detail: true` |
+| `innerlife_status` | operational state only: counts, daemon, doctor, pending-work indicators. Reports `mode: "status"`; the pre-0.6.6 `mode: "lite"` is retired | `detail: "full"`, or the boolean `true` alias |
 | `innerlife_pending_shares` | 3 bounded previews | `detail: "full"`, or `innerlife_share_check` for one share |
 | `innerlife_briefing` | decision synthesis: selected line summary when unambiguous, open loops, counts, at most one candidate preview | `detail: "full"` |
 | `gateway_context(detail=brief)` | one resume packet, up to 3 Memory summaries, InnerLife status plus at most one candidate | `detail: "full"` |
