@@ -14,6 +14,9 @@ const CONTEXT_BUDGET_CEILINGS = Object.freeze({
   coreToolCount: 26,
   docsDefault: 4 * 1024,
   docsSection: 8 * 1024,
+  // `full` concatenates every section, so it is bounded as the sum rather than
+  // as one more independent section.
+  docsFullSection: 12 * 1024,
   ambiguityPayload: 4 * 1024,
   ambiguityCandidatePreview: 240,
   ambiguityCandidateLimit: 5,
@@ -30,7 +33,8 @@ const CONTEXT_BUDGET_CEILINGS = Object.freeze({
   gatewayContextBrief: 8 * 1024,
   gatewayContextBriefStretch: 5 * 1024,
   automaticContextHardLimitTokens: 900,
-  automaticContextTargetTokens: 600
+  automaticContextTargetTokens: 600,
+  automaticContextHardLimitBytes: 900 * 4
 });
 
 module.exports = { CONTEXT_BUDGET_CEILINGS };

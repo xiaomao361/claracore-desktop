@@ -175,6 +175,32 @@ Claude operating as `clara` cannot act on Lara's shares or sessions. Hermes
 operating as `lara` cannot act on Clara's or Codex's data. The Desktop UI may
 still request an all-agent inspection snapshot.
 
+## v0.6.6 Compatibility Matrix
+
+Read this as: what each client gets by default after upgrading Desktop, and what
+it must change to keep its previous behavior.
+
+| Client / transport | Default tool manifest | Default payload shapes | Needs a client change? |
+| --- | --- | --- | --- |
+| **Codex** (HTTP MCP) | `core` (26 tools) | new bounded defaults | Only if it used maintenance tools by advertisement; then send `X-ClaraCore-Tool-Profile: full`. Its per-prompt hook should move to `gateway_auto_context`. |
+| **Claude Code** (HTTP MCP) | `core` (26 tools) | new bounded defaults | No, for ordinary recall/continuation. Its SessionStart hook now receives a much smaller briefing. |
+| **Hermes / Lara** (HTTP MCP) | `core` (26 tools) | new bounded defaults | Only if it parsed `currentPosition` from Shared Line writes; use `detail: "full"` or read the new top-level fields. |
+| **Any stdio client** | `core` (26 tools) | new bounded defaults | Set `CLARACORE_TOOL_PROFILE=full` to keep the old manifest. |
+| **HTTP `/agent/setup`** | reports `toolProfiles` and `contextStates` | `firstCalls` no longer requires `gateway_docs` | No. |
+| **HTTP `/gateway/context`** | unchanged endpoint | bounded ambiguity body with `candidateCount`, `totalCount`, `detailRef` | No, unless it assumed an unbounded `candidates` array. |
+| **Desktop UI / CLI** | not applicable | **unchanged — full records** | No. Shaping is a Gateway-boundary concern only. |
+
+Behavior that is identical on every client and transport:
+
+- an unknown or missing tool profile resolves to `core`; only an explicit `full`
+  broadens the surface;
+- every tool still executes when called by name under either profile, because
+  Gateway tool input is not schema-validated;
+- `claracore_connection_test` reports the resolved profile in `toolProfile`;
+- ambiguity refusals, delivery evidence, sensitivity, time view, and same-Agent
+  filtering remain fail-closed.
+
+
 ## v0.6.6 Default Payload Changes
 
 Every domain default read is smaller. Clients that parsed the old shapes must

@@ -515,7 +515,9 @@ function createInnerLifeReadModelRepository(helpers) {
     async getInnerLifeBriefing(input = DEFAULT_AGENT_ID) {
       const options = input && typeof input === "object" ? input : { agentId: input };
       const agentId = resolveAgentIdentity(options || {}).id;
-      const profile = await this.ensureInnerLifeProfile(agentId);
+      // A briefing is an observation. Reading one for an unknown Agent must not
+      // create that Agent's profile.
+      const profile = await this.getInnerLifeProfileReadOnly(agentId);
       const { resumePacket, sharedLineContext } = await this.getOptionalInnerLifeResumePacket(options, profile.agent_id);
       const memories = await this.listMemories(5);
       const pendingShares = (await this.listInnerLifeShares("pending", 20)).filter((share) => share.agent_id === profile.agent_id).slice(0, 5);

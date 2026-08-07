@@ -11,6 +11,10 @@ const DOCS_SECTIONS = Object.freeze([
 
 const DEFAULT_DOCS_BYTES = 4096;
 const SECTION_DOCS_BYTES = 8192;
+// `full` is the concatenation of every section, not an independent one, so the
+// 8 KB per-section bound does not apply to it. Truncating it would silently
+// drop guidance; give it room for the sum instead.
+const FULL_SECTION_DOCS_BYTES = 12288;
 
 const STARTUP_SEQUENCE =
   "claracore_connection_test -> gateway_context(detail=brief, no lineId) -> retry with one candidate lineId only after SHARED_LINE_ID_REQUIRED";
@@ -69,6 +73,17 @@ function defaultDocs({ toolProfile }) {
     "- Do not mutate SQLite directly; use MCP tools.",
     "- Do not stop or replace external legacy ClaraCore services.",
     "- Never claim a line, memory, thought, model, or health state that tools did not return.",
+    "",
+    "## Defaults",
+    "",
+    "Every domain read is bounded by default and names an explicit call for the rest:",
+    "",
+    "- memoria_search: 3 bounded summaries -> memoria_get, or detail=full",
+    "- shared_line_get: a resume packet -> detail=context, detail=full",
+    "- innerlife_status: operational state only -> detail=true",
+    "- innerlife_pending_shares: 3 previews -> innerlife_share_check, or detail=full",
+    "- innerlife_briefing: one decision synthesis -> detail=full",
+    "- gateway_context: detail=brief -> detail=full",
     "",
     "## Sections",
     "",
@@ -145,7 +160,9 @@ function memorySection() {
   return [
     "## Memory / Memoria",
     "",
-    "- Search with memoria_search before creating a memory. Default timeView=current; use historical or all only when prior state is the question.",
+    "- Search with memoria_search before creating a memory. It returns three bounded summaries; raise limit only when one read genuinely needs more, and use detail=full or memoria_get for a whole record.",
+    "- A default search does not carry embedding operational metadata or related records. Ask for them explicitly.",
+    "- Default timeView=current; use historical or all only when prior state is the question.",
     "- memoria_create is for durable, factual, reviewable information. One memory holds one fact or decision.",
     "- Label at write time: agent-id:<your-agent-id>, project/module labels, stable topic labels.",
     "- memoria_update corrects or refines the same fact. For a confirmed changed state, create the new fact and call memoria_supersede.",
@@ -176,6 +193,7 @@ function sharedLineSection() {
     "## Shared Line",
     "",
     "- Shared Line is the current resumable working position, not long-term fact storage.",
+    "- shared_line_get returns a resume packet: line, summary, interpretation status, facts used, next step, and at most one recent handoff. Use detail=context for relevant Shared Reality and detail=full for history, snapshots, arcs, and agent state.",
     "- Start resume reads with gateway_context detail=brief. Use shared_line_list when you need the catalog or are preparing a write.",
     "- SHARED_LINE_ID_REQUIRED is a safe refusal: nothing was read or written. Pick a candidate and retry with lineId.",
     "- A request without lineId is allowed only when your agent owns zero or one active non-default line.",
@@ -199,6 +217,8 @@ function innerLifeSection() {
     "",
     "- innerlife_session_start at the beginning of a real work session; it returns the session id, a compact share_plan, and a Shared Line resume packet.",
     "- innerlife_session_end with a structured summary of the actual conversation. Do not invent an afterthought; InnerLife decides whether one exists.",
+    "- innerlife_status returns operational state only: counts, daemon, doctor, and whether work is waiting. Pass detail=true for the full snapshot.",
+    "- innerlife_pending_shares returns three bounded previews. innerlife_briefing returns one decision synthesis, not an aggregate dump; both take detail for the rest.",
     "- innerlife_share_check before surfacing a waiting share. Pass real conversation context, not keywords. Use at most one share per turn.",
     "- innerlife_mark_share reports the outcome. action=used requires deliveryEvidence with conversationId, a responseExcerpt of at least 12 characters taken from what you actually said, and sharedAt. deferred and discarded need no evidence.",
     "- Reading candidates never marks delivery. Pending content stays pending until an explicit action.",
@@ -215,6 +235,7 @@ function diagnosticsSection({ launch, paths }) {
     "",
     "- claracore_status for product health and configuration.",
     "- gateway_trace_list to inspect recent tool calls. The operator can see these traces.",
+    "- gateway_auto_context arbitrates automatic per-prompt context: Memory and InnerLife candidates compete for one bounded slot, and it selects one block or abstains. It never marks delivery or use.",
     "- Keep tool calls bounded. Never mutate SQLite directly.",
     "- Do not read local source files as the normal workflow; packaged Desktop runs from app.asar.",
     "",
@@ -259,13 +280,14 @@ function buildGatewayDocs({ section, launch, paths, toolProfile }) {
   return {
     section: requested,
     sections: DOCS_SECTIONS,
-    text: boundText(text, SECTION_DOCS_BYTES)
+    text: boundText(text, requested === "full" ? FULL_SECTION_DOCS_BYTES : SECTION_DOCS_BYTES)
   };
 }
 
 module.exports = {
   DEFAULT_DOCS_BYTES,
   DOCS_SECTIONS,
+  FULL_SECTION_DOCS_BYTES,
   SECTION_DOCS_BYTES,
   buildGatewayDocs,
   normalizeSection

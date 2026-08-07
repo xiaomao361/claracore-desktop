@@ -51,6 +51,43 @@ function createInnerLifeProfileRepository(helpers) {
     }
     ,
 
+    // Read-only counterpart of ensureInnerLifeProfile. Inspecting InnerLife
+    // must not bring an Agent into existence: a briefing for an unknown Agent
+    // is an empty briefing, not a new profile row. Write paths keep using
+    // ensureInnerLifeProfile.
+    async getInnerLifeProfileReadOnly(agentId = DEFAULT_AGENT_ID) {
+      const identity = resolveAgentIdentity(agentId || DEFAULT_AGENT_ID);
+      const id = identity.id;
+      const rows = await this.query(`
+        SELECT agent_id, display_name, enabled, profile_json, state_json, created_at, updated_at
+        FROM innerlife_profiles
+        WHERE agent_id = ${sqlString(id)};
+      `);
+      const row = rows[0];
+      if (!row) {
+        return {
+          agent_id: id,
+          display_name: identity.name || id,
+          enabled: false,
+          profile_json: null,
+          state_json: null,
+          created_at: null,
+          updated_at: null,
+          exists: false,
+          profile: {},
+          state: {}
+        };
+      }
+      return {
+        ...row,
+        enabled: Boolean(row.enabled),
+        exists: true,
+        profile: parseJson(row.profile_json, {}),
+        state: parseJson(row.state_json, {})
+      };
+    }
+    ,
+
     async updateInnerLifeProfile(input = {}) {
       const profile = await this.ensureInnerLifeProfile(input.agentId || input.agent_id || input.agent || DEFAULT_AGENT_ID);
       const displayName = String(input.displayName || input.display_name || profile.display_name || profile.agent_id).trim() || profile.agent_id;

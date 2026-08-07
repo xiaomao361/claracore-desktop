@@ -121,18 +121,42 @@ function checkDocs() {
   for (const section of DOCS_SECTIONS) {
     const result = buildGatewayDocs({ ...args, section });
     assert.strictEqual(result.section, section);
-    assertWithin(`gateway_docs section=${section}`, result.text, CONTEXT_BUDGET_CEILINGS.docsSection);
+    assertWithin(
+      `gateway_docs section=${section}`,
+      result.text,
+      section === "full" ? CONTEXT_BUDGET_CEILINGS.docsFullSection : CONTEXT_BUDGET_CEILINGS.docsSection
+    );
     assert.ok(result.text.trim().length > 0, `Section ${section} must return content.`);
+    // A truncated docs section silently drops guidance. Bound the content, do
+    // not cut it.
+    assert.ok(
+      !result.text.includes("[truncated"),
+      `Section ${section} was truncated; raise its bound or trim the source instead.`
+    );
   }
 
   assert.throws(() => buildGatewayDocs({ ...args, section: "everything" }), /section must be one of/);
 
-  // Default docs must not restate the tools/list manifest.
-  const names = toolDefinitions().map((tool) => tool.name);
-  const mentioned = names.filter((name) => fallback.text.includes(name));
+  assert.ok(!fallback.text.includes("[truncated"), "Default docs must not be truncated.");
+
+  // The changed v0.6.6 defaults must be stated where an Agent actually reads.
+  for (const phrase of ["memoria_search", "shared_line_get", "innerlife_status", "detail=full"]) {
+    assert.ok(fallback.text.includes(phrase), `Default docs must state the changed default for ${phrase}.`);
+  }
+
+  // Default docs may name a tool to state its default, but must never restate
+  // the manifest. The invariant is the descriptions, not the names.
+  const canonicalTools = toolDefinitions();
+  for (const tool of canonicalTools) {
+    assert.ok(
+      !fallback.text.includes(tool.description),
+      `Default docs restate the ${tool.name} description; tools/list is the manifest, not this guide.`
+    );
+  }
+  const manifestBytes = bytes(canonicalTools);
   assert.ok(
-    mentioned.length < 10,
-    `Default docs name ${mentioned.length} tools; tools/list is the manifest, not this guide.`
+    bytes(fallback.text) * 10 < manifestBytes,
+    `Default docs are ${bytes(fallback.text)} bytes against a ${manifestBytes}-byte manifest; they should be an order of magnitude smaller.`
   );
 
   // Onboarding safety statements must survive the trim.
@@ -604,6 +628,37 @@ function checkAutomaticArbiter() {
   assert.strictEqual(urgent.suppressed[0].domain, "memory");
 }
 
+// The measurement contract in the plan is itself testable: the baseline must
+// report each field family, not only totals, or a future regression can pass
+// its ceiling while quietly moving cost between families.
+const REQUIRED_BREAKDOWNS = Object.freeze({
+  "memoria_search default": ["resultCount", "bodyBytes", "metadataBytes", "relatedBytes"],
+  "shared_line_get resume": [
+    "currentPosition",
+    "sharedReality",
+    "agentState",
+    "history",
+    "snapshot",
+    "arc",
+    "text"
+  ],
+  "shared_line_get full": [
+    "currentPosition",
+    "sharedReality",
+    "agentState",
+    "history",
+    "snapshot",
+    "arc",
+    "text"
+  ],
+  "innerlife_status default": ["profile", "shares", "inbox", "doctor", "counts"],
+  "innerlife_briefing default": ["memories", "openLoops", "counts", "inbox", "text"],
+  "innerlife_briefing detail=full": ["memories", "shares", "inbox", "thoughts", "text"],
+  "automatic candidates offered": ["candidateCount"],
+  "automatic selected": ["domain"],
+  "automatic delivered block": ["truncated", "targetBytes"]
+});
+
 async function checkBaselineScript() {
   const report = await collect();
   assert.deepStrictEqual(report.failures, [], `Baseline reports surfaces over ceiling: ${report.failures.join(", ")}`);
@@ -611,6 +666,46 @@ async function checkBaselineScript() {
   assert.ok(report.groups.docs.length >= DOCS_SECTIONS.length, "Baseline must measure every docs section.");
   const fullManifest = report.groups.toolProfiles.find((entry) => entry.name === "tools/list full");
   assert.strictEqual(fullManifest.ceiling, null, "Full-profile payloads must not share the normal-use ceiling.");
+
+  // Every group the measurement contract names must be present.
+  for (const group of ["toolProfiles", "docs", "errors", "memory", "sharedLine", "innerLife", "aggregate", "automatic"]) {
+    assert.ok(report.groups[group]?.length, `Baseline is missing the ${group} group.`);
+  }
+
+  const byName = new Map(
+    Object.values(report.groups)
+      .flat()
+      .map((entry) => [entry.name, entry])
+  );
+  for (const [name, fields] of Object.entries(REQUIRED_BREAKDOWNS)) {
+    const entry = byName.get(name);
+    assert.ok(entry, `Baseline is missing the measurement "${name}".`);
+    assert.ok(entry.breakdown, `Baseline measurement "${name}" reports no per-family breakdown.`);
+    for (const field of fields) {
+      assert.ok(
+        Object.hasOwn(entry.breakdown, field),
+        `Baseline measurement "${name}" does not report the ${field} family.`
+      );
+    }
+  }
+
+  // Candidate, selected, and delivered are three separate measurements, and
+  // the delivered block is the only one that shares the automatic budget.
+  const delivered = byName.get("automatic delivered block");
+  assert.strictEqual(
+    delivered.ceiling,
+    CONTEXT_BUDGET_CEILINGS.automaticContextHardLimitBytes,
+    "The delivered automatic block must be measured against the hard limit."
+  );
+  assert.ok(
+    delivered.bytes <= CONTEXT_BUDGET_CEILINGS.automaticContextTargetTokens * 4,
+    `Automatic delivered block is ${delivered.bytes} bytes, over the ${CONTEXT_BUDGET_CEILINGS.automaticContextTargetTokens}-token target.`
+  );
+  assert.strictEqual(
+    byName.get("automatic candidates offered").ceiling,
+    null,
+    "Offered candidates are diagnostic and must not share the delivery ceiling."
+  );
 }
 
 async function main() {

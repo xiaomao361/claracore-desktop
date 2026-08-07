@@ -99,6 +99,12 @@ async function main() {
   if (server?.env?.CLARACORE_CONVERSATION_ID !== "<optional-host-conversation-id>") {
     throw new Error("Agent setup does not include the optional conversation id placeholder.");
   }
+  // v0.6.6 A1: first-party setup generates the core profile explicitly.
+  if (server?.env?.CLARACORE_TOOL_PROFILE !== "core") {
+    throw new Error(
+      `Agent setup must generate the first-party core tool profile, got ${server?.env?.CLARACORE_TOOL_PROFILE}.`
+    );
+  }
   if (snapshot.connections.gatewayEnvPath !== "not used in product core reset") {
     throw new Error("Agent setup should not reference old Gateway env files.");
   }
@@ -169,8 +175,13 @@ async function main() {
     }
     const docsResponse = await client.callTool("gateway_docs", { section: "full" });
     const docsText = docsResponse.result?.content?.[0]?.text || "";
-    if (Buffer.byteLength(docsText, "utf8") > 8192) {
-      throw new Error(`Gateway docs section=full is ${Buffer.byteLength(docsText, "utf8")} bytes, over the 8 KB ceiling.`);
+    // section=full concatenates every section, so it is bounded as the sum
+    // rather than as one more independent 8 KB section.
+    if (Buffer.byteLength(docsText, "utf8") > 12288) {
+      throw new Error(`Gateway docs section=full is ${Buffer.byteLength(docsText, "utf8")} bytes, over the 12 KB ceiling.`);
+    }
+    if (docsText.includes("[truncated")) {
+      throw new Error("Gateway docs section=full was truncated; guidance must be bounded, not cut.");
     }
     if (!docsText.includes(dataRoot)) throw new Error("Gateway docs do not include the active data root.");
     if (!docsText.includes("Keep old ClaraCore service processes untouched")) {

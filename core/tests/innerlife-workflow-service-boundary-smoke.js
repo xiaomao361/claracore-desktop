@@ -393,10 +393,12 @@ async function main() {
     );
   }
   const installed = listInstalledRepositoryMethods(ProductDatabase);
-  assert.strictEqual(installed.length, 177, "The repository public API count must remain stable.");
+  // 178 since v0.6.6: getInnerLifeProfileReadOnly is the read-only counterpart
+  // of ensureInnerLifeProfile, so briefing reads create no product state.
+  assert.strictEqual(installed.length, 178, "The repository public API count must remain stable.");
   assert.strictEqual(
     installed.filter((entry) => entry.owner === "innerlife").length,
-    65,
+    66,
     "The InnerLife public API count must remain stable."
   );
 
