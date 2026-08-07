@@ -234,8 +234,24 @@ turn. That hook change is client-side work and is not done by upgrading Desktop.
 ## Automatic Turn Context: Host Adapter Contract
 
 A host prompt hook makes **one** call per user turn and injects at most one
-block. It must not retrieve Memory, inspect InnerLife, or score relevance
-itself — that policy lives in ClaraCore so it cannot drift between hosts.
+block. It must not retrieve Memory itself — that policy lives in ClaraCore so it
+cannot drift between hosts.
+
+**Automatic context is Memory only.** InnerLife shares are never delivered
+automatically, and this is a product decision rather than a missing feature. A
+waiting thought does not need to be about the current topic: an off-topic
+engineering thought during engineering work is fine. What makes a share wrong is
+the **register** — that same thought dropped into an intimate conversation. A
+server can match topics; it cannot read register. So the model owns the
+decision, through `innerlife_share_check`, and the hook carries only the pending
+**count** as a signal that something is waiting.
+
+This was measured, not assumed. Lexical relevance over real shares ranked three
+unrelated Chinese shares above the English one that actually matched: Chinese
+bigrams tie on function words, and cross-language overlap is structurally zero.
+The Memory Controller earned automatic injection by having embeddings and a
+measured 0.72 vector gate. If InnerLife ever gets share embeddings, automatic
+delivery can be revisited — but topic matching would still be the wrong gate.
 
 ### Request
 
@@ -254,7 +270,7 @@ Identity comes from the authenticated caller headers, never from the body.
 ```json
 {
   "decision": "deliver_one" | "abstain",
-  "domainStatus": { "memory": "ok|timeout|error|skipped", "innerlife": "..." },
+  "domainStatus": { "memory": "ok|timeout|error|skipped", "innerlife": "not_collected" },
   "selected": { "domain": "memory|innerlife", "id": "...", "evidenceState": "selected" },
   "block": { "domain": "...", "id": "...", "body": "...", "bytes": 0, "truncated": false },
   "candidates": [ { "domain": "...", "id": "...", "eligible": false, "discardReason": "..." } ],
@@ -271,7 +287,7 @@ this desktop actually arbitrated.**
 
 | Response | Adapter does |
 | --- | --- |
-| `deliver_one` with a block | inject that one block |
+| `deliver_one` with a block | inject that one block (always Memory) |
 | anything carrying `domainStatus` | nothing — the desktop looked and abstained |
 | RPC error `Unknown tool` | fall back to the old `memory_context` path |
 | any other shape | fall back to the old `memory_context` path |
