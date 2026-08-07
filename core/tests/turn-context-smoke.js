@@ -99,23 +99,27 @@ async function checkRelevanceIsReadOnly() {
   const belowFloor = scorer("candidates", share("s6", "candidates only here nothing else at all"));
   assert.strictEqual(belowFloor.signals.reason, "below_overlap_floor");
 
-  // KNOWN FALSE POSITIVE, recorded rather than hidden: when the InnerLife
-  // provider is disabled, processInnerLifeOnce stores a template that embeds the
-  // operator prompt verbatim, so such a share scores high against a similar
-  // prompt. That is InnerLife content quality, not relevance scoring, and is not
-  // papered over here — fixing it inside the scorer would mean string-matching
-  // the template.
-  const templateEcho = scorer(
-    "shared line ambiguity refusal bounded candidates",
-    share(
-      "s7",
-      "Manual InnerLife review\n\nCurrent position: none\n\nOperator prompt: shared line ambiguity refusal bounded candidates"
-    )
+  // Fixed: the fallback template used to embed the operator prompt verbatim, so
+  // a boilerplate share scored highly against any later prompt on the same topic
+  // and automatic context delivered it back as if it were a thought. The model
+  // still receives the operator prompt; the stored body no longer echoes it.
+  const templateBody = "Manual InnerLife review\n\nCurrent position: none\n\nRecent Memory context:\n- No recent Memory records.";
+  const templateEcho = scorer("shared line ambiguity refusal bounded candidates", share("s7", templateBody));
+  assert.strictEqual(
+    templateEcho.relevance,
+    0,
+    "A template body must not match an unrelated prompt now that it no longer echoes one."
   );
+
+  // The threshold is 0.35, matching MIN_MEMORY_RELEVANCE. Lock both sides of
+  // the measured gap so a future change cannot quietly reopen it.
+  const zhBody = "共享线歧义拒绝现在会返回有界候选和真实总数，agent 可以自己选，不用把整个目录拉下来。";
+  const zhQuestion = scorer("共享线歧义拒绝是怎么限制候选数量的", share("zh3", zhBody));
   assert.ok(
-    templateEcho.relevance >= 0.5,
-    "Template echo currently scores high; this assertion exists so the behaviour is visible if it changes."
+    zhQuestion.relevance >= 0.35,
+    `A full Chinese question scored ${zhQuestion.relevance}; at 0.5 no ordinary Chinese question could ever fire.`
   );
+  assert.ok(oneWord.relevance < 0.35, "One incidental shared word must still be discarded at the lower floor.");
 }
 
 function checkChineseRelevance() {
