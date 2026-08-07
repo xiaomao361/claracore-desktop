@@ -102,6 +102,30 @@ function checkCoreProfile() {
   }
 }
 
+// The core profile was first picked by asking "does this tool sound like
+// maintenance", which put memoria_supersede in full — while the first-party
+// Agent instructions name it as the everyday remedy for a stale fact. It failed
+// silently: nothing broke until a closeout actually needed it. These pairs are
+// the check that classification did not drift from what the Agent is told to do.
+const CORE_WORKFLOW_PAIRS = Object.freeze([
+  ["memoria_create", "memoria_supersede", "a confirmed replacement is create plus supersede"],
+  ["memoria_link_create", "memoria_link_list", "reading a neighbourhood before adding to it"],
+  ["memoria_record_create", "memoria_record_list", "writing a structured record implies reading them back"],
+  ["innerlife_session_start", "innerlife_session_end", "a session that can start must be closable"],
+  ["innerlife_share_check", "innerlife_mark_share", "checking a share implies reporting the outcome"]
+]);
+
+function checkCoreWorkflowsAreComplete() {
+  const core = new Set(CORE_TOOL_NAMES);
+  for (const [write, read, why] of CORE_WORKFLOW_PAIRS) {
+    if (!core.has(write)) continue;
+    assert.ok(
+      core.has(read),
+      `core advertises ${write} but not ${read} — ${why}. A half workflow fails silently: the Agent only finds out mid-task.`
+    );
+  }
+}
+
 function checkFullProfileUnchanged() {
   const full = profileToolDefinitions("full");
   const canonical = toolDefinitions();
@@ -763,6 +787,7 @@ async function checkBaselineScript() {
 async function main() {
   checkProfileResolution();
   checkCoreProfile();
+  checkCoreWorkflowsAreComplete();
   checkFullProfileUnchanged();
   checkDocs();
   checkAmbiguityPayload();

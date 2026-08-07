@@ -182,10 +182,10 @@ it must change to keep its previous behavior.
 
 | Client / transport | Default tool manifest | Default payload shapes | Needs a client change? |
 | --- | --- | --- | --- |
-| **Codex** (HTTP MCP) | `core` (26 tools) | new bounded defaults | Only if it used maintenance tools by advertisement; then send `X-ClaraCore-Tool-Profile: full`. Its per-prompt hook should move to `gateway_auto_context`. |
-| **Claude Code** (HTTP MCP) | `core` (26 tools) | new bounded defaults | No, for ordinary recall/continuation. Its SessionStart hook now receives a much smaller briefing. |
-| **Hermes / Lara** (HTTP MCP) | `core` (26 tools) | new bounded defaults | Only if it parsed `currentPosition` from Shared Line writes; use `detail: "full"` or read the new top-level fields. |
-| **Any stdio client** | `core` (26 tools) | new bounded defaults | Set `CLARACORE_TOOL_PROFILE=full` to keep the old manifest. |
+| **Codex** (HTTP MCP) | `core` (29 tools) | new bounded defaults | Only if it used maintenance tools by advertisement; then send `X-ClaraCore-Tool-Profile: full`. Its per-prompt hook should move to `gateway_auto_context`. |
+| **Claude Code** (HTTP MCP) | `core` (29 tools) | new bounded defaults | No, for ordinary recall/continuation. Its SessionStart hook now receives a much smaller briefing. |
+| **Hermes / Lara** (HTTP MCP) | `core` (29 tools) | new bounded defaults | Only if it parsed `currentPosition` from Shared Line writes; use `detail: "full"` or read the new top-level fields. |
+| **Any stdio client** | `core` (29 tools) | new bounded defaults | Set `CLARACORE_TOOL_PROFILE=full` to keep the old manifest. |
 | **HTTP `/agent/setup`** | reports `toolProfiles` and `contextStates` | `firstCalls` no longer requires `gateway_docs` | No. |
 | **HTTP `/gateway/context`** | unchanged endpoint | bounded ambiguity body with `candidateCount`, `totalCount`, `detailRef` | No, unless it assumed an unbounded `candidates` array. |
 | **Desktop UI / CLI** | not applicable | **unchanged — full records** | No. Shaping is a Gateway-boundary concern only. |

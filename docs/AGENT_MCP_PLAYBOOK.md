@@ -37,8 +37,13 @@ work. A caller conversation id never replaces an `inner_session_*` id.
 
 | Profile | Contents | Selection |
 | --- | --- | --- |
-| `core` (default) | 26 tools: connection/context, Memory recall and write, Shared Line continuation, InnerLife session and sharing | nothing to set |
+| `core` (default) | 29 tools: connection/context, Memory recall/write/supersede/link, Shared Line continuation, InnerLife session and sharing | nothing to set |
 | `full` | every tool, including maintenance, import/export, graph, retention, identity, daemon, archive, and advanced editing | `X-ClaraCore-Tool-Profile: full` (HTTP) or `CLARACORE_TOOL_PROFILE=full` (stdio) |
+
+`core` covers complete everyday workflows, not just the write half of each: if a
+tool is in `core`, its natural counterpart is too — `memoria_create` with
+`memoria_supersede`, `memoria_link_create` with `memoria_link_list`. A half
+workflow fails silently, since the caller only discovers the gap mid-task.
 
 An unknown or missing value resolves to `core`; an invalid profile never
 broadens the surface. `claracore_connection_test` reports the resolved profile
