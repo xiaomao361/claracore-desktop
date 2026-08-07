@@ -2,6 +2,7 @@ const fs = require("fs/promises");
 const os = require("os");
 const path = require("path");
 const { createGatewayClient, parseTextResult } = require("./gateway-client");
+const { CONTEXT_BUDGET_CEILINGS } = require("./fixtures/context-budget-ceilings");
 const packageJson = require("../../package.json");
 const runtime = require("../runtime");
 
@@ -84,13 +85,27 @@ async function main() {
     }
 
     // The packaged runtime must resolve the same profiles as the source tree.
+    // Read the ceilings from their single source rather than repeating the
+    // numbers here. This file only runs after a build, so a hardcoded figure
+    // goes stale silently until someone packages.
     const packagedTools = (await client.request("tools/list")).result?.tools || [];
-    if (packagedTools.length !== 26) {
-      throw new Error(`Packaged core profile exposed ${packagedTools.length} tools, expected 26.`);
+    if (packagedTools.length > CONTEXT_BUDGET_CEILINGS.coreToolCount) {
+      throw new Error(
+        `Packaged core profile exposed ${packagedTools.length} tools, over the ${CONTEXT_BUDGET_CEILINGS.coreToolCount} ceiling.`
+      );
     }
     const packagedManifestBytes = Buffer.byteLength(JSON.stringify(packagedTools), "utf8");
-    if (packagedManifestBytes > 12288) {
-      throw new Error(`Packaged core tools/list is ${packagedManifestBytes} bytes, over the 12 KB ceiling.`);
+    if (packagedManifestBytes > CONTEXT_BUDGET_CEILINGS.coreToolsList) {
+      throw new Error(
+        `Packaged core tools/list is ${packagedManifestBytes} bytes, over the ${CONTEXT_BUDGET_CEILINGS.coreToolsList}-byte ceiling.`
+      );
+    }
+    // The workflow pairs that made this profile wrong once must survive
+    // packaging, not just the source tree.
+    for (const name of ["memoria_supersede", "memoria_link_list", "memoria_record_list"]) {
+      if (!packagedTools.some((tool) => tool.name === name)) {
+        throw new Error(`Packaged core profile is missing everyday tool ${name}.`);
+      }
     }
     const packagedConnection = parseTextResult(await client.callTool("claracore_connection_test"));
     if (packagedConnection.toolProfile !== "core") {
