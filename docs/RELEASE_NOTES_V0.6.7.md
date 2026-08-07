@@ -63,6 +63,30 @@ this can be revisited — but topic matching would still be the wrong gate.
 Clients should detect capability through `domainStatus`, not through the version
 string. See `docs/MULTI_AGENT_CLIENTS.md`.
 
+## Also In This Release
+
+**Three tools moved from `full` into `core`.** The core profile was originally
+picked by asking whether a tool sounded like maintenance, which put
+`memoria_supersede` in `full` — while the first-party Agent instructions name it
+as the everyday remedy for a stale fact. `memoria_link_create` was in `core`
+without `memoria_link_list`, so the profile could write links it could not read,
+and `memoria_record_create` had no `memoria_record_list`.
+
+This failed silently. Nothing broke until a closeout actually needed to
+supersede a record and the tool was not there; the workaround was
+`memoria_update` plus an `evolved-from` link, which preserves history but leaves
+the old record `active` instead of `historical`.
+
+`core` is now 29 tools at 13,065 bytes against a ceiling raised from 12 KB to
+14 KB. Descriptions were compressed first, recovering about 490 bytes; going
+further would have meant deleting the "when not to use this" clauses that stop
+misuse. Spending 2 KB beats making every description shallower. `core` remains
+31.7% of the full manifest and 65% below the 37,130-byte 0.6.5 baseline.
+
+`context-budget-smoke` now asserts workflow completeness: if `core` advertises
+one half of a pair it must advertise the other. Verified to actually fail by
+removing `memoria_supersede` and watching it go red.
+
 ## Verification
 
 Source: `npm run check`, `npm run test:turn-context`, `npm run test:phase1`
