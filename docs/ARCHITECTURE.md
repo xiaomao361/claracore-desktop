@@ -35,8 +35,40 @@ The Desktop runtime is Node/Electron.
 - Agent Gateway: `core/gateway`
   - `core/gateway/context.js`: cross-domain Gateway context composition,
     Agent-scoped reads, and bounded `brief` projection. Omitted `detail`
-    preserves the 0.6.4 full packet.
+    preserves the 0.6.4 full packet. Since 0.6.6 `brief` composes the other
+    domains' default contracts instead of a second larger copy of each.
+  - `core/gateway/tool-profiles.js`: the `core` and `full` tool manifests.
+  - `core/gateway/docs.js`: progressive `gateway_docs`.
+  - `core/gateway/auto-context.js`: the one-winner automatic-context arbiter.
+- Context shaping (0.6.6): `core/continuity/resume-detail.js` and
+  `core/innerlife/selective.js`
 - CLI fallback: `core/cli.js`
+
+## Context Budget Boundary (0.6.6)
+
+Storage richness is not delivery richness. The product keeps complete stored
+state and separates it from the packet an Agent needs for one decision.
+
+- **Shaping is a Gateway-boundary concern.** Repository read models and domain
+  facades return the complete record. Every default-size reduction lives in a
+  shaping module called from `core/gateway/tool-handlers/*`, so the Desktop UI,
+  CLI, and internal ports keep full detail.
+- **`inputSchema` is advertisement, not validation.** Gateway tool input is not
+  schema-validated anywhere. The `core` profile therefore narrows which tools
+  and which arguments are *advertised*; every handler still accepts the full
+  argument set and every tool still executes when called by name.
+- **Every removed field names its replacement.** A shaped payload carries a
+  `detailRef` or an `omitted` block identifying the explicit call that returns
+  what was left out, plus the true size or count of what was omitted.
+- **Shaping never mutates.** Removing `agentState` from a default line read does
+  not delete or change it; reads must create no product state at all.
+- **Ceilings are the testable metric.** `core/tests/fixtures/context-budget-ceilings.js`
+  is the single source of every default-surface bound, enforced by
+  `core/tests/context-budget-smoke.js` inside `npm run check`. Token estimates
+  stay diagnostic because tokenization belongs to the receiving host.
+- **Automatic context has one winner.** Memory and InnerLife compete for one
+  bounded delivery slot through `core/gateway/auto-context.js` rather than
+  stacking independently. Selection is not delivery and not use.
 
 Agents should use Gateway MCP first, then CLI fallback when MCP is unavailable.
 When the Desktop app is running, Agent Access may also expose a

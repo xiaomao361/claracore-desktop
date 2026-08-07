@@ -1,5 +1,12 @@
 const innerlife = require("../../innerlife");
+const {
+  normalizeInnerLifeDetail,
+  shapeInnerLifeBriefing,
+  shapeInnerLifeStatus,
+  shapePendingShares
+} = require("../../innerlife/selective");
 const continuity = require("../../continuity");
+const { shapeSharedLinePacket } = require("../../continuity/resume-detail");
 
 function compactLineSummary(line) {
   return {
@@ -39,9 +46,14 @@ async function handleInnerLifeTool(name, args, context) {
       limit: 20,
       status: "active"
     });
+    // v0.6.6: session start is the path a host hook actually injects, so it
+    // must carry the same bounded contracts as the individual tools. Shaping
+    // only innerlife_briefing and shared_line_get would leave the largest
+    // per-session payload unshaped.
     return textResult({
       ...startPacket,
-      shared_line: sharedLine,
+      ...(startPacket.briefing ? { briefing: shapeInnerLifeBriefing(startPacket.briefing, args.detail) } : {}),
+      shared_line: sharedLine ? shapeSharedLinePacket(sharedLine, args.detail === "full" ? "full" : "resume") : sharedLine,
       shared_lines: lines.map(compactLineSummary),
       ...(activatedLine ? { activated_line: compactLineSummary(activatedLine) } : {}),
       ...(sharedLineError ? { shared_line_error: sharedLineError } : {})
@@ -77,14 +89,17 @@ async function handleInnerLifeTool(name, args, context) {
   }
 
   if (name === "innerlife_status") {
+    // v0.6.6: the default read is operational state only. detail=true still
+    // returns the complete snapshot, including inbox bodies and history.
     const agentId = currentMcpAgentId(args);
-    return textResult(
-      args.detail === true ? await innerlife.snapshot(core, agentId) : await innerlife.snapshotLite(core, agentId)
-    );
+    const detail = normalizeInnerLifeDetail(args.detail);
+    const snapshot = detail === "full" ? await innerlife.snapshot(core, agentId) : await innerlife.snapshotLite(core, agentId);
+    return textResult(shapeInnerLifeStatus(snapshot, detail));
   }
 
   if (name === "innerlife_briefing") {
-    return textResult(await innerlife.briefing(core, { ...args, agentId: currentMcpAgentId(args) }));
+    const briefing = await innerlife.briefing(core, { ...args, agentId: currentMcpAgentId(args) });
+    return textResult(shapeInnerLifeBriefing(briefing, args.detail));
   }
 
   if (name === "innerlife_doctor") {
@@ -145,9 +160,9 @@ async function handleInnerLifeTool(name, args, context) {
   }
 
   if (name === "innerlife_pending_shares") {
-    return textResult({
-      shares: await innerlife.pendingShares(core, args.status || "pending", args.limit || 20, currentMcpAgentId(args))
-    });
+    // Candidates are bounded previews. Reading them never marks delivery.
+    const shares = await innerlife.pendingShares(core, args.status || "pending", args.limit || 20, currentMcpAgentId(args));
+    return textResult(shapePendingShares(shares, args.detail, args.limit));
   }
 
   if (name === "innerlife_share_actions") {

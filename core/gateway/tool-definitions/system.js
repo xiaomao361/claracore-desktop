@@ -27,10 +27,23 @@ const systemToolDefinitions = [
   {
     "name": "gateway_docs",
     "title": "Gateway Docs",
-    "description": "Read the agent-facing ClaraCore Desktop usage guide, product boundaries, startup sequence, and fallback notes.",
+    "description": "Read the agent-facing ClaraCore Desktop usage guide. Omitting section returns a small default summary with connection truth, domain roles, the startup sequence, and the section index. Pass section for one bounded topic. Tool names and argument schemas come from tools/list, not from this guide.",
     "inputSchema": {
       "type": "object",
-      "properties": {},
+      "properties": {
+        "section": {
+          "type": "string",
+          "enum": [
+            "start",
+            "memory",
+            "shared-line",
+            "innerlife",
+            "diagnostics",
+            "full"
+          ],
+          "description": "Omit for the default summary."
+        }
+      },
       "additionalProperties": false
     }
   },
@@ -62,6 +75,30 @@ const systemToolDefinitions = [
             "full"
           ],
           "description": "Use brief for bounded startup context. Omit or use full for the 0.6.4 compatibility payload."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "gateway_auto_context",
+    "title": "Gateway Automatic Context",
+    "description": "Arbitrate automatic per-prompt context. Memory and InnerLife candidates compete for one bounded delivery slot: at most one block is selected, or the arbiter abstains. It is read-only and never marks delivery or use; report those separately with evidence after the response exists.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "agentId": {
+          "type": "string"
+        },
+        "memoryCandidates": {
+          "type": "array",
+          "description": "Memory Controller output. Only action=INJECT_TOP1 with policyMode=canary is eligible.",
+          "items": { "type": "object", "additionalProperties": true }
+        },
+        "shareCandidates": {
+          "type": "array",
+          "description": "InnerLife share candidates whose timing gate opened. Timing is not relevance.",
+          "items": { "type": "object", "additionalProperties": true }
         }
       },
       "additionalProperties": false

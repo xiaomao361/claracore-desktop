@@ -5,6 +5,7 @@ const { PRODUCT_VERSION } = require("../version");
 const { buildFlavorInfo } = require("../build-flavor");
 const { buildDecayAudit } = require("./decay");
 const { readDesktopSettings } = require("./paths");
+const { DEFAULT_PROFILE: DEFAULT_TOOL_PROFILE } = require("../gateway/tool-profiles");
 
 function productModules(input = {}) {
   const innerLife = input.innerLife || {};
@@ -94,6 +95,9 @@ function productAgentSetup(app, paths) {
               CLARACORE_AGENT_ID: "<agent-stable-id>",
               CLARACORE_CLIENT_ID: "<codex-app|claude-code|hermes>",
               CLARACORE_CONVERSATION_ID: "<optional-host-conversation-id>",
+              // First-party setup states the profile explicitly instead of
+              // relying on the default, so the generated config is the contract.
+              CLARACORE_TOOL_PROFILE: DEFAULT_TOOL_PROFILE,
               CLARACORE_DESKTOP_DATA_DIR: paths.dataRoot
             }
           }

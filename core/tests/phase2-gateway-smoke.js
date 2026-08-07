@@ -31,54 +31,86 @@ async function main() {
       throw new Error("Gateway initialize did not return ClaraCore Desktop server info.");
     }
 
+    // v0.6.6: stdio defaults to the core tool profile. Core carries the normal
+    // recall and write surface; the maintenance surface stays available under
+    // the explicit full profile, and every tool still executes when called.
     const tools = await client.request("tools/list");
     const toolNames = new Set((tools.result?.tools || []).map((tool) => tool.name));
     for (const tool of [
       "gateway_docs",
       "memory_context",
-      "memoria_list",
       "memoria_search",
       "memoria_get",
       "memoria_create",
       "memoria_update",
-      "memoria_supersede",
-      "memoria_tag",
-      "memoria_delete",
-      "memoria_restore",
-      "memoria_archive",
-      "memoria_archived_list",
-      "memoria_restore_archived",
-      "memoria_archive_suggestions",
-      "memoria_archive_dormant",
-      "memoria_stats",
-      "memoria_graph",
-      "memoria_maintenance_check",
-      "memoria_maintenance_run",
-      "memoria_maintenance_audit",
-      "memoria_export",
-      "memoria_import",
-      "memoria_merge_suggestions",
-      "memoria_merge",
-      "memoria_restricted_list",
-      "memoria_restrict",
-      "memoria_unrestrict",
-      "memoria_label_alias_list",
-      "memoria_label_alias_create",
-      "memoria_label_alias_delete",
-      "memoria_record_create",
-      "memoria_record_list",
-      "memoria_record_summary",
-      "memoria_record_stats"
+      "memoria_link_create",
+      "memoria_record_create"
     ]) {
-      if (!toolNames.has(tool)) throw new Error(`Gateway missing tool: ${tool}`);
+      if (!toolNames.has(tool)) throw new Error(`Core profile missing tool: ${tool}`);
+    }
+    for (const tool of ["memoria_export", "memoria_import", "memoria_maintenance_run", "memoria_graph"]) {
+      if (toolNames.has(tool)) throw new Error(`Core profile should not advertise maintenance tool: ${tool}`);
     }
 
+    const fullProfileClient = createGatewayClient(dataRoot, {
+      env: { CLARACORE_AGENT_ID: "phase2-gateway-agent", CLARACORE_TOOL_PROFILE: "full" }
+    });
+    try {
+      const fullTools = await fullProfileClient.request("tools/list");
+      const fullToolNames = new Set((fullTools.result?.tools || []).map((tool) => tool.name));
+      for (const tool of [
+        "memoria_list",
+        "memoria_supersede",
+        "memoria_tag",
+        "memoria_delete",
+        "memoria_restore",
+        "memoria_archive",
+        "memoria_archived_list",
+        "memoria_restore_archived",
+        "memoria_archive_suggestions",
+        "memoria_archive_dormant",
+        "memoria_stats",
+        "memoria_graph",
+        "memoria_maintenance_check",
+        "memoria_maintenance_run",
+        "memoria_maintenance_audit",
+        "memoria_export",
+        "memoria_import",
+        "memoria_merge_suggestions",
+        "memoria_merge",
+        "memoria_restricted_list",
+        "memoria_restrict",
+        "memoria_unrestrict",
+        "memoria_label_alias_list",
+        "memoria_label_alias_create",
+        "memoria_label_alias_delete",
+        "memoria_record_list",
+        "memoria_record_summary",
+        "memoria_record_stats"
+      ]) {
+        if (!fullToolNames.has(tool)) throw new Error(`Full profile missing tool: ${tool}`);
+      }
+    } finally {
+      await fullProfileClient.close();
+    }
+
+    // Default docs are a small summary; Memory rules moved to section=memory.
     const docs = await client.callTool("gateway_docs");
     const docsText = docs.result?.content?.[0]?.text || "";
-    if (!docsText.includes(dataRoot) || !docsText.includes("memoria_create") || !docsText.includes("memoria_supersede")) {
-      throw new Error("Gateway docs do not include the active data root and Memory tools.");
+    if (!docsText.includes("Memory") || !docsText.includes("memory")) {
+      throw new Error("Default Gateway docs lost the Memory role or the section index.");
     }
-    if (docsText.includes(`${path.sep}.claracore${path.sep}memoria`)) {
+    const diagnosticsDocsText =
+      (await client.callTool("gateway_docs", { section: "diagnostics" })).result?.content?.[0]?.text || "";
+    if (!diagnosticsDocsText.includes(dataRoot)) {
+      throw new Error("Gateway docs diagnostics section does not include the active data root.");
+    }
+    const memoryDocsText =
+      (await client.callTool("gateway_docs", { section: "memory" })).result?.content?.[0]?.text || "";
+    if (!memoryDocsText.includes("memoria_create") || !memoryDocsText.includes("memoria_supersede")) {
+      throw new Error("Gateway docs memory section does not include Memory tools.");
+    }
+    if (memoryDocsText.includes(`${path.sep}.claracore${path.sep}memoria`)) {
       throw new Error("Gateway docs point at old Memoria data.");
     }
 

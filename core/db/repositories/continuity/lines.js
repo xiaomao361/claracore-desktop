@@ -1,6 +1,7 @@
 function createContinuityLineRepository(helpers) {
   const {
     DEFAULT_AGENT_ID,
+    ambiguousSharedLineError,
     jsonSql,
     newId,
     parseJson,
@@ -49,29 +50,7 @@ function createContinuityLineRepository(helpers) {
     };
   }
 
-  function buildAmbiguousSharedLineError(agentId, lines) {
-    const candidates = lines.map((line) => ({
-      lineId: line.id,
-      title: line.title,
-      summary: line.summary,
-      updatedAt: line.positionUpdatedAt || line.updatedAt || null
-    }));
-    const candidateText = candidates
-      .map((candidate) => {
-        const summary = String(candidate.summary || "").replace(/\s+/g, " ").trim().slice(0, 120);
-        return `${candidate.lineId} (${candidate.title}${summary ? `: ${summary}` : ""})`;
-      })
-      .join("; ");
-    const error = new Error(
-      `SHARED_LINE_ID_REQUIRED: Agent "${agentId}" has multiple active Shared Lines. ` +
-        `Choose a returned candidate and retry with its explicit lineId; call shared_line_list only when you need the full active catalog. ` +
-        `Candidates: ${candidateText}`
-    );
-    error.code = "SHARED_LINE_ID_REQUIRED";
-    error.agentId = agentId;
-    error.candidates = candidates;
-    return error;
-  }
+  const buildAmbiguousSharedLineError = ambiguousSharedLineError;
 
   return {
     async ensureDefaultContinuityLine() {

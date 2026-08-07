@@ -31,13 +31,75 @@ entry only when the host refreshes or relaunches its stdio MCP process for each
 conversation; otherwise remove it so a stale id is not traced across unrelated
 work. A caller conversation id never replaces an `inner_session_*` id.
 
+## Tool Profiles (v0.6.6)
+
+`tools/list` is served from a maintained profile.
+
+| Profile | Contents | Selection |
+| --- | --- | --- |
+| `core` (default) | 26 tools: connection/context, Memory recall and write, Shared Line continuation, InnerLife session and sharing | nothing to set |
+| `full` | every tool, including maintenance, import/export, graph, retention, identity, daemon, archive, and advanced editing | `X-ClaraCore-Tool-Profile: full` (HTTP) or `CLARACORE_TOOL_PROFILE=full` (stdio) |
+
+An unknown or missing value resolves to `core`; an invalid profile never
+broadens the surface. `claracore_connection_test` reports the resolved profile
+in its `toolProfile` field.
+
+The `core` manifest advertises fewer tools and, for some tools, fewer
+arguments. Gateway tool input is not schema-validated, so every handler still
+accepts the full argument set and every tool still executes when called by
+name. Select `full` when you want those tools and arguments advertised.
+
+## Changed Defaults (v0.6.6)
+
+Every default read below got smaller. Nothing was deleted: each one names the
+explicit call that recovers the full record.
+
+| Tool | New default | Recover full detail with |
+| --- | --- | --- |
+| `memoria_search` | 3 results, bounded body previews, no embedding metadata, no related records | `detail: "full"`, or `memoria_get(id)` per result |
+| `shared_line_get` | `resume` packet: line id/title, summary, interpretation status, facts used, next step, updated time, at most one recent handoff | `detail: "context"` adds relevant Shared Reality; `detail: "full"` restores history, snapshots, arcs, agent state, and the stored text |
+| `shared_line_update` / `create` / `activate` / `handoff_create` | acknowledgement uses the same `resume` shape | `detail: "full"`, or a follow-up `shared_line_get` |
+| `innerlife_status` | operational state only: counts, daemon, doctor, pending-work indicators. Reports `mode: "status"`; the pre-0.6.6 `mode: "lite"` is retired | `detail: "full"`, or the boolean `true` alias |
+| `innerlife_pending_shares` | 3 bounded previews | `detail: "full"`, or `innerlife_share_check` for one share |
+| `innerlife_briefing` | decision synthesis: selected line summary when unambiguous, open loops, counts, at most one candidate preview | `detail: "full"` |
+| `gateway_context(detail=brief)` | one resume packet, up to 3 Memory summaries, InnerLife status plus at most one candidate | `detail: "full"` |
+
+Two things that did **not** change:
+
+- **Agent-level Continuity state** is no longer in any line packet. It is
+  Agent-scoped, so repeating it per line was the same bytes twice. Load it once
+  per session with `shared_line_agent_state`. Removing it from a default read
+  never deletes or mutates it.
+- **Reading a candidate still marks nothing.** `innerlife_pending_shares` and
+  `innerlife_briefing` are read-only. Delivery and use remain separate states
+  that only `innerlife_mark_share` records, and `action="used"` still requires
+  `deliveryEvidence` from the response that actually said it.
+
+## Automatic Context (v0.6.6)
+
+`gateway_auto_context` arbitrates automatic per-prompt injection. Memory and
+InnerLife candidates compete for **one** bounded delivery slot:
+
+1. invalid, restricted, historical, cross-Agent, not-pending, and weak
+   candidates are discarded, each with a recorded reason;
+2. eligible candidates are ranked by urgency, then relevance;
+3. exactly one wins, or the arbiter abstains;
+4. the winner is trimmed to a 600-token target and a 900-token hard limit;
+5. `selected` is returned — never `delivered` and never `used`.
+
+A Memory hit therefore suppresses a second InnerLife block in the same turn. An
+irrelevant timing candidate is rejected without being marked used.
+
+The arbiter is read-only and creates no product state. Host hooks must call it
+instead of stacking domains independently; until a host hook is updated, its
+turn behavior is unchanged.
+
 ## Startup Contract
 
 After MCP is installed, connected, or restarted, run this sequence:
 
 1. `claracore_connection_test`
-2. `gateway_docs`
-3. `gateway_context` with `detail: "brief"` and without `lineId`
+2. `gateway_context` with `detail: "brief"` and without `lineId`
 
 If the context call returns `SHARED_LINE_ID_REQUIRED`, choose one of the
 returned candidates and retry with its explicit `lineId`. Use
@@ -49,15 +111,34 @@ Gateway/diagnostics capabilities, a bounded summary of actual context, three to
 five natural-language example requests, and one evidence-backed next action
 when appropriate. Do not wait for the user to ask how to use ClaraCore.
 
-`gateway_docs` explains the product boundary and available tools.
+`gateway_docs` is no longer a mandatory startup read. Call it when you need the
+usage guide. Omitting `section` returns a bounded summary (connection truth,
+domain roles, startup sequence, section index). Pass `section` for one topic:
+`start`, `memory`, `shared-line`, `innerlife`, `diagnostics`, or `full`. It no
+longer restates the tool manifest — tool names and argument schemas come from
+`tools/list`.
+
 `gateway_context` returns the current working packet: Shared Line, recent
 Memory, InnerLife state, Doctor guidance, and recovery advice. Use
 `detail: "brief"` for bounded startup and resume reads. Omit `detail`, or pass
 `detail: "full"`, only when a 0.6.4 compatibility client or a specific task
 needs the complete packet.
 
-Do not invent tool names. If a tool name is uncertain, call `gateway_docs` and
-use the names listed there.
+Do not invent tool names. If a tool name is uncertain, read `tools/list`.
+
+## Shared Line Ambiguity (v0.6.6)
+
+`SHARED_LINE_ID_REQUIRED` is a safe refusal: nothing was read or written and no
+line was guessed. The refusal is bounded rather than a catalog:
+
+- at most five candidates, each with `lineId`, `title`, `status`,
+  `summaryPreview`, and `updatedAt`;
+- `candidateCount` and the true `totalCount`;
+- `detailRef` pointing at `shared_line_list` for the rest.
+
+The message text carries the same bounded previews because some hosts surface
+only `error.message`. Hosts that read JSON-RPC `error.data` get the structured
+form on both transports.
 
 ## Common Recipes
 

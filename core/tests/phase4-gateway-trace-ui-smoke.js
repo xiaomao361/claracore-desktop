@@ -37,6 +37,12 @@ async function main() {
     isPackaged: false
   };
   process.env.CLARACORE_DESKTOP_DATA_DIR = dataRoot;
+  // Pin the provider off. Otherwise whether processProductInnerLifeOnce yields
+  // a share depends on live model output, which made this smoke flaky.
+  await runtime.saveProductSettings(appShim, {
+    "innerlife.provider": "disabled",
+    "innerlife.enabled": false
+  });
   const { database } = await runtime.ensureProductCore(appShim);
   const memory = await runtime.createProductMemory(appShim, {
     title: "Time Flow Memory",

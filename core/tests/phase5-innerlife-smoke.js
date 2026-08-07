@@ -51,6 +51,26 @@ async function main() {
   if (!fullBriefing.recentMemories.some((item) => item.id === memory.id)) {
     throw new Error("InnerLife lazy briefing did not include recent Memory context.");
   }
+  // v0.6.6: inspecting InnerLife must not bring an Agent into existence.
+  const profilesBeforeRead = (await core.database.query("SELECT count(*) AS total FROM innerlife_profiles;"))[0].total;
+  const unknownBriefing = await core.database.getInnerLifeBriefing("never-seen-agent");
+  await core.database.getInnerLifeSnapshotLite("also-never-seen-agent");
+  await core.database.getInnerLifeSnapshot("still-never-seen-agent");
+  const profilesAfterRead = (await core.database.query("SELECT count(*) AS total FROM innerlife_profiles;"))[0].total;
+  if (profilesAfterRead !== profilesBeforeRead) {
+    throw new Error(
+      `InnerLife status and briefing reads created ${profilesAfterRead - profilesBeforeRead} profile(s); reads must create no product state.`
+    );
+  }
+  if (unknownBriefing.agentId !== "never-seen-agent") {
+    throw new Error("A briefing for an unknown Agent must still report that Agent id truthfully.");
+  }
+  const agentsAfterRead = (await core.database.query(
+    "SELECT count(*) AS total FROM agents WHERE id = 'never-seen-agent';"
+  ))[0].total;
+  if (agentsAfterRead !== 0) {
+    throw new Error("A briefing read must not register a new agent row.");
+  }
   const duplicateStart = await runtime.startProductInnerLifeSession(app, {
     agentId: "my-agent",
     userId: "phase5-user",

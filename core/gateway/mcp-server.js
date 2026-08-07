@@ -181,7 +181,8 @@ const { toolDefinitions, callToolBody } = createGatewayTools({
   currentCallerContext,
   gatewayLaunchConfig,
   runtimeAppForGateway,
-  textResult
+  textResult,
+  toolProfile: () => process.env.CLARACORE_TOOL_PROFILE
 });
 
 
@@ -206,6 +207,19 @@ async function openDatabase() {
   }
   const database = await cachedDatabaseInit;
   return { paths, database };
+}
+
+// Bounded structured recovery detail for a coded refusal. The message stays the
+// primary contract because not every host surfaces JSON-RPC error data.
+function recoveryData(error) {
+  return {
+    code: error.code,
+    ...(error.agentId ? { agentId: error.agentId } : {}),
+    ...(Array.isArray(error.candidates) ? { candidates: error.candidates } : {}),
+    ...(error.candidateCount ? { candidateCount: error.candidateCount } : {}),
+    ...(error.totalCount ? { totalCount: error.totalCount } : {}),
+    ...(error.detailRef ? { detailRef: error.detailRef } : {})
+  };
 }
 
 function summarizeToolResponse(result) {
@@ -303,7 +317,8 @@ async function handleMessage(message) {
       id: message.id,
       error: {
         code: -32603,
-        message: error.message
+        message: error.message,
+        ...(error.code ? { data: recoveryData(error) } : {})
       }
     });
   } finally {

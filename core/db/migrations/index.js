@@ -4,8 +4,16 @@ const productAdditions = require("./002_product_additions");
 const multiAgentCallerContext = require("./003_multi_agent_caller_context");
 const memoryControllerLedger = require("./004_memory_controller_ledger");
 const memoryControllerWatermark = require("./005_memory_controller_watermark");
+const innerLifeHourlyDefault = require("./006_innerlife_hourly_default");
 
-const MIGRATIONS = [gatewayTraceCompatibility, productAdditions, multiAgentCallerContext, memoryControllerLedger, memoryControllerWatermark];
+const MIGRATIONS = [
+  gatewayTraceCompatibility,
+  productAdditions,
+  multiAgentCallerContext,
+  memoryControllerLedger,
+  memoryControllerWatermark,
+  innerLifeHourlyDefault
+];
 
 async function ensureMigrationTable(database) {
   await database.exec(`

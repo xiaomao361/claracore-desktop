@@ -118,6 +118,91 @@ async function search(core, input) {
   });
 }
 
+// v0.6.6 summary-first recall.
+//
+// The full record stays available through memoria_get and through
+// detail="full". A default read answers "which memory do I want next", not
+// "give me everything Memoria stores about these rows".
+const SUMMARY_SEARCH_LIMIT = 3;
+const SUMMARY_SEARCH_MAX_LIMIT = 25;
+const SUMMARY_BODY_BYTES = 1200;
+const SUMMARY_TITLE_BYTES = 200;
+const SUMMARY_LABEL_LIMIT = 8;
+
+function summaryDetail(value) {
+  const detail = String(value || "summary").trim().toLowerCase() || "summary";
+  if (!["summary", "full"].includes(detail)) {
+    throw new Error("memoria_search detail must be summary or full.");
+  }
+  return detail;
+}
+
+function truncateUtf8Body(value, maxBytes) {
+  const text = String(value || "");
+  if (Buffer.byteLength(text, "utf8") <= maxBytes) return { text, truncated: false };
+  const characters = Array.from(text);
+  let low = 0;
+  let high = characters.length;
+  while (low < high) {
+    const middle = Math.ceil((low + high) / 2);
+    if (Buffer.byteLength(characters.slice(0, middle).join(""), "utf8") <= maxBytes) low = middle;
+    else high = middle - 1;
+  }
+  return { text: characters.slice(0, low).join(""), truncated: true };
+}
+
+function summarizeMemoryResult(memory) {
+  const body = truncateUtf8Body(memory?.body, SUMMARY_BODY_BYTES);
+  const title = truncateUtf8Body(memory?.title || "", SUMMARY_TITLE_BYTES);
+  return {
+    id: memory?.id || "",
+    title: title.text,
+    bodyPreview: body.text,
+    bodyTruncated: body.truncated,
+    labels: (memory?.labels || []).slice(0, SUMMARY_LABEL_LIMIT),
+    stateRole: memory?.stateRole || (memory?.status === "superseded" ? "historical" : "current"),
+    supersedes: memory?.supersedes || [],
+    supersededBy: memory?.supersededBy || [],
+    source: memory?.search_source || "keyword",
+    score: Number((memory?.search_score || 0).toFixed(4)),
+    updatedAt: memory?.updated_at || memory?.updatedAt || null,
+    detailRef: { tool: "memoria_get", arguments: { id: memory?.id || "" } }
+  };
+}
+
+async function searchSummary(core, input = {}) {
+  const detail = summaryDetail(input.detail);
+  const requestedLimit = Number.parseInt(String(input.limit ?? SUMMARY_SEARCH_LIMIT), 10);
+  const limit = Math.max(
+    1,
+    Math.min(Number.isFinite(requestedLimit) ? requestedLimit : SUMMARY_SEARCH_LIMIT, SUMMARY_SEARCH_MAX_LIMIT)
+  );
+  const result = await search(core, { ...input, limit });
+
+  if (detail === "full") return { detail, ...result };
+
+  const results = (result?.results || []).map(summarizeMemoryResult);
+  return {
+    detail,
+    mode: result?.mode || "keyword",
+    query: result?.query || "",
+    timeView: result?.timeView || "current",
+    results,
+    resultPage: {
+      requestedLimit: Number.isFinite(requestedLimit) ? requestedLimit : SUMMARY_SEARCH_LIMIT,
+      appliedLimit: limit,
+      returned: results.length,
+      requestCapped: Number.isFinite(requestedLimit) && requestedLimit > limit,
+      mayHaveMore: results.length === limit
+    },
+    // A silent embedding failure downgrades hybrid search to keyword-only, so
+    // the fact is reported. The message itself is operational detail.
+    degraded: Boolean(result?.error),
+    relatedRef: { tool: "memoria_link_list", arguments: {} },
+    detailRef: { tool: "memoria_search", arguments: { query: result?.query || "", detail: "full" } }
+  };
+}
+
 async function list(core, input = {}) {
   const paging = normalizeListInput(input, 20);
   return core.database.listMemories(paging.limit, "", { offset: paging.offset, agentId: paging.agentId });
@@ -207,7 +292,12 @@ module.exports = {
   restrict,
   restricted,
   search,
+  searchSummary,
   stats,
+  summarizeMemoryResult,
+  SUMMARY_BODY_BYTES,
+  SUMMARY_SEARCH_LIMIT,
+  SUMMARY_SEARCH_MAX_LIMIT,
   supersede,
   tag,
   unrestrict,

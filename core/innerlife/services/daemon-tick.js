@@ -104,7 +104,7 @@ function createInnerLifeDaemonTickService(inputPorts = {}) {
       const settings = await ports.getSettings(database);
       const pollSeconds = Math.max(
         1,
-        Number.parseInt(String(settings["innerlife.loop_seconds"] || 900), 10) || 900
+        Number.parseInt(String(settings["innerlife.loop_seconds"] || 3600), 10) || 3600
       );
       const sourceIngest = await ports.ingestSources(database, { agentId, maxItems: 5 });
       if (sourceIngest.insertedCount > 0) {

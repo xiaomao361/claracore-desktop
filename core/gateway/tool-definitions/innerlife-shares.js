@@ -144,7 +144,7 @@ const innerlifeShareToolDefinitions = [
   {
     "name": "innerlife_pending_shares",
     "title": "List InnerLife Pending Shares",
-    "description": "List Desktop-owned InnerLife share candidates.",
+    "description": "List Desktop-owned InnerLife share candidates as bounded previews. Returns three by default. Reading candidates never marks delivery; a full body is earned by explicit inspection or by passing innerlife_share_check.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -154,7 +154,13 @@ const innerlifeShareToolDefinitions = [
         "limit": {
           "type": "number",
           "minimum": 1,
-          "maximum": 100
+          "maximum": 10,
+          "description": "Default 3."
+        },
+        "detail": {
+          "type": "string",
+          "enum": ["summary", "full"],
+          "description": "summary (default) returns previews. full returns whole share bodies."
         }
       },
       "additionalProperties": false

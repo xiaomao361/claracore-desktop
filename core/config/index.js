@@ -35,7 +35,7 @@ const DEFAULT_SETTINGS = {
   "innerlife.base_url": "https://api.deepseek.com",
   "innerlife.light_model": "deepseek-v4-flash",
   "innerlife.deep_model": "deepseek-v4-flash",
-  "innerlife.loop_seconds": 900,
+  "innerlife.loop_seconds": 3600,
   "gateway.enabled": true,
   "gateway.transport": "stdio",
   "gateway.local_only": true,

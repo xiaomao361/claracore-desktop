@@ -24,6 +24,11 @@ const innerlifeSessionToolDefinitions = [
         "externalSessionId": {
           "type": "string"
         },
+        "detail": {
+          "type": "string",
+          "enum": ["summary", "full"],
+          "description": "Shape of the returned briefing and Shared Line resume packet. summary is the default."
+        },
         "includeBriefing": {
           "type": "boolean"
         },
@@ -138,13 +143,16 @@ const innerlifeSessionToolDefinitions = [
   {
     "name": "innerlife_status",
     "title": "InnerLife Status",
-    "description": "Read the Desktop-owned InnerLife status. Returns a lite snapshot by default (counts, pending share previews, daemon, doctor). Pass detail=true for the full snapshot including inbox, sessions, digest runs, and history.",
+    "description": "Read Desktop-owned InnerLife operational state: counts, daemon, doctor, and indicators that shares or Inbox work are waiting. It does not return share bodies or Inbox bodies. Pass detail=true for the full snapshot including inbox, sessions, digest runs, and history.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "detail": {
-          "type": "boolean",
-          "description": "Return the full snapshot instead of the lite summary."
+          "oneOf": [
+            { "type": "string", "enum": ["summary", "full"] },
+            { "type": "boolean" }
+          ],
+          "description": "summary (default) is operational state only; full returns the complete snapshot. Boolean true is a compatibility alias for full. Responses report mode=status or mode=full; clients that branched on the pre-0.6.6 mode value must use detail instead."
         }
       },
       "additionalProperties": false
@@ -153,7 +161,7 @@ const innerlifeSessionToolDefinitions = [
   {
     "name": "innerlife_briefing",
     "title": "Get InnerLife Briefing",
-    "description": "Read the current Desktop-owned InnerLife briefing. Shared Line context is optional: pass lineId to select one, or receive sharedLineContext.status=ambiguous while the briefing continues without it.",
+    "description": "Read the current Desktop-owned InnerLife briefing as a decision-oriented synthesis: selected Shared Line summary when unambiguous, compact open loops, counts, and at most one candidate share preview. Shared Line context is optional: pass lineId to select one, or receive sharedLineContext.status=ambiguous while the briefing continues without it.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -162,6 +170,11 @@ const innerlifeSessionToolDefinitions = [
         },
         "lineId": {
           "type": "string"
+        },
+        "detail": {
+          "type": "string",
+          "enum": ["summary", "full"],
+          "description": "summary (default) is the decision synthesis. full returns the complete aggregate briefing."
         }
       },
       "additionalProperties": false

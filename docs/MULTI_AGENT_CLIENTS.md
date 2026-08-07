@@ -36,11 +36,20 @@ Authorization: Bearer <token>
 X-ClaraCore-Agent-ID: <stable-persona-id>
 X-ClaraCore-Client-ID: <host-client-id>
 X-ClaraCore-Conversation-ID: <current-host-conversation-id>
+X-ClaraCore-Tool-Profile: core|full
 ```
 
 `X-ClaraCore-Session-ID` remains a compatibility alias for the caller
 conversation. New integrations should use `X-ClaraCore-Conversation-ID` so it
 cannot be confused with an InnerLife `sessionId` tool argument.
+
+`X-ClaraCore-Tool-Profile` is new in v0.6.6 and optional. It selects which
+manifest `tools/list` returns. Omitting it, or sending an unknown value, gives
+the smaller `core` manifest; only an explicit `full` broadens the surface.
+The stdio equivalent is `CLARACORE_TOOL_PROFILE`. Every tool still executes
+when called by name under either profile — the profile changes what is
+advertised, not what is authorized. Clients that depend on the full manifest
+being advertised must select `full` during the compatibility window.
 
 For stdio fallback, set:
 
@@ -166,6 +175,62 @@ Claude operating as `clara` cannot act on Lara's shares or sessions. Hermes
 operating as `lara` cannot act on Clara's or Codex's data. The Desktop UI may
 still request an all-agent inspection snapshot.
 
+## v0.6.6 Compatibility Matrix
+
+Read this as: what each client gets by default after upgrading Desktop, and what
+it must change to keep its previous behavior.
+
+| Client / transport | Default tool manifest | Default payload shapes | Needs a client change? |
+| --- | --- | --- | --- |
+| **Codex** (HTTP MCP) | `core` (26 tools) | new bounded defaults | Only if it used maintenance tools by advertisement; then send `X-ClaraCore-Tool-Profile: full`. Its per-prompt hook should move to `gateway_auto_context`. |
+| **Claude Code** (HTTP MCP) | `core` (26 tools) | new bounded defaults | No, for ordinary recall/continuation. Its SessionStart hook now receives a much smaller briefing. |
+| **Hermes / Lara** (HTTP MCP) | `core` (26 tools) | new bounded defaults | Only if it parsed `currentPosition` from Shared Line writes; use `detail: "full"` or read the new top-level fields. |
+| **Any stdio client** | `core` (26 tools) | new bounded defaults | Set `CLARACORE_TOOL_PROFILE=full` to keep the old manifest. |
+| **HTTP `/agent/setup`** | reports `toolProfiles` and `contextStates` | `firstCalls` no longer requires `gateway_docs` | No. |
+| **HTTP `/gateway/context`** | unchanged endpoint | bounded ambiguity body with `candidateCount`, `totalCount`, `detailRef` | No, unless it assumed an unbounded `candidates` array. |
+| **Desktop UI / CLI** | not applicable | **unchanged — full records** | No. Shaping is a Gateway-boundary concern only. |
+
+Behavior that is identical on every client and transport:
+
+- an unknown or missing tool profile resolves to `core`; only an explicit `full`
+  broadens the surface;
+- every tool still executes when called by name under either profile, because
+  Gateway tool input is not schema-validated;
+- `claracore_connection_test` reports the resolved profile in `toolProfile`;
+- ambiguity refusals, delivery evidence, sensitivity, time view, and same-Agent
+  filtering remain fail-closed.
+
+
+## v0.6.6 Default Payload Changes
+
+Every domain default read is smaller. Clients that parsed the old shapes must
+adapt or pass the explicit detail argument during the compatibility window:
+
+- `memoria_search` returns 3 bounded summaries with `bodyPreview`, not whole
+  bodies; pass `detail: "full"` for the previous shape.
+- `shared_line_get` and the Shared Line write acknowledgements return a resume
+  packet with top-level `summary` / `interpretationStatus` / `factsUsed`, not a
+  nested `currentPosition`. Pass `detail: "full"` for the previous shape.
+- `agentState` is absent from every line packet. Read it once per session with
+  `shared_line_agent_state`.
+- `innerlife_status` returns operational state only; pass `detail: "full"` (or
+  the boolean `true` alias) for the previous snapshot. **Its `mode` value
+  changed**: the default read now reports `mode: "status"` and the full read
+  reports `mode: "full"`. The pre-0.6.6 `mode: "lite"` is retired — branch on
+  `detail`, not on `mode`.
+- `innerlife_pending_shares` returns 3 previews; pass `detail: "full"` for whole
+  bodies.
+- `innerlife_briefing` returns a decision synthesis with `counts` and no `text`
+  block; pass `detail: "full"` for the previous aggregate.
+- `gateway_context(detail=brief)` embeds the resume packet and the InnerLife
+  status shape. Its `text` field is now a short orientation summary and no
+  longer repeats the structured content.
+
+Hosts that inject context per prompt should route Memory and InnerLife
+candidates through `gateway_auto_context` so at most one bounded block enters a
+turn. That hook change is client-side work and is not done by upgrading Desktop.
+
+
 ## Codex Migration Checklist
 
 1. Keep `agentId=codex` stable.
@@ -176,8 +241,10 @@ still request an all-agent inspection snapshot.
 5. Omit `CLARACORE_CONVERSATION_ID` when one long-lived stdio process spans
    multiple Codex conversations.
 6. After changing caller configuration, reconnect and run
-   `claracore_connection_test`, `gateway_docs`, and
-   `gateway_context(detail=brief)`.
+   `claracore_connection_test` then `gateway_context(detail=brief)`.
+   `gateway_docs` is now an on-demand read, not a startup step.
+7. Codex maintenance workflows that need the import/export, graph, or retention
+   tools advertised must send `X-ClaraCore-Tool-Profile: full`.
 
 ## Claude Migration Checklist
 
@@ -214,7 +281,9 @@ still request an all-agent inspection snapshot.
 9. For stdio, set `CLARACORE_CLIENT_ID=hermes`; omit the conversation variable
    when Hermes cannot refresh the MCP process per session.
 10. After upgrading Desktop, restart the Hermes MCP connection, run
-    `claracore_connection_test`, and read the live `gateway_docs` and tool list.
+    `claracore_connection_test`, and read the live `tools/list`. Read
+    `gateway_docs` only when the usage guide is actually needed; it now returns
+    a bounded summary and takes a `section` argument.
 11. Treat `memory_context` as observe-only. Call it per non-empty prompt only
     when Hermes has a verified per-prompt hook; never inject its empty context.
 12. Without that hook, keep explicit `memoria_search` for real recall requests

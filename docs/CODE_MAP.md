@@ -200,7 +200,27 @@ Repository ownership:
 - `core/gateway/context.js`: cross-domain Gateway context service. It composes
   Memoria, Shared Line, and InnerLife facades, keeps omitted `detail` as the
   0.6.4 full contract, and provides the bounded Agent-scoped `brief`
-  projection used during onboarding and resume.
+  projection used during onboarding and resume. Since 0.6.6 `brief` embeds the
+  Shared Line resume packet and the InnerLife status shape rather than a second
+  larger copy of each domain.
+- `core/gateway/tool-profiles.js`: the `core` and `full` tool manifests. `full`
+  is the canonical definitions byte-for-byte; `core` narrows the tool list and
+  the advertised schema properties. Profile resolution fails closed to `core`.
+- `core/gateway/docs.js`: progressive `gateway_docs` — a bounded default summary
+  plus independently bounded sections. It must not restate `tools/list`.
+- `core/gateway/auto-context.js`: the deterministic one-winner arbiter for
+  automatic per-prompt context. Read-only; it selects at most one bounded block
+  or abstains and never claims delivery or use. Host hooks call it so the logic
+  is not duplicated per host.
+- `core/continuity/resume-detail.js`: Shared Line `resume` / `context` / `full`
+  shaping. Agent-level state is deliberately absent from the first two.
+- `core/innerlife/selective.js`: InnerLife status, candidate, and briefing
+  shaping. Listing candidates must never mark delivery.
+- `core/tests/context-budget-smoke.js` and
+  `scripts/context-budget-baseline.js`: default-surface byte ceilings and the
+  machine-readable baseline report. Ceilings live in
+  `core/tests/fixtures/context-budget-ceilings.js`; fixtures are deterministic
+  and carry no live personal content.
 - `core/tests/gateway-context-service-smoke.js`: SQL-free service contract,
   repository-ownership gate, UTF-8 bounding, Agent isolation, and brief/full
   compatibility coverage.

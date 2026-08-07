@@ -2,7 +2,7 @@ const sharedLineToolDefinitions = [
   {
     "name": "shared_line_get",
     "title": "Get Shared Line",
-    "description": "Read one ClaraCore Desktop Shared Line without repeating the cross-line catalog or other agents' states; use shared_line_list only when you need the active or archived catalog. Pass lineId to select an exact line. Without lineId, an identified agent may default only when it owns zero or one active non-default line; multiple active lines return SHARED_LINE_ID_REQUIRED with candidates, so choose one and retry with lineId. Unidentified callers use the global active fallback. By default the affective trace and position history are truncated to the most recent nodes plus protected (needs-review) nodes; pass fullArc to get the complete arc.",
+    "description": "Read one ClaraCore Desktop Shared Line. Returns a resume packet by default: the smallest state needed to continue work. Agent-level state is not repeated per line; load it once per session with shared_line_agent_state. Pass lineId to select an exact line. Without lineId, an identified agent may default only when it owns zero or one active non-default line; multiple active lines return SHARED_LINE_ID_REQUIRED with candidates, so choose one and retry with lineId. Unidentified callers use the global active fallback.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -15,8 +15,14 @@ const sharedLineToolDefinitions = [
         "model": {
           "type": "string"
         },
+        "detail": {
+          "type": "string",
+          "enum": ["resume", "context", "full"],
+          "description": "resume (default) is the continuation packet. context adds relevant Shared Reality. full restores history, snapshots, agent state, arcs, and the stored text."
+        },
         "fullArc": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "With detail=full, return the complete affective trace and position history instead of the truncated arc."
         }
       },
       "additionalProperties": false
@@ -58,6 +64,11 @@ const sharedLineToolDefinitions = [
         "title"
       ],
       "properties": {
+        "detail": {
+          "type": "string",
+          "enum": ["resume", "context", "full"],
+          "description": "Shape of the returned Shared Line acknowledgement. resume is the default."
+        },
         "title": {
           "type": "string"
         },
@@ -81,6 +92,11 @@ const sharedLineToolDefinitions = [
         "lineId"
       ],
       "properties": {
+        "detail": {
+          "type": "string",
+          "enum": ["resume", "context", "full"],
+          "description": "Shape of the returned Shared Line acknowledgement. resume is the default."
+        },
         "lineId": {
           "type": "string"
         }
@@ -156,6 +172,11 @@ const sharedLineToolDefinitions = [
         "summary"
       ],
       "properties": {
+        "detail": {
+          "type": "string",
+          "enum": ["resume", "context", "full"],
+          "description": "Shape of the returned Shared Line acknowledgement. resume is the default."
+        },
         "agentId": {
           "type": "string"
         },
@@ -289,6 +310,11 @@ const sharedLineToolDefinitions = [
     "inputSchema": {
       "type": "object",
       "properties": {
+        "detail": {
+          "type": "string",
+          "enum": ["resume", "context", "full"],
+          "description": "Shape of the returned Shared Line acknowledgement. resume is the default."
+        },
         "lineId": {
           "type": "string"
         },

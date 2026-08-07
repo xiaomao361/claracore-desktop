@@ -55,14 +55,47 @@ async function main() {
       throw new Error(`Packaged Gateway version mismatch: ${JSON.stringify(initialized.result?.serverInfo)}`);
     }
 
+    // v0.6.6: the default docs read is a bounded summary plus a section index.
+    // Packaging specifics live in the start and diagnostics sections.
     const docsResponse = await client.callTool("gateway_docs");
     const docsText = docsResponse.result?.content?.[0]?.text || "";
-    if (!docsText.includes("ELECTRON_RUN_AS_NODE")) throw new Error("Packaged Gateway docs do not include run-as-node launch.");
-    if (!docsText.includes("CLARACORE_CLIENT_ID") || !docsText.includes("CLARACORE_CONVERSATION_ID")) {
-      throw new Error("Packaged Gateway docs do not include complete stdio caller context.");
+    if (Buffer.byteLength(docsText, "utf8") > 4096) {
+      throw new Error(`Packaged default docs are ${Buffer.byteLength(docsText, "utf8")} bytes, over the 4 KB ceiling.`);
     }
+    if (docsText.includes("[truncated")) throw new Error("Packaged default docs were truncated.");
     if (!docsText.includes("packaged app")) throw new Error("Packaged Gateway docs do not report packaged app source.");
-    if (!docsText.includes(dataRoot)) throw new Error("Packaged Gateway docs do not include active data root.");
+
+    const startDocs = (await client.callTool("gateway_docs", { section: "start" })).result?.content?.[0]?.text || "";
+    if (!startDocs.includes("ELECTRON_RUN_AS_NODE")) {
+      throw new Error("Packaged Gateway start section does not include run-as-node launch.");
+    }
+    if (!startDocs.includes("CLARACORE_CLIENT_ID") || !startDocs.includes("CLARACORE_CONVERSATION_ID")) {
+      throw new Error("Packaged Gateway start section does not include complete stdio caller context.");
+    }
+    if (!startDocs.includes("CLARACORE_TOOL_PROFILE")) {
+      throw new Error("Packaged Gateway start section does not document the tool profile setting.");
+    }
+    if (!startDocs.includes(dataRoot)) {
+      throw new Error("Packaged Gateway start section does not include the active data root.");
+    }
+    const diagnosticsDocs = (await client.callTool("gateway_docs", { section: "diagnostics" })).result?.content?.[0]?.text || "";
+    if (!diagnosticsDocs.includes(dataRoot)) {
+      throw new Error("Packaged Gateway diagnostics section does not include the active data root.");
+    }
+
+    // The packaged runtime must resolve the same profiles as the source tree.
+    const packagedTools = (await client.request("tools/list")).result?.tools || [];
+    if (packagedTools.length !== 26) {
+      throw new Error(`Packaged core profile exposed ${packagedTools.length} tools, expected 26.`);
+    }
+    const packagedManifestBytes = Buffer.byteLength(JSON.stringify(packagedTools), "utf8");
+    if (packagedManifestBytes > 12288) {
+      throw new Error(`Packaged core tools/list is ${packagedManifestBytes} bytes, over the 12 KB ceiling.`);
+    }
+    const packagedConnection = parseTextResult(await client.callTool("claracore_connection_test"));
+    if (packagedConnection.toolProfile !== "core") {
+      throw new Error(`Packaged Gateway did not report the resolved profile: ${packagedConnection.toolProfile}`);
+    }
 
     const created = parseTextResult(
       await client.callTool("memoria_create", {
@@ -198,8 +231,12 @@ async function main() {
         factsUsed: [created.id]
       })
     );
-    if (!sharedLine.currentPosition.factsUsed.includes(created.id)) {
+    // v0.6.6: write acknowledgements return the resume packet shape.
+    if (sharedLine.detail !== "resume" || !sharedLine.factsUsed.includes(created.id)) {
       throw new Error("Packaged Gateway shared_line_update did not persist factsUsed.");
+    }
+    if ("agentState" in sharedLine) {
+      throw new Error("Packaged Gateway resume packet must not carry Agent-level state.");
     }
     const handoffResult = parseTextResult(
       await client.callTool("shared_line_handoff_create", {
@@ -212,8 +249,14 @@ async function main() {
     if (handoffResult.handoff.objective !== "Packaged Gateway handoff") {
       throw new Error("Packaged Gateway shared_line_handoff_create did not persist objective.");
     }
-    if (!handoffResult.sharedLine.handoffs.some((handoff) => handoff.id === handoffResult.handoff.id)) {
+    if (handoffResult.sharedLine.recentHandoff?.id !== handoffResult.handoff.id) {
       throw new Error("Packaged Gateway handoff was not returned in Shared Line context.");
+    }
+    const packagedFullLine = parseTextResult(
+      await client.callTool("shared_line_get", { lineId: handoffResult.sharedLine.lineId, detail: "full" })
+    );
+    if (!packagedFullLine.handoffs.some((handoff) => handoff.id === handoffResult.handoff.id)) {
+      throw new Error("Packaged Gateway detail=full did not recover the Shared Line handoff history.");
     }
     const context = parseTextResult(
       await client.callTool("gateway_context", {
