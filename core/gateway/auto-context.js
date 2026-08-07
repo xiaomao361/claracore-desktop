@@ -20,7 +20,15 @@ const AUTO_CONTEXT_HARD_LIMIT_BYTES = AUTO_CONTEXT_HARD_LIMIT_TOKENS * BYTES_PER
 const AUTO_CONTEXT_TARGET_BYTES = AUTO_CONTEXT_TARGET_TOKENS * BYTES_PER_TOKEN_ESTIMATE;
 
 const MIN_MEMORY_RELEVANCE = 0.35;
-const MIN_SHARE_RELEVANCE = 0.5;
+// 0.35, matching MIN_MEMORY_RELEVANCE so both domains face one floor.
+// Measured over six real cases: the lowest score that should deliver is 0.438
+// (a full Chinese question against a paraphrasing share) and the highest that
+// should not is 0.286 (one incidental shared word), so 0.35 has room on both
+// sides. At 0.5 no ordinary Chinese question could ever fire, because bigram
+// tokenisation puts more boundary junk in the denominator than English filler
+// words do. Six hand-built cases is a small sample; this is a floor that beats
+// 0.5 on every one of them, not a calibrated constant.
+const MIN_SHARE_RELEVANCE = 0.35;
 
 // Evidence states are kept separate on purpose. "selected" is the only one this
 // arbiter can produce; the rest belong to the host and to explicit tool calls.

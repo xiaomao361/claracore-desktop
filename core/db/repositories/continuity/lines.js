@@ -141,7 +141,17 @@ function createContinuityLineRepository(helpers) {
         LIMIT 20;
       `);
       const lines = rows.map((row) => mapContinuityLineRow(row, null));
-      if (lines.length > 1) throw buildAmbiguousSharedLineError(agentId, lines);
+      if (lines.length > 1) {
+        // The candidate query is capped, so count separately rather than
+        // reporting the page size as the total. This runs only on the refusal
+        // path, which is rare and already an error.
+        const totals = await this.query(`
+          SELECT COUNT(*) AS total
+          FROM continuity_lines
+          WHERE agent_id = ${sqlString(agentId)} AND status = 'active' AND id != 'line_default';
+        `);
+        throw buildAmbiguousSharedLineError(agentId, lines, Number(totals?.[0]?.total ?? lines.length));
+      }
       return lines[0]?.id || null;
     },
 

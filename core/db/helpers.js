@@ -157,8 +157,12 @@ const AMBIGUOUS_TITLE_BYTES = 80;
 // most AMBIGUOUS_CANDIDATE_LIMIT candidates with bounded summary previews, plus
 // the true total count and an explicit detail reference for the rest. Nothing is
 // guessed and nothing is written.
-function ambiguousSharedLineError(agentId, lines) {
-  const totalCount = lines.length;
+// `totalCount` must be the real number of active lines, not the size of the
+// capped candidate query. The caller reads a bounded page and passes the true
+// count separately; falling back to lines.length keeps older callers working
+// but is only accurate while the page is not full.
+function ambiguousSharedLineError(agentId, lines, trueTotalCount) {
+  const totalCount = Number.isFinite(trueTotalCount) ? trueTotalCount : lines.length;
   const candidates = lines.slice(0, AMBIGUOUS_CANDIDATE_LIMIT).map((line) => ({
     lineId: line.id,
     title: boundedUtf8Text(line.title, AMBIGUOUS_TITLE_BYTES),

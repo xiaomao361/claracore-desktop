@@ -182,6 +182,13 @@ function checkAmbiguityPayload() {
 
   assert.strictEqual(error.code, "SHARED_LINE_ID_REQUIRED");
   assert.strictEqual(error.totalCount, AMBIGUOUS_LINE_COUNT, "The refusal must report the true total count.");
+  // The candidate query is capped, so the caller passes the real count. Without
+  // this the field reported the page size and quietly lied above the cap.
+  const cappedPage = lines.slice(0, 20);
+  const capped = ambiguousSharedLineError("fixture-agent", cappedPage, 23);
+  assert.strictEqual(capped.totalCount, 23, "totalCount must be the caller's true count, not the page size.");
+  assert.ok(/has 23 active Shared Lines/.test(capped.message), "The refusal message must state the true total.");
+  assert.ok(/\+18 more/.test(capped.message), "The omitted count must follow the true total.");
   assert.ok(
     error.candidates.length <= CONTEXT_BUDGET_CEILINGS.ambiguityCandidateLimit,
     `Ambiguity returned ${error.candidates.length} candidates, over the ${CONTEXT_BUDGET_CEILINGS.ambiguityCandidateLimit} limit.`

@@ -35,7 +35,9 @@ function createInnerLifeReflectionRepository(helpers) {
           ? "Shared Line selection is ambiguous; no line context was used."
           : "No Shared Line position saved yet."
       );
-      const template = [
+      const operatorPrompt = prompt
+        || "Review current state calmly and propose only one shareable thought for the next fitting moment.";
+      const templateBase = [
         "Manual InnerLife review",
         "",
         summarizeInnerLifeProfile(profile),
@@ -46,14 +48,18 @@ function createInnerLifeReflectionRepository(helpers) {
         memoryLines,
         "",
         "Pending inbox:",
-        inboxLines,
-        "",
-        `Operator prompt: ${prompt || "Review current state calmly and propose only one shareable thought for the next fitting moment."}`
+        inboxLines
       ].join("\n");
+      // The model needs to see the operator prompt; the stored body must not
+      // echo it. A fallback body that quotes the prompt verbatim scores highly
+      // against any later prompt on the same topic, so automatic context would
+      // deliver boilerplate back as if it were a thought.
+      const modelPrompt = `${templateBase}\n\nOperator prompt: ${operatorPrompt}`;
+      const template = templateBase;
       const generated = await generateOrTemplate(this, {
         tier: "light",
         system: IL_SYSTEM.process,
-        prompt: template,
+        prompt: modelPrompt,
         template
       });
       const body = generated.body;
@@ -162,12 +168,16 @@ function createInnerLifeReflectionRepository(helpers) {
         "Recent thoughts:",
         thoughtLines,
         "",
-        `Exploration prompt: ${prompt || "Explore freely — surface what deserves attention without forcing a conclusion."}`
+        ""
       ].join("\n");
+      // Same defect as processInnerLifeOnce: the model needs the exploration
+      // prompt, the stored body must not echo it back as if it were a thought.
+      const explorePrompt = prompt
+        || "Explore freely — surface what deserves attention without forcing a conclusion.";
       const generated = await generateOrTemplate(this, {
         tier: "light",
         system: IL_SYSTEM.explore,
-        prompt: template,
+        prompt: `${template}\nExploration prompt: ${explorePrompt}`,
         template
       });
       const body = generated.body;
