@@ -26,6 +26,9 @@ instructions.
 - [v0.6.6 Release Notes](RELEASE_NOTES_V0.6.6.md): tool profiles, progressive
   docs, summary-first Memory, Shared Line resume packets, selective InnerLife,
   and the one-winner automatic-context arbiter.
+- [v0.6.6 Turn Context Patch](V0.6.6_TURN_CONTEXT_PATCH.md): proposed
+  server-owned single-call automatic-context flow and host-adapter acceptance
+  after real Codex Desktop prompt hooks did not fire.
 - [Memory Controller Canary Handoff](MEMORY_CONTROLLER_CANARY_HANDOFF.md):
   confirmed authenticated multi-Agent trusted-context boundary, implementation slices,
   evidence contract, and first-canary acceptance.

@@ -83,21 +83,29 @@ const systemToolDefinitions = [
   {
     "name": "gateway_auto_context",
     "title": "Gateway Automatic Context",
-    "description": "Arbitrate automatic per-prompt context. Memory and InnerLife candidates compete for one bounded delivery slot: at most one block is selected, or the arbiter abstains. It is read-only and never marks delivery or use; report those separately with evidence after the response exists.",
+    "description": "Arbitrate automatic per-prompt context in one call. Pass prompt and the Gateway collects Memory and InnerLife candidates itself, then returns one bounded block or abstains. Do not retrieve Memory or inspect InnerLife separately for this purpose. Read-only: it never marks delivery or use, and never selects among active Shared Lines. Traces do not keep the prompt verbatim: they store a hash plus an 80-byte preview, so a prompt shorter than that is still recorded in full.",
     "inputSchema": {
       "type": "object",
       "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "The current user message. Mutually exclusive with the candidate arrays."
+        },
+        "sessionId": {
+          "type": "string",
+          "description": "Optional InnerLife session id."
+        },
         "agentId": {
           "type": "string"
         },
         "memoryCandidates": {
           "type": "array",
-          "description": "Memory Controller output. Only action=INJECT_TOP1 with policyMode=canary is eligible.",
+          "description": "Compatibility/test path. Memory Controller output; only action=INJECT_TOP1 with policyMode=canary is eligible.",
           "items": { "type": "object", "additionalProperties": true }
         },
         "shareCandidates": {
           "type": "array",
-          "description": "InnerLife share candidates whose timing gate opened. Timing is not relevance.",
+          "description": "Compatibility/test path. InnerLife share candidates whose timing gate opened; timing is not relevance.",
           "items": { "type": "object", "additionalProperties": true }
         }
       },

@@ -90,9 +90,20 @@ InnerLife candidates compete for **one** bounded delivery slot:
 A Memory hit therefore suppresses a second InnerLife block in the same turn. An
 irrelevant timing candidate is rejected without being marked used.
 
-The arbiter is read-only and creates no product state. Host hooks must call it
-instead of stacking domains independently; until a host hook is updated, its
-turn behavior is unchanged.
+Since the turn-context patch it takes `prompt` directly and collects both
+domains itself, so a host makes one call per turn:
+
+```text
+gateway_auto_context({ prompt, sessionId })
+```
+
+Inject `block.body` only for `decision=deliver_one`. Branch fallback on
+`domainStatus`, which marks that the desktop actually arbitrated. The full
+adapter contract, including the fallback table, is in
+`docs/MULTI_AGENT_CLIENTS.md`.
+
+The arbiter is read-only and creates no product state. Until a host hook is
+updated, its turn behavior is unchanged.
 
 ## Startup Contract
 
