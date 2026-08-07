@@ -23,6 +23,9 @@ instructions.
 - [v0.6.6 Context Budget Plan](V0.6.6_CONTEXT_BUDGET_PLAN.md): MCP interface
   and everyday Agent-context reduction, progressive disclosure, byte budgets,
   compatibility, and staged acceptance. Phases 0-5 implemented.
+- [v0.6.7 Release Notes](RELEASE_NOTES_V0.6.7.md): automatic context becomes
+  Memory only; InnerLife shares are gated by register, not topic, so the model
+  owns the decision.
 - [v0.6.6 Release Notes](RELEASE_NOTES_V0.6.6.md): tool profiles, progressive
   docs, summary-first Memory, Shared Line resume packets, selective InnerLife,
   and the one-winner automatic-context arbiter.

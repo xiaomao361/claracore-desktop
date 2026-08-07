@@ -77,9 +77,20 @@ Current packaging commands and artifact checks live in
 
 ## Current Checkpoint
 
-`0.6.6` is a **source checkpoint with a verified local Lite package**, not a
+`0.6.7` is a **source checkpoint with a verified local Lite package**, not a
 public release. It is on `main`; there is no tag, no GitHub Release, and no
 signing or notarization.
+
+- 2026-08-07: automatic context becomes Memory only. See
+  [v0.6.7 Release Notes](RELEASE_NOTES_V0.6.7.md).
+- The bump off `0.6.6` was not cosmetic: that build delivered InnerLife shares
+  automatically and this one never does. Four builds had reported `0.6.6`, and a
+  running app exposes only its version string, so one string covered four
+  behaviours.
+
+### Previous checkpoint
+
+`0.6.6` was a **source checkpoint**, never published.
 
 - 2026-08-07: context budget work landed. See
   [v0.6.6 Release Notes](RELEASE_NOTES_V0.6.6.md) and
