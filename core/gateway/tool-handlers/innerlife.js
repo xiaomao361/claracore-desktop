@@ -6,6 +6,7 @@ const {
   shapePendingShares
 } = require("../../innerlife/selective");
 const continuity = require("../../continuity");
+const { shapeSharedLinePacket } = require("../../continuity/resume-detail");
 
 function compactLineSummary(line) {
   return {
@@ -45,9 +46,14 @@ async function handleInnerLifeTool(name, args, context) {
       limit: 20,
       status: "active"
     });
+    // v0.6.6: session start is the path a host hook actually injects, so it
+    // must carry the same bounded contracts as the individual tools. Shaping
+    // only innerlife_briefing and shared_line_get would leave the largest
+    // per-session payload unshaped.
     return textResult({
       ...startPacket,
-      shared_line: sharedLine,
+      ...(startPacket.briefing ? { briefing: shapeInnerLifeBriefing(startPacket.briefing, args.detail) } : {}),
+      shared_line: sharedLine ? shapeSharedLinePacket(sharedLine, args.detail === "full" ? "full" : "resume") : sharedLine,
       shared_lines: lines.map(compactLineSummary),
       ...(activatedLine ? { activated_line: compactLineSummary(activatedLine) } : {}),
       ...(sharedLineError ? { shared_line_error: sharedLineError } : {})

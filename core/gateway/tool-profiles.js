@@ -105,7 +105,7 @@ const CORE_TOOL_SHAPES = Object.freeze({
   innerlife_session_start: {
     description:
       "Start an InnerLife session. Returns session id, a compact share_plan, and a Shared Line resume packet. Pass lineId to select an exact line.",
-    properties: ["agentId", "userId", "host", "externalSessionId", "lineId"]
+    properties: ["agentId", "userId", "host", "externalSessionId", "lineId", "includeBriefing", "detail"]
   },
   innerlife_session_end: {
     description:

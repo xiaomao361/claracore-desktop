@@ -24,6 +24,11 @@ const innerlifeSessionToolDefinitions = [
         "externalSessionId": {
           "type": "string"
         },
+        "detail": {
+          "type": "string",
+          "enum": ["summary", "full"],
+          "description": "Shape of the returned briefing and Shared Line resume packet. summary is the default."
+        },
         "includeBriefing": {
           "type": "boolean"
         },

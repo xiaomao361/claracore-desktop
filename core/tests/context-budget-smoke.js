@@ -480,6 +480,30 @@ function aggregateContextService() {
   });
 }
 
+// innerlife_session_start is the packet a host hook actually injects at the top
+// of every session, so it must carry the same bounded contracts as the
+// individual tools rather than the stored payloads.
+function checkSessionStartPacket() {
+  const briefing = innerLifeBriefingFixture();
+  const line = sharedLinePacketFixture();
+
+  const shapedBriefing = shapeInnerLifeBriefing(briefing);
+  const shapedLine = shapeSharedLinePacket(line, "resume");
+  assertWithin("session_start briefing", shapedBriefing, CONTEXT_BUDGET_CEILINGS.innerlifeBriefingDefault);
+  assertWithin("session_start shared_line", shapedLine, CONTEXT_BUDGET_CEILINGS.sharedLineGetDefault);
+
+  const injected = { briefing: shapedBriefing, shared_line: shapedLine };
+  assertWithin("session_start injected context", injected, CONTEXT_BUDGET_CEILINGS.sessionStartInjection);
+
+  // The unshaped stored payloads are what this replaces.
+  assert.ok(
+    bytes(injected) * 5 < bytes({ briefing, shared_line: line }),
+    "Session start must inject a materially smaller packet than the stored payloads."
+  );
+  assert.ok(!("agentState" in shapedLine), "Session start must not inject Agent-level state per line.");
+  assert.ok(!("text" in shapedBriefing), "Session start must not inject a parallel briefing text block.");
+}
+
 async function checkAggregateContext() {
   const service = aggregateContextService();
   const snapshot = innerLifeSnapshotLiteFixture();
@@ -738,6 +762,7 @@ async function main() {
   await checkMemorySummarySearch();
   checkSharedLineResume();
   checkInnerLifeSelective();
+  checkSessionStartPacket();
   await checkAggregateContext();
   checkAutomaticArbiter();
   await checkBaselineScript();
