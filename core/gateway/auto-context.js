@@ -105,6 +105,13 @@ function rank(left, right) {
 
 function arbitrateAutomaticContext(input = {}) {
   const callerAgentId = String(input.agentId || "").trim();
+  // A domain that never ran is not a domain with no candidates. Without this,
+  // a permanently timing-out Memory Controller looks exactly like a quiet one.
+  const domainStatus = {
+    memory: "ok",
+    innerlife: "ok",
+    ...(input.domainStatus || {})
+  };
   const candidates = [
     ...(input.memoryCandidates || []).map((memory) => evaluateMemoryCandidate(memory, callerAgentId)),
     ...(input.shareCandidates || []).map((share) => evaluateShareCandidate(share, callerAgentId))
@@ -120,6 +127,7 @@ function arbitrateAutomaticContext(input = {}) {
 
   const base = {
     agentId: callerAgentId,
+    domainStatus,
     budget: {
       targetTokens: AUTO_CONTEXT_TARGET_TOKENS,
       hardLimitTokens: AUTO_CONTEXT_HARD_LIMIT_TOKENS,
@@ -131,7 +139,16 @@ function arbitrateAutomaticContext(input = {}) {
   };
 
   if (!eligible.length) {
-    return { ...base, decision: "abstain", selected: null, block: null, reason: "no_eligible_candidate" };
+    // Distinguish "nothing qualified" from "nothing was collected", so a broken
+    // domain is visible in the trace instead of reading as a quiet turn.
+    const degraded = Object.values(domainStatus).some((status) => status === "timeout" || status === "error");
+    return {
+      ...base,
+      decision: "abstain",
+      selected: null,
+      block: null,
+      reason: degraded ? "no_eligible_candidate_degraded" : "no_eligible_candidate"
+    };
   }
 
   const winner = eligible[0];

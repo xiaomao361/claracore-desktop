@@ -17,13 +17,15 @@ function controllerFor(database) {
   return controller;
 }
 
-async function handleMemoryControllerTool(name, args, context) {
-  if (name !== "memory_context") return undefined;
-  const { currentCallerContext, database, textResult } = context;
+// The identity, mode, allowlist, timeView, and canary gates live here and
+// nowhere else. Automatic turn context calls this same function rather than
+// re-deriving eligibility, so there is exactly one place that can widen it.
+async function runMemoryContext(args, context) {
+  const { currentCallerContext, database } = context;
   const caller = currentCallerContext({});
   const agentId = String(caller?.agentId || "").trim();
   if (UNIDENTIFIED_AGENT_IDS.has(agentId)) {
-    return textResult({
+    return ({
       decisionId: "",
       action: "NOOP",
       reason: "caller_identity_required",
@@ -36,7 +38,7 @@ async function handleMemoryControllerTool(name, args, context) {
   const settings = await database.getSettings();
   const configuredMode = String(settings["memory.controller.mode"] || "off").trim().toLowerCase();
   if (!MEMORY_CONTROLLER_MODES.includes(configuredMode)) {
-    return textResult({
+    return ({
       decisionId: "",
       action: "NOOP",
       reason: "invalid_controller_mode",
@@ -47,7 +49,7 @@ async function handleMemoryControllerTool(name, args, context) {
     });
   }
   if (configuredMode === "off") {
-    return textResult({
+    return ({
       decisionId: "",
       action: "NOOP",
       reason: "controller_disabled",
@@ -59,7 +61,7 @@ async function handleMemoryControllerTool(name, args, context) {
   }
   const allowlist = parseCanaryAgentIds(settings["memory.controller.canary_agent_ids"]);
   if (configuredMode === "canary" && !allowlist.valid) {
-    return textResult({
+    return ({
       decisionId: "",
       action: "NOOP",
       reason: "invalid_canary_allowlist",
@@ -85,14 +87,20 @@ async function handleMemoryControllerTool(name, args, context) {
     contextBudgetTokens: args.contextBudgetTokens,
     mode
   });
-  return textResult({
+  return {
     ...packet,
     configuredMode,
     canaryEligible,
     context: canaryEligible ? packet.context : ""
-  });
+  };
+}
+
+async function handleMemoryControllerTool(name, args, context) {
+  if (name !== "memory_context") return undefined;
+  return context.textResult(await runMemoryContext(args, context));
 }
 
 module.exports = {
-  handleMemoryControllerTool
+  handleMemoryControllerTool,
+  runMemoryContext
 };

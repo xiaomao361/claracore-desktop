@@ -285,6 +285,45 @@ async function main() {
       missingToolFailed = error.message.includes("Unknown tool");
     }
     if (!missingToolFailed) throw new Error("Gateway missing tool call should fail for trace coverage.");
+    // v0.6.6 turn-context patch: the prompt must never be persisted verbatim.
+    // Long enough that the preview bound has to actually withhold something;
+    // the tail is what proves the raw prompt is not persisted.
+    const SECRET_TAIL = "zztailmustnotbestoredzz";
+    const SECRET_PROMPT = `remember this private detail ${"x".repeat(120)} ${SECRET_TAIL}`;
+    const autoContext = parseTextResult(
+      await client.callTool("gateway_auto_context", { prompt: SECRET_PROMPT })
+    );
+    if (!autoContext.decision || !autoContext.domainStatus) {
+      throw new Error(`gateway_auto_context prompt path did not return a decision: ${JSON.stringify(autoContext)}`);
+    }
+    if (autoContext.selected && autoContext.selected.evidenceState !== "selected") {
+      throw new Error("Automatic context must only ever report the selected evidence state.");
+    }
+    let mixedRejected = false;
+    try {
+      await client.callTool("gateway_auto_context", { prompt: "x", memoryCandidates: [] });
+    } catch (error) {
+      mixedRejected = String(error.message || "").includes("not both");
+    }
+    if (!mixedRejected) {
+      throw new Error("gateway_auto_context must refuse prompt and candidate arrays together.");
+    }
+    const autoTraces = parseTextResult(await client.callTool("gateway_trace_list", { limit: 20 })).traces || [];
+    const autoTrace = autoTraces.find((trace) => trace.toolName === "gateway_auto_context" && trace.status === "ok");
+    if (!autoTrace) throw new Error("gateway_auto_context call was not traced.");
+    if (JSON.stringify(autoTrace.request).includes(SECRET_TAIL)) {
+      throw new Error(`Gateway trace persisted the raw prompt: ${JSON.stringify(autoTrace.request)}`);
+    }
+    if (!autoTrace.request?.prompt?.redacted || !autoTrace.request?.prompt?.hash) {
+      throw new Error(`Gateway trace did not redact the prompt: ${JSON.stringify(autoTrace.request)}`);
+    }
+    if (autoTrace.request.prompt.truncated !== true) {
+      throw new Error("A prompt longer than the preview bound must be reported as truncated.");
+    }
+    if (Buffer.byteLength(autoTrace.request.prompt.preview, "utf8") > 80) {
+      throw new Error(`Trace preview exceeded its 80-byte bound: ${autoTrace.request.prompt.preview.length}`);
+    }
+
     const traceList = parseTextResult(
       await client.callTool("gateway_trace_list", {
         limit: 20

@@ -1,9 +1,25 @@
 const { getGatewayContext } = require("../context");
 const { buildGatewayDocs } = require("../docs");
 const { arbitrateAutomaticContext } = require("../auto-context");
+const { createTurnContextService } = require("../turn-context");
+const { createInnerLifeRelevanceScorer } = require("../../innerlife/relevance");
+const { runMemoryContext } = require("./memory-controller");
+const innerlife = require("../../innerlife");
+const { meaningfulTokens } = require("../../db/helpers");
+
+// One wiring of the collection ports. Memory retrieval reuses the Memory
+// Controller handler's own gate logic; InnerLife relevance uses the read-only
+// scorer, never innerlife_share_check, which would write a row per check.
+const turnContextService = createTurnContextService({
+  runMemoryController: (core, input) => runMemoryContext({ prompt: input.prompt }, core.handlerContext),
+  listPendingShares: (core, agentId, limit) =>
+    innerlife.pendingShares(core, "pending", limit, agentId),
+  scoreShareRelevance: createInnerLifeRelevanceScorer({ meaningfulTokens })
+});
 
 async function handleSystemTool(name, args, context) {
   const {
+    core,
     database,
     currentCallerContext,
     currentMcpAgentId,
@@ -78,9 +94,35 @@ async function handleSystemTool(name, args, context) {
   }
 
   if (name === "gateway_auto_context") {
-    return textResult(
-      arbitrateAutomaticContext({ ...(args || {}), agentId: currentMcpAgentId(args) })
+    const input = args || {};
+    const prompt = String(input.prompt || "").trim();
+    const hasCandidates = Array.isArray(input.memoryCandidates) || Array.isArray(input.shareCandidates);
+    // Never merge the two paths silently. A precedence rule would just hide the
+    // ambiguity; refusing makes the caller say which contract it meant.
+    if (prompt && hasCandidates) {
+      throw new Error(
+        "gateway_auto_context accepts either prompt or the candidate arrays, not both. Pass prompt for the server-owned path."
+      );
+    }
+
+    const agentId = currentMcpAgentId(args);
+    if (!prompt) {
+      return textResult(arbitrateAutomaticContext({ ...input, agentId }));
+    }
+
+    const collected = await turnContextService.collect(
+      { ...core, handlerContext: context },
+      { prompt, agentId }
     );
+    return textResult({
+      ...arbitrateAutomaticContext({
+        agentId,
+        memoryCandidates: collected.memoryCandidates,
+        shareCandidates: collected.shareCandidates,
+        domainStatus: collected.domainStatus
+      }),
+      latencyMs: collected.latencyMs
+    });
   }
 
   if (name === "gateway_trace_list") {

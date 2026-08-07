@@ -1,3 +1,5 @@
+const crypto = require("crypto");
+
 function createGatewayTraceRepository(helpers) {
   const {
     jsonSql,
@@ -28,7 +30,49 @@ function createGatewayTraceRepository(helpers) {
     };
   }
 
-  function boundedGatewayTraceRequest(request = {}, maxBytes = 16 * 1024) {
+  // Fields that carry raw user text. A trace is bounded evidence, not a
+  // transcript: storing the prompt verbatim would put every message the user
+  // ever typed into the local database on the automatic path. The Memory
+  // Controller already established the right shape for this — a hash plus a
+  // bounded preview — and this mirrors it.
+  const REDACTED_REQUEST_FIELDS = Object.freeze(["prompt", "transcript", "context"]);
+  // 80 bytes, deliberately shorter than the Memory Controller's 160-byte
+  // query_preview: a trace preview only needs to identify which turn produced a
+  // decision. Be honest about what this does and does not guarantee — a prompt
+  // shorter than the bound is still recorded in full, so `truncated` says
+  // plainly whether anything was actually withheld.
+  const REDACTED_PREVIEW_BYTES = 80;
+
+  function redactedField(value) {
+    const text = typeof value === "string" ? value : JSON.stringify(value ?? "");
+    const collapsed = text.replace(/\s+/g, " ").trim();
+    const preview = collapsed.slice(0, REDACTED_PREVIEW_BYTES);
+    return {
+      redacted: true,
+      bytes: Buffer.byteLength(text, "utf8"),
+      hash: crypto.createHash("sha256").update(text).digest("hex").slice(0, 32),
+      preview,
+      truncated: preview.length < collapsed.length
+    };
+  }
+
+  function redactGatewayTraceRequest(request = {}) {
+    if (!request || typeof request !== "object" || Array.isArray(request)) return request;
+    let changed = false;
+    const out = {};
+    for (const [key, value] of Object.entries(request)) {
+      if (REDACTED_REQUEST_FIELDS.includes(key) && value !== undefined && value !== null && value !== "") {
+        out[key] = redactedField(value);
+        changed = true;
+      } else {
+        out[key] = value;
+      }
+    }
+    return changed ? out : request;
+  }
+
+  function boundedGatewayTraceRequest(inputRequest = {}, maxBytes = 16 * 1024) {
+    const request = redactGatewayTraceRequest(inputRequest);
     let serialized;
     try {
       serialized = JSON.stringify(request || {});

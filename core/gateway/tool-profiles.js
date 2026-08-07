@@ -32,8 +32,12 @@ const CORE_TOOL_SHAPES = Object.freeze({
       "Read one assembled context packet from Memory, Shared Line, and InnerLife. Start with detail=brief and no lineId; SHARED_LINE_ID_REQUIRED means multiple active lines, so retry with one candidate lineId."
   },
   gateway_auto_context: {
+    // core advertises only the host contract. The candidate arrays are the
+    // compatibility/test path and stay in the full profile, which also keeps
+    // this tool smaller in core than it was before prompt existed.
     description:
-      "Arbitrate automatic per-prompt context: Memory and InnerLife candidates compete for one bounded slot. Returns one block or abstains. Read-only; it never marks delivery or use."
+      "Arbitrate automatic per-prompt context in one call. Pass prompt; the Gateway collects Memory and InnerLife candidates itself and returns one bounded block or abstains. Do not retrieve Memory or inspect InnerLife separately for this. Read-only; it never marks delivery or use.",
+    properties: ["prompt", "sessionId", "agentId"]
   },
   memory_context: {
     description:
