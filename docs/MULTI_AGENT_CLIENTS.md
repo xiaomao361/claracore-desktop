@@ -231,6 +231,88 @@ candidates through `gateway_auto_context` so at most one bounded block enters a
 turn. That hook change is client-side work and is not done by upgrading Desktop.
 
 
+## Automatic Turn Context: Host Adapter Contract
+
+A host prompt hook makes **one** call per user turn and injects at most one
+block. It must not retrieve Memory, inspect InnerLife, or score relevance
+itself — that policy lives in ClaraCore so it cannot drift between hosts.
+
+### Request
+
+```json
+{ "prompt": "the current user message", "sessionId": "optional InnerLife session id" }
+```
+
+`prompt` and the `memoryCandidates` / `shareCandidates` arrays are **mutually
+exclusive**. Sending both is rejected, not merged. The arrays are the
+compatibility/test path and are only advertised under the `full` tool profile.
+
+Identity comes from the authenticated caller headers, never from the body.
+
+### Response
+
+```json
+{
+  "decision": "deliver_one" | "abstain",
+  "domainStatus": { "memory": "ok|timeout|error|skipped", "innerlife": "..." },
+  "selected": { "domain": "memory|innerlife", "id": "...", "evidenceState": "selected" },
+  "block": { "domain": "...", "id": "...", "body": "...", "bytes": 0, "truncated": false },
+  "candidates": [ { "domain": "...", "id": "...", "eligible": false, "discardReason": "..." } ],
+  "reason": "single_winner | no_eligible_candidate | no_eligible_candidate_degraded"
+}
+```
+
+Inject `block.body` only when `decision === "deliver_one"`. Nothing else.
+
+### Fallback rules
+
+Branch on `domainStatus`, not on `decision`. **`domainStatus` is the marker that
+this desktop actually arbitrated.**
+
+| Response | Adapter does |
+| --- | --- |
+| `deliver_one` with a block | inject that one block |
+| anything carrying `domainStatus` | nothing — the desktop looked and abstained |
+| RPC error `Unknown tool` | fall back to the old `memory_context` path |
+| any other shape | fall back to the old `memory_context` path |
+
+Only *unknown tool* and *unrecognised shape* fall back. A network, auth, or
+timeout failure must inject nothing rather than starting a second uncoordinated
+retrieval.
+
+This rule is not obvious and it is easy to get wrong in a way that looks fine:
+an adapter that only falls back on an explicit pre-patch abstain will inject
+nothing forever against any desktop that answers differently, and will show no
+error while doing it.
+
+### Evidence
+
+`selected` is not `delivered` and not `used`. An InnerLife block must carry its
+share id into the injected text so the model can report the outcome through
+`innerlife_mark_share`, which still requires real `deliveryEvidence` for
+`action="used"`. The arbiter never marks anything.
+
+### Counts are not blocks
+
+A pending-share **count** carries no product content and does not compete for
+the delivery slot. Fetching it separately (throttled) is fine. Fetching share
+**bodies** separately is not — that is a second uncoordinated injection.
+
+### When the prompt event does not fire
+
+On a host where the per-prompt hook is not reliably emitted, automatic context
+is **unavailable**. A session-level instruction telling the model to call the
+tool each turn is model-driven, must be labelled best-effort, and must not be
+counted as acceptance. Gateway traces show whether the call actually happened;
+a missing call is never reported as success.
+
+### Traces
+
+The prompt is not stored verbatim: `gateway_traces` keeps a hash plus an
+80-byte preview, with `truncated` reporting whether anything was withheld. A
+prompt shorter than the bound is still recorded in full.
+
+
 ## Codex Migration Checklist
 
 1. Keep `agentId=codex` stable.
