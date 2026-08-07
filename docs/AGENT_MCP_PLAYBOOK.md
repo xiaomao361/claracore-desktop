@@ -77,8 +77,12 @@ Two things that did **not** change:
 
 ## Automatic Context (v0.6.6)
 
-`gateway_auto_context` arbitrates automatic per-prompt injection. Memory and
-InnerLife candidates compete for **one** bounded delivery slot:
+`gateway_auto_context` arbitrates automatic per-prompt injection into **one**
+bounded delivery slot. It collects Memory only; InnerLife shares are never
+delivered automatically, because whether a waiting thought fits is a question of
+register rather than topic and only the model can read register. Reach them
+through `innerlife_share_check`. Candidates supplied by a host on the
+compatibility path are still arbitrated:
 
 1. invalid, restricted, historical, cross-Agent, not-pending, and weak
    candidates are discarded, each with a recorded reason;

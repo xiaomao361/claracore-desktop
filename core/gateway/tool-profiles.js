@@ -36,7 +36,7 @@ const CORE_TOOL_SHAPES = Object.freeze({
     // compatibility/test path and stay in the full profile, which also keeps
     // this tool smaller in core than it was before prompt existed.
     description:
-      "Arbitrate automatic per-prompt context in one call. Pass prompt; the Gateway collects Memory and InnerLife candidates itself and returns one bounded block or abstains. Do not retrieve Memory or inspect InnerLife separately for this. Read-only; it never marks delivery or use.",
+      "Arbitrate automatic per-prompt Memory context in one call. Pass prompt; the Gateway runs the Memory Controller and returns one bounded block or abstains. InnerLife is not collected here — a waiting thought is gated by register, not topic, so use innerlife_share_check. Read-only; it never marks delivery or use.",
     properties: ["prompt", "sessionId", "agentId"]
   },
   memory_context: {

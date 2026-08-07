@@ -83,7 +83,7 @@ const systemToolDefinitions = [
   {
     "name": "gateway_auto_context",
     "title": "Gateway Automatic Context",
-    "description": "Arbitrate automatic per-prompt context in one call. Pass prompt and the Gateway collects Memory and InnerLife candidates itself, then returns one bounded block or abstains. Do not retrieve Memory or inspect InnerLife separately for this purpose. Read-only: it never marks delivery or use, and never selects among active Shared Lines. Traces do not keep the prompt verbatim: they store a hash plus an 80-byte preview, so a prompt shorter than that is still recorded in full.",
+    "description": "Arbitrate automatic per-prompt Memory context in one call. Pass prompt and the Gateway runs the Memory Controller itself, then returns one bounded block or abstains. Do not retrieve Memory separately for this purpose. InnerLife is deliberately not collected here: whether a waiting thought fits is a question of register, not topic, and only the model can read register — use innerlife_share_check. Read-only: it never marks delivery or use, and never selects among active Shared Lines. Traces do not keep the prompt verbatim: they store a hash plus an 80-byte preview, so a prompt shorter than that is still recorded in full.",
     "inputSchema": {
       "type": "object",
       "properties": {

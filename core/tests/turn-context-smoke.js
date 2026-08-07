@@ -1,16 +1,10 @@
 const assert = require("assert");
 const { arbitrateAutomaticContext } = require("../gateway/auto-context");
 const {
-  INNERLIFE_TIMEOUT_MS,
   MEMORY_TIMEOUT_MS,
-  SHARE_CANDIDATE_LIMIT,
   TURN_BUDGET_MS,
   createTurnContextService
 } = require("../gateway/turn-context");
-const { createInnerLifeRelevanceScorer, relevanceTokens } = require("../innerlife/relevance");
-const { meaningfulTokens } = require("../db/helpers");
-
-const scoreShareRelevance = createInnerLifeRelevanceScorer();
 
 function share(id, body, overrides = {}) {
   return { id, agent_id: "clara", status: "pending", body, ...overrides };
@@ -29,126 +23,59 @@ function memoryPacket(overrides = {}) {
 function serviceWith(overrides = {}) {
   return createTurnContextService({
     runMemoryController: async () => memoryPacket(),
-    listPendingShares: async () => [],
-    scoreShareRelevance,
     ...overrides
   });
 }
 
 function checkBudgetArithmetic() {
-  // The patch proposed one 3 s budget while the Memory Controller's own hard
-  // timeout is 2500 ms, which would leave almost nothing for InnerLife. The
-  // per-domain slices must actually fit inside the turn budget.
   assert.ok(
-    MEMORY_TIMEOUT_MS + INNERLIFE_TIMEOUT_MS < TURN_BUDGET_MS,
-    `Domain timeouts ${MEMORY_TIMEOUT_MS}+${INNERLIFE_TIMEOUT_MS} leave no room inside the ${TURN_BUDGET_MS}ms turn budget.`
+    MEMORY_TIMEOUT_MS < TURN_BUDGET_MS,
+    `Memory timeout ${MEMORY_TIMEOUT_MS} must fit inside the ${TURN_BUDGET_MS}ms turn budget.`
   );
   assert.ok(MEMORY_TIMEOUT_MS < 2500, "Memory must be given less than the Controller's own hard timeout.");
 }
 
 function checkPortContract() {
   assert.throws(() => createTurnContextService({}), /requires ports/);
-  assert.throws(() => createTurnContextService({ runMemoryController: () => {} }), /requires ports/);
 }
 
-async function checkRelevanceIsReadOnly() {
-  // The scorer must be a pure function of its inputs. If it ever needs a
-  // database it has become innerlife_share_check, which writes a row per check.
-  const scorer = createInnerLifeRelevanceScorer();
-  assert.strictEqual(scorer.length, 2, "The relevance scorer takes only a prompt and a share.");
-
-  const related = scorer(
-    "how does the shared line ambiguity refusal bound its candidates",
-    share("s1", "The shared line ambiguity refusal returns bounded candidates instead of the whole catalog.")
-  );
-  const unrelated = scorer(
-    "what should I have for lunch today",
-    share("s2", "The shared line ambiguity refusal returns bounded candidates instead of the whole catalog.")
-  );
-  assert.ok(related.relevance > unrelated.relevance, "A matching prompt must score above an unrelated one.");
-  assert.strictEqual(unrelated.relevance, 0, "An unrelated prompt must score zero, not merely low.");
-
-  // An explicit ask lifts a connected share but must not manufacture relevance,
-  // or "有什么想说的" would surface anything at all.
-  const askOnly = scorer("你有什么想说的吗", share("s3", "completely unrelated stored thought about disk alerts"));
-  assert.strictEqual(askOnly.relevance, 0, "An ask signal alone must not create relevance.");
-
-  // Relevance must not collapse on length. Dividing by the share's own tokens
-  // was the first attempt: a real multi-sentence thought scored 0.2 against a
-  // 0.5 threshold, so nothing but a near-paraphrase could ever be delivered and
-  // the feature would have silently never fired.
-  const realistic = scorer(
-    "how does the shared line ambiguity refusal bound its candidates",
-    share(
-      "s4",
-      "Worth keeping: the ambiguity refusal now bounds its candidates and reports a true total count, so an agent can choose without pulling the whole catalog. It refuses rather than guessing."
-    )
-  );
-  assert.ok(
-    realistic.relevance >= 0.5,
-    `A realistic multi-sentence share scored ${realistic.relevance}; the scorer must not penalise length.`
-  );
-
-  // One shared common word is not a topic match.
-  const oneWord = scorer(
-    "how does the shared line ambiguity refusal bound its candidates",
-    share("s5", "The candidates for the election were announced yesterday in the news")
-  );
-  assert.strictEqual(oneWord.signals.reason, "prompt_coverage");
-  assert.ok(oneWord.relevance < 0.5, "A single incidental term must not clear the threshold.");
-  const belowFloor = scorer("candidates", share("s6", "candidates only here nothing else at all"));
-  assert.strictEqual(belowFloor.signals.reason, "below_overlap_floor");
-
-  // Fixed: the fallback template used to embed the operator prompt verbatim, so
-  // a boilerplate share scored highly against any later prompt on the same topic
-  // and automatic context delivered it back as if it were a thought. The model
-  // still receives the operator prompt; the stored body no longer echoes it.
-  const templateBody = "Manual InnerLife review\n\nCurrent position: none\n\nRecent Memory context:\n- No recent Memory records.";
-  const templateEcho = scorer("shared line ambiguity refusal bounded candidates", share("s7", templateBody));
+// InnerLife is reached through innerlife_share_check, not through automatic
+// delivery. Topical relevance was never the right gate — a waiting thought does
+// not have to be about the current topic. What makes a share wrong is the
+// register, which the server cannot read, so the model owns the decision.
+async function checkInnerLifeIsNotCollected() {
+  let sharesTouched = false;
+  const service = createTurnContextService({
+    runMemoryController: async () => memoryPacket(),
+    // Present but must never be reached; a port that is not in the contract
+    // cannot be called by name.
+    listPendingShares: async () => {
+      sharesTouched = true;
+      return [share("s1", "a waiting thought")];
+    }
+  });
+  const collected = await service.collect({}, { prompt: "anything at all here", agentId: "clara" });
+  assert.strictEqual(sharesTouched, false, "Automatic collection must not read InnerLife shares.");
+  assert.deepStrictEqual(collected.shareCandidates, [], "Automatic context must carry no share candidates.");
   assert.strictEqual(
-    templateEcho.relevance,
-    0,
-    "A template body must not match an unrelated prompt now that it no longer echoes one."
+    collected.domainStatus.innerlife,
+    "not_collected",
+    "InnerLife must report not_collected, which is not the same as having nothing waiting."
   );
 
-  // The threshold is 0.35, matching MIN_MEMORY_RELEVANCE. Lock both sides of
-  // the measured gap so a future change cannot quietly reopen it.
-  const zhBody = "共享线歧义拒绝现在会返回有界候选和真实总数，agent 可以自己选，不用把整个目录拉下来。";
-  const zhQuestion = scorer("共享线歧义拒绝是怎么限制候选数量的", share("zh3", zhBody));
-  assert.ok(
-    zhQuestion.relevance >= 0.35,
-    `A full Chinese question scored ${zhQuestion.relevance}; at 0.5 no ordinary Chinese question could ever fire.`
-  );
-  assert.ok(oneWord.relevance < 0.35, "One incidental shared word must still be discarded at the lower floor.");
+  // An abstain caused by no Memory candidate is a plain abstain, not a degraded
+  // one: a domain that is deliberately not collected is not a broken domain.
+  const decided = arbitrateAutomaticContext({
+    agentId: "clara",
+    memoryCandidates: [],
+    shareCandidates: collected.shareCandidates,
+    domainStatus: collected.domainStatus
+  });
+  assert.strictEqual(decided.decision, "abstain");
+  assert.strictEqual(decided.reason, "no_eligible_candidate");
 }
 
-function checkChineseRelevance() {
-  // The shared meaningfulTokens helper keeps an unpunctuated Chinese sentence as
-  // a single token, so coverage was 1 with an overlap of 1, fell under the
-  // two-token floor, and scored 0. Chinese relevance was dead in every case.
-  assert.strictEqual(
-    meaningfulTokens("共享线歧义拒绝").length,
-    1,
-    "Guard: the shared tokenizer still collapses Chinese, which is why relevance owns its own."
-  );
-  assert.ok(
-    relevanceTokens("共享线歧义拒绝").length > 1,
-    "Relevance tokenisation must split Chinese into matchable units."
-  );
 
-  const scorer = createInnerLifeRelevanceScorer();
-  const body = "共享线歧义拒绝现在会返回有界候选和真实总数，agent 可以自己选，不用把整个目录拉下来。";
-  for (const fragment of ["共享线歧义拒绝", "返回有界候选", "真实总数"]) {
-    const scored = scorer(fragment, share("zh", body));
-    assert.strictEqual(scored.signals.coverage, 1, `Fragment ${fragment} should be fully covered.`);
-    assert.ok(scored.relevance >= 0.5, `Fragment ${fragment} scored ${scored.relevance}; Chinese must be deliverable.`);
-  }
-  assert.strictEqual(scorer("今天中午吃什么好呢", share("zh", body)).relevance, 0, "Unrelated Chinese must score zero.");
-
-  // Mixed script must not lose the latin half.
-  const mixed = scorer("the ambiguity refusal 有界候选", share("zh2", "ambiguity refusal 返回有界候选"));
-  assert.ok(mixed.relevance > 0, "Mixed-script prompts must still match.");
-}
 
 function checkMemoryScoreIsReal() {
   // Hardcoding Memory relevance to 1 made any injected Memory outrank every
@@ -201,21 +128,14 @@ async function checkCollectorForwardsRealScore() {
 }
 
 async function checkCollectionShape() {
-  const service = serviceWith({
-    listPendingShares: async (unusedCore, unusedAgent, limit) => {
-      assert.strictEqual(limit, SHARE_CANDIDATE_LIMIT, "Collection must ask for the default three candidates.");
-      return [share("s1", "bounded ambiguity candidates"), share("s2", "unrelated"), share("s3", "unrelated too"), share("s4", "overflow")];
-    }
-  });
-  const collected = await service.collect({}, { prompt: "bounded ambiguity candidates", agentId: "clara" });
-  assert.ok(collected.shareCandidates.length <= SHARE_CANDIDATE_LIMIT);
-  assert.deepStrictEqual(collected.domainStatus, { memory: "ok", innerlife: "ok" });
-  assert.ok(collected.memoryCandidates.length === 1);
+  const collected = await serviceWith().collect({}, { prompt: "bounded ambiguity candidates", agentId: "clara" });
+  assert.deepStrictEqual(collected.domainStatus, { memory: "ok", innerlife: "not_collected" });
+  assert.strictEqual(collected.memoryCandidates.length, 1);
   assert.strictEqual(collected.memoryCandidates[0].policyMode, "canary");
 
   // An empty prompt does no domain work at all.
-  const skipped = await service.collect({}, { prompt: "   ", agentId: "clara" });
-  assert.deepStrictEqual(skipped.domainStatus, { memory: "skipped", innerlife: "skipped" });
+  const skipped = await serviceWith().collect({}, { prompt: "   ", agentId: "clara" });
+  assert.deepStrictEqual(skipped.domainStatus, { memory: "skipped", innerlife: "not_collected" });
   assert.deepStrictEqual(skipped.memoryCandidates, []);
 }
 
@@ -225,22 +145,24 @@ async function checkPartialFailure() {
   const memoryDown = serviceWith({
     runMemoryController: async () => {
       throw new Error("controller exploded");
-    },
-    listPendingShares: async () => [share("s1", "bounded ambiguity candidates for the refusal")]
+    }
   });
   const collected = await memoryDown.collect({}, { prompt: "bounded ambiguity candidates for the refusal", agentId: "clara" });
   assert.strictEqual(collected.domainStatus.memory, "error");
-  assert.strictEqual(collected.domainStatus.innerlife, "ok");
   assert.strictEqual(collected.memoryCandidates.length, 0);
-  assert.ok(collected.shareCandidates.length > 0, "A healthy domain must still produce candidates.");
 
+  // A host may still supply its own candidates on the compatibility path, and a
+  // broken Memory domain must not discard them.
   const decided = arbitrateAutomaticContext({
     agentId: "clara",
     memoryCandidates: collected.memoryCandidates,
-    shareCandidates: collected.shareCandidates,
+    shareCandidates: [
+      { id: "s1", agentId: "clara", status: "pending", selected: true, relevance: 0.9, preview: "a host-supplied candidate" }
+    ],
     domainStatus: collected.domainStatus
   });
   assert.strictEqual(decided.domainStatus.memory, "error", "The arbiter must carry the domain status through.");
+  assert.strictEqual(decided.decision, "deliver_one", "A healthy supplied candidate must survive a broken domain.");
 }
 
 async function checkTimeoutIsNotSilence() {
@@ -292,10 +214,9 @@ async function checkControllerVerdictIsNotWidened() {
 async function main() {
   checkBudgetArithmetic();
   checkPortContract();
-  checkChineseRelevance();
+  await checkInnerLifeIsNotCollected();
   checkMemoryScoreIsReal();
   await checkCollectorForwardsRealScore();
-  await checkRelevanceIsReadOnly();
   await checkCollectionShape();
   await checkPartialFailure();
   await checkTimeoutIsNotSilence();

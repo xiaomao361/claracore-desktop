@@ -2,18 +2,13 @@ const { getGatewayContext } = require("../context");
 const { buildGatewayDocs } = require("../docs");
 const { arbitrateAutomaticContext } = require("../auto-context");
 const { createTurnContextService } = require("../turn-context");
-const { createInnerLifeRelevanceScorer } = require("../../innerlife/relevance");
 const { runMemoryContext } = require("./memory-controller");
-const innerlife = require("../../innerlife");
 
-// One wiring of the collection ports. Memory retrieval reuses the Memory
-// Controller handler's own gate logic; InnerLife relevance uses the read-only
-// scorer, never innerlife_share_check, which would write a row per check.
+// Memory retrieval reuses the Memory Controller handler's own gate logic rather
+// than re-deriving eligibility. InnerLife is not collected: it stays
+// model-driven through innerlife_share_check.
 const turnContextService = createTurnContextService({
-  runMemoryController: (core, input) => runMemoryContext({ prompt: input.prompt }, core.handlerContext),
-  listPendingShares: (core, agentId, limit) =>
-    innerlife.pendingShares(core, "pending", limit, agentId),
-  scoreShareRelevance: createInnerLifeRelevanceScorer()
+  runMemoryController: (core, input) => runMemoryContext({ prompt: input.prompt }, core.handlerContext)
 });
 
 async function handleSystemTool(name, args, context) {

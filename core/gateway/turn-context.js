@@ -6,25 +6,35 @@
 // codebases and made it drift.
 //
 // This service owns collection. The arbiter stays a pure function and keeps
-// owning the decision. Nothing here writes: Memory Controller keeps its own
-// bounded ledger, and InnerLife relevance uses the read-only scorer rather than
-// innerlife_share_check, which would INSERT a row per check.
+// owning the decision. Nothing here writes: the Memory Controller keeps its own
+// bounded ledger.
 //
-// Per-domain timeouts are deliberate. The Memory Controller's own hard timeout
-// is 2500 ms, which would eat an entire 3 s turn budget on its own and leave
-// nothing for InnerLife. Each domain gets its own slice, and a domain that
-// overruns is discarded with a recorded reason instead of failing the turn.
+// InnerLife is deliberately not collected here. Automatic delivery needs the
+// server to judge whether a waiting thought fits, and measured against real
+// shares it cannot: lexical overlap scored three unrelated Chinese shares above
+// the English one that actually matched, because Chinese bigrams tie on function
+// words and cross-language overlap is structurally zero.
+//
+// The deeper reason is that topical relevance was never the right gate. A
+// waiting thought does not need to be about the current topic — an engineering
+// thought during engineering work is fine even off-topic. What makes a share
+// wrong is the register: an engineering thought in the middle of an intimate
+// conversation. The server cannot read register; the model can. So InnerLife
+// stays model-driven through innerlife_share_check, and the per-prompt hook only
+// carries the pending count, which is a signal that something is waiting rather
+// than a decision to say it.
+//
+// The Memory Controller earned automatic injection by having embeddings and a
+// measured 0.72 vector gate. If InnerLife ever gets share embeddings, this is
+// where it would come back.
+//
+// The Memory timeout is deliberate: the Controller's own hard timeout is 2500 ms,
+// which would eat an entire 3 s turn budget on its own.
 
 const TURN_BUDGET_MS = 3000;
 const MEMORY_TIMEOUT_MS = 1500;
-const INNERLIFE_TIMEOUT_MS = 800;
-const SHARE_CANDIDATE_LIMIT = 3;
 
-const TURN_CONTEXT_PORTS = Object.freeze([
-  "runMemoryController",
-  "listPendingShares",
-  "scoreShareRelevance"
-]);
+const TURN_CONTEXT_PORTS = Object.freeze(["runMemoryController"]);
 
 class DomainTimeoutError extends Error {
   constructor(domain) {
@@ -89,22 +99,6 @@ function createTurnContextService(inputPorts = {}) {
     ].filter((candidate) => candidate.id || candidate.context);
   }
 
-  async function collectInnerLife(core, { prompt, agentId }) {
-    const shares = await ports.listPendingShares(core, agentId, SHARE_CANDIDATE_LIMIT);
-    return (shares || []).slice(0, SHARE_CANDIDATE_LIMIT).map((share) => {
-      const scored = ports.scoreShareRelevance(prompt, share);
-      return {
-        id: share.id,
-        agentId: share.agent_id || share.agentId || "",
-        status: share.status,
-        selected: true,
-        relevance: scored.relevance,
-        signals: scored.signals,
-        preview: share.preview || share.body || ""
-      };
-    });
-  }
-
   return {
     ports: TURN_CONTEXT_PORTS,
 
@@ -117,23 +111,22 @@ function createTurnContextService(inputPorts = {}) {
         return {
           memoryCandidates: [],
           shareCandidates: [],
-          domainStatus: { memory: "skipped", innerlife: "skipped" },
+          domainStatus: { memory: "skipped", innerlife: "not_collected" },
           latencyMs: 0
         };
       }
 
-      const [memorySettled, innerLifeSettled] = await Promise.allSettled([
-        withTimeout(() => collectMemory(core, { prompt, agentId }), MEMORY_TIMEOUT_MS, "memory"),
-        withTimeout(() => collectInnerLife(core, { prompt, agentId }), INNERLIFE_TIMEOUT_MS, "innerlife")
+      const [memorySettled] = await Promise.allSettled([
+        withTimeout(() => collectMemory(core, { prompt, agentId }), MEMORY_TIMEOUT_MS, "memory")
       ]);
-
       const memory = domainOutcome(memorySettled, "memory");
-      const innerLife = domainOutcome(innerLifeSettled, "innerlife");
 
       return {
         memoryCandidates: memory.value || [],
-        shareCandidates: innerLife.value || [],
-        domainStatus: { memory: memory.status, innerlife: innerLife.status },
+        shareCandidates: [],
+        // "not_collected" is not "nothing was waiting": InnerLife is reached
+        // through innerlife_share_check, not through automatic delivery.
+        domainStatus: { memory: memory.status, innerlife: "not_collected" },
         latencyMs: Date.now() - startedAt
       };
     }
@@ -141,9 +134,7 @@ function createTurnContextService(inputPorts = {}) {
 }
 
 module.exports = {
-  INNERLIFE_TIMEOUT_MS,
   MEMORY_TIMEOUT_MS,
-  SHARE_CANDIDATE_LIMIT,
   TURN_BUDGET_MS,
   TURN_CONTEXT_PORTS,
   createTurnContextService
