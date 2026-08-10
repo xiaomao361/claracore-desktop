@@ -2,9 +2,16 @@
 
 ## Status
 
-`v0.6.7` is a **source checkpoint with a verified local Lite package**, not a
-public release. No tag, no GitHub Release, no signing or notarization. `v0.6.5`
-remains the newest signed, notarized public release.
+`v0.6.7` is the current public release. It contains a Developer ID signed,
+Apple-notarized, and stapled macOS Apple Silicon Lite DMG plus its SHA-256
+checksum. Full, Windows, Intel macOS, and Mac App Store packages are not part of
+this release.
+
+## Assets
+
+- `ClaraCore-Desktop-0.6.7-lite-arm64.dmg`
+- `SHA256SUMS.txt`
+- SHA-256: `abe1bd0adc3edf8259cd31bec254e5db6d4ecf441b4ac83a9a7f21fb82a9dc86`
 
 ## Why This Is Not 0.6.6
 
@@ -96,4 +103,14 @@ through `test:phase5`, `npm run test:gateway:http`,
 Package: `npm run test:lite`, `npm run test:package:lite`, and
 `core/tests/phase4-packaged-gateway-smoke.js` driven against the Lite build.
 
-Signing, notarization, and publication are separate and were not performed.
+Release acceptance completed on 2026-08-10:
+
+- the App and DMG signatures pass `codesign` verification with Hardened Runtime;
+- Apple accepted App submission `c7c709da-e41f-46c9-bcd7-99ec3823cc42` and DMG
+  submission `538d2a10-a2bb-45a4-af54-7c1f9254c95c`;
+- App and DMG stapler validation and Gatekeeper assessment pass as
+  `Notarized Developer ID`;
+- `hdiutil verify`, `npm run test:package:lite`, and the packaged Gateway smoke
+  pass against the final artifact, which reports version `0.6.7`;
+- the published DMG and `SHA256SUMS.txt` were downloaded from GitHub and their
+  checksum was reverified after publication.

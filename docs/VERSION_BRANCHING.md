@@ -4,14 +4,21 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- Current development version: `0.6.5`.
-- Current public release: `0.6.5`.
-- Tag `v0.6.5` is the current stable GitHub Release.
+- Current development version: `0.6.7`.
+- Current public release: `0.6.7`.
+- Tag `v0.6.7` is the current stable GitHub Release.
 
-`0.6.5` publishes the post-`0.6.4` architecture/runtime hardening and complete
-Home states as a Developer ID signed and Apple-notarized macOS Apple Silicon
-Lite DMG. Full, Windows, and Intel macOS packages are outside this maintenance
-release. See [v0.6.5 Release Notes](RELEASE_NOTES_V0.6.5.md).
+`0.6.7` publishes the context-budget work begun at the unpublished `0.6.6`
+checkpoint, makes automatic context Memory-only, and restores complete everyday
+Memory workflows to the core tool profile. It is a Developer ID signed and
+Apple-notarized macOS Apple Silicon Lite release. Full, Windows, and Intel macOS
+packages are outside this release. See
+[v0.6.7 Release Notes](RELEASE_NOTES_V0.6.7.md).
+
+`0.6.5` is the previous public release. It publishes the post-`0.6.4`
+architecture/runtime hardening and complete Home states as a signed and
+notarized macOS Apple Silicon Lite DMG. See
+[v0.6.5 Release Notes](RELEASE_NOTES_V0.6.5.md).
 
 `0.6.4` is the previous stable release. It provides signed and Apple-notarized
 macOS Apple Silicon Full/Lite DMGs and unsigned Windows x64 Full/Lite NSIS
@@ -73,13 +80,13 @@ through to the daily-use Application Support directory.
 
 Current packaging commands and artifact checks live in
 [macOS Packaging](mac-packaging.md). Current public-release details live in
-[v0.6.5 Release Notes](RELEASE_NOTES_V0.6.5.md).
+[v0.6.7 Release Notes](RELEASE_NOTES_V0.6.7.md).
 
 ## Current Checkpoint
 
-`0.6.7` is a **source checkpoint with a verified local Lite package**, not a
-public release. It is on `main`; there is no tag, no GitHub Release, and no
-signing or notarization.
+`0.6.7` is the current public release on `main`, tagged `v0.6.7`. Its macOS
+Apple Silicon Lite DMG is Developer ID signed, Apple-notarized, stapled,
+Gatekeeper accepted, and published with a SHA-256 checksum.
 
 - 2026-08-07: automatic context becomes Memory only. See
   [v0.6.7 Release Notes](RELEASE_NOTES_V0.6.7.md).
@@ -99,7 +106,7 @@ signing or notarization.
   (unsigned, arm64 Lite, sha256
   `d3461ebf6cd2f1184d53f6bf463e5972ad34885efe0dc29e68e5939ba5a0b019`),
   verified with `npm run test:package:lite` and the packaged Gateway smoke.
-- `v0.6.5` remains the newest signed, notarized public release.
+- `v0.6.5` was the newest signed, notarized public release before `v0.6.7`.
 
 ## History
 

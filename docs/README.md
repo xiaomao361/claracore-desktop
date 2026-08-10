@@ -35,7 +35,7 @@ instructions.
 - [Memory Controller Canary Handoff](MEMORY_CONTROLLER_CANARY_HANDOFF.md):
   confirmed authenticated multi-Agent trusted-context boundary, implementation slices,
   evidence contract, and first-canary acceptance.
-- [v0.6.5 Release Notes](RELEASE_NOTES_V0.6.5.md): current signed and notarized
+- [v0.6.5 Release Notes](RELEASE_NOTES_V0.6.5.md): previous signed and notarized
   macOS Apple Silicon Lite maintenance release.
 - [v0.6.4 Release Notes](RELEASE_NOTES_V0.6.4.md): previous macOS Apple Silicon
   and Windows x64 Full/Lite release.
@@ -60,7 +60,9 @@ instructions.
 
 - [macOS Packaging](mac-packaging.md): current Full/Lite packaging commands and
   packaged Gateway checks.
-- [v0.6.5 Release Notes](RELEASE_NOTES_V0.6.5.md): current signed and notarized
+- [v0.6.7 Release Notes](RELEASE_NOTES_V0.6.7.md): current signed and notarized
+  macOS Apple Silicon Lite GitHub Release.
+- [v0.6.5 Release Notes](RELEASE_NOTES_V0.6.5.md): previous signed and notarized
   macOS Apple Silicon Lite GitHub Release.
 - [v0.6.4 Release Notes](RELEASE_NOTES_V0.6.4.md): previous GitHub Release for
   macOS Apple Silicon and Windows x64 Full/Lite.
