@@ -20,13 +20,29 @@ function createInnerLifeShareTimingStore(helpers) {
   }
 
   async function recordCheck(database, input) {
+    const requestedSessionId = String(input.sessionId || "").trim();
+    let sessionId = "";
+    if (requestedSessionId) {
+      const sessions = await database.query(`
+        SELECT id
+        FROM innerlife_sessions
+        WHERE agent_id = ${sqlString(input.agentId)}
+          AND (
+            id = ${sqlString(requestedSessionId)}
+            OR external_session_id = ${sqlString(requestedSessionId)}
+          )
+        ORDER BY CASE WHEN id = ${sqlString(requestedSessionId)} THEN 0 ELSE 1 END
+        LIMIT 1;
+      `);
+      sessionId = sessions[0]?.id || "";
+    }
     await database.exec(`
       INSERT INTO innerlife_share_checks (id, share_id, agent_id, session_id, context, decision, reason, metadata_json)
       VALUES (
         ${sqlString(input.id)},
         ${input.shareId ? sqlString(input.shareId) : "NULL"},
         ${sqlString(input.agentId)},
-        ${input.sessionId ? sqlString(input.sessionId) : "NULL"},
+        ${sessionId ? sqlString(sessionId) : "NULL"},
         ${sqlString(input.context)},
         ${sqlString(input.decision)},
         ${sqlString(input.reason)},

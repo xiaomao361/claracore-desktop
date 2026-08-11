@@ -600,6 +600,7 @@ async function main() {
       await client.callTool("innerlife_share_check", {
         agentId: "my-agent",
         shareId: ended.share.id,
+        sessionId: "phase4-session-001",
         context: "Gateway asks whether this session afterthought can be shared now."
       })
     );
@@ -608,6 +609,20 @@ async function main() {
     }
     if (shareCheck.check?.metadata?.sharedLineStatus !== "ambiguous" || shareCheck.check?.metadata?.contextSource !== "provided") {
       throw new Error(`Gateway innerlife_share_check did not preserve provided context across Shared Line ambiguity: ${JSON.stringify(shareCheck.check)}`);
+    }
+    if (shareCheck.check?.sessionId !== started.session.id) {
+      throw new Error(`Gateway innerlife_share_check did not resolve externalSessionId to the canonical session: ${JSON.stringify(shareCheck.check)}`);
+    }
+    const unknownSessionShareCheck = parseTextResult(
+      await client.callTool("innerlife_share_check", {
+        agentId: "my-agent",
+        shareId: ended.share.id,
+        sessionId: "unregistered-caller-conversation",
+        context: "Gateway checks a share when the caller has no registered InnerLife session."
+      })
+    );
+    if (unknownSessionShareCheck.check?.sessionId !== null) {
+      throw new Error(`Gateway innerlife_share_check should ignore an unknown optional session id: ${JSON.stringify(unknownSessionShareCheck.check)}`);
     }
     const shareMark = parseTextResult(
       await client.callTool("innerlife_mark_share", {

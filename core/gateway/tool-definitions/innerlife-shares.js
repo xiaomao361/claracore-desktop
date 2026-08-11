@@ -51,7 +51,8 @@ const innerlifeShareToolDefinitions = [
           "type": "string"
         },
         "sessionId": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional InnerLife session reference. Accepts the canonical inner_session id or a registered externalSessionId for this agent. Unknown caller conversation ids are ignored instead of failing the share check."
         },
         "context": {
           "type": "string"

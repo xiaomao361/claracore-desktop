@@ -223,6 +223,8 @@ form on both transports.
 1. Call `innerlife_session_start` at the beginning of a meaningful session.
    Its bundled `shared_lines` list is active-only; archived lines require an
    explicit `shared_line_list` call with `status: "archived"` or `"all"`.
+   Save the returned `session.id`; it is the canonical `inner_session_*`
+   reference for later lifecycle calls.
 2. Use `innerlife_submit_inbox`, `innerlife_submit_fact`, or
    `innerlife_submit_continuity` for material that should be digested later.
 3. Shared Line context is optional for InnerLife digestion. Pass `lineId` when
@@ -230,7 +232,11 @@ form on both transports.
    digest, daemon tick, and provided-context share checks continue with
    `sharedLineContext.status: "ambiguous"` instead of rejecting the request.
 4. Call `innerlife_pending_shares` and `innerlife_share_check` before surfacing
-   a waiting share to the user.
+   a waiting share to the user. The optional `innerlife_share_check.sessionId`
+   accepts the canonical `inner_session_*` id or the exact `externalSessionId`
+   registered by the same Agent. If a host only has an unregistered caller
+   conversation id, omit `sessionId`; Desktop records the check without a
+   session association instead of failing it.
 5. Call `innerlife_status` without arguments for the compact status packet.
    Pass `detail: true` only when you need full sessions, digest runs, or
    history.
