@@ -2,7 +2,9 @@
 
 ## Status
 
-`v0.6.5` is the current public stable GitHub Release:
+`v0.6.5` was the public stable GitHub Release at this checkpoint and is now a
+historical release. See [Version Branching](VERSION_BRANCHING.md) for current
+release truth:
 
 <https://github.com/xiaomao361/claracore-desktop/releases/tag/v0.6.5>
 

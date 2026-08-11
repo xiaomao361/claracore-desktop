@@ -280,7 +280,7 @@ Identity comes from the authenticated caller headers, never from the body.
 
 Inject `block.body` only when `decision === "deliver_one"`. Nothing else.
 
-### Fallback rules
+### Failure rules
 
 Branch on `domainStatus`, not on `decision`. **`domainStatus` is the marker that
 this desktop actually arbitrated.**
@@ -289,17 +289,18 @@ this desktop actually arbitrated.**
 | --- | --- |
 | `deliver_one` with a block | inject that one block (always Memory) |
 | anything carrying `domainStatus` | nothing — the desktop looked and abstained |
-| RPC error `Unknown tool` | fall back to the old `memory_context` path |
-| any other shape | fall back to the old `memory_context` path |
+| RPC error, including `Unknown tool` | inject nothing; report or log incompatibility |
+| any other shape | inject nothing; report or log incompatibility |
 
-Only *unknown tool* and *unrecognised shape* fall back. A network, auth, or
-timeout failure must inject nothing rather than starting a second uncoordinated
-retrieval.
+Automatic Memory has one host entry point: `gateway_auto_context`. Every error,
+timeout, authentication failure, unknown tool, or unrecognised response shape
+must inject nothing rather than starting a second retrieval through
+`memory_context`. Explicit `memory_context` remains a separate product tool; it
+is not an adapter fallback.
 
-This rule is not obvious and it is easy to get wrong in a way that looks fine:
-an adapter that only falls back on an explicit pre-patch abstain will inject
-nothing forever against any desktop that answers differently, and will show no
-error while doing it.
+This deliberately drops automatic compatibility with Desktop builds that do
+not expose `gateway_auto_context`. A host must make that incompatibility visible
+without silently widening the automatic-context contract.
 
 ### Evidence
 

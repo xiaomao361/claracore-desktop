@@ -26,8 +26,10 @@ active as `../HOME_SHARED_HORIZON.md`.
 - `RELEASE_NOTES_V0.5.6.md`
 - `VERSION_HISTORY_PRE_V0.5.7.md`
 
-The current public release is documented in `../RELEASE_NOTES_V0.5.8.md` and
-current package commands remain in `../mac-packaging.md`.
+The historical `v0.5.8` public release is documented in
+`../RELEASE_NOTES_V0.5.8.md`. Current release truth lives in
+`../VERSION_BRANCHING.md`, and current package commands remain in
+`../mac-packaging.md`.
 
 ## Superseded Plans And Research
 

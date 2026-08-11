@@ -40,10 +40,10 @@ Read these before adding new features:
   pagination, resource ownership, memory telemetry, and long-run checks.
 - [macOS Packaging](docs/mac-packaging.md): current local packaging and packaged
   Gateway validation notes.
-- [v0.6.4 release notes](docs/RELEASE_NOTES_V0.6.4.md): current stable
-  macOS Apple Silicon and Windows x64 Full/Lite release.
-- [v0.6.3 release notes](docs/RELEASE_NOTES_V0.6.3.md): previous
-  small-audience macOS arm64 Lite release.
+- [v0.6.7 release notes](docs/RELEASE_NOTES_V0.6.7.md): current signed and
+  notarized macOS Apple Silicon Lite release.
+- [v0.6.5 release notes](docs/RELEASE_NOTES_V0.6.5.md): previous signed and
+  notarized macOS Apple Silicon Lite release.
 - [Home Shared Horizon](docs/HOME_SHARED_HORIZON.md): current Home presence,
   performance, and test-isolation contract.
 - [Trace page](docs/TRACE_PAGE.md): read-only narrative, metric definitions,
@@ -64,8 +64,10 @@ Read these before adding new features:
 
 ## Current Status
 
-The current development and public stable version is `0.6.5`. It is a working
-desktop shell with a
+The current development and public stable version is `0.6.7`. The public
+release is a signed and notarized macOS Apple Silicon Lite build; Full,
+Windows, Intel macOS, and Mac App Store packages are outside that release. It
+is a working desktop shell with a
 product-owned local data store, Desktop-native Memoria, Shared Line, InnerLife,
 a Desktop-owned Gateway, with model configuration merged into the Settings
 surface.
@@ -92,9 +94,16 @@ Included:
   stdio fallback without duplicating a technical manual in the human UI.
 - Streamable HTTP MCP uses stable localhost port `50668` by default and persisted local token file; port/token edits, random token generation, and copyable agent config live in Settings > General > Agent Gateway
 - Desktop-owned Gateway Streamable HTTP endpoint for Gateway context, Memory Controller, Memoria, Shared Line, and InnerLife MCP tools; stdio remains available for clients that do not support HTTP MCP yet
+- Gateway tool profiles keep everyday Agent workflows in the bounded `core`
+  surface and expose maintenance, import/export, retention, archive, and other
+  advanced operations through the explicit `full` profile.
 - Memory Controller automatic recall is off by default. Settings > Advanced
   can enable observe-only decisions without injecting Memory, and Trace >
   Advanced data shows bounded raw counts plus the latest ten decisions.
+- `gateway_auto_context` is the single automatic per-prompt entry point. It
+  may return one bounded eligible Memory block; it never automatically
+  delivers InnerLife. Agents review waiting thoughts separately with
+  `innerlife_share_check` when the conversational register is appropriate.
 - Gateway `memoria_update` requires `id` and `body`; omitted `title`, `labels`,
   and `sensitivity` preserve their current values, while explicitly supplied
   fields replace them.

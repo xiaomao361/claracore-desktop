@@ -1,8 +1,8 @@
 # ClaraCore Desktop v0.5.8
 
-Released on 2026-07-17 as the current stable GitHub Release. This release also
-publishes the completed Agent First work that remained unreleased during the
-`0.5.7` development line.
+Released on 2026-07-17 as the stable GitHub Release at that checkpoint. This
+release also publishes the completed Agent First work that remained unreleased
+during the `0.5.7` development line.
 
 ## What Changed
 

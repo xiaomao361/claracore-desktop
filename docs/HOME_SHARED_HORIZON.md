@@ -7,7 +7,7 @@ Date: 2026-07-17
 > [Version Branching](VERSION_BRANCHING.md) for current release truth.
 
 Status: current Home product and performance contract, introduced in `0.5.8`
-and carried forward by the `0.6.2` development line.
+and carried forward through the current `0.6.7` line.
 
 ## Current Result
 
@@ -34,8 +34,9 @@ look biological or decorative instead of expressing continuity.
 - Repository: `/Users/zhouwei/Documents/ClaraCore/apps/claracore-desktop`
 - Remote: `git@github.com:xiaomao361/claracore-desktop.git`
 - Branch: `main`
-- Current development version: `0.6.4`
-- Public stable baseline: `v0.6.3`
+- Snapshot development version on 2026-07-17: `0.6.4`
+- Snapshot public stable baseline on 2026-07-17: `v0.6.3`
+- Current version and release truth: [Version Branching](VERSION_BRANCHING.md)
 
 The Desktop repository may contain unrelated uncommitted work. Preserve it. Do
 not revert, bulk-stage, commit, or push unless the user explicitly asks.

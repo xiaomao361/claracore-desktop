@@ -15,8 +15,10 @@ public release.
   `core/tests/phase4-packaged-gateway-smoke.js`.
 
 **Not done:** signing, notarization, tagging, GitHub Release, and publication.
-Those remain separate acceptance layers and were not authorized here. `v0.6.5`
-is still the newest signed, notarized public release.
+Those remain separate acceptance layers and were not authorized for this
+checkpoint. At the time, `v0.6.5` was the newest signed, notarized public
+release; `v0.6.7` later superseded it. See
+[Version Branching](VERSION_BRANCHING.md) for current release truth.
 
 ## Theme
 

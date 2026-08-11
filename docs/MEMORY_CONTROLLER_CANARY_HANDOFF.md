@@ -9,8 +9,8 @@
 - Decision date: 2026-07-23
 - Status: Multi-Agent pull-mode Gateway canary and bounded Codex host injection implemented and validated; delivery/usage feedback not started
 - Target repository: `/Users/zhouwei/Documents/ClaraCore/apps/claracore-desktop`
-- Current development version: `0.6.4`
-- Current public stable version: `0.6.3`
+- Snapshot development version: `0.6.4`
+- Snapshot public stable version: `0.6.3`
 - Eligible Agents: every identified authenticated Agent, isolated by `agentId`
 
 This handoff defines the next smallest verified loop for turning the existing

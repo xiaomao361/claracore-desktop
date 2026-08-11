@@ -2,8 +2,10 @@
 
 ## Status
 
-`v0.6.4` is the current public stable GitHub Release. Tag `v0.6.4` points to
-commit `c2d91b9acc247989b9259e55ec3cec9faaf804b3`.
+`v0.6.4` was the public stable GitHub Release at this checkpoint and is now a
+historical release. Tag `v0.6.4` points to commit
+`c2d91b9acc247989b9259e55ec3cec9faaf804b3`. See
+[Version Branching](VERSION_BRANCHING.md) for current release truth.
 
 Release:
 <https://github.com/xiaomao361/claracore-desktop/releases/tag/v0.6.4>

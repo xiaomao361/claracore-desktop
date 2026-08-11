@@ -101,9 +101,9 @@ install anything.
 Run `npm run test:update` for mocked release and Settings UI coverage before
 performing a live published-Release check.
 
-The earlier `v0.6.3` release remains historical. Current `v0.6.4` assets and
-checksums are documented in
-[v0.6.4 Release Notes](RELEASE_NOTES_V0.6.4.md).
+Earlier release assets and checksums remain documented in their versioned
+release notes. The current artifact boundary is the `v0.6.7` macOS Apple
+Silicon Lite release described above.
 
 ## Gateway In Packaged Mode
 
