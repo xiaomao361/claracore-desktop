@@ -18,6 +18,7 @@ window.ClaraCoreDom = {
   backupNotice: document.querySelector("#backupNotice"),
   productJsonNotice: document.querySelector("#productJsonNotice"),
   backupList: document.querySelector("#backupList"),
+  backupListToggle: document.querySelector("#backupListToggle"),
   restoreConfirmPanel: document.querySelector("#restoreConfirmPanel"),
   restorePreview: document.querySelector("#restorePreview"),
   restoreConfirmInput: document.querySelector("#restoreConfirmInput"),

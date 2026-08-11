@@ -20,10 +20,56 @@
 .backup-list {
   display: grid;
   gap: 8px;
-  max-height: calc(100vh - 560px);
-  min-height: 180px;
-  overflow: auto;
   padding-right: 4px;
+}
+
+.backup-list.expanded {
+  max-height: 420px;
+  overflow: auto;
+}
+
+.data-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.data-action-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fafaf7;
+}
+
+.data-action-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.data-action-copy small {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.data-action-buttons {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+#productJsonNotice,
+#backupNotice {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .data-backup-section {
@@ -36,10 +82,29 @@
   margin-top: 0;
 }
 
+.data-backup-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.data-backup-heading .link-button {
+  flex: 0 0 auto;
+  font-size: 12px;
+}
+
+.backup-list-toggle {
+  justify-self: center;
+  min-height: 32px;
+  padding: 5px 12px;
+  font-size: 12px;
+}
+
 .backup-item {
   display: grid;
-  gap: 9px;
-  padding: 12px;
+  gap: 6px;
+  padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: #fffefa;
@@ -89,19 +154,22 @@
 }
 
 .backup-file-row {
-  display: grid;
-  grid-template-columns: 58px minmax(0, 1fr);
+  display: flex;
+  justify-content: space-between;
   gap: 8px;
-  align-items: baseline;
+  align-items: center;
   min-width: 0;
-  padding: 8px 9px;
-  border: 1px solid rgba(43, 61, 52, 0.08);
-  border-radius: 8px;
-  background: #fafaf7;
+  padding: 2px 0;
 }
 
-.backup-file-row span,
-.backup-meta-grid span {
+.backup-quick-check {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 5px;
+  align-items: baseline;
+}
+
+.backup-quick-check span {
   color: var(--faint);
   font-size: 11px;
   font-weight: 700;
@@ -118,26 +186,10 @@
   white-space: nowrap;
 }
 
-.backup-meta-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 88px;
-  gap: 8px;
-}
-
-.backup-meta-grid div {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-}
-
-.backup-meta-grid strong {
-  min-width: 0;
-  overflow: hidden;
+.backup-quick-check strong {
   color: var(--muted);
   font-size: 12px;
   font-weight: 650;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .restore-confirm-panel {

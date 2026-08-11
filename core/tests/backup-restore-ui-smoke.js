@@ -47,7 +47,7 @@ async function main() {
     await page.click("#exportBackup");
     await page.waitForSelector("[data-backup-action='restore']", { timeout: 15000 });
     const backupText = await page.textContent("#backupList");
-    if (!backupText.includes("verified") || (!backupText.includes("Quick check") && !backupText.includes("快速检查"))) {
+    if ((!backupText.includes("verified") && !backupText.includes("已校验")) || (!backupText.includes("Quick check") && !backupText.includes("快速检查"))) {
       throw new Error(`Backup list does not show verification: ${backupText}`);
     }
 
@@ -77,11 +77,12 @@ async function main() {
       const beforeSearch = await window.ClaraCoreDesktop.searchMemories("UI backup restore before A");
       const afterSearch = await window.ClaraCoreDesktop.searchMemories("UI backup restore after B");
       const snapshot = await window.ClaraCoreDesktop.getRuntimeSnapshot();
+      const settingsSnapshot = await window.ClaraCoreDesktop.getViewSnapshot("settings");
       return {
         beforeFound: beforeSearch.results.some((memory) => memory.id === beforeId),
         afterFound: afterSearch.results.some((memory) => memory.id === afterId),
         sharedLine: snapshot.sharedLine.currentPosition.summary,
-        backups: snapshot.backups.length
+        backups: settingsSnapshot.backups.length
       };
     }, { beforeId: before.id, afterId: after.id });
     if (!result.beforeFound) throw new Error("UI restore did not bring back checkpoint Memory.");

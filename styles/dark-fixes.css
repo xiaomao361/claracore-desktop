@@ -137,6 +137,7 @@ body[data-theme="dark"] .trace-compact-row code {
 body[data-theme="dark"] .endpoint-empty,
 body[data-theme="dark"] .agent-roster-card,
 body[data-theme="dark"] .agent-access-details,
+body[data-theme="dark"] .data-action-group,
 body[data-theme="dark"] .backup-item,
 body[data-theme="dark"] .backup-file-row,
 body[data-theme="dark"] .restore-diff-section,

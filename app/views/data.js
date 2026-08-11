@@ -1,5 +1,6 @@
 function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, formatLocalDateTime, getSnapshot, refresh, showCopyNotice }) {
   let pendingRestoreBackupId = null;
+  let showAllBackups = false;
 
   function fileNameFromPath(value) {
     return String(value || "").split(/[\\/]/).filter(Boolean).pop() || "";
@@ -7,22 +8,28 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, formatLocalD
 
   function renderBackups() {
     const backups = getSnapshot()?.backups || [];
+    const visibleBackups = showAllBackups ? backups : backups.slice(0, 3);
+    dom.backupList.classList.toggle("expanded", showAllBackups && backups.length > 3);
+    dom.backupListToggle.hidden = backups.length <= 3;
+    dom.backupListToggle.textContent = showAllBackups
+      ? t("data.collapseBackups")
+      : `${t("data.showAllBackups")} (${backups.length})`;
     if (backups.length === 0) {
       dom.backupList.innerHTML = `<div class="endpoint-empty">${t("data.noBackups")}</div>`;
       return;
     }
-    dom.backupList.innerHTML = backups
+    dom.backupList.innerHTML = visibleBackups
       .map((backup) => {
         const manifestPath = backup.metadata?.manifestPath || "";
         const quickCheck = backup.metadata?.verification?.quickCheck || "";
         const backupFile = fileNameFromPath(backup.path);
-        const manifestFile = fileNameFromPath(manifestPath);
+        const statusLabel = backup.status === "verified" ? t("data.verified") : backup.status || "";
         return `
           <div class="backup-item ${escapeHtml(backup.status || "")}" data-backup-id="${escapeHtml(backup.id || "")}">
             <div class="backup-item-heading">
               <div>
                 <strong>${escapeHtml(formatLocalDateTime(backup.created_at))}</strong>
-                <span class="backup-status">${escapeHtml(backup.status || "")}</span>
+                <span class="backup-status">${escapeHtml(statusLabel)}</span>
               </div>
               <div class="backup-actions">
                 ${
@@ -33,13 +40,9 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, formatLocalD
                 <button class="secondary danger-button" data-backup-action="delete" data-backup-id="${escapeHtml(backup.id)}">${t("actions.delete")}</button>
               </div>
             </div>
-            <div class="backup-file-row" title="${escapeHtml(backup.path || "")}">
-              <span>${escapeHtml(t("data.backupFile"))}</span>
+            <div class="backup-file-row" title="${escapeHtml([backup.path, manifestPath].filter(Boolean).join("\n"))}">
               <code>${escapeHtml(backupFile || backup.path || "")}</code>
-            </div>
-            <div class="backup-meta-grid">
-              ${manifestPath ? `<div title="${escapeHtml(manifestPath)}"><span>${t("data.manifest")}: </span><strong>${escapeHtml(manifestFile || manifestPath)}</strong></div>` : ""}
-              ${quickCheck ? `<div><span>${t("data.quickCheck")}: </span><strong>${escapeHtml(quickCheck)}</strong></div>` : ""}
+              ${quickCheck ? `<span class="backup-quick-check"><span>${t("data.quickCheck")}</span><strong>${escapeHtml(quickCheck)}</strong></span>` : ""}
             </div>
           </div>
         `;
@@ -256,6 +259,10 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, formatLocalD
       if (backupsDir) {
         window.ClaraCoreDesktop.openPath(backupsDir);
       }
+    });
+    dom.backupListToggle.addEventListener("click", () => {
+      showAllBackups = !showAllBackups;
+      renderBackups();
     });
     dom.backupList.addEventListener("click", (event) => {
       previewRestore(event).catch(console.error);

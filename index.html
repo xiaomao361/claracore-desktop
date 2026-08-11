@@ -103,7 +103,6 @@
             <article class="panel memory-detail-panel" aria-live="polite">
               <div class="panel-heading memory-reader-heading">
                 <h2 data-i18n="memory.detail.title">Memory detail</h2>
-                <span class="memory-detail-readonly" data-i18n="memory.readOnly">Read only</span>
               </div>
               <div id="memoryDetail"></div>
             </article>
@@ -779,20 +778,41 @@
               <details id="advancedDataRecoveryDetails" class="advanced-settings-group">
                 <summary><span><strong data-i18n="settings.dataRecoveryTitle">Data and recovery</strong><small data-i18n="settings.dataRecoveryBody">Create safe copies or recover local product data.</small></span></summary>
                 <div class="advanced-settings-content">
-                  <div class="action-row"><span data-i18n="data.exportBackup">Create backup (.db + manifest)</span><button id="exportBackup" class="secondary" data-i18n="actions.create">Create</button></div>
-                  <div class="action-row"><span data-i18n="data.exportProductJson">Export JSON</span><button id="exportProductJson" class="secondary" data-i18n="actions.export">Export</button></div>
-                  <p class="module-guidance" data-i18n="data.importRiskCopy">JSON import merges product records into the current data root; create a backup first if you need a rollback point.</p>
-                  <div class="action-row danger"><span data-i18n="data.importProductJson">Import JSON</span><button id="importProductJson" class="secondary" data-i18n="actions.import">Import</button></div>
+                  <div class="data-action-grid">
+                    <section class="data-action-group">
+                      <div class="data-action-copy">
+                        <strong data-i18n="data.backupGroupTitle">Database backup</strong>
+                        <small data-i18n="data.backupGroupBody">Create a restorable snapshot with a verification manifest.</small>
+                      </div>
+                      <button id="exportBackup" class="secondary" data-i18n="actions.create">Create</button>
+                    </section>
+                    <section class="data-action-group">
+                      <div class="data-action-copy">
+                        <strong data-i18n="data.jsonGroupTitle">Portable JSON</strong>
+                        <small data-i18n="data.importRiskCopy">JSON import merges product records into the current data root; create a backup first if you need a rollback point.</small>
+                      </div>
+                      <div class="data-action-buttons">
+                        <button id="exportProductJson" class="secondary" data-i18n="actions.export">Export</button>
+                        <button id="importProductJson" class="secondary danger-button" data-i18n="actions.import">Import</button>
+                      </div>
+                    </section>
+                  </div>
                   <span id="productJsonNotice" class="quiet" aria-live="polite"></span>
                   <span id="backupNotice" class="quiet" aria-live="polite"></span>
-                  <div class="data-backup-section"><h3 class="section-title" data-i18n="data.recentBackups">Recent backups</h3><div id="backupList" class="backup-list"></div></div>
+                  <div class="data-backup-section">
+                    <div class="data-backup-heading">
+                      <h3 class="section-title" data-i18n="data.recentBackups">Recent backups</h3>
+                      <button id="openBackupsFolder" class="link-button" data-i18n="data.openBackupsFolder">Open backups folder</button>
+                    </div>
+                    <div id="backupList" class="backup-list"></div>
+                    <button id="backupListToggle" class="backup-list-toggle secondary" type="button" hidden></button>
+                  </div>
                   <div id="restoreConfirmPanel" class="restore-confirm-panel hidden">
                     <p data-i18n="data.restorePrompt">Type RESTORE to confirm.</p>
                     <div id="restorePreview" class="restore-preview"></div>
                     <input id="restoreConfirmInput" autocomplete="off" />
                     <div class="settings-actions"><button id="cancelRestoreBackup" class="secondary" data-i18n="actions.cancel">Cancel</button><button id="confirmRestoreBackup" class="primary" data-i18n="actions.restore">Restore</button></div>
                   </div>
-                  <button id="openBackupsFolder" class="secondary" data-i18n="data.openBackupsFolder">Open backups folder</button>
                 </div>
               </details>
 

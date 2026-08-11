@@ -1,3 +1,31 @@
+@media (max-width: 1180px) {
+  .memory-toolbar,
+  .memory-reader-grid,
+  .shared-line-layout,
+  .data-action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .memory-browser-panel,
+  .memory-detail-panel {
+    min-height: auto;
+  }
+
+  .memory-list {
+    max-height: 420px;
+  }
+
+  .memory-agent-filter {
+    justify-self: stretch;
+  }
+
+  .shared-line-detail-panel {
+    max-height: none;
+    overflow: visible;
+    position: static;
+  }
+}
+
 @media (max-width: 1120px) {
   .home-command-grid,
   .module-grid,
@@ -53,25 +81,10 @@
   .shared-line-status-strip,
   .home-command-grid,
   .cognitive-system-grid,
-  .shared-line-layout,
   .screen-grid,
   .system-grid,
   .lower-grid {
     grid-template-columns: 1fr;
-  }
-
-  .memory-toolbar,
-  .memory-reader-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .memory-browser-panel,
-  .memory-detail-panel {
-    min-height: auto;
-  }
-
-  .memory-list {
-    max-height: 420px;
   }
 
   .shared-line-page-heading,
@@ -143,7 +156,6 @@
   }
 
   .innerlife-share-list,
-  .backup-list,
   .innerlife-record-grid .compact-list,
   .shared-line-tab-panel.active {
     max-height: none;
@@ -161,7 +173,6 @@
     width: 100%;
   }
 
-  .backup-meta-grid,
   .innerlife-profile-grid,
   .backup-file-row {
     grid-template-columns: 1fr;
@@ -312,13 +323,8 @@
   }
 
   .memory-toolbar .memory-search,
-  .memory-toolbar,
   .memory-detail-facts > div {
     grid-template-columns: 1fr;
-  }
-
-  .memory-agent-filter {
-    justify-self: stretch;
   }
 
   .shared-line-list-panel,

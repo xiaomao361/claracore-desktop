@@ -58,6 +58,8 @@
     "test:phase5:scheduler-ui": "node core/tests/run-ui-smoke.js core/tests/phase5-innerlife-scheduler-ui-smoke.js",
     "test:backup": "node core/tests/backup-restore-smoke.js",
     "test:backup:ui": "node core/tests/run-ui-smoke.js core/tests/backup-restore-ui-smoke.js",
+    "test:data-backup-list:ui": "node core/tests/run-ui-smoke.js core/tests/data-backup-list-ui-smoke.js",
+    "test:responsive-layout:ui": "node core/tests/run-ui-smoke.js core/tests/responsive-layout-ui-smoke.js",
     "test:import-preview": "node core/tests/import-preview-smoke.js",
     "test:import-preview:ui": "node core/tests/run-ui-smoke.js core/tests/import-preview-ui-smoke.js",
     "test:sqlite-binary": "node core/tests/sqlite-binary-smoke.js",
