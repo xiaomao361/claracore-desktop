@@ -23,8 +23,8 @@ async function main() {
     const page = await app.firstWindow();
     await page.waitForSelector("[data-view='settings']", { timeout: 15000 });
     await page.click("[data-view='settings']");
-    await page.click("[data-settings-tab='advanced']");
-    await page.evaluate(() => { document.querySelector("#advancedDataRecoveryDetails").open = true; });
+    await page.click("[data-settings-tab='app-data']");
+    await page.evaluate(() => { document.querySelector("#dataRecoveryDetails").open = true; });
 
     for (let expectedBackups = 1; expectedBackups <= 4; expectedBackups += 1) {
       await page.click("#exportBackup");

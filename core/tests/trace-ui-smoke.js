@@ -156,11 +156,15 @@ async function main() {
         subtitle: document.querySelector("#viewSubtitle")?.textContent || "",
         span: document.querySelector("#traceSpanTitle")?.textContent || "",
         statements: [...document.querySelectorAll("#traceStatements .trace-statement")].map((node) => node.textContent.replace(/\s+/g, "")),
+        statementNote: document.querySelector(".trace-statement-note")?.textContent || "",
+        processSteps: document.querySelectorAll(".trace-process-flow article").length,
         milestones: document.querySelector("#traceMilestoneList")?.textContent || "",
         participants: document.querySelector("#traceParticipantList")?.textContent || "",
         detailCards: document.querySelectorAll("#traceView .trace-data-card").length,
         metricRows: document.querySelectorAll("#traceView .trace-data-card .trace-metric-row").length,
-        advancedOpen: document.querySelector("#traceAdvancedDetails")?.open,
+        detailOpen: document.querySelector("#traceDetailDialog")?.open,
+        moduleIcons: document.querySelectorAll("#traceDetailDialog .trace-module-icon").length,
+        traceControllerPresent: Boolean(document.querySelector("#traceMemoryControllerList")),
         buttons: document.querySelectorAll("#traceView button").length,
         semantic: traceSnapshot.trace.semantic,
         firstAt: traceSnapshot.trace.firstAt,
@@ -171,20 +175,25 @@ async function main() {
     });
     if (
       initial.title !== "痕迹" ||
-      !initial.subtitle.includes("逐渐留下") ||
-      !initial.span.includes("天的痕迹") ||
+      !initial.subtitle.includes("真实证据") ||
+      !initial.span.includes("已经积累") ||
       initial.statements.length !== 4 ||
-      !initial.statements.some((text) => text.includes("1个值得保留的决定")) ||
-      !initial.statements.some((text) => text.includes("1次过去的记忆")) ||
+      !initial.statements.some((text) => text.includes("1个决定已经确认并保留")) ||
+      !initial.statements.some((text) => text.includes("来自带有决定标签的当前记忆")) ||
+      !initial.statements.some((text) => text.includes("1次过去的记忆被再次引用")) ||
       !initial.statements.some((text) => text.includes("1个Agent想法")) ||
+      !initial.statementNote.includes("来自已经确认的记录") ||
+      initial.processSteps !== 3 ||
       !initial.milestones.includes("Agent First 成为页面原则") ||
       !initial.milestones.includes("ClaraCore Desktop 0.5.7 形成") ||
       !initial.participants.includes("Codex") ||
       !initial.participants.includes("Clara") ||
       initial.detailCards !== 3 ||
       initial.metricRows !== 12 ||
-      initial.advancedOpen ||
-      initial.buttons !== 0 ||
+      initial.detailOpen ||
+      initial.moduleIcons !== 3 ||
+      initial.traceControllerPresent ||
+      initial.buttons !== 2 ||
       initial.semantic.decisions !== 1 ||
       initial.semantic.reusedMemories !== 1 ||
       initial.semantic.verifiedShares !== 1 ||
@@ -201,28 +210,29 @@ async function main() {
     }
 
     await page.evaluate(() => hydrateView("trace", { force: true }));
-    await page.click("#traceAdvancedDetails > summary");
-    await page.waitForFunction(() => document.querySelector("#traceAdvancedDetails")?.open === true);
-    const advanced = await page.evaluate(() => ({
+    await page.click("#traceOpenDetail");
+    await page.waitForFunction(() => document.querySelector("#traceDetailDialog")?.open === true);
+    const detail = await page.evaluate(() => ({
+      cards: document.querySelectorAll("#traceDetailDialog .trace-data-card").length,
+      moduleIcons: [...document.querySelectorAll("#traceDetailDialog .trace-module-icon")].map((node) => node.className),
       rows: document.querySelectorAll("#traceAdvancedMetrics .trace-metric-row").length,
       text: document.querySelector("#traceAdvancedMetrics")?.textContent || "",
-      controllerStatus: document.querySelector("#traceMemoryControllerStatus")?.textContent || "",
-      controllerRows: document.querySelectorAll("#traceMemoryControllerMetrics .trace-metric-row").length,
-      controllerEvents: document.querySelectorAll("#traceMemoryControllerList .trace-controller-event").length,
-      controllerText: document.querySelector("#traceMemoryControllerList")?.textContent || ""
+      title: document.querySelector("#traceDetailTitle")?.textContent || "",
+      controllerPresent: Boolean(document.querySelector("#traceMemoryControllerList"))
     }));
     if (
-      advanced.rows !== 12
-      || !advanced.text.includes("InnerLife 会话")
-      || !advanced.text.includes("等待生成向量")
-      || advanced.controllerStatus !== "仅观察"
-      || advanced.controllerRows !== 4
-      || advanced.controllerEvents !== 2
-      || !advanced.controllerText.includes("codex")
-      || !advanced.controllerText.includes("clara")
-      || !advanced.controllerText.includes("INJECT_TOP1")
+      detail.cards !== 3
+      || detail.moduleIcons.length !== 3
+      || !detail.moduleIcons.some((name) => name.includes("nav-icon-memory"))
+      || !detail.moduleIcons.some((name) => name.includes("nav-icon-shared-line"))
+      || !detail.moduleIcons.some((name) => name.includes("nav-icon-innerlife"))
+      || detail.rows !== 12
+      || !detail.text.includes("InnerLife 会话")
+      || !detail.text.includes("等待生成向量")
+      || detail.title !== "构成与生命周期证据"
+      || detail.controllerPresent
     ) {
-      throw new Error(`Trace advanced data did not render: ${JSON.stringify(advanced)}`);
+      throw new Error(`Trace detail evidence did not render: ${JSON.stringify(detail)}`);
     }
 
     const desktopLayout = await page.evaluate(() => ({
@@ -235,9 +245,8 @@ async function main() {
     }
 
     if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
-      await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "advanced"), fullPage: true });
+      await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "detail"), fullPage: true });
     }
-    await page.click("#traceAdvancedDetails > summary");
     await page.setViewportSize({ width: 760, height: 900 });
     await page.evaluate(() => {
       document.body.dataset.theme = "dark";
@@ -255,6 +264,8 @@ async function main() {
     if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
       await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "dark-narrow"), fullPage: true });
     }
+    await page.click("#traceDetailClose");
+    await page.waitForFunction(() => document.querySelector("#traceDetailDialog")?.open === false);
 
     await page.click("[data-view='settings']");
     await page.click("[data-settings-tab='advanced']");
@@ -311,7 +322,7 @@ async function main() {
     }
     if (rendererErrors.length) throw new Error(`Renderer errors: ${rendererErrors.join(" | ")}`);
 
-    console.log(JSON.stringify({ ok: true, packaged: Boolean(packagedExecutable), initial, advanced, controllerSetting, canaryController, disabledController, desktopLayout, narrowLayout }, null, 2));
+    console.log(JSON.stringify({ ok: true, packaged: Boolean(packagedExecutable), initial, detail, controllerSetting, canaryController, disabledController, desktopLayout, narrowLayout }, null, 2));
   } finally {
     if (app) await app.close();
     await runtime.resetCachedDatabase();

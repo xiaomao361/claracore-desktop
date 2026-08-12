@@ -51,7 +51,7 @@ async function main() {
   }
   const migrations = await database.query("SELECT id FROM schema_migrations ORDER BY id;");
   const migrationIds = migrations.map((row) => row.id);
-  for (const expectedId of ["000_gateway_trace_compatibility", "001_product_core_schema", "002_product_additions", "004_memory_controller_ledger", "005_memory_controller_watermark", "006_innerlife_hourly_default"]) {
+  for (const expectedId of ["000_gateway_trace_compatibility", "001_product_core_schema", "002_product_additions", "004_memory_controller_ledger", "005_memory_controller_watermark", "006_innerlife_hourly_default", "007_innerlife_single_model"]) {
     if (!migrationIds.includes(expectedId)) throw new Error(`Missing applied migration: ${expectedId}`);
   }
 
@@ -65,8 +65,7 @@ async function main() {
     "innerlife.enabled": true,
     "innerlife.provider": "openai-compatible",
     "innerlife.base_url": "https://api.deepseek.com",
-    "innerlife.light_model": "deepseek-v4-flash",
-    "innerlife.deep_model": "deepseek-v4-flash",
+    "innerlife.model": "deepseek-v4-flash",
     "innerlife.loop_seconds": 3600,
     "gateway.enabled": true,
     "gateway.transport": "stdio",
@@ -96,8 +95,7 @@ async function main() {
     "memory.maintenance.hour": 0,
     "innerlife.provider": "openai-compatible",
     "innerlife.base_url": "http://127.0.0.1:11439",
-    "innerlife.light_model": "phase1-light",
-    "innerlife.deep_model": "phase1-deep",
+    "innerlife.model": "phase1-model",
     "innerlife.loop_seconds": "1980",
     "innerlife.llm.api_key_ref": "env:PHASE1_INNERLIFE_API_KEY"
   });
@@ -127,11 +125,16 @@ async function main() {
   if (snapshot.configuration.innerlife.baseUrl !== "http://127.0.0.1:11439") {
     throw new Error("Saved InnerLife endpoint did not read back from SQLite.");
   }
-  if (snapshot.configuration.innerlife.lightModel !== "phase1-light") {
-    throw new Error("Saved InnerLife light model did not read back from SQLite.");
+  if (snapshot.configuration.innerlife.model !== "phase1-model") {
+    throw new Error("Saved InnerLife model did not read back from SQLite.");
   }
-  if (snapshot.configuration.innerlife.deepModel !== "phase1-deep") {
-    throw new Error("Saved InnerLife deep model did not read back from SQLite.");
+  const originalChatCompletion = database.chatCompletion;
+  database.chatCompletion = async (input) => input.model;
+  const lightGenerationModel = await database.innerLifeGenerate({ tier: "light", prompt: "light path" });
+  const deepGenerationModel = await database.innerLifeGenerate({ tier: "deep", prompt: "deep path" });
+  database.chatCompletion = originalChatCompletion;
+  if (lightGenerationModel !== "phase1-model" || deepGenerationModel !== "phase1-model") {
+    throw new Error(`Every InnerLife workflow should use the selected model: ${JSON.stringify({ lightGenerationModel, deepGenerationModel })}`);
   }
   if (snapshot.configuration.innerlife.pollSeconds !== "1980") {
     throw new Error("Saved InnerLife loop seconds did not read back from SQLite.");

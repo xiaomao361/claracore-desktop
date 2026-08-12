@@ -138,6 +138,7 @@ async function main() {
       { timeout: 15000 }
     );
     await page.click("[data-view='settings']");
+    await page.click("[data-settings-tab='app-data']");
     await page.selectOption("#settingsLanguage", "en");
     await page.selectOption("#settingsTheme", "light");
     await page.click("#saveAppearanceSettings");
@@ -158,18 +159,24 @@ async function main() {
       { timeout: 15000 }
     );
     const primaryContract = await page.evaluate(() => ({
-      advancedOpen: document.querySelector("#logAdvancedDiagnostics")?.open,
+      detailOpen: document.querySelector("#logDetailDialog")?.open,
       clearButtonPresent: Boolean(document.querySelector("#clearLogs")),
       backendClearAvailable: typeof window.ClaraCoreDesktop.clearLogs === "function",
       statusText: document.querySelector("#logStatusSummary")?.textContent || "",
+      loadedRange: document.querySelector("#logLoadedRange")?.textContent || "",
       statusTone: document.querySelector(".log-status-line")?.className || "",
-      terminalText: document.querySelector("#logTerminal")?.textContent || ""
+      terminalText: document.querySelector("#logTerminal")?.textContent || "",
+      rowCount: document.querySelectorAll("#logTerminal .log-event-row").length,
+      issueCount: document.querySelectorAll("#logIssueList .log-event-row").length
     }));
     if (
-      primaryContract.advancedOpen ||
+      primaryContract.detailOpen ||
       primaryContract.clearButtonPresent ||
       !primaryContract.backendClearAvailable ||
       !primaryContract.statusTone.includes("error") ||
+      !primaryContract.loadedRange.includes("Gateway trace") ||
+      primaryContract.rowCount < 2 ||
+      primaryContract.issueCount < 1 ||
       !primaryContract.terminalText.includes("missing_gateway_tool")
     ) {
       throw new Error(`Logs primary hierarchy contract failed: ${JSON.stringify(primaryContract)}`);
@@ -193,11 +200,34 @@ async function main() {
     await page.click("#refreshLogs");
     await page.waitForFunction(() => !document.querySelector("#refreshLogs")?.disabled, null, { timeout: 15000 });
 
-    await page.click("#logAdvancedDiagnostics > summary");
+    const issueTrigger = page.locator("#logIssueList .log-event-row").first();
+    await issueTrigger.focus();
+    await issueTrigger.click();
+    await page.waitForFunction(() => document.querySelector("#logDetailDialog")?.open);
+    const eventDetailText = await page.locator("#logEventDetail").textContent();
+    if (!eventDetailText.includes("missing_gateway_tool")) {
+      throw new Error(`Log raw event detail missing expected evidence: ${eventDetailText}`);
+    }
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(() => !document.querySelector("#logDetailDialog")?.open);
+    const focusRestored = await page.evaluate(() => document.activeElement === document.querySelector("#logIssueList .log-event-row"));
+    if (!focusRestored) throw new Error("Log detail did not restore focus to its trigger");
+
+    await page.click("[data-log-detail='decay']");
     await page.waitForFunction(
       () =>
-        document.querySelector("#logAdvancedDiagnostics")?.open &&
-        document.querySelector("#logDecayList")?.querySelectorAll(".decay-audit-item").length >= 3 &&
+        document.querySelector("#logDetailDialog")?.open &&
+        !document.querySelector("#logDecayPanel")?.hidden &&
+        document.querySelector("#logDecayList")?.querySelectorAll(".decay-audit-item").length >= 3,
+      null,
+      { timeout: 15000 }
+    );
+    await page.click("#logDetailClose");
+    await page.click("[data-log-detail='sequence']");
+    await page.waitForFunction(
+      () =>
+        document.querySelector("#logDetailDialog")?.open &&
+        !document.querySelector("#logSequencePanel")?.hidden &&
         document.querySelector("#logTimeFlowList")?.textContent.includes("Time Flow Memory") &&
         document.querySelector("#logTimeFlowList")?.textContent.includes("Time Flow Shared Line") &&
         document.querySelector("#logTimeFlowList")?.textContent.includes("InnerLife") &&
@@ -248,9 +278,10 @@ async function main() {
       throw new Error(`Gateway trace UI did not render traces: ${JSON.stringify(result)}`);
     }
 
-    await page.click("#logAdvancedDiagnostics > summary");
-    await page.waitForFunction(() => !document.querySelector("#logAdvancedDiagnostics")?.open);
+    await page.click("#logDetailClose");
+    await page.waitForFunction(() => !document.querySelector("#logDetailDialog")?.open);
     await page.click("[data-view='settings']");
+    await page.click("[data-settings-tab='app-data']");
     await page.selectOption("#settingsLanguage", "zh");
     await page.selectOption("#settingsTheme", "dark");
     await page.click("#saveAppearanceSettings");
@@ -262,14 +293,14 @@ async function main() {
     await page.click("[data-view='home']");
     await page.click("[data-view='logs']");
     const reentryState = await page.evaluate(() => ({
-      advancedOpen: document.querySelector("#logAdvancedDiagnostics")?.open,
-      title: document.querySelector("#logAdvancedDiagnostics > summary strong")?.textContent || "",
+      detailOpen: document.querySelector("#logDetailDialog")?.open,
+      title: document.querySelector("#logDiagnosticTitle")?.textContent || "",
       theme: document.body.dataset.themePreference,
       language: document.documentElement.lang,
       horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth
     }));
     if (
-      reentryState.advancedOpen ||
+      reentryState.detailOpen ||
       reentryState.title !== "高级诊断" ||
       reentryState.theme !== "dark" ||
       reentryState.language !== "zh-CN" ||

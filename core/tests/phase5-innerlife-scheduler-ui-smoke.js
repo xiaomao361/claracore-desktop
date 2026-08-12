@@ -52,7 +52,7 @@ async function main() {
     await page.evaluate(() => window.ClaraCoreTestHooks.refresh());
     await page.waitForFunction(
       () =>
-        document.querySelector("#innerLifeLastResult")?.textContent.includes("processed") &&
+        document.querySelector("#innerLifeLastResult")?.textContent.includes("已处理") &&
         document.querySelector("#innerLifeUnsharedList")?.textContent.includes("Scheduler agent item"),
       null,
       { timeout: 15000 }

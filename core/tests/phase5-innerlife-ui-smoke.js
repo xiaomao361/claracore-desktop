@@ -74,9 +74,12 @@ async function main() {
       selectorDisabled: document.querySelector("#innerLifeAgentFilter")?.disabled,
       focus: document.querySelector("#innerLifeFocus")?.textContent || "",
       thoughts: document.querySelectorAll("#innerLifeUnsharedList .innerlife-thought").length,
-      controls: document.querySelectorAll("#innerlifeView button, #innerlifeView input, #innerlifeView textarea").length
+      mutationControls: document.querySelectorAll("#innerlifeView input, #innerlifeView textarea, #innerLifeDaemonToggle, #saveInnerLifeProfile").length,
+      shellLeft: document.querySelector(".innerlife-shell")?.getBoundingClientRect().left,
+      readerLeft: document.querySelector(".innerlife-reader")?.getBoundingClientRect().left,
+      shellPaddingLeft: Number.parseFloat(getComputedStyle(document.querySelector(".innerlife-shell")).paddingLeft)
     }));
-    if (!emptyState.selectorDisabled || !emptyState.focus || emptyState.thoughts !== 0 || emptyState.controls !== 0) {
+    if (!emptyState.selectorDisabled || !emptyState.focus || emptyState.thoughts !== 0 || emptyState.mutationControls !== 0 || Math.abs(emptyState.shellLeft + emptyState.shellPaddingLeft - emptyState.readerLeft) > 1) {
       throw new Error(`InnerLife empty state is not quiet and read-only: ${JSON.stringify(emptyState)}`);
     }
     await page.evaluate(async () => {
@@ -134,6 +137,17 @@ async function main() {
       staleId: stale.id
     });
 
+    for (let index = 0; index < 22; index += 1) {
+      await createShare(page, "codex", `NEWER WAITING THOUGHT ${index}: keeps the unshared queue busy.`);
+    }
+    const orderingDatabase = new DatabaseSync(databasePath);
+    orderingDatabase.prepare(`
+      UPDATE innerlife_shares
+      SET updated_at = '2099-01-01 00:00:00'
+      WHERE id IN (?, ?, ?)
+    `).run(pending.id, approved.id, deferred.id);
+    orderingDatabase.close();
+
     await page.click("[data-view='innerlife']");
     await page.evaluate(() => window.ClaraCoreTestHooks.refresh());
     await page.waitForFunction(
@@ -147,14 +161,58 @@ async function main() {
     await page.selectOption("#innerLifeAgentFilter", "lara");
     await page.waitForFunction(() => document.querySelector("#innerLifeUnsharedList")?.textContent.includes("LARA ONLY THOUGHT"));
     await page.selectOption("#innerLifeAgentFilter", "codex");
-    await page.click("#innerLifeAdvancedDetails > summary");
-    await page.click("#innerLifeAdvancedDetails > summary");
+    const readerStructure = await page.evaluate(() => ({
+      thoughtCards: document.querySelectorAll("#innerLifeUnsharedList .innerlife-thought").length,
+      sharedRows: document.querySelectorAll("#innerLifeSharedList .innerlife-archive-row").length,
+      processSteps: document.querySelectorAll("#innerLifeProcessFlow button").length,
+      processBeforeThoughts: Boolean(
+        document.querySelector(".innerlife-process-section")?.compareDocumentPosition(document.querySelector(".innerlife-primary-section"))
+        & Node.DOCUMENT_POSITION_FOLLOWING
+      ),
+      insightEntries: document.querySelectorAll(".innerlife-insight-grid button").length,
+      nestedDetails: document.querySelectorAll("#innerlifeView details").length,
+      hasSingleReader: Boolean(document.querySelector("#innerLifeDetailDialog"))
+    }));
+    if (readerStructure.thoughtCards !== 3 || readerStructure.sharedRows !== 1 || readerStructure.processSteps !== 5 || !readerStructure.processBeforeThoughts || readerStructure.insightEntries !== 3 || readerStructure.nestedDetails !== 0 || !readerStructure.hasSingleReader) {
+      throw new Error(`InnerLife reader structure is wrong: ${JSON.stringify(readerStructure)}`);
+    }
+    const thoughtTrigger = page.locator(`#innerLifeUnsharedList [data-innerlife-share-id="${approved.id}"]`);
+    await thoughtTrigger.click();
+    await page.waitForFunction(() => document.querySelector("#innerLifeDetailDialog")?.open);
+    const thoughtDetail = await page.evaluate(() => document.querySelector("#innerLifeDetailBody")?.textContent || "");
+    if (!thoughtDetail.includes("APPROVED UNDELIVERED: Approval alone is not conversational delivery.")) {
+      throw new Error(`Thought detail is incomplete: ${thoughtDetail}`);
+    }
+    await page.keyboard.press("Escape");
+    const focusRestored = await page.evaluate((id) => document.activeElement?.dataset?.innerlifeShareId === id, approved.id);
+    if (!focusRestored) throw new Error("InnerLife dialog did not restore focus to its trigger.");
+
+    await page.click('[data-innerlife-open="profile"]');
+    await page.waitForFunction(() => document.querySelector("#innerLifeDetailDialog")?.open);
+    const profileDetail = await page.evaluate(() => ({
+      text: document.querySelector("#innerLifeDetailBody")?.textContent || "",
+      rawVisible: Boolean(document.querySelector("#innerLifeDetailBody pre"))
+    }));
+    if (!profileDetail.text.includes("与当前对话相关时分享") || profileDetail.rawVisible) {
+      throw new Error(`Profile explanation is not human-first: ${JSON.stringify(profileDetail)}`);
+    }
+    await page.click('[data-innerlife-open="raw-profile"]');
+    const rawDetail = await page.evaluate(() => ({
+      preCount: document.querySelectorAll("#innerLifeDetailBody pre").length,
+      maxHeights: [...document.querySelectorAll("#innerLifeDetailBody pre")].map((node) => getComputedStyle(node).maxHeight),
+      backVisible: !document.querySelector("#innerLifeDetailBack")?.hidden
+    }));
+    if (rawDetail.preCount !== 2 || rawDetail.maxHeights.some((value) => value !== "none") || !rawDetail.backVisible) {
+      throw new Error(`Raw configuration is not a full single-reader view: ${JSON.stringify(rawDetail)}`);
+    }
+    await page.click("#innerLifeDetailClose");
     await page.evaluate(() => {
       const thought = document.querySelector("#innerLifeUnsharedList .innerlife-thought");
       thought?.scrollIntoView({ block: "center" });
     });
     await page.evaluate(() => window.ClaraCoreTestHooks.refresh());
     await page.click("[data-view='settings']");
+    await page.click("[data-settings-tab='app-data']");
     await page.selectOption("#settingsLanguage", "zh");
     await page.selectOption("#settingsTheme", "dark");
     await page.click("#saveAppearanceSettings");
@@ -175,9 +233,8 @@ async function main() {
       sharedText: document.querySelector("#innerLifeSharedList")?.textContent || "",
       unsharedIds: [...document.querySelectorAll("#innerLifeUnsharedList [data-innerlife-share-id]")].map((node) => node.dataset.innerlifeShareId),
       sharedIds: [...document.querySelectorAll("#innerLifeSharedList [data-innerlife-share-id]")].map((node) => node.dataset.innerlifeShareId),
-      advancedOpen: document.querySelector("#innerLifeAdvancedDetails")?.open,
       focusBlock: Boolean(document.querySelector("#innerlifeView > .page-focus")),
-      mutationControls: document.querySelectorAll("#innerlifeView button, #innerlifeView input, #innerlifeView textarea").length,
+      mutationControls: document.querySelectorAll("#innerlifeView input, #innerlifeView textarea, #innerLifeDaemonToggle, #saveInnerLifeProfile").length,
       daemonToggle: Boolean(document.querySelector("#innerLifeDaemonToggle")),
       profileEditor: Boolean(document.querySelector("#saveInnerLifeProfile, #innerLifeProfileJson, #innerLifeStateJson")),
       pendingId,
@@ -204,14 +261,21 @@ async function main() {
     if (!result.sharedIds.includes(result.deliveredId) || result.unsharedIds.includes(result.deliveredId)) {
       throw new Error(`Delivered share classification is wrong: ${JSON.stringify(result)}`);
     }
+    if (!result.sharedText.includes("已在对话中分享") || result.sharedText.includes("送达未验证")) {
+      throw new Error(`Verified delivery evidence was lost from 已经分享: ${result.sharedText}`);
+    }
     if (!result.unsharedText.includes("Reading this complete thought must not share it.") || !result.unsharedText.includes("APPROVED UNDELIVERED")) {
       throw new Error(`InnerLife did not render complete unshared thought bodies: ${result.unsharedText}`);
     }
     if (result.unsharedText.includes("LARA ONLY THOUGHT") || result.sharedText.includes("LARA ONLY THOUGHT")) {
       throw new Error(`InnerLife leaked another agent's thought: ${JSON.stringify(result)}`);
     }
-    if (result.advancedOpen !== false || result.focusBlock || result.mutationControls !== 0 || result.daemonToggle || result.profileEditor) {
+    if (result.focusBlock || result.mutationControls !== 0 || result.daemonToggle || result.profileEditor) {
       throw new Error(`InnerLife human page is not read-only and quiet: ${JSON.stringify(result)}`);
+    }
+
+    if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
+      await page.screenshot({ path: process.env.CLARACORE_UI_SCREENSHOT_PATH, fullPage: true });
     }
 
     await app.close();
@@ -222,6 +286,9 @@ async function main() {
       profileOptions: result.profileOptions,
       unsharedIds: result.unsharedIds,
       sharedIds: result.sharedIds,
+      sharedQueueIndependent: true,
+      singleReaderDetail: true,
+      processVisible: true,
       lifecycleUnchanged: true,
       readOnly: true
     }, null, 2));

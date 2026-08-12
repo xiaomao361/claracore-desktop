@@ -1,5 +1,13 @@
 const { BUILD_FLAVOR, HAS_BUILT_IN_EMBEDDING } = require("../build-flavor");
 
+// This value is intentionally not derived from package.json. Every product
+// version bump must explicitly confirm that the Agent Guide still describes
+// the shipped product; context-budget-smoke enforces parity.
+const DOCS_RELEASE = Object.freeze({
+  version: "0.6.9",
+  updatedAt: "2026-08-12"
+});
+
 const DOCS_SECTIONS = Object.freeze([
   "start",
   "memory",
@@ -15,6 +23,7 @@ const SECTION_DOCS_BYTES = 8192;
 // 8 KB per-section bound does not apply to it. Truncating it would silently
 // drop guidance; give it room for the sum instead.
 const FULL_SECTION_DOCS_BYTES = 12288;
+const SEARCH_DOCS_BYTES = 6144;
 
 const STARTUP_SEQUENCE =
   "claracore_connection_test -> gateway_context(detail=brief, no lineId) -> retry with one candidate lineId only after SHARED_LINE_ID_REQUIRED";
@@ -26,6 +35,16 @@ function normalizeSection(value) {
     throw new Error(`gateway_docs section must be one of: ${DOCS_SECTIONS.join(", ")}.`);
   }
   return section;
+}
+
+function normalizeQuery(value) {
+  const query = String(value || "").replace(/\s+/g, " ").trim();
+  if (query.length > 200) throw new Error("gateway_docs query must be 200 characters or fewer.");
+  return query;
+}
+
+function releaseHeader() {
+  return `Guide version: ${DOCS_RELEASE.version} · Updated: ${DOCS_RELEASE.updatedAt}`;
 }
 
 function boundText(text, maxBytes) {
@@ -52,6 +71,7 @@ function embeddingLine() {
 function defaultDocs({ toolProfile }) {
   return [
     "# ClaraCore Desktop Agent Guide",
+    releaseHeader(),
     "",
     "You are connected through MCP. MCP tools are the product contract; do not read packaged app source.",
     `Tool profile: ${toolProfile}. The core profile advertises a smaller manifest; full-profile tools still execute if called by name.`,
@@ -95,6 +115,7 @@ function defaultDocs({ toolProfile }) {
     "- innerlife: sessions, share timing, delivery evidence",
     "- diagnostics: health, traces, CLI fallback",
     "- full: every section at once",
+    "- query: search maintained passages across all sections",
     "",
     "Tool names and argument schemas come from tools/list, not from this guide."
   ].join("\n");
@@ -153,6 +174,39 @@ function startSection({ launch, paths, toolProfile }) {
     "```",
     "",
     "Replace the placeholders before use. Add CLARACORE_CONVERSATION_ID only when the client relaunches the MCP process per host conversation; otherwise a stale id is traced across unrelated conversations."
+  ].join("\n");
+}
+
+function searchDocs(query, parts) {
+  const terms = [...new Set(query.toLowerCase().match(/[a-z0-9_-]{2,}/g) || [])];
+  const candidates = Object.entries(parts).flatMap(([section, build]) =>
+    build()
+      .split(/\n{2,}/)
+      .map((text, index) => ({ section, index, text: text.trim() }))
+      .filter((item) => item.text)
+  );
+  const matches = candidates
+    .map((item) => ({
+      ...item,
+      score: terms.reduce((total, term) => total + (item.text.toLowerCase().includes(term) ? 1 : 0), 0)
+    }))
+    .filter((item) => item.score > 0)
+    .sort((left, right) => right.score - left.score || left.section.localeCompare(right.section) || left.index - right.index)
+    .slice(0, 8);
+
+  const body = matches.length
+    ? matches.map((item) => `## ${item.section}\n\n${item.text}`).join("\n\n")
+    : [
+        "No matching guide passage was found.",
+        "Try gateway_docs with one section: start, memory, shared-line, innerlife, diagnostics, or full.",
+        "Tool names and argument schemas come from tools/list."
+      ].join("\n\n");
+  return [
+    "# ClaraCore Desktop Agent Guide Search",
+    releaseHeader(),
+    `Query: ${query}`,
+    "",
+    body
   ].join("\n");
 }
 
@@ -253,11 +307,15 @@ function diagnosticsSection({ launch, paths }) {
   ].join("\n");
 }
 
-function buildGatewayDocs({ section, launch, paths, toolProfile }) {
+function buildGatewayDocs({ section, query, launch, paths, toolProfile }) {
   const requested = normalizeSection(section);
+  const normalizedQuery = normalizeQuery(query);
+  if (requested && normalizedQuery) {
+    throw new Error("gateway_docs accepts either section or query, not both.");
+  }
   const context = { launch, paths, toolProfile: toolProfile || "core" };
 
-  if (!requested) {
+  if (!requested && !normalizedQuery) {
     return {
       section: "default",
       sections: DOCS_SECTIONS,
@@ -273,10 +331,18 @@ function buildGatewayDocs({ section, launch, paths, toolProfile }) {
     diagnostics: () => diagnosticsSection(context)
   };
 
+  if (normalizedQuery) {
+    return {
+      section: "search",
+      sections: DOCS_SECTIONS,
+      text: boundText(searchDocs(normalizedQuery, parts), SEARCH_DOCS_BYTES)
+    };
+  }
+
   const text =
     requested === "full"
-      ? ["# ClaraCore Desktop Agent Guide", "", ...Object.values(parts).map((build) => `${build()}\n`)].join("\n")
-      : parts[requested]();
+      ? ["# ClaraCore Desktop Agent Guide", releaseHeader(), "", ...Object.values(parts).map((build) => `${build()}\n`)].join("\n")
+      : [releaseHeader(), "", parts[requested]()].join("\n");
 
   return {
     section: requested,
@@ -287,9 +353,12 @@ function buildGatewayDocs({ section, launch, paths, toolProfile }) {
 
 module.exports = {
   DEFAULT_DOCS_BYTES,
+  DOCS_RELEASE,
   DOCS_SECTIONS,
   FULL_SECTION_DOCS_BYTES,
   SECTION_DOCS_BYTES,
+  SEARCH_DOCS_BYTES,
   buildGatewayDocs,
+  normalizeQuery,
   normalizeSection
 };

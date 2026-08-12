@@ -5,6 +5,7 @@ const multiAgentCallerContext = require("./003_multi_agent_caller_context");
 const memoryControllerLedger = require("./004_memory_controller_ledger");
 const memoryControllerWatermark = require("./005_memory_controller_watermark");
 const innerLifeHourlyDefault = require("./006_innerlife_hourly_default");
+const innerLifeSingleModel = require("./007_innerlife_single_model");
 
 const MIGRATIONS = [
   gatewayTraceCompatibility,
@@ -12,7 +13,8 @@ const MIGRATIONS = [
   multiAgentCallerContext,
   memoryControllerLedger,
   memoryControllerWatermark,
-  innerLifeHourlyDefault
+  innerLifeHourlyDefault,
+  innerLifeSingleModel
 ];
 
 async function ensureMigrationTable(database) {

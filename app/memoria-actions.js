@@ -15,6 +15,7 @@ function createClaraCoreMemoriaActions({
     state.activeMemoryAgentFilter = selectedAgentId;
     memoriaView.setActiveAgentFilter(selectedAgentId);
     const query = String(dom.memorySearchInput.value || "").trim();
+    memoriaView.setSearchActive(Boolean(query));
     if (!query) {
       await loadMemoryTabData("search", { force: true });
       return;
@@ -119,22 +120,7 @@ function createClaraCoreMemoriaActions({
   function bindMemorySelection() {
     dom.memoryList?.addEventListener("click", (event) => {
       const item = event.target.closest("[data-memory-id]");
-      if (item) memoriaView.selectMemory(item.dataset.memoryId || "");
-    });
-    dom.memoryList?.addEventListener("keydown", (event) => {
-      const item = event.target.closest("[data-memory-id]");
-      if (!item) return;
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        memoriaView.selectMemory(item.dataset.memoryId || "", { focus: true });
-        return;
-      }
-      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
-      event.preventDefault();
-      const items = [...dom.memoryList.querySelectorAll("[data-memory-id]")];
-      const index = items.indexOf(item);
-      const nextIndex = event.key === "ArrowDown" ? Math.min(items.length - 1, index + 1) : Math.max(0, index - 1);
-      memoriaView.selectMemory(items[nextIndex]?.dataset.memoryId || "", { focus: true });
+      if (item) memoriaView.selectMemory(item.dataset.memoryId || "", { trigger: item });
     });
   }
 
@@ -148,10 +134,7 @@ function createClaraCoreMemoriaActions({
       tab.addEventListener("click", () => selectTab(tab).catch(console.error));
     });
     bindLabelList(dom.memoryAllLabelList);
-    dom.memoryAdvancedDetails?.addEventListener("toggle", () => {
-      if (!dom.memoryAdvancedDetails.open) return;
-      loadMemoryTabData(memoriaView.getActiveTab()).catch(console.error);
-    });
+    bindLabelList(dom.memoryTopicList);
     bindLoadMore();
     bindGraph();
     bindMemorySelection();

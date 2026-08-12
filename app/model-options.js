@@ -1,13 +1,21 @@
 function createClaraCoreModelOptions({ dom, t, getSecretInputValue }) {
-  function setModelOptions(target, models) {
+  function setModelOptions(target, models, selectedModel = "") {
     if (!target) return;
-    target.replaceChildren(
-      ...models.map((model) => {
-        const option = document.createElement("option");
-        option.value = model;
-        return option;
-      })
-    );
+    const optionNodes = models.map((model) => {
+      const option = document.createElement("option");
+      option.value = model;
+      option.textContent = model;
+      return option;
+    });
+    if (target.matches?.("select") && !selectedModel && models.length) {
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = t("settings.selectModel");
+      placeholder.disabled = true;
+      optionNodes.unshift(placeholder);
+    }
+    target.replaceChildren(...optionNodes);
+    if (target.matches?.("select")) target.value = selectedModel;
   }
 
   async function loadModelOptions(kind, { silent = false } = {}) {
@@ -17,8 +25,8 @@ function createClaraCoreModelOptions({ dom, t, getSecretInputValue }) {
     const apiKeyInput = isMemoria ? dom.memoriaApiKey : dom.innerLifeApiKey;
     const button = isMemoria ? dom.refreshMemoriaModels : dom.refreshInnerLifeModels;
     const notice = isMemoria ? dom.memoriaModelNotice : dom.innerLifeModelNotice;
-    const options = isMemoria ? dom.memoriaModelOptions : dom.innerLifeModelOptions;
-    const modelInput = isMemoria ? dom.memoriaModel : dom.innerLifeDeepModel;
+    const modelInput = isMemoria ? dom.memoriaModel : dom.innerLifeModel;
+    const options = isMemoria ? dom.memoriaModelOptions : modelInput;
     if (!providerInput || !endpointInput || !window.ClaraCoreDesktop?.listModels) return;
     const provider = providerInput.value;
     const endpoint = endpointInput.value;
@@ -37,12 +45,11 @@ function createClaraCoreModelOptions({ dom, t, getSecretInputValue }) {
         model: modelInput?.value || ""
       });
       const models = Array.isArray(result?.models) ? result.models : [];
-      setModelOptions(options, models);
-      let selectedModel = "";
+      const configuredModel = String(modelInput?.value || "").trim();
+      const resolvedModel = String(result?.resolvedModel || "").trim();
+      const selectedModel = resolvedModel || (!configuredModel && models.length === 1 ? models[0] : "");
+      setModelOptions(options, models, selectedModel);
       if (!silent && modelInput) {
-        const configuredModel = String(modelInput.value || "").trim();
-        selectedModel = String(result?.resolvedModel || "").trim();
-        if (!selectedModel && !configuredModel && models.length === 1) selectedModel = models[0];
         if (selectedModel && selectedModel !== configuredModel) modelInput.value = selectedModel;
       }
       if (notice) {
@@ -66,13 +73,12 @@ function createClaraCoreModelOptions({ dom, t, getSecretInputValue }) {
     const providerInput = isMemoria ? dom.memoriaProvider : dom.innerLifeBackend;
     const endpointInput = isMemoria ? dom.memoriaEndpoint : dom.innerLifeEndpoint;
     const apiKeyInput = isMemoria ? dom.memoriaApiKey : dom.innerLifeApiKey;
-    const modelInput = isMemoria ? dom.memoriaModel : dom.innerLifeDeepModel;
-    const fallbackModelInput = isMemoria ? null : dom.innerLifeLightModel;
+    const modelInput = isMemoria ? dom.memoriaModel : dom.innerLifeModel;
     return {
       provider: providerInput?.value || "",
       endpoint: endpointInput?.value || "",
       apiKeyRef: getSecretInputValue(apiKeyInput),
-      model: modelInput?.value || fallbackModelInput?.value || ""
+      model: modelInput?.value || ""
     };
   }
 

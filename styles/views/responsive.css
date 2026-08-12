@@ -1,6 +1,7 @@
 @media (max-width: 1180px) {
   .memory-toolbar,
   .memory-reader-grid,
+  .shared-line-agent-context,
   .shared-line-layout,
   .data-action-grid {
     grid-template-columns: 1fr;
@@ -23,6 +24,15 @@
     max-height: none;
     overflow: visible;
     position: static;
+  }
+
+  .shared-line-agent-context-details {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .shared-line-agent-context > .shared-line-agent-role-grid {
+    grid-column: 1;
   }
 }
 
@@ -91,6 +101,10 @@
   .shared-line-detail-heading {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .shared-line-agent-context {
+    grid-template-columns: 1fr;
   }
 
   .shared-line-readonly-badge {
@@ -178,6 +192,21 @@
     grid-template-columns: 1fr;
   }
 
+  .innerlife-runtime-facts,
+  .innerlife-record-grid,
+  .innerlife-pipeline-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .innerlife-advanced-section-heading {
+    display: grid;
+  }
+
+  .innerlife-advanced-subdetails > section,
+  .innerlife-technical-body {
+    margin-inline: 16px;
+  }
+
   .model-config-head,
   .settings-section-head,
   .advanced-settings-group > summary,
@@ -199,6 +228,24 @@
 
   .shared-line-detail-row {
     grid-template-columns: 1fr;
+  }
+
+  .shared-line-agent-role-head {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .shared-line-agent-role-badge {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .shared-line-agent-role-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .shared-line-agent-role-field.is-copy,
+  .shared-line-agent-role-empty {
+    grid-column: 1;
   }
 
   .section-heading-line {

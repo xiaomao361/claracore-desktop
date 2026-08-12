@@ -9,9 +9,9 @@ function createClaraCoreTraceView({ dom, t, getSnapshot, escapeHtml, formatLocal
     traceSharedLineMetrics,
     traceInnerLifeMetrics,
     traceAdvancedMetrics,
-    traceMemoryControllerStatus,
-    traceMemoryControllerMetrics,
-    traceMemoryControllerList
+    traceOpenDetail,
+    traceDetailDialog,
+    traceDetailClose
   } = dom;
 
   function metricRows(target, rows) {
@@ -28,16 +28,16 @@ function createClaraCoreTraceView({ dom, t, getSnapshot, escapeHtml, formatLocal
 
   function renderStatements(trace) {
     const values = [
-      [trace.semantic?.decisions, "trace.statement.decisions"],
-      [trace.semantic?.activeLines, "trace.statement.lines"],
-      [trace.semantic?.reusedMemories, "trace.statement.reused"],
-      [trace.semantic?.verifiedShares, "trace.statement.shared"]
+      [trace.semantic?.decisions, "trace.statement.decisions", "trace.statement.decisionsEvidence"],
+      [trace.semantic?.activeLines, "trace.statement.lines", "trace.statement.linesEvidence"],
+      [trace.semantic?.reusedMemories, "trace.statement.reused", "trace.statement.reusedEvidence"],
+      [trace.semantic?.verifiedShares, "trace.statement.shared", "trace.statement.sharedEvidence"]
     ];
     traceStatements.innerHTML = values
-      .map(([value, labelKey]) => `
+      .map(([value, labelKey, evidenceKey]) => `
         <article class="trace-statement">
-          <strong>${escapeHtml(String(value || 0))}</strong>
-          <span>${escapeHtml(t(labelKey))}</span>
+          <strong>${escapeHtml(t(labelKey, { count: String(value || 0) }))}</strong>
+          <span>${escapeHtml(t(evidenceKey))}</span>
         </article>
       `)
       .join("");
@@ -127,47 +127,12 @@ function createClaraCoreTraceView({ dom, t, getSnapshot, escapeHtml, formatLocal
     ]);
   }
 
-  function renderMemoryController() {
-    const controller = getSnapshot()?.memoryController || {};
-    if (traceMemoryControllerStatus) {
-      const modeKey = controller.mode === "canary"
-        ? "settings.memoryControllerCanary"
-        : controller.mode === "observe"
-          ? "settings.memoryControllerObserve"
-          : "settings.memoryControllerOff";
-      traceMemoryControllerStatus.textContent = t(modeKey);
-      traceMemoryControllerStatus.className = controller.mode === "off" ? "badge warn" : "badge ok";
-    }
-    metricRows(traceMemoryControllerMetrics, [
-      ["trace.controller.events", controller.eventCount],
-      ["trace.controller.retrievals", controller.stageA?.RETRIEVE],
-      ["trace.controller.noops", controller.stageA?.NOOP],
-      ["trace.controller.errors", Number(controller.results?.error || 0) + Number(controller.results?.timeout || 0)]
-    ]);
-    const recent = Array.isArray(controller.recent) ? controller.recent : [];
-    if (!traceMemoryControllerList) return;
-    if (!recent.length) {
-      traceMemoryControllerList.innerHTML = `<p class="trace-empty">${escapeHtml(t("trace.controller.empty"))}</p>`;
-      return;
-    }
-    traceMemoryControllerList.innerHTML = recent.map((event) => {
-      const action = event.stageA?.action === "RETRIEVE"
-        ? event.stageB?.action || event.stageA.action
-        : event.stageA?.action || event.resultStatus || "-";
-      return `
-        <article class="trace-controller-event">
-          <div>
-            <strong>${escapeHtml(t("trace.controller.decision", {
-              agent: event.agentId || "-",
-              action,
-              latency: String(event.totalLatencyMs || 0)
-            }))}</strong>
-            <p>${escapeHtml(event.queryPreview || event.stageA?.reason || "-")}</p>
-          </div>
-          <time>${escapeHtml(formatLocalDateTime(event.createdAt))}</time>
-        </article>
-      `;
-    }).join("");
+  function openDetail() {
+    if (!traceDetailDialog?.open) traceDetailDialog?.showModal();
+  }
+
+  function closeDetail() {
+    if (traceDetailDialog?.open) traceDetailDialog.close();
   }
 
   function render() {
@@ -183,8 +148,13 @@ function createClaraCoreTraceView({ dom, t, getSnapshot, escapeHtml, formatLocal
     renderMilestones(trace);
     renderParticipants(trace);
     renderDetails(trace);
-    renderMemoryController();
   }
+
+  traceOpenDetail?.addEventListener("click", openDetail);
+  traceDetailClose?.addEventListener("click", closeDetail);
+  traceDetailDialog?.addEventListener("click", (event) => {
+    if (event.target === traceDetailDialog) closeDetail();
+  });
 
   return { render };
 }

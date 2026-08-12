@@ -6,7 +6,8 @@ const {
   profileToolDefinitions
 } = require("../gateway/tool-profiles");
 const { toolDefinitions } = require("../gateway/tool-definitions");
-const { DOCS_SECTIONS, buildGatewayDocs } = require("../gateway/docs");
+const { DOCS_RELEASE, DOCS_SECTIONS, buildGatewayDocs } = require("../gateway/docs");
+const { PRODUCT_VERSION } = require("../version");
 const { ambiguousSharedLineError } = require("../db/helpers");
 const memoria = require("../memoria");
 const { shapeSharedLinePacket } = require("../continuity/resume-detail");
@@ -146,6 +147,11 @@ function checkFullProfileUnchanged() {
 
 function checkDocs() {
   const args = { launch: gatewayLaunchFixture, paths: pathsFixture, toolProfile: "core" };
+  assert.strictEqual(
+    DOCS_RELEASE.version,
+    PRODUCT_VERSION,
+    "The Agent Guide version must be explicitly updated with every product version."
+  );
   const fallback = buildGatewayDocs(args);
   assert.strictEqual(fallback.section, "default");
   assertWithin("gateway_docs default", fallback.text, CONTEXT_BUDGET_CEILINGS.docsDefault);
@@ -168,6 +174,14 @@ function checkDocs() {
   }
 
   assert.throws(() => buildGatewayDocs({ ...args, section: "everything" }), /section must be one of/);
+  assert.throws(() => buildGatewayDocs({ ...args, section: "memory", query: "recall" }), /either section or query/);
+  assert.throws(() => buildGatewayDocs({ ...args, query: "x".repeat(201) }), /200 characters/);
+
+  const searched = buildGatewayDocs({ ...args, query: "automatic recall memory" });
+  assert.strictEqual(searched.section, "search");
+  assert.ok(searched.text.includes(`Guide version: ${PRODUCT_VERSION}`));
+  assert.ok(searched.text.includes("memory_context"), "Agent Guide search must return matching maintained guidance.");
+  assertWithin("gateway_docs query", searched.text, 6144);
 
   assert.ok(!fallback.text.includes("[truncated"), "Default docs must not be truncated.");
 

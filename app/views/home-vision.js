@@ -28,7 +28,7 @@ function createClaraCoreHomeVision({ canvas, container, fallback }) {
   }
 
   function prefersReducedMotion() {
-    return document.body?.dataset.motionPreference === "off" || window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    return document.body?.dataset.motion === "off" || window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
   }
 
   function shouldAnimate() {
@@ -238,7 +238,7 @@ function createClaraCoreHomeVision({ canvas, container, fallback }) {
     state.resizeObserver.observe(container);
     document.addEventListener("visibilitychange", syncMotion);
     state.motionObserver = new MutationObserver(syncMotion);
-    state.motionObserver.observe(document.body, { attributes: true, attributeFilter: ["data-motion-preference", "data-theme", "data-theme-preference"] });
+    state.motionObserver.observe(document.body, { attributes: true, attributeFilter: ["data-motion", "data-theme", "data-theme-preference"] });
   }
 
   return { setModel, setActive, debugState };

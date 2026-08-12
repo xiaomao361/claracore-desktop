@@ -40,7 +40,9 @@ Read these before adding new features:
   pagination, resource ownership, memory telemetry, and long-run checks.
 - [macOS Packaging](docs/mac-packaging.md): current local packaging and packaged
   Gateway validation notes.
-- [v0.6.7 release notes](docs/RELEASE_NOTES_V0.6.7.md): current signed and
+- [v0.6.9 release notes](docs/RELEASE_NOTES_V0.6.9.md): current signed and
+  notarized macOS Apple Silicon Lite release.
+- [v0.6.7 release notes](docs/RELEASE_NOTES_V0.6.7.md): previous signed and
   notarized macOS Apple Silicon Lite release.
 - [v0.6.5 release notes](docs/RELEASE_NOTES_V0.6.5.md): previous signed and
   notarized macOS Apple Silicon Lite release.
@@ -64,7 +66,7 @@ Read these before adding new features:
 
 ## Current Status
 
-The current development and public stable version is `0.6.7`. The public
+The current development and public stable version is `0.6.9`. The public
 release is a signed and notarized macOS Apple Silicon Lite build; Full,
 Windows, Intel macOS, and Mac App Store packages are outside that release. It
 is a working desktop shell with a
@@ -83,11 +85,11 @@ Included:
 - ClaraCore root detection
 - Product-owned SQLite data root under Desktop user data
 - Home, Memoria, Shared Line, InnerLife, Trace, Agent Access, Logs, and Settings pages (model and data management live inside Settings tabs)
-- Home presence surface with a layered shared-line horizon representing the
-  shared consciousness space, at most three recently observed Agent ripples, stable
-  identity colors, reduced-motion fallback, and strict
-  animation/pixel budgets. It uses recent Gateway activity as presence truth
-  and keeps Shared Line / eligible InnerLife text readable without Canvas.
+- Home presence surface with a layered Shared Line horizon, at most three
+  recently observed Agent ripples, stable identity colors, reduced-motion
+  fallback, and strict animation/pixel budgets. The current Shared Line is the
+  primary content; recent Gateway activity is supporting evidence. Pending
+  InnerLife content never appears on Home before its sharing decision.
 - Agent Access page with connected-agent/recent-activity evidence and one
   primary `复制给智能体` / `Copy for agent` action. The copied brief carries
   the current Streamable HTTP endpoint, bearer authorization, setup order, and
@@ -110,18 +112,20 @@ Included:
 - Shared Line defaults are agent-scoped for Gateway callers: without an explicit `lineId`, `X-ClaraCore-Agent-ID` / `CLARACORE_AGENT_ID` reads and writes the agent's own line only when that choice is unambiguous. Multiple active lines fail closed with `SHARED_LINE_ID_REQUIRED`; the agent must list lines and retry with an explicit `lineId`. InnerLife shared-line context follows the same agent scope.
 - The Full build's built-in Memory embedding model stays lazy-loaded; Ollama and OpenAI-compatible providers do not load it. Lite excludes that runtime entirely.
 - Memoria CLI for store, recall, get, update, tag, delete, restore, archive, import/export, records, and maintenance audit/run
-- Read-only human Memoria path: search, select, and inspect full Memory detail,
-  with Agent filtering, paging, truthful labels/time evidence, and keyboard
-  selection. Labels and the graph remain lazy behind one closed Advanced view;
-  mutations, vector maintenance, restricted/archive/deleted management, scores,
-  and maintenance counts stay Agent/runtime owned rather than primary UI.
+- Read-only human Memoria path: a bounded long-term knowledge shelf, search and
+  full-record reader, visible write-to-recall process, and recent recall
+  evidence that distinguishes need, retrieval, relevance, observation, and
+  actual context return. Labels and the relationship graph open in the same
+  reading layer; mutations and maintenance stay Agent/runtime owned.
 - Full defaults to the bundled ClaraCore built-in `Xenova/bge-small-zh-v1.5` Memory embedding model with 512-dimensional vectors. Fresh Lite starts with Ollama and requires the user to fetch and select an installed embedding model.
 - Shared Line CLI and Desktop-owned Gateway MCP tools for agent-driven line create/list/get/activate/rename/archive/restore/update/handoff, agent state, model adjustments, and arc compaction
 - Shared-reality and affective fields as first-class inputs, with a managed arc lifecycle: momentary readings stay transient, duplicates are de-duplicated, persisted arcs are capped, resume packets truncate by default (fullArc for the complete arc), and needs-review nodes are always protected
 - Read-only, line-first Shared Line UI: active lines on the left and selected
   `过去 -> 现在 -> 下一步`, shared understanding, and unresolved material on
   the right. Selecting a line only changes reviewed detail, never Agent-active
-  state; history, snapshots, metadata, and Agent evidence stay under Advanced.
+  state or ordering. The visible continuity process explains how progress
+  becomes shared understanding, a current position, and the next resume point;
+  full line lists, Agent context, evidence, and archives share one reader.
 - Desktop-owned InnerLife storage, agent profiles, inbox, sessions, events, thoughts, shares, digest runs, exploration, convergence, and daemon state
 - Model-backed InnerLife generation for digest, process-once, exploration,
   convergence, and session afterthoughts. No-provider paths use deterministic

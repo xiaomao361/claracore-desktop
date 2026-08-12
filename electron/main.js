@@ -162,12 +162,10 @@ function defaultUiLanguage() {
 function normalizeUiPreferences(preferences = {}, defaults = {}) {
   const language = preferences.language === "zh" || preferences.language === "en" ? preferences.language : undefined;
   const theme = ["system", "light", "dark"].includes(preferences.theme) ? preferences.theme : undefined;
-  const motion = ["system", "on", "off"].includes(preferences.motion) ? preferences.motion : undefined;
   const closeBehavior = preferences.closeBehavior === "quit" || preferences.closeBehavior === "hide" ? preferences.closeBehavior : undefined;
   return {
     language: language || defaults.language || defaultUiLanguage(),
     theme: theme || defaults.theme || "system",
-    motion: motion || defaults.motion || "system",
     closeBehavior: closeBehavior || defaults.closeBehavior || "hide"
   };
 }

@@ -199,11 +199,17 @@ function createInnerLifeReadModelRepository(helpers) {
         status: share.status,
         body: String(share.body || "").slice(0, 800),
         decision_reason: String(share.decision_reason || "").slice(0, 600),
+        deliveryEvidence: share.deliveryEvidence || null,
         created_at: share.created_at,
         updated_at: share.updated_at
       });
       const pendingShares = (await this.listInnerLifeShares("pending", 20, requestedAgentId)).map(compactShare);
       const recentShares = (await this.listInnerLifeShares("all", 20, requestedAgentId)).map(compactShare);
+      const unsharedShares = (await this.listInnerLifeShares("all", 100, requestedAgentId))
+        .filter((share) => ["pending", "approved", "deferred"].includes(String(share.status || "").toLowerCase()))
+        .slice(0, 20)
+        .map(compactShare);
+      const sharedShares = (await this.listInnerLifeShares("used", 20, requestedAgentId)).map(compactShare);
       const sessionsPage = await this.listInnerLifeSessionsPage({ agentId: requestedAgentId, limit: 10, offset: 0 });
       const sessions = sessionsPage.items;
       const inboxPage = await this.listInnerLifeInboxPage({ agentId: requestedAgentId, status: "all", limit: 10, offset: 0 });
@@ -232,6 +238,8 @@ function createInnerLifeReadModelRepository(helpers) {
         counts: await this.getInnerLifeCounts(requestedAgentId),
         pendingShares,
         recentShares,
+        unsharedShares,
+        sharedShares,
         sessions,
         sessionsPage: {
           agentId: sessionsPage.agentId,

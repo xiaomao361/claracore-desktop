@@ -143,6 +143,7 @@ function createClaraCoreSharedLineActions({
 
   async function selectLine(card) {
     const lineId = card.dataset.sharedLineId;
+    const dialog = card.closest?.("dialog") || null;
     if (
       !lineId
       || (
@@ -150,7 +151,10 @@ function createClaraCoreSharedLineActions({
         && packetMatchesLine(state.selectedSharedLinePacket, lineId)
         && dom.sharedLineNotice?.textContent !== t("sharedLine.lineFailed")
       )
-    ) return;
+    ) {
+      if (dialog?.open) dialog.close();
+      return;
+    }
     const previousLineId = committedLineId || state.selectedSharedLineId;
     const previousPacket = packetMatchesLine(committedPacket, committedLineId) ? committedPacket : null;
     const intentRevision = invalidatePendingDetail();
@@ -167,6 +171,7 @@ function createClaraCoreSharedLineActions({
       if (dom.sharedLineSelectionNotice) dom.sharedLineSelectionNotice.textContent = "";
       if (dom.sharedLineNotice) dom.sharedLineNotice.textContent = "";
       renderSharedLine();
+      if (dialog?.open) dialog.close();
     } catch (error) {
       if (!isCurrentDetailRequest(lineId, intentRevision, requestRevision)) return;
       console.error(error);
@@ -182,17 +187,10 @@ function createClaraCoreSharedLineActions({
 
   function bindEvents() {
     dom.sharedLineAgentFilter?.addEventListener("change", changeAgentFilter);
-    dom.sharedLineList?.addEventListener("click", (event) => {
+    document.querySelector("#sharedLineView")?.addEventListener("click", (event) => {
       const card = event.target.closest("[data-shared-line-action='select']");
       if (!card) return;
       selectLine(card).catch(console.error);
-    });
-    dom.sharedLineList?.addEventListener("keydown", (event) => {
-      if (event.key !== "Enter" && event.key !== " ") return;
-      const card = event.target.closest("[data-shared-line-action='select']");
-      if (!card) return;
-      event.preventDefault();
-      card.click();
     });
   }
 

@@ -26,7 +26,7 @@ Desktop currently owns:
 - Share timing checks against current context.
 - Daemon enable/pause/tick state, scheduler behavior, and recovery doctor.
 - Backup-gated copy import from the old InnerLife v2 database.
-- Model provider, endpoint, model names, API key references, and loop cadence
+- Model provider, endpoint, model name, API key reference, and loop cadence
   configured from the Desktop Models page.
 - Source ingest from profile `autonomous_sources` into pending inbox material.
 
@@ -38,9 +38,9 @@ use a deterministic template when no provider is configured. Synchronous
 generation paths retain their existing error fallback; persisted session
 afterthoughts instead record the generation error and retry on durable
 exponential backoff so a failed model call is not mistaken for completed work.
-Generation is tiered: `digest`
-follows its `mode` (deep mode uses the deep model), `converge` uses the deep
-model, and the rest use the light model.
+All generation paths use the single configured InnerLife model. Digest modes
+and convergence still describe different workflows, not different model
+connections.
 
 Each generated record stores `generationSource` in its metadata:
 

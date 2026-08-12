@@ -1,6 +1,6 @@
 {
   "name": "claracore-desktop",
-  "version": "0.6.7",
+  "version": "0.6.9",
   "buildFlavor": "full",
   "private": true,
   "description": "ClaraCore desktop manager for the local personal cognitive core",
@@ -33,7 +33,7 @@
     "baseline:sqlite:multi-agent": "node scripts/sqlite-multi-agent-baseline.js",
     "baseline:http-ui": "node scripts/http-ui-concurrency-baseline.js",
     "check:performance": "node --check scripts/runtime-performance-baseline.js && node --check scripts/memory-retrieval-performance-baseline.js && node --check scripts/sqlite-multi-agent-baseline.js && node --check scripts/http-ui-concurrency-baseline.js && node --check core/db/repositories/innerlife/retention.js && node --check electron/http-agent-gateway.js && node --check core/tests/home-presence-performance-smoke.js && node --check core/tests/agent-activity-performance-smoke.js && node --check core/tests/memory-long-run-check.js && node --check core/tests/gateway-trace-compatibility-smoke.js && node --check core/tests/gateway-trace-retention-smoke.js && node --check core/tests/innerlife-retention-smoke.js && node --check core/tests/innerlife-compact-snapshot-performance-smoke.js && node --check core/tests/http-gateway-backpressure-smoke.js && node --check core/tests/sqlite-multi-agent-startup-smoke.js && node --check core/tests/logs-snapshot-performance-smoke.js && node --check core/tests/overview-snapshot-performance-smoke.js && node --check core/tests/gateway-context-performance-smoke.js && node --check core/tests/persisted-background-jobs-smoke.js",
-    "test:phase1": "node core/tests/model-provider-utils-smoke.js && node core/tests/innerlife-hourly-default-migration-smoke.js && node core/tests/phase1-smoke.js && npm run test:phase1:ui",
+    "test:phase1": "node core/tests/model-provider-utils-smoke.js && node core/tests/innerlife-hourly-default-migration-smoke.js && node core/tests/innerlife-single-model-migration-smoke.js && node core/tests/phase1-smoke.js && npm run test:phase1:ui",
     "test:phase1:ui": "node core/tests/run-ui-smoke.js core/tests/phase1-settings-ui-smoke.js",
     "test:lite": "node core/tests/lite-flavor-smoke.js && node core/tests/run-ui-smoke.js core/tests/lite-settings-ui-smoke.js",
     "test:lite:ollama": "node core/tests/lite-ollama-smoke.js",

@@ -1,0 +1,85 @@
+:is(
+  .memory-page,
+  .shared-line-page,
+  .innerlife-shell,
+  .trace-page,
+  #logsView .logs-grid,
+  #agentSetupView .agent-access-page,
+  #settingsView
+) {
+  width: min(1180px, 100%);
+  margin: 0;
+  padding: clamp(18px, 2.8vw, 32px);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+:is(
+  .memory-page > .memory-overview,
+  .memory-page > .memory-process-section,
+  .memory-page > .memory-recall-section,
+  .shared-line-page > .shared-line-overview,
+  .shared-line-page > .shared-line-process-section,
+  .innerlife-shell > .innerlife-reader,
+  .trace-page > .trace-hero,
+  .trace-page > .trace-process-section,
+  .trace-page > .trace-detail-entry,
+  #logsView .log-terminal-panel,
+  #agentSetupView .agent-access-overview,
+  #agentSetupView .agent-access-process,
+  #agentSetupView .agent-access-grid > .panel,
+  #settingsView .settings-tab-panel > .settings-primary-panel
+) {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.innerlife-shell > .innerlife-reader,
+#logsView .log-terminal-panel,
+#settingsView .settings-tab-panel > .settings-primary-panel {
+  width: 100%;
+  padding-inline: 0;
+  background: transparent;
+}
+
+#agentSetupView .agent-access-overview,
+#agentSetupView .agent-access-process,
+#agentSetupView .agent-access-grid > .panel {
+  background: transparent;
+}
+
+#agentSetupView .agent-access-grid {
+  gap: clamp(28px, 4vw, 48px);
+}
+
+@media (max-width: 860px) {
+  :is(
+    .memory-page,
+    .shared-line-page,
+    .innerlife-shell,
+    .trace-page,
+    #logsView .logs-grid,
+    #agentSetupView .agent-access-page,
+    #settingsView
+  ) {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 560px) {
+  :is(
+    .memory-page,
+    .shared-line-page,
+    .innerlife-shell,
+    .trace-page,
+    #logsView .logs-grid,
+    #agentSetupView .agent-access-page,
+    #settingsView
+  ) {
+    padding: 14px;
+    border-radius: 8px;
+  }
+}

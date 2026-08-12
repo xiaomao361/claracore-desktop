@@ -1,4 +1,6 @@
 function createClaraCoreAgentSetupView({ dom, t, getSnapshot, copyValue }) {
+  let noticeKey = "";
+
   function currentConnectionMaterial() {
     const snapshot = getSnapshot();
     if (!snapshot?.connections) return null;
@@ -45,7 +47,7 @@ After tools appear, follow this sequence exactly:
 2. Call \`gateway_context\` with \`detail="brief"\` and without \`lineId\`. If it returns \`SHARED_LINE_ID_REQUIRED\`, choose one of its candidates and retry with that explicit \`lineId\`.
 3. In the user's current language, proactively report the truthful connection result, explain ClaraCore's Memory, Shared Line, InnerLife, and Gateway/diagnostics capabilities, summarize only the useful current context you actually found, offer 3-5 natural-language example requests, and suggest one evidence-backed next action when appropriate.
 
-Call \`gateway_docs\` when you need the usage guide. It returns a short summary by default; pass \`section\` (\`start\`, \`memory\`, \`shared-line\`, \`innerlife\`, \`diagnostics\`, \`full\`) for one topic. Tool names and argument schemas come from \`tools/list\`, not from this brief. Re-read both after a Desktop upgrade or MCP reconnect.
+Call \`gateway_docs\` when you need the versioned usage guide. It returns a short summary by default; pass \`section\` (\`start\`, \`memory\`, \`shared-line\`, \`innerlife\`, \`diagnostics\`, \`full\`) for one topic, or pass \`query\` to search maintained guide passages. Tool names and argument schemas come from \`tools/list\`, not from the guide. Re-read both after a Desktop upgrade or MCP reconnect.
 
 ## Keep four states separate
 
@@ -58,23 +60,63 @@ Do not claim connection success before the test succeeds. Connecting or reading 
   }
 
   function render() {
+    const snapshot = getSnapshot();
+    const connections = snapshot?.connections || {};
+    const gateway = connections.httpGateway || {};
+    const material = currentConnectionMaterial();
     const ready = Boolean(currentConnectionMaterial());
     dom.copyAgentSetup.disabled = !ready;
     dom.agentSetupStatus.textContent = ready ? t("agentSetup.ready") : t("agentSetup.starting");
+    dom.agentSetupStatus.className = `agent-setup-status ${ready ? "is-ready" : "is-pending"}`;
+    if (dom.agentSetupNotice) dom.agentSetupNotice.textContent = noticeKey ? t(noticeKey) : "";
+
+    const setState = (element, state, key) => {
+      if (!element) return;
+      element.textContent = t(key);
+      element.className = `agent-access-state ${state}`;
+    };
+    setState(
+      dom.agentGatewayStatus,
+      gateway.error ? "is-error" : gateway.ok ? "is-ready" : "is-pending",
+      gateway.error ? "agentSetup.state.issue" : gateway.ok ? "agentSetup.state.ready" : "agentSetup.state.starting"
+    );
+    setState(
+      dom.agentHttpStatus,
+      material?.httpEndpoint ? "is-ready" : "is-pending",
+      material?.httpEndpoint ? "agentSetup.state.ready" : "agentSetup.state.starting"
+    );
+    setState(
+      dom.agentStdioStatus,
+      connections.mcpConfig ? "is-ready" : "is-pending",
+      connections.mcpConfig ? "agentSetup.state.available" : "agentSetup.state.starting"
+    );
+    setState(
+      dom.agentGuideStatus,
+      connections.agentGuide?.version ? "is-ready" : "is-pending",
+      connections.agentGuide?.version ? "agentSetup.state.versioned" : "agentSetup.state.starting"
+    );
+    if (dom.agentGuideVersion) {
+      dom.agentGuideVersion.textContent = connections.agentGuide?.version
+        ? `gateway_docs · v${connections.agentGuide.version}`
+        : "gateway_docs";
+    }
   }
 
   async function copy() {
     const markdown = buildMarkdown();
     if (!markdown) {
-      dom.agentSetupNotice.textContent = t("agentSetup.starting");
+      noticeKey = "agentSetup.starting";
+      dom.agentSetupNotice.textContent = t(noticeKey);
       return false;
     }
     try {
       const copied = await copyValue(markdown, t("agentSetup.copied"), dom.agentSetupNotice);
-      if (!copied) dom.agentSetupNotice.textContent = t("agentSetup.copyFailed");
+      noticeKey = copied ? "agentSetup.copied" : "agentSetup.copyFailed";
+      dom.agentSetupNotice.textContent = t(noticeKey);
       return copied;
     } catch (error) {
-      dom.agentSetupNotice.textContent = t("agentSetup.copyFailed");
+      noticeKey = "agentSetup.copyFailed";
+      dom.agentSetupNotice.textContent = t(noticeKey);
       return false;
     }
   }

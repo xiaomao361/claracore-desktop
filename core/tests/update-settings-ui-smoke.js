@@ -65,7 +65,7 @@ async function main() {
 
     await page.waitForSelector("[data-view='settings']", { timeout: 15000 });
     await page.click("[data-view='settings']");
-    await page.click("[data-settings-tab='common']");
+    await page.click("[data-settings-tab='app-data']");
     await page.click("#checkForUpdates");
     await page.waitForFunction(
       (version) => document.querySelector("#updateCheckStatus")?.textContent.includes(version),

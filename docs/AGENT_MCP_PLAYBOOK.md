@@ -136,7 +136,8 @@ usage guide. Omitting `section` returns a bounded summary (connection truth,
 domain roles, startup sequence, section index). Pass `section` for one topic:
 `start`, `memory`, `shared-line`, `innerlife`, `diagnostics`, or `full`. It no
 longer restates the tool manifest — tool names and argument schemas come from
-`tools/list`.
+`tools/list`. Pass `query` instead of `section` to search maintained guide
+passages. Every response carries the Agent Guide version and update date.
 
 `gateway_context` returns the current working packet: Shared Line, recent
 Memory, InnerLife state, Doctor guidance, and recovery advice. Use

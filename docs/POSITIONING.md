@@ -45,6 +45,8 @@ They are not three features. They are one world, maintained at three layers.
 
 ## Design filter
 
+页面表达统一遵循 [UI_DESIGN_LANGUAGE.md](./UI_DESIGN_LANGUAGE.md)：先定义人看完需要知道什么，再让模块的真实运作流程在页面上可见。
+
 Every proposed feature must answer one question:
 
 **Does this maintain the shared world, or does it just add capability?**

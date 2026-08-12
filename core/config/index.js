@@ -33,8 +33,7 @@ const DEFAULT_SETTINGS = {
   "innerlife.enabled": true,
   "innerlife.provider": "openai-compatible",
   "innerlife.base_url": "https://api.deepseek.com",
-  "innerlife.light_model": "deepseek-v4-flash",
-  "innerlife.deep_model": "deepseek-v4-flash",
+  "innerlife.model": "deepseek-v4-flash",
   "innerlife.loop_seconds": 3600,
   "gateway.enabled": true,
   "gateway.transport": "stdio",
@@ -59,8 +58,7 @@ const WRITABLE_SETTINGS = new Set([
   "innerlife.enabled",
   "innerlife.provider",
   "innerlife.base_url",
-  "innerlife.light_model",
-  "innerlife.deep_model",
+  "innerlife.model",
   "innerlife.loop_seconds"
 ]);
 

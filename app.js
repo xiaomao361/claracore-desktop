@@ -59,9 +59,7 @@ const {
   memoriaModelStatus,
   innerLifeBackend,
   innerLifeEndpoint,
-  innerLifeLightModel,
-  innerLifeDeepModel,
-  innerLifeModelOptions,
+  innerLifeModel,
   innerLifeModelNotice,
   refreshInnerLifeModels,
   testInnerLifeConnection,
@@ -72,14 +70,13 @@ const {
   copyInnerLifeApiKey,
   innerLifeModelStatus,
   saveSettings,
-  saveRuntimeSettings,
-  runtimeSettingsNotice,
   settingsNotice,
   saveAppearanceSettings,
   appearanceSettingsNotice,
   saveDataRootSettings,
   storageSettingsNotice,
   settingsAgentGatewayToken,
+  agentGatewaySettingsNotice,
   generateAgentGatewayToken,
   copyAgentGatewayToken,
   copyAgentGatewayConfig,
@@ -146,7 +143,6 @@ const {
   safeJsonObject,
   formatBytes,
   formatLocalDateTime,
-  getSystemTimeZone,
   splitListInput,
   formatSharedLineMetaValue,
   renderReadableText,
@@ -191,7 +187,7 @@ const hydratingViews = new Map();
 const viewDetailReadCounts = new Map();
 const localOnlyHydrationViews = new Set(["memory", "agent-setup"]);
 const viewOwnedSnapshotFields = {
-  memory: ["memories", "memoryGraph", "restrictedMemoryGraph"],
+  memory: ["memories", "memoryGraph", "restrictedMemoryGraph", "memoryController"],
   home: ["agentActivitySummary"],
   innerlife: ["innerLife"],
   trace: ["trace", "memoryController"],
@@ -286,7 +282,6 @@ const settingsView = window.createClaraCoreSettingsView({
   getSnapshot: () => snapshot,
   getAppearancePreferences,
   formatMode,
-  getSystemTimeZone,
   state: rendererState
 });
 const sharedInnerLifeView = window.createClaraCoreSharedInnerLifeView({
@@ -421,10 +416,6 @@ function getAppearancePreferences() {
 
 function setTheme(theme) {
   appearance.setTheme(theme);
-}
-
-function setMotion(motion) {
-  appearance.setMotion(motion);
 }
 
 function setWindowCloseBehavior(closeBehavior) {
@@ -726,8 +717,32 @@ async function hydrateView(viewName, { force = false } = {}) {
   }
   const sharedLineCatalog = snapshot.sharedLine;
   const request = (async () => {
+    if (viewName === "memory") {
+      const result = await loadMemoryTabData(memoriaView.getActiveTab());
+      if (result?.stale || generation !== snapshotGeneration) return;
+      if (typeof window.ClaraCoreDesktop.getViewSnapshot === "function") {
+        viewDetailReadCounts.set(viewName, (viewDetailReadCounts.get(viewName) || 0) + 1);
+        const detail = await window.ClaraCoreDesktop.getViewSnapshot(viewName);
+        if (generation !== snapshotGeneration) return;
+        if (detail && typeof detail === "object") snapshot = { ...snapshot, ...detail };
+      }
+      hydratedViews.add(viewName);
+      memoriaView.renderMemoryOverview();
+      return;
+    }
     if (viewName === "shared-line") {
-      const packet = await sharedLineActions.hydrateSelectedLine(sharedLineCatalog);
+      let catalog = sharedLineCatalog;
+      if (typeof window.ClaraCoreDesktop.getViewSnapshot === "function") {
+        viewDetailReadCounts.set(viewName, (viewDetailReadCounts.get(viewName) || 0) + 1);
+        const detail = await window.ClaraCoreDesktop.getViewSnapshot(viewName);
+        if (generation !== snapshotGeneration) return;
+        if (detail?.sharedLine && typeof detail.sharedLine === "object") {
+          snapshot = { ...snapshot, sharedLine: detail.sharedLine };
+          catalog = detail.sharedLine;
+          sharedLineActions.syncSelectedLineCatalog(catalog);
+        }
+      }
+      const packet = await sharedLineActions.hydrateSelectedLine(catalog);
       if (generation !== snapshotGeneration) return;
       if (packet) hydratedViews.add(viewName);
       renderSharedLine();
@@ -878,18 +893,35 @@ const settingsTabButtons = window.ClaraCoreDom.settingsTabs || [];
 const settingsTabPanelList = window.ClaraCoreDom.settingsTabPanels || [];
 
 function setSettingsTab(tabName) {
-  const next = settingsTabPanelList.some((panel) => panel.dataset.settingsPanel === tabName) ? tabName : "common";
+  const next = settingsTabPanelList.some((panel) => panel.dataset.settingsPanel === tabName) ? tabName : "capabilities";
   settingsTabButtons.forEach((button) => {
-    button.classList.toggle("active", button.dataset.settingsTab === next);
-    button.setAttribute("aria-selected", button.dataset.settingsTab === next ? "true" : "false");
+    const active = button.dataset.settingsTab === next;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", active ? "true" : "false");
+    button.tabIndex = active ? 0 : -1;
   });
   settingsTabPanelList.forEach((panel) => {
-    panel.classList.toggle("active", panel.dataset.settingsPanel === next);
+    const active = panel.dataset.settingsPanel === next;
+    panel.classList.toggle("active", active);
+    panel.hidden = !active;
   });
 }
 
 settingsTabButtons.forEach((button) => {
   button.addEventListener("click", () => setSettingsTab(button.dataset.settingsTab));
+  button.addEventListener("keydown", (event) => {
+    const currentIndex = settingsTabButtons.indexOf(button);
+    let nextIndex = currentIndex;
+    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % settingsTabButtons.length;
+    else if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + settingsTabButtons.length) % settingsTabButtons.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = settingsTabButtons.length - 1;
+    else return;
+    event.preventDefault();
+    const nextButton = settingsTabButtons[nextIndex];
+    setSettingsTab(nextButton.dataset.settingsTab);
+    nextButton.focus();
+  });
 });
 
 document.querySelectorAll("[data-view]").forEach((button) => {
@@ -954,26 +986,27 @@ copyAgentSetup?.addEventListener("click", () => {
 
 generateAgentGatewayToken?.addEventListener("click", () => {
   if (settingsAgentGatewayToken) settingsAgentGatewayToken.value = randomAgentGatewayToken();
-  if (appearanceSettingsNotice) appearanceSettingsNotice.textContent = t("settings.generatedToken");
+  if (agentGatewaySettingsNotice) agentGatewaySettingsNotice.textContent = t("settings.generatedToken");
 });
 
 copyAgentGatewayToken?.addEventListener("click", () => {
-  copyValue(settingsAgentGatewayToken?.value || "", t("settings.apiKey.copied"), appearanceSettingsNotice).catch(console.error);
+  copyValue(settingsAgentGatewayToken?.value || "", t("settings.apiKey.copied"), agentGatewaySettingsNotice).catch(console.error);
 });
 
 copyAgentGatewayConfig?.addEventListener("click", () => {
-  copyValue(settingsView.agentGatewayCopyBlock(), t("settings.agentGatewayConfigCopied"), appearanceSettingsNotice).catch(console.error);
+  copyValue(settingsView.agentGatewayCopyBlock(), t("settings.agentGatewayConfigCopied"), agentGatewaySettingsNotice).catch(console.error);
 });
 
 saveAgentGatewayConfig?.addEventListener("click", async () => {
+  if (!window.confirm(t("settings.agentGatewaySaveConfirm"))) return;
   saveAgentGatewayConfig.disabled = true;
-  appearanceSettingsNotice.textContent = t("common.checking");
+  if (agentGatewaySettingsNotice) agentGatewaySettingsNotice.textContent = t("common.checking");
   try {
     await window.ClaraCoreDesktop.updateAgentGatewayConfig(settingsView.collectAgentGatewayConfigForm());
     await refreshForRuntimeScopes(["snapshot", "agent-setup", "logs"]);
-    appearanceSettingsNotice.textContent = t("settings.agentGatewaySaved");
+    if (agentGatewaySettingsNotice) agentGatewaySettingsNotice.textContent = t("settings.agentGatewaySaved");
   } catch (error) {
-    appearanceSettingsNotice.textContent = t("settings.agentGatewaySaveFailed", { error: error?.message || String(error) });
+    if (agentGatewaySettingsNotice) agentGatewaySettingsNotice.textContent = t("settings.agentGatewaySaveFailed", { error: error?.message || String(error) });
   } finally {
     saveAgentGatewayConfig.disabled = false;
   }
@@ -1021,12 +1054,13 @@ saveSettings.addEventListener("click", () => {
   saveModelSettings(saveSettings, settingsNotice, collectSettingsForm(), { confirmEmbedding: true });
 });
 
-saveRuntimeSettings?.addEventListener("click", () => {
-  saveModelSettings(saveRuntimeSettings, runtimeSettingsNotice, settingsView.collectRuntimeSettingsForm(), {
-    successKey: "settings.runtimeSaved",
-    failureKey: "settings.runtimeSaveFailed"
+[memoriaProvider, memoriaEndpoint, memoriaModel, memoriaApiKey, innerLifeBackend, innerLifeEndpoint, innerLifeModel, innerLifeApiKey, innerLifePollSeconds]
+  .filter(Boolean)
+  .forEach((control) => {
+    control.addEventListener("change", () => {
+      settingsNotice.textContent = t("settings.capabilitiesUnsaved");
+    });
   });
-});
 
 copyMemoriaApiKey.addEventListener("click", () => {
   const value = getSecretInputValue(memoriaApiKey);
@@ -1089,7 +1123,6 @@ saveAppearanceSettings?.addEventListener("click", async () => {
     const preferences = collectAppearanceSettingsForm();
     setLanguage(preferences.language);
     setTheme(preferences.theme);
-    setMotion(preferences.motion);
     setWindowCloseBehavior(preferences.closeBehavior);
     renderSettings();
     showCopyNotice(t("settings.appearanceSaved"), appearanceSettingsNotice);

@@ -12,8 +12,12 @@ function createClaraCoreMemoriaView(context) {
     setEmbeddingProgress
   } = context;
   const {
-    memorySearchInput, searchMemory, memoryList, memoryDetail, memoryAgentFilter, memoryAdvancedDetails,
-    memoryGraphSummary, memoryGraph, memoryAllLabelList, memoryAllHint, memoryTabs, memoryTabPanels
+    memorySearchInput, searchMemory, memoryList, memoryDetail, memoryAgentFilter,
+    memoryGraphSummary, memoryGraph, memoryAllLabelList, memoryAllHint, memoryTabs, memoryTabPanels,
+    memoryOverviewCount, memoryTopicList, memoryProcessFlow, memoryAllAction,
+    memoryRecallStatus, memoryRecallList, memoryAllRecallAction,
+    memoryDetailDialog, memoryDetailBack, memoryDetailClose, memoryDetailKicker,
+    memoryDetailDialogTitle, memoryDetailMeta, memoryRecallDetail, memoryKnowledgeWorkbench
   } = dom;
 
   let activeMemoryTab = "labels";
@@ -31,6 +35,10 @@ function createClaraCoreMemoriaView(context) {
   let activeMemoryAgentFilter = "";
   let selectedMemoryId = "";
   let visibleMemories = [];
+  let searchActive = false;
+  let dialogTrigger = null;
+  let dialogMode = "";
+  let dialogBackMode = "";
   const loadedMemoryTabs = { all: false, graph: false };
   const memoryPaging = { pageSize: 20, all: { loaded: 0 } };
   let snapshot = null;
@@ -91,6 +99,106 @@ function renderMemoryDetail(memory = selectedMemory()) {
   `;
 }
 
+function memoryControllerModeLabel(mode) {
+  if (mode === "canary") return "受信回召已开启";
+  if (mode === "observe") return "观察模式：记录判断结果";
+  return "自动回召已关闭";
+}
+
+function recallReasonLabel(reason) {
+  const labels = {
+    controller_disabled: "自动回召已关闭",
+    memory_opt_out: "当前请求关闭历史记忆",
+    current_turn_instruction: "当前指令独立执行",
+    ordinary_current_turn: "当前内容可独立处理",
+    explicit_history_request: "这次明确询问过去发生的事",
+    continuation_request: "这次需要继续之前的工作",
+    stable_preference_request: "这次可能需要长期偏好",
+    prior_decision_request: "这次可能需要以前的决定",
+    reusable_knowledge_request: "这次可能需要复用以前的方法",
+    no_candidates: "没有找到候选记忆",
+    restricted_result: "候选记忆受访问限制",
+    ineligible_result: "候选记忆已失效或不属于当前范围",
+    low_relevance: "相关度没有达到可信门槛",
+    ambiguous_top_results: "前两条过于接近，无法可靠选择",
+    context_budget_exceeded: "可用上下文空间不足",
+    high_confidence_top1: "第一条相关度足够高，并明显领先第二条"
+  };
+  return labels[String(reason || "")] || reason || "没有记录原因";
+}
+
+function recallVerdict(event) {
+  if ((event.injectedIds || []).length) return { tone: "returned", title: "已返回给智能体", body: "这条记忆进入了只读上下文；是否真的用于回答仍需后续反馈证明。" };
+  if (event.stageB?.action === "INJECT_TOP1" && event.policyMode === "observe") return { tone: "observed", title: "相关，但仅观察", body: "相关性判断通过了；当前模式没有把记忆返回给智能体。" };
+  if (event.stageA?.action === "NOOP") return { tone: "quiet", title: "没有启动检索", body: recallReasonLabel(event.stageA?.reason) };
+  return { tone: "abstained", title: "已检索，但没有返回", body: recallReasonLabel(event.stageB?.reason || event.stageA?.reason) };
+}
+
+function renderRecallEvent(event, compact = false) {
+  const verdict = recallVerdict(event);
+  const candidates = Array.isArray(event.candidates) ? event.candidates : [];
+  if (compact) {
+    return `<button type="button" class="memory-recall-row is-${verdict.tone}" data-memory-decision-id="${escapeHtml(event.id)}">
+      <span class="memory-recall-node" aria-hidden="true"></span>
+      <span><strong>${escapeHtml(event.queryPreview || "未记录对话摘要")}</strong><small>${escapeHtml(verdict.title)} · ${escapeHtml(formatLocalDateTime(event.createdAt))}</small></span>
+      <span aria-hidden="true">→</span>
+    </button>`;
+  }
+  return `<article class="memory-recall-event-detail">
+    <section><span>这次对话</span><h3>${escapeHtml(event.queryPreview || "未记录对话摘要")}</h3><p>${escapeHtml(formatLocalDateTime(event.createdAt))} · ${escapeHtml(event.agentId || "-")}</p></section>
+    <div class="memory-decision-path">
+      <div><span>1</span><strong>${event.stageA?.action === "RETRIEVE" ? "判断需要查找记忆" : "跳过记忆检索"}</strong><p>${escapeHtml(recallReasonLabel(event.stageA?.reason))}</p></div>
+      <div><span>2</span><strong>${candidates.length ? `找到 ${candidates.length} 条候选` : "没有候选记忆"}</strong><p>${escapeHtml(event.cacheStatus === "hit" ? "使用了仍然有效的检索缓存" : "重新执行了记忆检索")}</p></div>
+      <div><span>3</span><strong>${escapeHtml(verdict.title)}</strong><p>${escapeHtml(verdict.body)}</p></div>
+    </div>
+    ${candidates.length ? `<section class="memory-candidate-list"><h3>相关性候选</h3>${candidates.map((candidate, index) => `<div class="memory-candidate-row"><span>${index + 1}</span><div><strong>${escapeHtml(candidate.title || candidate.id)}</strong><small>${escapeHtml(candidate.source === "keyword+vector" ? "关键词 + 语义" : candidate.source === "vector" ? "语义相似" : "关键词命中")} · 相关分 ${Math.round(Number(candidate.score || 0) * 100)}%</small></div></div>`).join("")}</section>` : ""}
+    <p class="memory-evidence-boundary">证据分为候选、通过门槛、返回、送达和使用；各阶段的实际记录证明对应影响。</p>
+  </article>`;
+}
+
+function setMemoryDialogPane(mode) {
+  if (memoryDetail) memoryDetail.hidden = !["memory", "library"].includes(mode);
+  if (memoryRecallDetail) memoryRecallDetail.hidden = mode !== "recall";
+  if (memoryKnowledgeWorkbench) memoryKnowledgeWorkbench.hidden = !["labels", "graph"].includes(mode);
+}
+
+function openMemoryDialog(mode, options = {}) {
+  if (!memoryDetailDialog) return;
+  if (!memoryDetailDialog.open) dialogTrigger = options.trigger || document.activeElement;
+  dialogMode = mode;
+  dialogBackMode = options.backMode || "";
+  setMemoryDialogPane(mode);
+  memoryDetailBack.hidden = !dialogBackMode;
+  if (mode === "memory") {
+    const memory = selectedMemory();
+    memoryDetailKicker.textContent = "MEMORY";
+    memoryDetailDialogTitle.textContent = memory?.title || "记忆详情";
+    memoryDetailMeta.textContent = "完整内容与持久化依据";
+    renderMemoryDetail(memory);
+  } else if (mode === "library") {
+    memoryDetailKicker.textContent = "MEMORY LIBRARY";
+    memoryDetailDialogTitle.textContent = searchActive ? "搜索结果" : "最近载入的长期记忆";
+    memoryDetailMeta.textContent = `当前载入 ${visibleMemories.length} 条 · 点击任一条阅读全文`;
+    memoryDetail.innerHTML = `<div id="memoryDialogLibrary" class="memory-dialog-library"></div>`;
+    memoryListRenderer.renderMemoryResults(visibleMemories, memoryDetail.querySelector("#memoryDialogLibrary"));
+  } else if (mode === "recall") {
+    const events = getSnapshot()?.memoryController?.recent || [];
+    const selected = options.decisionId ? events.filter((event) => event.id === options.decisionId) : events;
+    memoryDetailKicker.textContent = "RECALL EVIDENCE";
+    memoryDetailDialogTitle.textContent = options.decisionId ? "一次回召为什么这样判断" : "最近的回召判断依据";
+    memoryDetailMeta.textContent = options.decisionId ? "从是否需要记忆，到相关性候选，再到是否真实返回" : `最近 ${events.length} 次判断`;
+    memoryRecallDetail.innerHTML = selected.length ? selected.map((event) => renderRecallEvent(event)).join("") : `<div class="memory-detail-empty"><strong>还没有回召判断</strong><p>发生相关对话后，这里会显示真实判断证据。</p></div>`;
+  } else {
+    memoryDetailKicker.textContent = "CONNECTIONS";
+    memoryDetailDialogTitle.textContent = mode === "graph" ? "关系与状态链" : "主题与标签";
+    memoryDetailMeta.textContent = mode === "graph" ? "关系用于解释记忆连接；回召结果以事件证据为准" : "标签用于组织和缩小检索范围";
+    activeMemoryTab = mode;
+    renderMemoryTabs();
+    loadMemoryTabData(mode).catch(console.error);
+  }
+  if (!memoryDetailDialog.open) memoryDetailDialog.showModal();
+}
+
 function renderMemoryResults(memories, target = memoryList, options = {}) {
   if (target !== memoryList) {
     memoryListRenderer.renderMemoryResults(memories, target, options);
@@ -100,7 +208,12 @@ function renderMemoryResults(memories, target = memoryList, options = {}) {
   if (!visibleMemories.some((memory) => memory.id === selectedMemoryId)) {
     selectedMemoryId = visibleMemories[0]?.id || "";
   }
-  memoryListRenderer.renderMemoryResults(visibleMemories, memoryList, { ...options, selectedId: selectedMemoryId });
+  const displayed = searchActive ? visibleMemories : visibleMemories.slice(0, 6);
+  memoryListRenderer.renderMemoryResults(displayed, memoryList, { ...options, selectedId: selectedMemoryId });
+  if (memoryAllAction) {
+    memoryAllAction.hidden = searchActive || visibleMemories.length <= displayed.length;
+    memoryAllAction.textContent = `查看最近载入的 ${visibleMemories.length} 条记忆 →`;
+  }
   renderMemoryDetail();
 }
 
@@ -113,9 +226,11 @@ function renderMemoryList() {
 function selectMemory(memoryId, options = {}) {
   if (!visibleMemories.some((memory) => memory.id === memoryId)) return;
   selectedMemoryId = memoryId;
-  memoryListRenderer.renderMemoryResults(visibleMemories, memoryList, { selectedId: selectedMemoryId });
+  const displayed = searchActive ? visibleMemories : visibleMemories.slice(0, 6);
+  memoryListRenderer.renderMemoryResults(displayed, memoryList, { selectedId: selectedMemoryId });
   renderMemoryDetail();
   if (options.focus) memoryList.querySelector(`[data-memory-id="${CSS.escape(memoryId)}"]`)?.focus();
+  if (options.open !== false) openMemoryDialog("memory", { trigger: options.trigger || document.activeElement, backMode: options.backMode || "" });
 }
 
 function renderMemoryTabs() {
@@ -924,6 +1039,36 @@ function drawMemoryGraphCanvas() {
   }
 }
 
+function renderMemoryRecall() {
+  const controller = snapshot?.memoryController || {};
+  const events = Array.isArray(controller.recent) ? controller.recent : [];
+  if (memoryRecallStatus) {
+    const mode = controller.mode || "off";
+    memoryRecallStatus.className = `memory-recall-status is-${mode}`;
+    memoryRecallStatus.innerHTML = `<span>${escapeHtml(memoryControllerModeLabel(mode))}</span><p>${mode === "canary" ? "仅返回第一条同智能体、有效、普通敏感度且高置信记忆。" : mode === "observe" ? "系统完成需求判断、检索和相关性门槛，返回内容为空。" : "仅响应显式搜索，自动评估已关闭。"}</p>`;
+  }
+  if (memoryRecallList) {
+    memoryRecallList.innerHTML = events.length
+      ? events.slice(0, 3).map((event) => renderRecallEvent(event, true)).join("")
+      : `<div class="endpoint-empty">还没有回召判断记录。</div>`;
+  }
+  if (memoryAllRecallAction) memoryAllRecallAction.hidden = events.length === 0;
+}
+
+function renderMemoryProcess() {
+  const stats = snapshot?.memoryStats || {};
+  const controller = snapshot?.memoryController || {};
+  const labelCount = (stats.labels || []).filter((item) => !/^(agent|agent-id|tool):/.test(String(item.label || ""))).length;
+  const steps = [
+    ["明确写入", stats.activeCount || 0, "智能体决定长期保留"],
+    ["组织关联", labelCount, "标签、关系与状态链"],
+    ["判断需要", controller.eventCount || 0, "先看这次是否需要历史"],
+    ["检查相关", controller.stageA?.RETRIEVE || 0, "比较语义分数和领先幅度"],
+    ["实际返回", controller.eventsWithInjection || 0, "按真实进入上下文的记录计数"]
+  ];
+  if (memoryProcessFlow) memoryProcessFlow.innerHTML = steps.map(([title, count, body], index) => `<div><span>${index + 1}</span><strong>${title}</strong><small>${body}</small><em>${count} 条</em></div>`).join("");
+}
+
 function renderMemoryOverview() {
   syncSnapshot();
   if (activeMemoryGraphLayer === "restricted" && !snapshot?.restrictedMemoryGraph) {
@@ -934,6 +1079,11 @@ function renderMemoryOverview() {
   const stats = snapshot?.memoryStats || {};
   const memories = snapshot?.memories || snapshot?.recentMemories || [];
   const labels = stats.labels || [];
+  if (memoryOverviewCount) memoryOverviewCount.textContent = String(stats.activeCount || 0);
+  const visibleTopics = labels.filter((item) => !/^(agent|agent-id|tool):/.test(String(item.label || ""))).slice(0, 6);
+  if (memoryTopicList) memoryTopicList.innerHTML = visibleTopics.length
+    ? visibleTopics.map((item) => `<button type="button" data-memory-label="${escapeHtml(item.label)}"><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.count)}</strong></button>`).join("")
+    : `<span class="quiet">记忆形成主题后会显示在这里。</span>`;
   const agentIds = labels
     .map((item) => String(item.label || ""))
     .filter((label) => label.startsWith("agent-id:"))
@@ -951,6 +1101,8 @@ function renderMemoryOverview() {
   if (loadedMemoryTabs.graph) renderMemoryGraph();
   renderMemoryTabs();
   renderMemoryList();
+  renderMemoryProcess();
+  renderMemoryRecall();
 }
 
 function graphNodeById(nodeId) {
@@ -1259,6 +1411,32 @@ function renderMemoryGraph() {
   drawMemoryGraphCanvas();
 }
 
+  function bindMemoryReader() {
+    document.querySelector("#memoryView .memory-page")?.addEventListener("click", (event) => {
+      const action = event.target.closest("[data-memory-open]");
+      if (!action) return;
+      openMemoryDialog(action.dataset.memoryOpen || "library", { trigger: action });
+    });
+    memoryDetailDialog?.addEventListener("click", (event) => {
+      const item = event.target.closest("[data-memory-id]");
+      if (!item) return;
+      selectMemory(item.dataset.memoryId || "", { trigger: item, backMode: "library" });
+    });
+    memoryRecallList?.addEventListener("click", (event) => {
+      const item = event.target.closest("[data-memory-decision-id]");
+      if (item) openMemoryDialog("recall", { trigger: item, decisionId: item.dataset.memoryDecisionId, backMode: "recall" });
+    });
+    memoryDetailClose?.addEventListener("click", () => memoryDetailDialog.close());
+    memoryDetailBack?.addEventListener("click", () => openMemoryDialog(dialogBackMode));
+    memoryDetailDialog?.addEventListener("close", () => {
+      const trigger = dialogTrigger;
+      dialogTrigger = null;
+      dialogMode = "";
+      dialogBackMode = "";
+      trigger?.focus();
+    });
+  }
+
   function resetLoadedTabs() {
     memoryHydration.invalidate();
     loadedMemoryTabs.all = false;
@@ -1270,10 +1448,11 @@ function renderMemoryGraph() {
   function getActiveTab() { return activeMemoryTab; }
   function setActiveAgentFilter(value) { activeMemoryAgentFilter = value || ""; }
   function setActiveTab(tabName) { activeMemoryTab = tabName || "search"; }
+  function setSearchActive(value) { searchActive = Boolean(value); }
 
   function searchMemoryLabel(label) {
     memorySearchInput.value = String(label || "").trim();
-    if (memoryAdvancedDetails) memoryAdvancedDetails.open = false;
+    memoryDetailDialog?.close();
     searchMemory.click();
   }
 
@@ -1343,10 +1522,12 @@ function renderMemoryGraph() {
     }
   }
 
+  bindMemoryReader();
+
   return {
     beginGraphDrag, endGraphDrag, getActiveTab, loadMemoryTabData, memoryAgentId, moveGraphDrag, processEmbeddings,
     renderMemoryGraph, renderMemoryList, renderMemoryOverview, renderMemoryResults, renderMemoryTabs, resetLoadedTabs,
-    searchMemoryLabel, selectMemory, selectMemoryGraphNode, setActiveAgentFilter, setActiveTab, setMemoryGraphLayer, setMemoryGraphMode,
+    searchMemoryLabel, selectMemory, selectMemoryGraphNode, setActiveAgentFilter, setActiveTab, setSearchActive, setMemoryGraphLayer, setMemoryGraphMode,
     setMemoryGraphZoom
   };
 }

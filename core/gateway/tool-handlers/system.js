@@ -37,6 +37,7 @@ async function handleSystemTool(name, args, context) {
   if (name === "gateway_docs") {
     const docs = buildGatewayDocs({
       section: args?.section,
+      query: args?.query,
       launch: gatewayLaunchConfig(paths),
       paths,
       toolProfile

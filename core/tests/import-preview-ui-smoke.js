@@ -26,13 +26,13 @@ async function main() {
     });
     await page.waitForSelector("[data-view='settings']", { timeout: 15000 });
     await page.click("[data-view='settings']");
-    await page.click("[data-settings-tab='advanced']");
-    await page.evaluate(() => { document.querySelector("#advancedDataRecoveryDetails").open = true; });
+    await page.click("[data-settings-tab='app-data']");
+    await page.evaluate(() => { document.querySelector("#dataRecoveryDetails").open = true; });
     await page.waitForFunction(() => window.ClaraCoreDesktop && document.querySelector("#exportProductJson"));
 
-    const dataText = await page.textContent("#dataView");
+    const dataText = await page.textContent("[data-settings-panel='app-data']");
     if (!(await page.locator("#exportProductJson").isVisible()) || !(await page.locator("#importProductJson").isVisible())) {
-      throw new Error("Advanced data and recovery does not expose product JSON actions.");
+      throw new Error("App and data settings do not expose product JSON actions.");
     }
     if (dataText.includes("Import old Memoria") || dataText.includes("导入旧 Memoria")) {
       throw new Error("Data page still exposes old-system import as a main UI action.");
@@ -64,11 +64,11 @@ async function main() {
     const result = await page.evaluate(async ({ beforeId, afterId }) => {
       const beforeSearch = await window.ClaraCoreDesktop.searchMemories("UI product JSON before");
       const afterSearch = await window.ClaraCoreDesktop.searchMemories("UI product JSON after");
-      const snapshot = await window.ClaraCoreDesktop.getRuntimeSnapshot();
+      const settingsSnapshot = await window.ClaraCoreDesktop.getViewSnapshot("settings");
       return {
         beforeFound: beforeSearch.results.some((memory) => memory.id === beforeId),
         afterFound: afterSearch.results.some((memory) => memory.id === afterId),
-        backups: snapshot.backups.length
+        backups: settingsSnapshot.backups.length
       };
     }, { beforeId: before.id, afterId: after.id });
     if (!result.beforeFound) throw new Error("Product JSON UI import did not restore exported Memory.");

@@ -3,6 +3,8 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
   let refreshTimer = null;
   let refreshInFlight = false;
   let activeFilter = "all";
+  let activeEntries = [];
+  let lastDetailTrigger = null;
   const liveLines = [];
   const html = typeof escapeHtml === "function"
     ? escapeHtml
@@ -14,35 +16,53 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
     return entry.kind === activeFilter;
   }
 
+  function safeJson(value) {
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch (_error) {
+      return String(value || "");
+    }
+  }
+
+  function buildLogEntries(snapshot) {
+    const runtimeEntries = (snapshot?.runtimeEvents || []).map((event, index) => ({
+      id: `runtime:${event.id || event.createdAt || index}`,
+      createdAt: event.createdAt || "",
+      kind: "runtime",
+      status: event.level || "info",
+      source: event.source || t("logs.source.runtime"),
+      title: event.source || t("logs.source.runtime"),
+      summary: event.message || "",
+      raw: event
+    }));
+    const gatewayEntries = (snapshot?.gatewayTraces || []).map((trace, index) => ({
+      id: `gateway:${trace.id || trace.createdAt || index}`,
+      createdAt: trace.createdAt || "",
+      kind: "gateway",
+      status: trace.status || "ok",
+      source: t("logs.source.gateway"),
+      title: trace.toolName || "unknown",
+      summary: trace.error || trace.responseSummary || "",
+      meta: `${String(trace.durationMs ?? 0)}ms${trace.agentId ? ` · ${trace.agentId}` : ""}`,
+      raw: trace
+    }));
+    return [...runtimeEntries, ...gatewayEntries, ...liveLines]
+      .sort((left, right) => String(left.createdAt).localeCompare(String(right.createdAt)));
+  }
+
   function render() {
     const snapshot = getSnapshot();
     const runtimeSource = snapshot?.runtimeEvents || [];
     const gatewaySource = snapshot?.gatewayTraces || [];
     const timeFlow = buildTimeFlow(snapshot);
     const decayAudit = snapshot?.decayAudit || {};
-    const runtimeEvents = runtimeSource.map((event) => ({
-      createdAt: event.createdAt || "",
-      kind: "runtime",
-      status: event.level || "info",
-      line: `[${formatLocalDateTime(event.createdAt)}] [${event.level || "info"}/${event.source || "runtime"}] ${event.message || ""}${
-        event.metadata && Object.keys(event.metadata).length ? ` ${JSON.stringify(event.metadata)}` : ""
-      }`
-    }));
-    const gatewayEvents = gatewaySource.map((trace) => ({
-      createdAt: trace.createdAt || "",
-      kind: "gateway",
-      status: trace.status || "ok",
-      line: `[${formatLocalDateTime(trace.createdAt)}] [gateway/${trace.status || "ok"}] ${trace.toolName || "unknown"} ${String(trace.durationMs ?? 0)}ms ${
-        trace.error || trace.responseSummary || ""
-      }`
-    }));
-    const lines = [...runtimeEvents, ...gatewayEvents, ...liveLines]
-      .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
+    activeEntries = buildLogEntries(snapshot);
+    const visibleEntries = activeEntries
       .filter(matchesFilter)
-      .slice(-200)
-      .map((entry) => entry.line);
+      .slice(-200);
 
-    dom.logTerminal.textContent = lines.length ? lines.join("\n") : t("logs.empty");
+    renderEventStream(visibleEntries);
+    renderIssueSummary(activeEntries);
     renderStatus(snapshot, runtimeSource, gatewaySource);
     if (dom.logDecayIssueCount) {
       dom.logDecayIssueCount.textContent = decayAudit.counts?.issues
@@ -67,6 +87,8 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
     statusLine?.classList.remove("ok", "error", "unavailable");
     if (!snapshot) {
       dom.logStatusSummary.textContent = t("logs.statusUnavailable");
+      if (dom.logLoadedRange) dom.logLoadedRange.textContent = "";
+      if (dom.logShowErrors) dom.logShowErrors.hidden = true;
       statusLine?.classList.add("unavailable");
       return;
     }
@@ -76,6 +98,43 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
       ? t("logs.statusErrors", { count: String(errorCount) })
       : t("logs.statusOk");
     statusLine?.classList.add(errorCount ? "error" : "ok");
+    if (dom.logLoadedRange) {
+      dom.logLoadedRange.textContent = t("logs.loadedRange", {
+        runtime: String(runtimeEvents.length),
+        gateway: String(gatewayTraces.length)
+      });
+    }
+    if (dom.logShowErrors) dom.logShowErrors.hidden = errorCount === 0;
+  }
+
+  function eventRow(entry, compact = false) {
+    const detail = preview(entry.summary) || t("logs.event.noSummary");
+    return `
+      <button type="button" class="log-event-row ${entry.status === "error" ? "error" : ""} ${compact ? "compact" : ""}" data-log-event-id="${html(entry.id)}">
+        <time datetime="${html(entry.createdAt)}">${html(formatLocalDateTime(entry.createdAt))}</time>
+        <span class="log-event-kind">${html(entry.source)}</span>
+        <span class="log-event-copy">
+          <strong>${html(entry.title)}</strong>
+          <span>${html(detail)}</span>
+        </span>
+        <span class="log-event-status">${html(entry.status)}</span>
+      </button>
+    `;
+  }
+
+  function renderEventStream(entries) {
+    if (!dom.logTerminal) return;
+    dom.logTerminal.innerHTML = entries.length
+      ? entries.map((entry) => eventRow(entry)).join("")
+      : `<div class="endpoint-empty">${html(t("logs.empty"))}</div>`;
+  }
+
+  function renderIssueSummary(entries) {
+    if (!dom.logIssueSummary || !dom.logIssueList) return;
+    const issues = entries.filter((entry) => entry.status === "error").slice(-3).reverse();
+    dom.logIssueSummary.hidden = issues.length === 0;
+    if (dom.logIssueCount) dom.logIssueCount.textContent = t("logs.issue.count", { count: String(issues.length) });
+    dom.logIssueList.innerHTML = issues.map((entry) => eventRow(entry, true)).join("");
   }
 
   function renderDecayAudit(decayAudit = {}) {
@@ -264,7 +323,7 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
   function renderTimeFlow(items) {
     if (!dom.logTimeFlowList) return;
     if (!items.length) {
-      dom.logTimeFlowList.innerHTML = `<div class="endpoint-empty">${html(t("logs.timeFlowEmpty"))}</div>`;
+      dom.logTimeFlowList.innerHTML = `<div class="endpoint-empty">${html(t("logs.sequenceEmpty"))}</div>`;
       return;
     }
     dom.logTimeFlowList.innerHTML = items
@@ -279,7 +338,7 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
                 <strong>${html(item.title || item.source)}</strong>
                 <span>${html(item.source)} · ${html(item.status || "")}</span>
               </div>
-              <p>${html(preview(item.summary) || t("logs.timeFlowNoDetail"))}</p>
+              <p>${html(preview(item.summary) || t("logs.sequenceNoDetail"))}</p>
               <small>${html(formatLocalDateTime(item.occurredAt))}${meta ? ` · ${html(meta)}` : ""}</small>
             </div>
           </article>
@@ -291,10 +350,14 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
   function appendLiveLine(source, message) {
     const createdAt = new Date().toISOString();
     liveLines.push({
+      id: `ui:${Date.now()}:${liveLines.length}`,
       createdAt,
       kind: "ui",
       status: "info",
-      line: `[${formatLocalDateTime(createdAt)}] [ui/${source}] ${message}`
+      source: source || t("logs.source.ui"),
+      title: source || t("logs.source.ui"),
+      summary: message,
+      raw: { createdAt, source, message }
     });
     while (liveLines.length > 80) liveLines.shift();
     render();
@@ -331,8 +394,55 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
     render();
   }
 
+  function setDetailPane(mode) {
+    if (dom.logEventDetail) dom.logEventDetail.hidden = mode !== "event";
+    if (dom.logDecayPanel) dom.logDecayPanel.hidden = mode !== "decay";
+    if (dom.logSequencePanel) dom.logSequencePanel.hidden = mode !== "sequence";
+  }
+
+  function openDetail(trigger) {
+    if (!dom.logDetailDialog) return;
+    lastDetailTrigger = trigger || document.activeElement;
+    if (!dom.logDetailDialog.open) dom.logDetailDialog.showModal();
+    dom.logDetailClose?.focus();
+  }
+
+  function openEventDetail(id, trigger) {
+    const entry = activeEntries.find((item) => item.id === id);
+    if (!entry || !dom.logEventDetail) return;
+    setDetailPane("event");
+    dom.logDetailKicker.textContent = t("logs.event.kicker");
+    dom.logDetailTitle.textContent = entry.title;
+    dom.logDetailMeta.textContent = [entry.source, entry.status, formatLocalDateTime(entry.createdAt), entry.meta]
+      .filter(Boolean)
+      .join(" · ");
+    dom.logEventDetail.innerHTML = `
+      <div class="log-event-readable">
+        <strong>${html(t("logs.event.summary"))}</strong>
+        <p>${html(entry.summary || t("logs.event.noSummary"))}</p>
+      </div>
+      <div class="log-event-raw">
+        <strong>${html(t("logs.event.raw"))}</strong>
+        <pre>${html(safeJson(entry.raw))}</pre>
+      </div>
+    `;
+    openDetail(trigger);
+  }
+
+  function openDiagnosticDetail(mode, trigger) {
+    setDetailPane(mode);
+    dom.logDetailKicker.textContent = t("logs.advanced.kicker");
+    dom.logDetailMeta.textContent = mode === "sequence" ? t("logs.timeFlowBody") : t("logs.decayAuditBody");
+    dom.logDetailTitle.textContent = mode === "sequence" ? t("logs.timeFlow") : t("logs.decayAudit");
+    openDetail(trigger);
+  }
+
+  function closeDetail() {
+    if (dom.logDetailDialog?.open) dom.logDetailDialog.close();
+  }
+
   function closeAdvancedDiagnostics() {
-    if (dom.logAdvancedDiagnostics) dom.logAdvancedDiagnostics.open = false;
+    closeDetail();
   }
 
   function refreshNow() {
@@ -350,6 +460,29 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
         dom.refreshLogs.disabled = false;
       });
   }
+
+  function bindEventRowContainer(container) {
+    container?.addEventListener("click", (event) => {
+      const trigger = event.target.closest("[data-log-event-id]");
+      if (trigger) openEventDetail(trigger.dataset.logEventId, trigger);
+    });
+  }
+
+  bindEventRowContainer(dom.logTerminal);
+  bindEventRowContainer(dom.logIssueList);
+  document.querySelectorAll("[data-log-detail]").forEach((trigger) => {
+    trigger.addEventListener("click", () => openDiagnosticDetail(trigger.dataset.logDetail, trigger));
+  });
+  dom.logShowErrors?.addEventListener("click", () => setFilter("errors"));
+  dom.logDetailClose?.addEventListener("click", closeDetail);
+  dom.logDetailDialog?.addEventListener("click", (event) => {
+    if (event.target === dom.logDetailDialog) closeDetail();
+  });
+  dom.logDetailDialog?.addEventListener("close", () => {
+    const trigger = lastDetailTrigger;
+    lastDetailTrigger = null;
+    if (trigger?.isConnected) trigger.focus();
+  });
 
   return {
     appendLiveLine,

@@ -69,9 +69,9 @@ async function main() {
     }
 
     await page.click("[data-view='settings']");
+    await page.click("[data-settings-tab='app-data']");
     await page.selectOption("#settingsLanguage", "zh");
     await page.selectOption("#settingsTheme", "dark");
-    await page.selectOption("#settingsMotion", "off");
     await page.selectOption("#settingsCloseBehavior", "quit");
     await page.click("#saveAppearanceSettings");
     await page.waitForFunction(
@@ -80,7 +80,6 @@ async function main() {
         return (
           preferences.language === "zh" &&
           preferences.theme === "dark" &&
-          preferences.motion === "off" &&
           preferences.closeBehavior === "quit"
         );
       },
@@ -103,8 +102,7 @@ async function main() {
     await page.waitForFunction(
       () =>
         document.documentElement.lang === "zh-CN" &&
-        document.body.dataset.themePreference === "dark" &&
-        document.body.dataset.motionPreference === "off",
+        document.body.dataset.themePreference === "dark",
       null,
       { timeout: 15000 }
     );
@@ -113,7 +111,6 @@ async function main() {
       language: document.documentElement.lang,
       navHome: document.querySelector("[data-view='home'] [data-i18n]")?.textContent || "",
       themePreference: document.body.dataset.themePreference,
-      motionPreference: document.body.dataset.motionPreference,
       preferences: await window.ClaraCoreDesktop.getUiPreferences()
     }));
 

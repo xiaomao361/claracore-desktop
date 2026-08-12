@@ -173,6 +173,12 @@ async function main() {
         throw new Error(`Default Gateway docs do not offer the ${section} section.`);
       }
     }
+    const searchedDocsText = (
+      await client.callTool("gateway_docs", { query: "automatic recall memory" })
+    ).result?.content?.[0]?.text || "";
+    if (!searchedDocsText.includes("Guide version: 0.6.9") || !searchedDocsText.includes("memory_context")) {
+      throw new Error("Gateway docs search did not return versioned matching guidance.");
+    }
     const docsResponse = await client.callTool("gateway_docs", { section: "full" });
     const docsText = docsResponse.result?.content?.[0]?.text || "";
     // section=full concatenates every section, so it is bounded as the sum

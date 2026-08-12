@@ -269,6 +269,48 @@ function createMemoryControllerRepository(helpers) {
 
     async getMemoryControlObservationSnapshot(input = {}) {
       const limit = Math.max(1, Math.min(20, boundedInteger(input.limit, 10, 20) || 10));
+      if (input.overview === true) {
+        const rows = await this.query(`
+          SELECT e.*,
+            CASE WHEN e.id IS NULL THEN 0 ELSE (SELECT COUNT(*) FROM memory_control_feedback f WHERE f.decision_id = e.id) END AS feedback_count,
+            (SELECT COUNT(*) FROM memory_control_events) AS ledger_event_count,
+            (SELECT COUNT(*) FROM memory_control_events WHERE stage_a_action = 'RETRIEVE') AS retrieve_count,
+            (SELECT COUNT(*) FROM memory_control_events WHERE injected_ids_json != '[]') AS events_with_injection
+          FROM (SELECT 1) seed
+          LEFT JOIN memory_control_events e ON 1 = 1
+          ORDER BY e.created_at DESC, e.id DESC
+          LIMIT ${limit};
+        `);
+        const stats = rows[0] || {};
+        const events = rows.filter((row) => row.id).map(mapEventRow);
+        return {
+          eventCount: Number(stats.ledger_event_count || 0),
+          eventsWithInjection: Number(stats.events_with_injection || 0),
+          stageA: { RETRIEVE: Number(stats.retrieve_count || 0) },
+          recent: events.map((event) => ({
+            id: event.id,
+            policyMode: event.policyMode,
+            agentId: event.agentId,
+            clientId: event.clientId,
+            conversationId: event.conversationId,
+            queryPreview: event.queryPreview,
+            features: event.features,
+            stageA: event.stageA,
+            stageB: event.stageB,
+            searchParams: event.searchParams,
+            candidates: event.candidates,
+            injectedIds: event.injectedIds,
+            cacheStatus: event.cacheStatus,
+            searchLatencyMs: event.searchLatencyMs,
+            totalLatencyMs: event.totalLatencyMs,
+            estimatedTokens: event.estimatedTokens,
+            resultStatus: event.resultStatus,
+            feedbackCount: event.feedbackCount,
+            error: event.error,
+            createdAt: event.createdAt
+          }))
+        };
+      }
       const [stats, events, stageARows, stageBRows, resultRows, agentRows] = await Promise.all([
         this.getMemoryControlLedgerStats(),
         this.listMemoryControlEvents({ limit }),
@@ -286,15 +328,23 @@ function createMemoryControllerRepository(helpers) {
         agents: countMap(agentRows),
         recent: events.map((event) => ({
           id: event.id,
+          policyMode: event.policyMode,
           agentId: event.agentId,
           clientId: event.clientId,
           conversationId: event.conversationId,
           queryPreview: event.queryPreview,
+          features: event.features,
           stageA: event.stageA,
           stageB: event.stageB,
+          searchParams: event.searchParams,
+          candidates: event.candidates,
+          injectedIds: event.injectedIds,
           cacheStatus: event.cacheStatus,
+          searchLatencyMs: event.searchLatencyMs,
           totalLatencyMs: event.totalLatencyMs,
+          estimatedTokens: event.estimatedTokens,
           resultStatus: event.resultStatus,
+          feedbackCount: event.feedbackCount,
           error: event.error,
           createdAt: event.createdAt
         }))
@@ -307,6 +357,7 @@ function createMemoryControllerRepository(helpers) {
           (SELECT COUNT(*) FROM memory_control_events) AS event_count,
           (SELECT COUNT(*) FROM memory_control_feedback) AS feedback_count,
           (SELECT COUNT(DISTINCT decision_id) FROM memory_control_feedback) AS events_with_feedback,
+          (SELECT COUNT(*) FROM memory_control_events WHERE injected_ids_json != '[]') AS events_with_injection,
           COALESCE((SELECT SUM(
             length(id) + length(policy_version) + length(policy_mode) + length(agent_id) +
             length(client_id) + length(conversation_id) + length(session_id) + length(query_hash) +
@@ -324,6 +375,7 @@ function createMemoryControllerRepository(helpers) {
         eventCount: rows[0]?.event_count || 0,
         feedbackCount: rows[0]?.feedback_count || 0,
         eventsWithFeedback: rows[0]?.events_with_feedback || 0,
+        eventsWithInjection: rows[0]?.events_with_injection || 0,
         estimatedBytes: rows[0]?.estimated_bytes || 0
       };
     },

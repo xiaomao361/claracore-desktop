@@ -25,7 +25,7 @@ const CORE_TOOL_SHAPES = Object.freeze({
   },
   gateway_docs: {
     description:
-      "Read the agent guide. Small summary by default; pass section for one topic."
+      "Read the versioned Agent Guide. Small overview by default; pass section for one topic or query to search maintained guidance."
   },
   gateway_context: {
     description:

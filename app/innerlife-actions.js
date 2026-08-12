@@ -73,15 +73,8 @@ function createClaraCoreInnerLifeActions({
     renderInnerLife();
   }
 
-  async function openAdvancedView() {
-    if (!dom.innerLifeAdvancedDetails?.open || dom.innerLifeAdvancedDetails.dataset.loaded === "true") return;
-    dom.innerLifeAdvancedDetails.dataset.loaded = "true";
-    await Promise.all([loadMoreSessions(), loadMoreDigestRuns(), loadMoreInbox()]);
-  }
-
   function bindEvents() {
     dom.innerLifeAgentFilter?.addEventListener("change", changeAgentFilter);
-    dom.innerLifeAdvancedDetails?.addEventListener("toggle", () => openAdvancedView().catch(console.error));
   }
 
   return {

@@ -77,13 +77,13 @@ async function main() {
     });
 
     await page.evaluate(() => {
-      document.body.dataset.motionPreference = "off";
+      document.body.dataset.motion = "off";
     });
     await page.waitForFunction(() => window.ClaraCoreTestHooks.homeVision().scheduled === 0);
     const staticBaseline = await sampleMetrics(app, page, 30);
 
     await page.evaluate(() => {
-      document.body.dataset.motionPreference = "on";
+      document.body.dataset.motion = "on";
     });
     await page.waitForFunction(() => window.ClaraCoreTestHooks.homeVision().scheduled === 1);
     const animated = await sampleMetrics(app, page, 30);

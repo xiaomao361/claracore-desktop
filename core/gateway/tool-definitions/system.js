@@ -27,7 +27,7 @@ const systemToolDefinitions = [
   {
     "name": "gateway_docs",
     "title": "Gateway Docs",
-    "description": "Read the agent-facing ClaraCore Desktop usage guide. Omitting section returns a small default summary with connection truth, domain roles, the startup sequence, and the section index. Pass section for one bounded topic. Tool names and argument schemas come from tools/list, not from this guide.",
+    "description": "Read the versioned Agent Guide for using ClaraCore Desktop. Omit arguments for a bounded overview, pass section for one maintained topic, or pass query to search guide passages. The guide version is release-gated with the app. Tool names and argument schemas come from tools/list.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -42,6 +42,11 @@ const systemToolDefinitions = [
             "full"
           ],
           "description": "Omit for the default summary."
+        },
+        "query": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Search the maintained Agent Guide. Use concise English product or workflow terms. Cannot be combined with section."
         }
       },
       "additionalProperties": false

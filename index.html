@@ -54,13 +54,10 @@
               <p id="homePresenceDetail" class="quiet"></p>
               <button id="homePresenceEmptyAction" class="link-button" data-view-target="agent-setup" data-i18n="home.presence.openAgentAccess" hidden>Open Agent Access</button>
             </div>
-            <div id="homeSharedLineSection" class="home-presence-block" hidden>
-              <span data-i18n="home.presence.sharedLine">Where we are</span>
-              <p id="homeSharedLineText"></p>
-            </div>
-            <div id="homeEmergingSection" class="home-presence-block home-presence-emerging" hidden>
-              <span data-i18n="home.presence.emerging">Taking shape within</span>
-              <p id="homeEmergingText"></p>
+            <div id="homeRecentActivitySection" class="home-presence-block" hidden>
+              <span data-i18n="home.presence.recentActivity">Recent activity</span>
+              <p id="homeRecentActivityText"></p>
+              <button id="homeRecentActivityAction" class="link-button" data-view-target="trace" data-i18n="home.presence.openTrace">Open Trace</button>
             </div>
             <div id="homeActionableIssue" class="home-presence-issue" hidden></div>
           </div>
@@ -80,10 +77,29 @@
             <span class="memory-readonly-badge" data-i18n="memory.readOnly">Read only</span>
           </header>
 
+          <section class="panel memory-overview" aria-labelledby="memoryOverviewTitle">
+            <div>
+              <span class="memory-kicker">LONG-TERM MEMORY</span>
+              <h2 id="memoryOverviewTitle"><span id="memoryOverviewCount">0</span> 条可以再次找回的长期记忆</h2>
+              <p>智能体明确留下的事实、决定和可复用认识。</p>
+            </div>
+            <div id="memoryTopicList" class="memory-topic-list" aria-label="主要记忆主题"></div>
+          </section>
+
+          <section class="panel memory-process-section" aria-labelledby="memoryProcessTitle">
+            <div class="memory-section-heading">
+              <div><span class="memory-kicker">HOW IT WORKS</span><h2 id="memoryProcessTitle">一条记忆怎样被再次想起</h2></div>
+              <p>依次查看检索、相关性判断和实际返回。</p>
+            </div>
+            <div id="memoryProcessFlow" class="memory-process-flow"></div>
+          </section>
+
           <div class="panel memory-toolbar">
             <div class="memory-search">
-              <input id="memorySearchInput" data-i18n-placeholder="memory.search.placeholder" placeholder="Search what agents remembered" />
+              <label for="memorySearchInput">寻找一段记忆</label>
+              <div><input id="memorySearchInput" data-i18n-placeholder="memory.search.placeholder" placeholder="Search what agents remembered" />
               <button id="searchMemory" class="secondary" data-i18n="actions.search">Search</button>
+              </div>
             </div>
             <label class="agent-filter memory-agent-filter">
               <span data-i18n="sharedLine.filter.agent">Agent</span>
@@ -91,73 +107,108 @@
             </label>
           </div>
 
-          <div class="memory-reader-grid">
-            <article class="panel memory-browser-panel">
-              <div class="panel-heading memory-reader-heading">
-                <h2 data-i18n="memory.recent">Recently formed</h2>
-                <span id="memoryAllHint" class="quiet"></span>
-              </div>
-              <div id="memoryList" class="memory-list" role="listbox" data-i18n-aria-label="memory.listLabel"></div>
-            </article>
-
-            <article class="panel memory-detail-panel" aria-live="polite">
-              <div class="panel-heading memory-reader-heading">
-                <h2 data-i18n="memory.detail.title">Memory detail</h2>
-              </div>
-              <div id="memoryDetail"></div>
-            </article>
-          </div>
-
-          <details id="memoryAdvancedDetails" class="panel memory-advanced-details">
-            <summary>
-              <span>
-                <strong data-i18n="memory.advanced.title">Advanced view</strong>
-                <small data-i18n="memory.advanced.body">Browse labels and read relationships without changing Memory.</small>
-              </span>
-            </summary>
-            <div class="memory-advanced-body">
-              <div class="memoria-tabs" role="tablist" data-i18n-aria-label="memory.advanced.tabsLabel">
-                <button class="active" data-memory-tab="labels" data-i18n="memory.tab.labels">Labels</button>
-                <button data-memory-tab="graph" data-i18n="memory.tab.graph">Graph</button>
-              </div>
-              <section class="memoria-tab-panel active" data-memory-panel="labels">
-                <div id="memoryAllLabelList" class="label-table"></div>
-              </section>
-              <section class="memoria-tab-panel" data-memory-panel="graph">
-                <div class="memory-graph-section">
-                  <strong data-i18n="memory.graph.title">Memory graph</strong>
-                  <div class="graph-legend">
-                    <span data-i18n="memory.graph.intro">Explore relationships, then switch to State Chain to see what changed.</span>
-                  </div>
-                  <div id="memoryGraphSummary" class="graph-summary"></div>
-                  <div id="memoryGraph" class="memory-graph"></div>
-                </div>
-              </section>
+          <section class="memory-recent-section" aria-labelledby="memoryRecentTitle">
+            <div class="memory-section-heading">
+              <div><span class="memory-kicker">KNOWLEDGE SHELF</span><h2 id="memoryRecentTitle" data-i18n="memory.recent">Recently formed</h2></div>
+              <span id="memoryAllHint" class="quiet" role="status"></span>
             </div>
-          </details>
+            <div id="memoryList" class="memory-list" aria-label="记忆列表"></div>
+            <button id="memoryAllAction" class="memory-text-action" type="button" data-memory-open="library" hidden></button>
+          </section>
+
+          <section class="panel memory-recall-section" aria-labelledby="memoryRecallTitle">
+            <div class="memory-section-heading">
+              <div><span class="memory-kicker">RECALL EVIDENCE</span><h2 id="memoryRecallTitle">最近的回召判断</h2></div>
+              <p>查看每次查找、放弃和返回的依据。</p>
+            </div>
+            <div id="memoryRecallStatus" class="memory-recall-status"></div>
+            <div id="memoryRecallList" class="memory-recall-list"></div>
+            <button id="memoryAllRecallAction" class="memory-text-action" type="button" data-memory-open="recall" hidden>查看完整判断依据 →</button>
+          </section>
+
+          <section class="memory-knowledge-section" aria-labelledby="memoryKnowledgeTitle">
+            <div class="memory-section-heading"><div><span class="memory-kicker">CONNECTIONS</span><h2 id="memoryKnowledgeTitle">这些记忆怎样组织在一起</h2></div></div>
+            <div class="memory-knowledge-actions">
+              <button type="button" data-memory-open="labels"><span>主题与标签</span><strong>看看长期记忆集中在哪些方向</strong><small>标签用于归类和缩小检索范围</small></button>
+              <button type="button" data-memory-open="graph"><span>关系与状态链</span><strong>看看事实之间如何连接和演变</strong><small>查看记忆之间的关联</small></button>
+            </div>
+          </section>
+
+          <dialog id="memoryDetailDialog" class="memory-detail-dialog" aria-labelledby="memoryDetailDialogTitle">
+            <div class="memory-dialog-head">
+              <button id="memoryDetailBack" class="memory-dialog-back" type="button" hidden aria-label="返回">←</button>
+              <div><span id="memoryDetailKicker" class="memory-kicker"></span><h2 id="memoryDetailDialogTitle"></h2><p id="memoryDetailMeta"></p></div>
+              <button id="memoryDetailClose" class="memory-dialog-close" type="button" aria-label="关闭">×</button>
+            </div>
+            <div class="memory-dialog-body">
+              <div id="memoryDetail"></div>
+              <div id="memoryRecallDetail" hidden></div>
+              <div id="memoryKnowledgeWorkbench" hidden>
+                <div class="memoria-tabs" role="tablist" aria-label="记忆组织方式">
+                  <button class="active" data-memory-tab="labels" data-i18n="memory.tab.labels">Labels</button>
+                  <button data-memory-tab="graph" data-i18n="memory.tab.graph">Graph</button>
+                </div>
+                <section class="memoria-tab-panel active" data-memory-panel="labels">
+                  <div id="memoryAllLabelList" class="label-table"></div>
+                </section>
+                <section class="memoria-tab-panel" data-memory-panel="graph">
+                  <div class="memory-graph-section">
+                    <strong data-i18n="memory.graph.title">Memory graph</strong>
+                    <div class="graph-legend"><span data-i18n="memory.graph.intro">Explore relationships, then switch to State Chain to see what changed.</span></div>
+                    <div id="memoryGraphSummary" class="graph-summary"></div>
+                    <div id="memoryGraph" class="memory-graph"></div>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </dialog>
         </div>
       </section>
 
       <section id="sharedLineView" class="view">
+        <div class="shared-line-page">
         <header class="shared-line-page-heading">
           <span class="shared-line-readonly-badge"><i aria-hidden="true"></i><span data-i18n="sharedLine.readOnly">Read only</span></span>
         </header>
+
+        <section class="panel shared-line-overview" aria-labelledby="sharedLineOverviewTitle">
+          <div>
+            <span class="memory-kicker">CONTINUITY</span>
+            <h2 id="sharedLineOverviewTitle" data-i18n="sharedLine.overview.title">共同线让正在推进的事情可以被下一次继续</h2>
+            <p data-i18n="sharedLine.overview.body">保存当前进展、共同确认和下一步。</p>
+          </div>
+          <div class="shared-line-overview-counts">
+            <p><strong id="sharedLineOverviewActiveCount">0</strong><span data-i18n="sharedLine.overview.active">条正在延续</span></p>
+            <p><strong id="sharedLineOverviewArchivedCount">0</strong><span data-i18n="sharedLine.overview.archived">条已经走过</span></p>
+          </div>
+        </section>
+
+        <section class="panel shared-line-process-section" aria-labelledby="sharedLineProcessTitle">
+          <div class="memory-section-heading">
+            <div><span class="memory-kicker">HOW IT CONTINUES</span><h2 id="sharedLineProcessTitle" data-i18n="sharedLine.process.title">一条共同线怎样延续</h2></div>
+            <p data-i18n="sharedLine.process.body">共同位置随进展更新，并成为下一次对话的起点。</p>
+          </div>
+          <div id="sharedLineProcessFlow" class="shared-line-process-flow"></div>
+        </section>
+
+        <div class="panel shared-line-toolbar">
+          <label class="agent-filter shared-line-heading-filter">
+            <span data-i18n="sharedLine.agentView">Agent view</span>
+            <select id="sharedLineAgentFilter"></select>
+          </label>
+          <p data-i18n="sharedLine.filter.body">按智能体查看共同线。</p>
+        </div>
 
         <div class="shared-line-layout">
           <article class="panel shared-line-list-panel">
             <div class="panel-heading shared-line-list-heading">
               <h2 data-i18n="sharedLine.activeLines">In progress</h2>
               <span id="sharedLineActiveCount" class="quiet"></span>
-              <label class="agent-filter shared-line-heading-filter">
-                <span data-i18n="sharedLine.filter.agent">Agent</span>
-                <select id="sharedLineAgentFilter"></select>
-              </label>
             </div>
-            <div id="sharedLineList" class="shared-line-list" role="listbox" data-i18n-aria-label="sharedLine.listLabel"></div>
-            <details id="sharedLineArchiveDetails" class="shared-line-archive-details">
-              <summary data-i18n="sharedLine.pastLines">View lines already traveled</summary>
-              <div id="sharedLineArchiveList" class="shared-line-archive-list"></div>
-            </details>
+            <div id="sharedLineList" class="shared-line-list" role="listbox" data-i18n-aria-label="sharedLine.listLabel">
+              <div id="sharedLinePrimaryList" class="shared-line-primary-list"></div>
+            </div>
+            <button id="sharedLineAllAction" type="button" class="memory-text-action" data-shared-line-open="lines"></button>
             <p class="shared-line-maintained-note" data-i18n="sharedLine.maintainedByAgents">Lines are maintained by agents. This page shows shared progress.</p>
           </article>
 
@@ -207,28 +258,47 @@
               <span id="sharedLineUpdated" class="quiet"></span>
             </div>
 
-            <details id="sharedLineAdvancedDetails" class="shared-line-advanced-details">
-              <summary>
-                <span>
-                  <strong data-i18n="sharedLine.advanced.title">Advanced view</strong>
-                  <small data-i18n="sharedLine.advanced.body">Read older evidence and metadata without changing this line.</small>
-                </span>
-              </summary>
-              <div class="shared-line-advanced-body">
-                <section>
-                  <h3 data-i18n="sharedLine.history">Recent history</h3>
-                  <div id="sharedLineHistoryList" class="shared-line-history-list"></div>
-                </section>
-                <section>
-                  <h3 data-i18n="sharedLine.snapshots">Recent snapshots</h3>
-                  <div id="sharedLineSnapshotList" class="shared-line-history-list"></div>
-                </section>
-                <div id="sharedLineMetadataPanel" class="shared-line-detail-list"></div>
-                <div id="sharedLineAgentStatePanel" class="shared-line-detail-list"></div>
-              </div>
-            </details>
             <span id="sharedLineNotice" class="quiet" aria-live="polite"></span>
           </article>
+        </div>
+
+        <section class="shared-line-reading-section" aria-labelledby="sharedLineReadingTitle">
+          <div class="memory-section-heading">
+            <div><span class="memory-kicker">READ FURTHER</span><h2 id="sharedLineReadingTitle" data-i18n="sharedLine.reading.title">从三个角度理解这条线</h2></div>
+          </div>
+          <div class="shared-line-reading-actions">
+            <button type="button" data-shared-line-open="agents"><span data-i18n="sharedLine.agentContext">智能体上下文</span><strong data-i18n="sharedLine.reading.agents">查看跨所有线保持一致的角色设定</strong><small data-i18n="sharedLine.agentContextBody">按智能体维护，跨该智能体的所有共同线生效。</small></button>
+            <button type="button" data-shared-line-open="evidence"><span data-i18n="sharedLine.reading.evidenceKicker">线的证据</span><strong data-i18n="sharedLine.reading.evidence">查看当前位置如何逐步形成</strong><small data-i18n="sharedLine.advanced.body">查看较早证据和元数据。</small></button>
+            <button type="button" data-shared-line-open="archive"><span data-i18n="sharedLine.reading.archiveKicker">已经走过</span><strong data-i18n="sharedLine.reading.archive">查看已经结束的历史线</strong><small data-i18n="sharedLine.reading.archiveBody">查看已经结束的共同线。</small></button>
+          </div>
+        </section>
+
+        <dialog id="sharedLineDetailDialog" class="memory-detail-dialog shared-line-detail-dialog" aria-labelledby="sharedLineDialogTitle">
+          <div class="memory-dialog-head">
+            <div>
+              <span id="sharedLineDialogKicker" class="memory-kicker">CONTINUITY</span>
+              <h2 id="sharedLineDialogTitle"></h2>
+              <p id="sharedLineDialogMeta"></p>
+            </div>
+            <button id="sharedLineDialogClose" type="button" class="memory-dialog-close" aria-label="关闭" data-i18n-aria-label="common.close">×</button>
+          </div>
+          <div id="sharedLineDialogBody" class="memory-dialog-body">
+            <section id="sharedLineDialogLines" hidden>
+              <div id="sharedLineOverflowList" class="shared-line-dialog-line-list"></div>
+            </section>
+            <section id="sharedLineDialogAgents" hidden>
+              <div id="sharedLineAgentStatePanel" class="shared-line-agent-role-grid"></div>
+            </section>
+            <section id="sharedLineDialogEvidence" hidden>
+              <section><h3 data-i18n="sharedLine.history">Recent history</h3><div id="sharedLineHistoryList" class="shared-line-history-list"></div></section>
+              <section><h3 data-i18n="sharedLine.snapshots">Recent snapshots</h3><div id="sharedLineSnapshotList" class="shared-line-history-list"></div></section>
+              <div id="sharedLineMetadataPanel" class="shared-line-detail-list"></div>
+            </section>
+            <section id="sharedLineDialogArchive" hidden>
+              <div id="sharedLineArchiveList" class="shared-line-archive-list"></div>
+            </section>
+          </div>
+        </dialog>
         </div>
       </section>
 
@@ -253,6 +323,14 @@
               <div id="innerLifeInterests" class="innerlife-interests"></div>
             </section>
 
+            <section class="innerlife-process-section" aria-labelledby="innerLifeProcessTitle">
+              <div class="innerlife-section-heading">
+                <div><span class="innerlife-section-kicker">HOW IT WORKS</span><h2 id="innerLifeProcessTitle">InnerLife 如何运作</h2></div>
+                <p>它先消化经历、形成念头，再判断当下是否适合说出口。</p>
+              </div>
+              <div id="innerLifeProcessFlow" class="innerlife-process-flow"></div>
+            </section>
+
             <section class="innerlife-primary-section" aria-labelledby="innerLifeUnsharedTitle">
               <div class="innerlife-section-heading">
                 <div>
@@ -261,59 +339,37 @@
                 </div>
                 <p data-i18n="innerLife.unsharedHint">Reading here never tells the agent that a thought was shared or used.</p>
               </div>
-              <div id="innerLifeUnsharedList" class="innerlife-thought-list"></div>
+              <div id="innerLifeUnsharedList" class="innerlife-thought-gallery"></div>
+              <button id="innerLifeAllUnsharedAction" class="innerlife-collection-action" type="button" data-innerlife-open="unshared-library" hidden></button>
             </section>
 
-            <details id="innerLifeSharedDetails" class="innerlife-disclosure innerlife-shared-details">
-              <summary>
-                <span>
-                  <strong data-i18n="innerLife.shared">Shared before</strong>
-                  <small data-i18n="innerLife.sharedHint">Verified deliveries and legacy shares with unverified delivery appear here.</small>
-                </span>
-              </summary>
-              <div id="innerLifeSharedList" class="innerlife-thought-list innerlife-shared-list"></div>
-            </details>
-
-            <details id="innerLifeAdvancedDetails" class="innerlife-disclosure innerlife-advanced-details">
-              <summary>
-                <span>
-                  <strong data-i18n="innerLife.advanced.title">Advanced view</strong>
-                  <small data-i18n="innerLife.advanced.body">Read runtime and pipeline evidence without changing InnerLife.</small>
-                </span>
-              </summary>
-              <div class="innerlife-advanced-body">
-                <section>
-                  <h3 data-i18n="innerLife.profileTitle">Inner profile</h3>
-                  <div class="innerlife-raw-grid">
-                    <div><span data-i18n="innerLife.profileJson">Profile JSON</span><pre id="innerLifeProfileJsonView"></pre></div>
-                    <div><span data-i18n="innerLife.stateJson">State JSON</span><pre id="innerLifeStateJsonView"></pre></div>
-                  </div>
-                </section>
-                <section>
-                  <h3 data-i18n="innerLife.runtime">Runtime</h3>
-                  <div class="metric-list innerlife-runtime-facts">
-                    <div><span data-i18n="innerLife.daemonStatus">Daemon</span><strong id="innerLifeDaemonStatus">-</strong></div>
-                    <div><span data-i18n="innerLife.nextRun">Next run</span><strong id="innerLifeNextRun">-</strong></div>
-                    <div><span data-i18n="innerLife.lastResult">Last result</span><strong id="innerLifeLastResult">-</strong></div>
-                    <div><span data-i18n="innerLife.recovery">Recovery</span><strong id="innerLifeRecovery">-</strong></div>
-                    <div><span data-i18n="innerLife.doctor">Doctor</span><strong id="innerLifeDoctorStatus">-</strong></div>
-                  </div>
-                  <div id="innerLifeDoctorList" class="shared-line-history-list"></div>
-                </section>
-                <section class="innerlife-record-grid">
-                  <div><h3 data-i18n="innerLife.history">History</h3><div id="innerLifeHistoryList" class="shared-line-history-list compact-list"></div></div>
-                  <div><h3 data-i18n="innerLife.experiences">Experiences</h3><div id="innerLifeExperienceList" class="shared-line-history-list compact-list"></div></div>
-                  <div><h3 data-i18n="innerLife.summaries">Summaries</h3><div id="innerLifeSummaryList" class="shared-line-history-list compact-list"></div></div>
-                </section>
-                <section class="innerlife-record-grid innerlife-pipeline-grid">
-                  <div><h3 data-i18n="innerLife.sessions">Sessions</h3><div id="innerLifeSessionList" class="shared-line-history-list"></div></div>
-                  <div><h3 data-i18n="innerLife.digests">Digests</h3><div id="innerLifeDigestList" class="shared-line-history-list"></div></div>
-                  <div><h3 data-i18n="innerLife.inboxRecent">Recent inbox</h3><div id="innerLifeInboxList" class="shared-line-history-list"></div></div>
-                  <div><h3 data-i18n="innerLife.timingChecks">Timing checks</h3><div id="innerLifeShareCheckList" class="shared-line-history-list"></div></div>
-                </section>
+            <section class="innerlife-archive-section" aria-labelledby="innerLifeSharedTitle">
+              <div class="innerlife-section-heading">
+                <div><span class="innerlife-section-kicker">ARCHIVE</span><h2 id="innerLifeSharedTitle" data-i18n="innerLife.shared">Shared before</h2></div>
+                <p data-i18n="innerLife.sharedHint">Verified deliveries and legacy shares with unverified delivery appear here.</p>
               </div>
-            </details>
+              <div id="innerLifeSharedList" class="innerlife-shared-index"></div>
+              <button id="innerLifeAllSharedAction" class="innerlife-collection-action" type="button" data-innerlife-open="shared-library" hidden></button>
+            </section>
+
+            <section class="innerlife-insight-section" aria-labelledby="innerLifeInsightTitle">
+              <div class="innerlife-section-heading"><div><span class="innerlife-section-kicker">UNDER THE SURFACE</span><h2 id="innerLifeInsightTitle">了解它现在怎样工作</h2></div></div>
+              <div class="innerlife-insight-grid">
+                <button type="button" data-innerlife-open="status"><span>运行状态</span><strong id="innerLifeDaemonStatus">-</strong><small><span id="innerLifeLastResult">-</span> · <span id="innerLifeNextRun">-</span></small></button>
+                <button type="button" data-innerlife-open="profile"><span>分享方式</span><strong>什么时候会说出口</strong><small>查看频率、冷却时间和每日上限</small></button>
+                <button type="button" data-innerlife-open="technical"><span>技术诊断</span><strong id="innerLifeDoctorStatus">-</strong><small>查看底层运行记录</small></button>
+              </div>
+            </section>
           </article>
+
+          <dialog id="innerLifeDetailDialog" class="innerlife-detail-dialog" aria-labelledby="innerLifeDetailTitle">
+            <div class="innerlife-dialog-head">
+              <button id="innerLifeDetailBack" class="innerlife-dialog-back" type="button" hidden aria-label="返回">←</button>
+              <div><span id="innerLifeDetailKicker" class="innerlife-section-kicker"></span><h2 id="innerLifeDetailTitle"></h2><p id="innerLifeDetailMeta"></p></div>
+              <button id="innerLifeDetailClose" class="innerlife-dialog-close" type="button" aria-label="关闭">×</button>
+            </div>
+            <div id="innerLifeDetailBody" class="innerlife-detail-body"></div>
+          </dialog>
         </div>
       </section>
 
@@ -324,11 +380,31 @@
           </header>
 
           <article class="panel trace-hero" aria-labelledby="traceSpanTitle">
-            <span class="trace-kicker" data-i18n="trace.kicker">Accumulated here</span>
-            <h2 id="traceSpanTitle" data-i18n="trace.emptySpan">No trace has formed here yet</h2>
-            <p id="traceSpanDetail" class="quiet"></p>
+            <span class="trace-kicker" data-i18n="trace.kicker">Left together</span>
+            <h2 data-i18n="trace.hero.title">Evidence that has remained in the shared world</h2>
+            <p data-i18n="trace.hero.body">Evidence of what was kept, continued, reused, or brought into a conversation.</p>
+            <div class="trace-span">
+              <strong id="traceSpanTitle" data-i18n="trace.emptySpan">There are no records to look back on yet</strong>
+              <span id="traceSpanDetail"></span>
+            </div>
             <div id="traceStatements" class="trace-statements"></div>
+            <p class="trace-statement-note" data-i18n="trace.statement.note">Each count comes from a confirmed record.</p>
           </article>
+
+          <section class="panel trace-process-section" aria-labelledby="traceProcessTitle">
+            <div class="trace-section-heading trace-process-heading">
+              <div>
+                <span class="trace-kicker" data-i18n="trace.process.kicker">HOW TRACE FORMS</span>
+                <h2 id="traceProcessTitle" data-i18n="trace.process.title">A record becomes readable trace only after it has evidence</h2>
+              </div>
+              <p data-i18n="trace.process.body">Confirmed records from each module form this view.</p>
+            </div>
+            <div class="trace-process-flow">
+              <article><span>01</span><strong data-i18n="trace.process.record.title">Records remain</strong><p data-i18n="trace.process.record.body">Memoria, Shared Line, and InnerLife keep their own source records.</p></article>
+              <article><span>02</span><strong data-i18n="trace.process.evidence.title">Evidence qualifies them</strong><p data-i18n="trace.process.evidence.body">Explicit labels, valid Memory references, and complete delivery evidence set the boundary.</p></article>
+              <article><span>03</span><strong data-i18n="trace.process.summary.title">A bounded view is formed</strong><p data-i18n="trace.process.summary.body">Only confirmed milestones, continuity, reuse, sharing, and participation appear here.</p></article>
+            </div>
+          </section>
 
           <div class="trace-story-grid">
             <article class="panel trace-milestone-panel">
@@ -352,49 +428,51 @@
             </article>
           </div>
 
-          <section class="trace-data-section" aria-labelledby="traceDataTitle">
-            <div class="trace-data-heading">
-              <div>
-                <span class="trace-kicker" data-i18n="trace.data.kicker">The complete counts</span>
-                <h2 id="traceDataTitle" data-i18n="trace.data.title">Data overview</h2>
-              </div>
+          <section class="panel trace-detail-entry" aria-labelledby="traceDataTitle">
+            <div>
+              <span class="trace-kicker" data-i18n="trace.data.kicker">COMPOSITION AND EVIDENCE</span>
+              <h2 id="traceDataTitle" data-i18n="trace.data.title">Understand what these traces are made from</h2>
+              <p data-i18n="trace.data.body">View complete counts and lifecycle evidence.</p>
             </div>
-            <div class="trace-data-grid">
-              <article class="panel trace-data-card trace-data-memory">
-                <div class="trace-data-card-head"><span class="trace-data-mark">M</span><h3 data-i18n="trace.memory.title">Memory</h3></div>
-                <div id="traceMemoryMetrics" class="trace-metric-list"></div>
-              </article>
-              <article class="panel trace-data-card trace-data-line">
-                <div class="trace-data-card-head"><span class="trace-data-mark">L</span><h3 data-i18n="trace.sharedLine.title">Shared Line</h3></div>
-                <div id="traceSharedLineMetrics" class="trace-metric-list"></div>
-              </article>
-              <article class="panel trace-data-card trace-data-innerlife">
-                <div class="trace-data-card-head"><span class="trace-data-mark">I</span><h3 data-i18n="trace.innerLife.title">InnerLife</h3></div>
-                <div id="traceInnerLifeMetrics" class="trace-metric-list"></div>
-              </article>
-            </div>
+            <button id="traceOpenDetail" class="secondary" type="button" data-i18n="trace.data.open">View composition and evidence</button>
           </section>
 
-          <details id="traceAdvancedDetails" class="panel trace-advanced-details">
-            <summary>
-              <span>
-                <strong data-i18n="trace.advanced.title">Advanced data</strong>
-                <small data-i18n="trace.advanced.body">Read technical and lifecycle counts without mixing them into the main trace.</small>
-              </span>
-            </summary>
-            <div id="traceAdvancedMetrics" class="trace-advanced-grid"></div>
-            <section class="trace-controller-evidence" aria-labelledby="traceMemoryControllerTitle">
-              <div class="trace-controller-heading">
+          <dialog id="traceDetailDialog" class="trace-detail-dialog" aria-labelledby="traceDetailTitle">
+            <div class="trace-detail-shell">
+              <header class="trace-detail-header">
                 <div>
-                  <h3 id="traceMemoryControllerTitle" data-i18n="trace.controller.title">Memory Controller</h3>
-                  <p data-i18n="trace.controller.body">Observe-only routing evidence. No Memory content is injected.</p>
+                  <span class="trace-kicker" data-i18n="trace.detail.kicker">TRACE EVIDENCE</span>
+                  <h2 id="traceDetailTitle" data-i18n="trace.detail.title">Composition and lifecycle evidence</h2>
+                  <p data-i18n="trace.detail.body">These counts explain the source records. They do not change any record.</p>
                 </div>
-                <span id="traceMemoryControllerStatus" class="badge warn">off</span>
+                <button id="traceDetailClose" class="trace-detail-close" type="button" aria-label="Close" data-i18n-aria-label="actions.close">×</button>
+              </header>
+              <div class="trace-detail-body">
+                <div class="trace-data-grid">
+                  <article class="panel trace-data-card trace-data-memory">
+                    <div class="trace-data-card-head"><span class="nav-icon nav-icon-memory trace-module-icon" aria-hidden="true"></span><h3 data-i18n="trace.memory.title">Memory</h3></div>
+                    <div id="traceMemoryMetrics" class="trace-metric-list"></div>
+                  </article>
+                  <article class="panel trace-data-card trace-data-line">
+                    <div class="trace-data-card-head"><span class="nav-icon nav-icon-shared-line trace-module-icon" aria-hidden="true"></span><h3 data-i18n="trace.sharedLine.title">Shared Line</h3></div>
+                    <div id="traceSharedLineMetrics" class="trace-metric-list"></div>
+                  </article>
+                  <article class="panel trace-data-card trace-data-innerlife">
+                    <div class="trace-data-card-head"><span class="nav-icon nav-icon-innerlife trace-module-icon" aria-hidden="true"></span><h3 data-i18n="trace.innerLife.title">InnerLife</h3></div>
+                    <div id="traceInnerLifeMetrics" class="trace-metric-list"></div>
+                  </article>
+                </div>
+                <section class="trace-technical-section" aria-labelledby="traceAdvancedTitle">
+                  <div>
+                    <span class="trace-kicker" data-i18n="trace.advanced.kicker">LIFECYCLE EVIDENCE</span>
+                    <h3 id="traceAdvancedTitle" data-i18n="trace.advanced.title">Technical and lifecycle counts</h3>
+                    <p data-i18n="trace.advanced.body">Use these only when checking how the complete counts were formed.</p>
+                  </div>
+                  <div id="traceAdvancedMetrics" class="trace-advanced-grid"></div>
+                </section>
               </div>
-              <div id="traceMemoryControllerMetrics" class="trace-advanced-grid trace-controller-metrics"></div>
-              <div id="traceMemoryControllerList" class="trace-controller-list"></div>
-            </section>
-          </details>
+            </div>
+          </dialog>
         </div>
       </section>
 
@@ -413,9 +491,23 @@
             </div>
             <div class="log-status-line" role="status" aria-live="polite">
               <span class="log-status-dot" aria-hidden="true"></span>
-              <strong id="logStatusSummary" data-i18n="logs.statusUnavailable">Recent status unavailable</strong>
+              <div class="log-status-copy">
+                <strong id="logStatusSummary" data-i18n="logs.statusUnavailable">Recent status unavailable</strong>
+                <span id="logLoadedRange" class="quiet"></span>
+              </div>
+              <button id="logShowErrors" class="secondary" type="button" data-i18n="logs.showErrors" hidden>Show errors</button>
               <span id="logLastRefresh" class="quiet">-</span>
             </div>
+            <section id="logIssueSummary" class="log-issue-summary" aria-labelledby="logIssueTitle" hidden>
+              <div class="log-section-heading">
+                <div>
+                  <span class="section-kicker" data-i18n="logs.issue.kicker">Needs attention</span>
+                  <h3 id="logIssueTitle" data-i18n="logs.issue.title">Problems in the loaded records</h3>
+                </div>
+                <span id="logIssueCount" class="quiet"></span>
+              </div>
+              <div id="logIssueList" class="log-issue-list"></div>
+            </section>
             <div class="log-filter-row">
               <label>
                 <span data-i18n="logs.filter">Filter</span>
@@ -429,16 +521,39 @@
               </label>
               <span data-i18n="logs.filterHint">Filtering only changes the visible view; raw logs remain available.</span>
             </div>
-            <pre id="logTerminal" class="log-terminal" aria-live="polite"></pre>
-            <details id="logAdvancedDiagnostics" class="log-advanced-details">
-              <summary>
-                <span>
-                  <strong data-i18n="logs.advanced.title">Advanced diagnostics</strong>
-                  <small data-i18n="logs.advanced.body">Read-only system evidence for deeper troubleshooting.</small>
-                </span>
-              </summary>
-              <div class="log-advanced-content">
-                <section class="decay-audit-panel" aria-label="Decay Audit">
+            <div id="logTerminal" class="log-terminal" aria-live="polite"></div>
+            <section class="log-diagnostic-entry" aria-labelledby="logDiagnosticTitle">
+              <div class="log-section-heading">
+                <div>
+                  <span class="section-kicker" data-i18n="logs.advanced.kicker">Technical evidence</span>
+                  <h3 id="logDiagnosticTitle" data-i18n="logs.advanced.title">Advanced diagnostics</h3>
+                  <p data-i18n="logs.advanced.body">View runtime and sequence details.</p>
+                </div>
+              </div>
+              <div class="log-diagnostic-actions">
+                <button type="button" class="log-diagnostic-action" data-log-detail="decay">
+                  <strong data-i18n="logs.decayOpen">View runtime and decay status</strong>
+                  <span data-i18n="logs.decayAuditBody">Read-only evidence of dormant, stale, or waiting state.</span>
+                </button>
+                <button type="button" class="log-diagnostic-action" data-log-detail="sequence">
+                  <strong data-i18n="logs.sequenceOpen">View nearby records in time</strong>
+                    <span data-i18n="logs.timeFlowBody">Review nearby records in time order.</span>
+                </button>
+              </div>
+            </section>
+            <dialog id="logDetailDialog" class="log-detail-dialog" aria-labelledby="logDetailTitle">
+              <div class="log-detail-shell">
+                <header class="log-detail-header">
+                  <div>
+                    <span id="logDetailKicker" class="section-kicker"></span>
+                    <h3 id="logDetailTitle"></h3>
+                    <p id="logDetailMeta" class="quiet"></p>
+                  </div>
+                  <button id="logDetailClose" class="icon-button" type="button" data-i18n-aria-label="actions.close" aria-label="Close">×</button>
+                </header>
+                <div class="log-detail-body">
+                  <section id="logEventDetail" class="log-event-detail" hidden></section>
+                  <section id="logDecayPanel" class="decay-audit-panel" hidden>
                   <div class="section-heading-line">
                     <div>
                       <strong data-i18n="logs.decayAudit">Decay audit</strong>
@@ -448,78 +563,121 @@
                   </div>
                   <div id="logDecayList" class="decay-audit-list"></div>
                 </section>
-                <section class="time-flow-panel" aria-label="Time Flow">
+                  <section id="logSequencePanel" class="time-flow-panel" hidden>
                   <div class="section-heading-line">
                     <div>
-                      <strong data-i18n="logs.timeFlow">Time flow</strong>
-                      <span data-i18n="logs.timeFlowBody">Read-only sequence across Memory, Shared Line, InnerLife, Gateway, and runtime events.</span>
+                        <strong data-i18n="logs.timeFlow">Recent evidence sequence</strong>
+                        <span data-i18n="logs.timeFlowBody">Records are ordered by time only; proximity does not imply causality.</span>
                     </div>
                   </div>
                   <div id="logTimeFlowList" class="time-flow-list"></div>
                 </section>
               </div>
-            </details>
+              </div>
+            </dialog>
           </article>
         </div>
       </section>
 
       <section id="agentSetupView" class="view">
-        <div class="screen-grid agent-access-grid">
-          <article class="panel main-panel">
+        <div class="agent-access-page">
+          <section class="panel agent-access-overview" aria-labelledby="agentAccessOverviewTitle">
+            <div class="agent-access-overview-copy">
+              <span class="memory-kicker">GATEWAY</span>
+              <h2 id="agentAccessOverviewTitle" data-i18n="agentSetup.overview.title">Agents enter ClaraCore through the local Gateway</h2>
+              <p data-i18n="agentSetup.overview.body">The Gateway verifies identity, exposes the available tools, routes each request, and leaves visible evidence.</p>
+            </div>
+            <div class="agent-access-status-grid">
+              <article><span data-i18n="agentSetup.status.gateway">Local Gateway</span><strong id="agentGatewayStatus">-</strong></article>
+              <article><span data-i18n="agentSetup.status.http">Streamable HTTP MCP</span><strong id="agentHttpStatus">-</strong></article>
+              <article><span data-i18n="agentSetup.status.stdio">stdio fallback</span><strong id="agentStdioStatus">-</strong></article>
+              <article><span data-i18n="agentSetup.status.guide">ClaraCore Docs</span><strong id="agentGuideStatus">-</strong></article>
+            </div>
+          </section>
+
+          <section class="panel agent-access-process" aria-labelledby="agentAccessProcessTitle">
+            <div class="memory-section-heading">
+              <div>
+                <span class="memory-kicker">HOW IT CONNECTS</span>
+                <h2 id="agentAccessProcessTitle" data-i18n="agentSetup.process.title">How an agent enters and uses ClaraCore</h2>
+              </div>
+              <p data-i18n="agentSetup.process.body">Connection, identity, routing, and returned evidence stay separate and inspectable.</p>
+            </div>
+            <div class="agent-access-process-flow">
+              <article><span>1</span><strong data-i18n="agentSetup.process.copy">Receive the setup brief</strong><small data-i18n="agentSetup.process.copyBody">The brief carries the current endpoint and fallback config.</small></article>
+              <article><span>2</span><strong data-i18n="agentSetup.process.identity">Declare its identity</strong><small data-i18n="agentSetup.process.identityBody">The agent supplies stable Agent, client, and conversation ids.</small></article>
+              <article><span>3</span><strong data-i18n="agentSetup.process.route">Read the guide and route</strong><small data-i18n="agentSetup.process.routeBody">gateway_docs explains usage; Gateway chooses the requested module.</small></article>
+              <article><span>4</span><strong data-i18n="agentSetup.process.result">Return results and evidence</strong><small data-i18n="agentSetup.process.resultBody">The result returns to the agent and the call remains visible below.</small></article>
+            </div>
+          </section>
+
+          <div class="screen-grid agent-access-grid">
+            <article class="panel agent-access-side">
+              <div class="panel-heading">
+                <div>
+                  <h2 data-i18n="agentSetup.inviteTitle">Let an agent into ClaraCore</h2>
+                  <p data-i18n="agentSetup.inviteBody">Give the setup brief to an agent. It will connect, read the guide, and verify access.</p>
+                </div>
+              </div>
+              <div class="agent-guide-note">
+                <div>
+                  <strong data-i18n="agentSetup.guide.title">Built-in ClaraCore Docs</strong>
+                  <p data-i18n="agentSetup.guide.body">Agents can call gateway_docs by topic or question. Its version is checked whenever Desktop is released.</p>
+                </div>
+                <code id="agentGuideVersion">-</code>
+              </div>
+              <div class="agent-invite-action">
+                <span id="agentSetupStatus" class="agent-setup-status" role="status"></span>
+                <button id="copyAgentSetup" class="primary full" data-i18n="agentSetup.copy">Copy for agent</button>
+                <p class="quiet" data-i18n="agentSetup.copyHelper">After copying, paste it into the agent conversation.</p>
+                <span id="agentSetupNotice" class="quiet" aria-live="polite"></span>
+              </div>
+            </article>
+
+          <article class="panel main-panel agent-access-activity">
             <div class="panel-heading">
               <div>
-                <h2 data-i18n="agentSetup.title">Agent Access</h2>
-                <p data-i18n="agentSetup.body">Monitor MCP agents using the Desktop-owned Gateway.</p>
+                <h2 data-i18n="agentSetup.activity.title">Recent access</h2>
+                <p data-i18n="agentSetup.activity.body">Recent MCP calls handled by the Gateway.</p>
               </div>
             </div>
-            <section class="agent-access-section">
+            <section class="agent-access-section" aria-labelledby="agentRosterTitle">
               <div class="section-heading-line">
                 <div>
-                  <strong data-i18n="connections.connectedAgents">Connected agents</strong>
-                  <span data-i18n="connections.connectedAgentsBody">Inferred from recent MCP calls.</span>
+                  <h3 id="agentRosterTitle" data-i18n="connections.connectedAgents">Agents with calls</h3>
+                  <p data-i18n="connections.connectedAgentsBody">Agents grouped from recent MCP calls.</p>
                 </div>
+                <span data-i18n="agentSetup.activity.agentLimit">Up to 8 agents</span>
               </div>
               <div id="gatewayHandshakeList" class="agent-roster"></div>
             </section>
-            <section class="agent-access-section">
+            <section class="agent-access-section" aria-labelledby="agentActivityTitle">
               <div class="section-heading-line">
                 <div>
-                  <strong data-i18n="connections.agentActivity">Agent activity</strong>
-                  <span data-i18n="connections.agentActivityBody">Recent Gateway tool calls across agents.</span>
+                  <h3 id="agentActivityTitle" data-i18n="connections.agentActivity">Recent MCP activity</h3>
+                  <p data-i18n="connections.agentActivityBody">Recent Gateway tool calls across agents.</p>
                 </div>
+                <span data-i18n="agentSetup.activity.traceLimit">Latest 20 calls</span>
               </div>
               <div id="gatewayTraceList" class="gateway-activity-table"></div>
             </section>
           </article>
-          <article class="panel agent-access-side">
-            <div class="panel-heading">
-              <div>
-                <h2 data-i18n="agentSetup.inviteTitle">Let an agent into ClaraCore</h2>
-                <p data-i18n="agentSetup.inviteBody">Give the setup brief to an agent. It will connect, read the guide, and tell you what it can do.</p>
-              </div>
-            </div>
-            <div class="agent-invite-action">
-              <button id="copyAgentSetup" class="primary full" data-i18n="agentSetup.copy">Copy for agent</button>
-              <span id="agentSetupNotice" class="quiet" aria-live="polite"></span>
-              <p class="quiet" data-i18n="agentSetup.copyHelper">After copying, paste it into the agent conversation.</p>
-              <span id="agentSetupStatus" class="agent-setup-status quiet" aria-live="polite"></span>
-            </div>
-          </article>
+          </div>
         </div>
       </section>
 
       <section id="settingsView" class="view">
         <div class="settings-tabs" role="tablist" aria-label="Settings views">
-          <button class="active" data-settings-tab="common" data-i18n="settings.tab.common">Common</button>
-          <button data-settings-tab="capabilities" data-i18n="settings.tab.capabilities">Capabilities</button>
-          <button data-settings-tab="advanced" data-i18n="settings.tab.advanced">Advanced</button>
+          <button id="settingsTabCapabilities" class="active" type="button" role="tab" aria-selected="true" aria-controls="modelView" tabindex="0" data-settings-tab="capabilities" data-i18n="settings.tab.capabilities">Capabilities</button>
+          <button id="settingsTabAppData" type="button" role="tab" aria-selected="false" aria-controls="settingsAppDataPanel" tabindex="-1" data-settings-tab="app-data" data-i18n="settings.tab.appData">App & data</button>
+          <button id="settingsTabAdvanced" type="button" role="tab" aria-selected="false" aria-controls="advancedSettingsPanel" tabindex="-1" data-settings-tab="advanced" data-i18n="settings.tab.advanced">Advanced</button>
         </div>
-        <section class="settings-tab-panel active" data-settings-panel="common">
+        <section id="settingsAppDataPanel" class="settings-tab-panel" role="tabpanel" aria-labelledby="settingsTabAppData" data-settings-panel="app-data" hidden>
           <article class="panel settings-primary-panel">
             <div class="panel-heading">
               <div>
-                <h2 data-i18n="settings.generalTitle">Settings</h2>
-                <p class="quiet" data-i18n="settings.commonBody">Personal preferences and application updates.</p>
+                <h2 data-i18n="settings.appDataTitle">App & data</h2>
+                <p class="quiet" data-i18n="settings.appDataBody">Adjust application preferences and manage local data.</p>
               </div>
               <span id="appearanceSettingsNotice" class="quiet" aria-live="polite"></span>
             </div>
@@ -527,11 +685,11 @@
               <section class="settings-section-card">
                 <div class="settings-section-head">
                   <div>
-                    <h3 data-i18n="settings.appearanceTitle">Appearance</h3>
-                    <p data-i18n="settings.appearanceBody">Language and theme preferences for this desktop shell.</p>
+                    <h3 data-i18n="settings.appPreferencesTitle">App preferences</h3>
+                    <p data-i18n="settings.appPreferencesBody">Language, theme, and close-window behavior.</p>
                   </div>
                 </div>
-                <div class="settings-grid">
+                <div class="settings-grid app-preferences-grid">
                   <label class="field">
                     <span data-i18n="settings.language">Language</span>
                     <select id="settingsLanguage">
@@ -548,26 +706,6 @@
                     </select>
                   </label>
                   <label class="field">
-                    <span data-i18n="settings.motion">Motion</span>
-                    <select id="settingsMotion">
-                      <option value="system" data-i18n="settings.motionSystem">Follow system</option>
-                      <option value="on" data-i18n="settings.motionOn">On</option>
-                      <option value="off" data-i18n="settings.motionOff">Off</option>
-                    </select>
-                  </label>
-                </div>
-                <p id="settingsTimeZone" class="quiet settings-system-note"></p>
-              </section>
-
-              <section class="settings-section-card">
-                <div class="settings-section-head">
-                  <div>
-                    <h3 data-i18n="settings.windowTitle">Window</h3>
-                    <p data-i18n="settings.windowBody">Basic window behavior for day-to-day desktop use.</p>
-                  </div>
-                </div>
-                <div class="settings-grid">
-                  <label class="field wide-field">
                     <span data-i18n="settings.closeBehavior">Close window</span>
                     <select id="settingsCloseBehavior">
                       <option value="hide" data-i18n="settings.closeHide">Hide to tray</option>
@@ -575,7 +713,71 @@
                     </select>
                   </label>
                 </div>
+                <div class="settings-actions compact-actions">
+                  <button id="saveAppearanceSettings" class="primary" data-i18n="settings.saveAppPreferences">Save app preferences</button>
+                </div>
               </section>
+
+              <div id="appDataSettingsGroups" class="advanced-settings-list">
+                <details id="dataRecoveryDetails" class="advanced-settings-group">
+                  <summary><span><strong data-i18n="settings.dataRecoveryTitle">Data and recovery</strong><small data-i18n="settings.dataRecoveryBody">Create safe copies or recover local product data.</small></span></summary>
+                  <div class="advanced-settings-content">
+                    <div class="data-action-grid">
+                      <section class="data-action-group">
+                        <div class="data-action-copy">
+                          <strong data-i18n="data.backupGroupTitle">Database backup</strong>
+                          <small data-i18n="data.backupGroupBody">Create a restorable snapshot with a verification manifest.</small>
+                        </div>
+                        <button id="exportBackup" class="secondary" data-i18n="actions.create">Create</button>
+                      </section>
+                      <section class="data-action-group">
+                        <div class="data-action-copy">
+                          <strong data-i18n="data.jsonGroupTitle">Portable JSON</strong>
+                          <small data-i18n="data.importRiskCopy">JSON import merges product records into the current data root; create a backup first if you need a rollback point.</small>
+                        </div>
+                        <div class="data-action-buttons">
+                          <button id="exportProductJson" class="secondary" data-i18n="actions.export">Export</button>
+                          <button id="importProductJson" class="secondary danger-button" data-i18n="actions.import">Import</button>
+                        </div>
+                      </section>
+                    </div>
+                    <span id="productJsonNotice" class="quiet" aria-live="polite"></span>
+                    <span id="backupNotice" class="quiet" aria-live="polite"></span>
+                    <div class="data-backup-section">
+                      <div class="data-backup-heading">
+                        <h3 class="section-title" data-i18n="data.recentBackups">Recent backups</h3>
+                        <button id="openBackupsFolder" class="link-button" data-i18n="data.openBackupsFolder">Open backups folder</button>
+                      </div>
+                      <div id="backupList" class="backup-list"></div>
+                      <button id="backupListToggle" class="backup-list-toggle secondary" type="button" hidden></button>
+                    </div>
+                    <div id="restoreConfirmPanel" class="restore-confirm-panel hidden">
+                      <p data-i18n="data.restorePrompt">Type RESTORE to confirm.</p>
+                      <div id="restorePreview" class="restore-preview"></div>
+                      <input id="restoreConfirmInput" autocomplete="off" />
+                      <div class="settings-actions"><button id="cancelRestoreBackup" class="secondary" data-i18n="actions.cancel">Cancel</button><button id="confirmRestoreBackup" class="primary" data-i18n="actions.restore">Restore</button></div>
+                    </div>
+                  </div>
+                </details>
+
+                <details id="storageDetails" class="advanced-settings-group">
+                  <summary><span><strong data-i18n="settings.storageTitle">Storage location</strong><small data-i18n="settings.storageBody">Choose where ClaraCore keeps its local source of truth.</small></span></summary>
+                  <div class="advanced-settings-content">
+                    <div class="path-root-row"><div><span data-i18n="settings.dataRoot">Data root</span><code id="dataRootPath">Checking...</code></div><button id="openSettingsDataRoot" class="secondary" type="button" data-i18n="data.openDataDir">Open data folder</button></div>
+                    <div class="settings-grid"><label class="field wide-field"><span data-i18n="settings.dataRootOverride">Custom data root</span><input id="settingsDataRootOverride" data-i18n-placeholder="settings.dataRootDefaultPlaceholder" placeholder="Use default data directory" /></label></div>
+                    <div class="settings-actions compact-actions">
+                      <button id="chooseSettingsDataRoot" class="secondary" type="button" data-i18n="settings.chooseDataRoot">Choose folder</button>
+                      <button id="resetSettingsDataRoot" class="secondary" type="button" data-i18n="settings.useDefaultDataRoot">Use default</button>
+                      <button id="saveDataRootSettings" class="primary" type="button" data-i18n="settings.saveStorage">Save storage location</button>
+                      <button id="relaunchForDataRoot" class="secondary" type="button" data-i18n="settings.restartNow" hidden>Restart now</button>
+                    </div>
+                    <span id="storageSettingsNotice" class="quiet" aria-live="polite"></span>
+                    <details class="settings-path-details"><summary data-i18n="settings.showPathDetails">Show path details</summary><div id="settingsPathDetails" class="path-detail-list"></div></details>
+                    <p class="quiet" data-i18n="settings.dataRootHint">Choose a custom data root here; restart to apply it.</p>
+                  </div>
+                </details>
+              </div>
+
               <section class="settings-section-card">
                 <div class="settings-section-head">
                   <div>
@@ -592,18 +794,15 @@
                 <p id="updateCheckStatus" class="quiet" data-i18n="settings.update.ready">Checks public GitHub Releases. Installation stays manual.</p>
               </section>
             </div>
-            <div class="settings-actions">
-              <button id="saveAppearanceSettings" class="primary" data-i18n="settings.saveCommon">Save common settings</button>
-            </div>
           </article>
         </section>
 
-        <section id="modelView" class="settings-tab-panel" data-settings-panel="capabilities">
+        <section id="modelView" class="settings-tab-panel active" role="tabpanel" aria-labelledby="settingsTabCapabilities" data-settings-panel="capabilities">
           <article class="panel settings-primary-panel">
             <div class="panel-heading">
               <div>
                 <h2 data-i18n="settings.capabilitiesTitle">Capabilities</h2>
-                <p class="quiet" data-i18n="settings.capabilitiesBody">See which intelligent abilities are available. Open a capability only when you want to change its external provider.</p>
+                <p class="quiet" data-i18n="settings.capabilitiesBody">Choose the provider and model used by each intelligent ability.</p>
               </div>
               <span id="settingsNotice" class="quiet" aria-live="polite"></span>
             </div>
@@ -612,7 +811,7 @@
                 <summary class="model-config-head">
                   <div>
                     <h3 data-i18n="settings.memoryCapabilityTitle">Memory retrieval</h3>
-                    <p data-i18n="settings.memoryCapabilityBody">Helps ClaraCore find related memories by meaning.</p>
+                    <p data-i18n="settings.memoryCapabilityBody">Used for semantic memory recall. Changing the provider or model prepares the search vectors again.</p>
                     <strong id="memoriaCapabilityProvider" class="capability-provider">-</strong>
                   </div>
                   <span class="capability-summary-action"><span id="memoriaModelStatus" class="badge ok">ready</span><span data-i18n="settings.change">Change</span></span>
@@ -656,7 +855,7 @@
                 <summary class="model-config-head">
                   <div>
                     <h3 data-i18n="settings.innerLifeCapabilityTitle">InnerLife</h3>
-                    <p data-i18n="settings.innerLifeCapabilityBody">Lets agents form and share occasional thoughts.</p>
+                    <p data-i18n="settings.innerLifeCapabilityBody">Used for background review and thought formation. Saved changes apply from the next review.</p>
                     <strong id="innerLifeCapabilityProvider" class="capability-provider">-</strong>
                   </div>
                   <span class="capability-summary-action"><span id="innerLifeModelStatus" class="badge warn">disabled</span><span data-i18n="settings.change">Change</span></span>
@@ -672,13 +871,12 @@
                       </select>
                     </label>
                     <label id="innerLifeEndpointField" class="field"><span data-i18n="settings.endpoint">Endpoint</span><input id="innerLifeEndpoint" /></label>
-                    <label id="innerLifeDeepModelField" class="field">
-                      <span data-i18n="settings.primaryModel">Primary model</span>
+                    <label id="innerLifeModelField" class="field">
+                      <span data-i18n="settings.model">Model</span>
                       <span class="model-picker-field">
-                        <input id="innerLifeDeepModel" list="innerLifeModelOptions" />
+                        <select id="innerLifeModel"></select>
                         <button id="refreshInnerLifeModels" class="secondary" type="button" data-i18n="settings.fetchModels">Fetch</button>
                       </span>
-                      <datalist id="innerLifeModelOptions"></datalist>
                       <small id="innerLifeModelNotice" class="quiet" aria-live="polite"></small>
                     </label>
                     <label id="innerLifeApiKeyField" class="field">
@@ -693,6 +891,13 @@
                     <button id="testInnerLifeConnection" class="secondary" type="button" data-i18n="settings.testConnection">Test connection</button>
                     <span id="innerLifeConnectionNotice" class="connection-test-notice" aria-live="polite" data-i18n="settings.connectionNotTested">Not tested this session.</span>
                   </div>
+                  <div class="settings-grid capability-runtime-grid">
+                    <label id="innerLifePollField" class="field">
+                      <span data-i18n="settings.reviewIntervalMinutes">Review interval (minutes)</span>
+                      <input id="innerLifePollSeconds" type="number" min="1" step="1" />
+                      <small class="quiet" data-i18n="settings.reviewIntervalMinutesHint">Controls background review frequency. It does not enable or pause InnerLife.</small>
+                    </label>
+                  </div>
                 </div>
               </details>
             </div>
@@ -702,37 +907,15 @@
           </article>
         </section>
 
-        <section id="dataView" class="settings-tab-panel" data-settings-panel="advanced">
+        <section id="advancedSettingsPanel" class="settings-tab-panel" role="tabpanel" aria-labelledby="settingsTabAdvanced" data-settings-panel="advanced" hidden>
           <article class="panel settings-primary-panel">
             <div class="panel-heading">
               <div>
                 <h2 data-i18n="settings.advancedTitle">Advanced</h2>
-                <p class="quiet" data-i18n="settings.advancedBody">These settings change connection, storage, or recovery behavior. Open them only when you have a specific reason.</p>
+                <p class="quiet" data-i18n="settings.advancedBody">These settings change automatic recall, agent connections, or diagnostic behavior. Open them only when you have a specific reason.</p>
               </div>
             </div>
             <div class="advanced-settings-list">
-              <details id="advancedModelRuntimeDetails" class="advanced-settings-group">
-                <summary><span><strong data-i18n="settings.modelRuntimeTitle">Model runtime details</strong><small data-i18n="settings.modelRuntimeBody">Optional InnerLife background defaults.</small></span></summary>
-                <div class="advanced-settings-content">
-                  <div class="settings-grid">
-                    <label id="innerLifeLightModelField" class="field">
-                      <span data-i18n="settings.lightModelOverride">Light-model override</span>
-                      <input id="innerLifeLightModel" list="innerLifeModelOptions" />
-                      <small class="quiet" data-i18n="settings.lightModelOverrideHint">Leave empty to use the primary model.</small>
-                    </label>
-                    <label id="innerLifePollField" class="field">
-                      <span data-i18n="settings.pollMinutes">Loop minutes</span>
-                      <input id="innerLifePollSeconds" type="number" min="1" step="1" />
-                      <small class="quiet" data-i18n="settings.pollMinutesHint">Controls the background review interval, not whether InnerLife is enabled.</small>
-                    </label>
-                  </div>
-                  <div class="settings-actions compact-actions">
-                    <button id="saveRuntimeSettings" class="primary" data-i18n="settings.saveRuntime">Save runtime details</button>
-                    <span id="runtimeSettingsNotice" class="quiet" aria-live="polite"></span>
-                  </div>
-                </div>
-              </details>
-
               <details id="advancedMemoryControllerDetails" class="advanced-settings-group">
                 <summary><span><strong data-i18n="settings.memoryControllerTitle">Memory Controller</strong><small data-i18n="settings.memoryControllerBody">Choose whether automatic Agent prompts create observe-only decisions.</small></span><span id="settingsMemoryControllerStatus" class="badge warn">off</span></summary>
                 <div class="advanced-settings-content">
@@ -760,7 +943,7 @@
                     <label class="field"><span data-i18n="settings.agentGatewayPort">Port</span><input id="settingsAgentGatewayPort" type="number" min="1" max="65535" step="1" /></label>
                     <label class="field wide-field">
                       <span data-i18n="settings.agentGatewayToken">Bearer token</span>
-                      <span class="copy-field"><input id="settingsAgentGatewayToken" autocomplete="off" spellcheck="false" /><button id="copyAgentGatewayToken" class="secondary" type="button" data-i18n="actions.copy">Copy</button></span>
+                      <span class="copy-field"><input id="settingsAgentGatewayToken" type="password" autocomplete="off" spellcheck="false" /><button id="copyAgentGatewayToken" class="secondary" type="button" data-i18n="actions.copy">Copy</button></span>
                     </label>
                   </div>
                   <div class="path-chip-list">
@@ -769,67 +952,10 @@
                   </div>
                   <div class="settings-actions compact-actions">
                     <button id="generateAgentGatewayToken" class="secondary" type="button" data-i18n="settings.generateToken">Generate token</button>
-                    <button id="saveAgentGatewayConfig" class="primary" type="button" data-i18n="settings.saveAgentGateway">Save Gateway</button>
+                    <button id="saveAgentGatewayConfig" class="primary" type="button" data-i18n="settings.saveAgentGateway">Save and restart Gateway</button>
                   </div>
+                  <span id="agentGatewaySettingsNotice" class="settings-inline-notice quiet" role="status" aria-live="polite"></span>
                   <p class="quiet" data-i18n="settings.agentGatewayHint">Changing the port updates the local MCP server. Rotating the token requires connected agents to update their bearer token.</p>
-                </div>
-              </details>
-
-              <details id="advancedDataRecoveryDetails" class="advanced-settings-group">
-                <summary><span><strong data-i18n="settings.dataRecoveryTitle">Data and recovery</strong><small data-i18n="settings.dataRecoveryBody">Create safe copies or recover local product data.</small></span></summary>
-                <div class="advanced-settings-content">
-                  <div class="data-action-grid">
-                    <section class="data-action-group">
-                      <div class="data-action-copy">
-                        <strong data-i18n="data.backupGroupTitle">Database backup</strong>
-                        <small data-i18n="data.backupGroupBody">Create a restorable snapshot with a verification manifest.</small>
-                      </div>
-                      <button id="exportBackup" class="secondary" data-i18n="actions.create">Create</button>
-                    </section>
-                    <section class="data-action-group">
-                      <div class="data-action-copy">
-                        <strong data-i18n="data.jsonGroupTitle">Portable JSON</strong>
-                        <small data-i18n="data.importRiskCopy">JSON import merges product records into the current data root; create a backup first if you need a rollback point.</small>
-                      </div>
-                      <div class="data-action-buttons">
-                        <button id="exportProductJson" class="secondary" data-i18n="actions.export">Export</button>
-                        <button id="importProductJson" class="secondary danger-button" data-i18n="actions.import">Import</button>
-                      </div>
-                    </section>
-                  </div>
-                  <span id="productJsonNotice" class="quiet" aria-live="polite"></span>
-                  <span id="backupNotice" class="quiet" aria-live="polite"></span>
-                  <div class="data-backup-section">
-                    <div class="data-backup-heading">
-                      <h3 class="section-title" data-i18n="data.recentBackups">Recent backups</h3>
-                      <button id="openBackupsFolder" class="link-button" data-i18n="data.openBackupsFolder">Open backups folder</button>
-                    </div>
-                    <div id="backupList" class="backup-list"></div>
-                    <button id="backupListToggle" class="backup-list-toggle secondary" type="button" hidden></button>
-                  </div>
-                  <div id="restoreConfirmPanel" class="restore-confirm-panel hidden">
-                    <p data-i18n="data.restorePrompt">Type RESTORE to confirm.</p>
-                    <div id="restorePreview" class="restore-preview"></div>
-                    <input id="restoreConfirmInput" autocomplete="off" />
-                    <div class="settings-actions"><button id="cancelRestoreBackup" class="secondary" data-i18n="actions.cancel">Cancel</button><button id="confirmRestoreBackup" class="primary" data-i18n="actions.restore">Restore</button></div>
-                  </div>
-                </div>
-              </details>
-
-              <details id="advancedStorageDetails" class="advanced-settings-group">
-                <summary><span><strong data-i18n="settings.storageTitle">Storage location</strong><small data-i18n="settings.storageBody">Choose where ClaraCore keeps its local source of truth.</small></span></summary>
-                <div class="advanced-settings-content">
-                  <div class="path-root-row"><div><span data-i18n="settings.dataRoot">Data root</span><code id="dataRootPath">Checking...</code></div><button id="openSettingsDataRoot" class="secondary" type="button" data-i18n="data.openDataDir">Open data folder</button></div>
-                  <div class="settings-grid"><label class="field wide-field"><span data-i18n="settings.dataRootOverride">Custom data root</span><input id="settingsDataRootOverride" data-i18n-placeholder="settings.dataRootDefaultPlaceholder" placeholder="Use default data directory" /></label></div>
-                  <div class="settings-actions compact-actions">
-                    <button id="chooseSettingsDataRoot" class="secondary" type="button" data-i18n="settings.chooseDataRoot">Choose folder</button>
-                    <button id="resetSettingsDataRoot" class="secondary" type="button" data-i18n="settings.useDefaultDataRoot">Use default</button>
-                    <button id="saveDataRootSettings" class="primary" type="button" data-i18n="settings.saveStorage">Save storage location</button>
-                    <button id="relaunchForDataRoot" class="secondary" type="button" data-i18n="settings.restartNow" hidden>Restart now</button>
-                  </div>
-                  <span id="storageSettingsNotice" class="quiet" aria-live="polite"></span>
-                  <details class="settings-path-details"><summary data-i18n="settings.showPathDetails">Show path details</summary><div id="settingsPathDetails" class="path-detail-list"></div></details>
-                  <p class="quiet" data-i18n="settings.dataRootHint">Choose a custom data root here; restart to apply it.</p>
                 </div>
               </details>
 

@@ -1,6 +1,5 @@
 function createClaraCoreAppearance({ desktop, onSystemPreferenceChange, preferences = {} }) {
   let currentTheme = ["system", "light", "dark"].includes(preferences.theme) ? preferences.theme : "system";
-  let currentMotion = ["system", "on", "off"].includes(preferences.motion) ? preferences.motion : "system";
   let currentCloseBehavior = preferences.closeBehavior === "quit" ? "quit" : "hide";
 
   function resolvedTheme() {
@@ -9,7 +8,6 @@ function createClaraCoreAppearance({ desktop, onSystemPreferenceChange, preferen
   }
 
   function resolvedMotion() {
-    if (currentMotion === "on" || currentMotion === "off") return currentMotion;
     return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "off" : "on";
   }
 
@@ -17,8 +15,6 @@ function createClaraCoreAppearance({ desktop, onSystemPreferenceChange, preferen
     return {
       theme: currentTheme,
       resolvedTheme: resolvedTheme(),
-      motion: currentMotion,
-      resolvedMotion: resolvedMotion(),
       closeBehavior: currentCloseBehavior
     };
   }
@@ -27,7 +23,6 @@ function createClaraCoreAppearance({ desktop, onSystemPreferenceChange, preferen
     document.body.dataset.theme = resolvedTheme();
     document.body.dataset.themePreference = currentTheme;
     document.body.dataset.motion = resolvedMotion();
-    document.body.dataset.motionPreference = currentMotion;
   }
 
   function persist(updates) {
@@ -41,12 +36,6 @@ function createClaraCoreAppearance({ desktop, onSystemPreferenceChange, preferen
     persist({ theme: currentTheme });
   }
 
-  function setMotion(motion) {
-    currentMotion = ["system", "on", "off"].includes(motion) ? motion : "system";
-    applyTheme();
-    persist({ motion: currentMotion });
-  }
-
   function setWindowCloseBehavior(closeBehavior, options = {}) {
     currentCloseBehavior = closeBehavior === "quit" ? "quit" : "hide";
     const result = desktop?.setWindowPreferences?.({ closeBehavior: currentCloseBehavior });
@@ -57,9 +46,6 @@ function createClaraCoreAppearance({ desktop, onSystemPreferenceChange, preferen
   function applyPreferences(nextPreferences = {}) {
     if (["system", "light", "dark"].includes(nextPreferences.theme)) {
       currentTheme = nextPreferences.theme;
-    }
-    if (["system", "on", "off"].includes(nextPreferences.motion)) {
-      currentMotion = nextPreferences.motion;
     }
     if (nextPreferences.closeBehavior === "quit" || nextPreferences.closeBehavior === "hide") {
       currentCloseBehavior = nextPreferences.closeBehavior;
@@ -76,15 +62,13 @@ function createClaraCoreAppearance({ desktop, onSystemPreferenceChange, preferen
       }
     });
     window.matchMedia?.("(prefers-reduced-motion: reduce)")?.addEventListener("change", () => {
-      if (currentMotion === "system") {
-        applyTheme();
-        onSystemPreferenceChange?.();
-      }
+      applyTheme();
+      onSystemPreferenceChange?.();
     });
   }
 
   function initialize() {
-    applyPreferences({ theme: currentTheme, motion: currentMotion, closeBehavior: currentCloseBehavior });
+    applyPreferences({ theme: currentTheme, closeBehavior: currentCloseBehavior });
     bindSystemPreferenceListeners();
   }
 
@@ -93,7 +77,6 @@ function createClaraCoreAppearance({ desktop, onSystemPreferenceChange, preferen
     applyTheme,
     getPreferences,
     initialize,
-    setMotion,
     setTheme,
     setWindowCloseBehavior
   };

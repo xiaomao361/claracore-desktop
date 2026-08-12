@@ -4,15 +4,21 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- Current development version: `0.6.7`.
-- Current public release: `0.6.7`.
-- Tag `v0.6.7` is the current stable GitHub Release.
+- Current development version: `0.6.9`.
+- Current public release: `0.6.9`.
+- Tag `v0.6.9` is the current stable GitHub Release.
 
-`0.6.7` publishes the context-budget work begun at the unpublished `0.6.6`
-checkpoint, makes automatic context Memory-only, and restores complete everyday
-Memory workflows to the core tool profile. It is a Developer ID signed and
+`0.6.9` publishes the unified Desktop design language, direct human-facing
+copy, versioned searchable Agent Guide, single-model InnerLife settings, and
+clearer Memory/Trace/Logs evidence boundaries. It is a Developer ID signed and
 Apple-notarized macOS Apple Silicon Lite release. Full, Windows, and Intel macOS
 packages are outside this release. See
+[v0.6.9 Release Notes](RELEASE_NOTES_V0.6.9.md).
+
+`0.6.8` was a local design checkpoint and was never published.
+
+`0.6.7` is the previous public release. It made automatic context Memory-only
+and restored complete everyday Memory workflows to the core tool profile. See
 [v0.6.7 Release Notes](RELEASE_NOTES_V0.6.7.md).
 
 `0.6.5` is the previous public release. It publishes the post-`0.6.4`
@@ -72,6 +78,9 @@ through to the daily-use Application Support directory.
 ## Release Rules
 
 - Version changes update `package.json` and `package-lock.json` together.
+- Every version change also reviews the Agent Guide and explicitly updates
+  `DOCS_RELEASE` in `core/gateway/docs.js`. `npm run test:context-budget`
+  rejects a product/guide version mismatch.
 - A public release requires release notes, focused tests, the relevant package
   checks, a tag/release entry, and explicit authorization to push/publish.
 - `收口` means docs, validation, commit, push, and local/remote parity; explicit
@@ -80,33 +89,24 @@ through to the daily-use Application Support directory.
 
 Current packaging commands and artifact checks live in
 [macOS Packaging](mac-packaging.md). Current public-release details live in
-[v0.6.7 Release Notes](RELEASE_NOTES_V0.6.7.md).
+[v0.6.9 Release Notes](RELEASE_NOTES_V0.6.9.md).
 
 ## Current Checkpoint
 
-`0.6.7` is the current public release on `main`, tagged `v0.6.7`. Its macOS
+`0.6.9` is the current public release on `main`, tagged `v0.6.9`. Its macOS
 Apple Silicon Lite DMG is Developer ID signed, Apple-notarized, stapled,
 Gatekeeper accepted, and published with a SHA-256 checksum.
 
-- 2026-08-07: automatic context becomes Memory only. See
-  [v0.6.7 Release Notes](RELEASE_NOTES_V0.6.7.md).
-- The bump off `0.6.6` was not cosmetic: that build delivered InnerLife shares
-  automatically and this one never does. Four builds had reported `0.6.6`, and a
-  running app exposes only its version string, so one string covered four
-  behaviours.
+- 2026-08-12: the complete human UI adopts one design language; the Agent Guide
+  is versioned and searchable; InnerLife settings use one migrated model.
+- See [v0.6.9 Release Notes](RELEASE_NOTES_V0.6.9.md).
 
-### Previous checkpoint
+### Previous checkpoints
 
-`0.6.6` was a **source checkpoint**, never published.
-
-- 2026-08-07: context budget work landed. See
-  [v0.6.6 Release Notes](RELEASE_NOTES_V0.6.6.md) and
-  [v0.6.6 Context Budget Plan](V0.6.6_CONTEXT_BUDGET_PLAN.md).
-- Local artifact: `dist-lite/ClaraCore-Desktop-0.6.6-lite-arm64.dmg`
-  (unsigned, arm64 Lite, sha256
-  `d3461ebf6cd2f1184d53f6bf463e5972ad34885efe0dc29e68e5939ba5a0b019`),
-  verified with `npm run test:package:lite` and the packaged Gateway smoke.
-- `v0.6.5` was the newest signed, notarized public release before `v0.6.7`.
+- `0.6.8` was a local design checkpoint and was never published.
+- `v0.6.7` was the newest signed, notarized public release before `v0.6.9`.
+- `0.6.6` was an unpublished source and local-package checkpoint for the
+  context-budget work later released in `0.6.7`.
 
 ## History
 

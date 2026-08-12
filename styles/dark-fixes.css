@@ -148,6 +148,8 @@ body[data-theme="dark"] .data-row,
 body[data-theme="dark"] .action-row,
 body[data-theme="dark"] .shared-line-current,
 body[data-theme="dark"] .shared-line-detail-group,
+body[data-theme="dark"] .shared-line-agent-role-card,
+body[data-theme="dark"] .shared-line-agent-role-field,
 body[data-theme="dark"] .shared-line-tabs button,
 body[data-theme="dark"] .shared-line-card,
 body[data-theme="dark"] .shared-line-history-item,
@@ -179,6 +181,15 @@ body[data-theme="dark"] .innerlife-json-editor textarea {
   box-shadow: none;
 }
 
+body[data-theme="dark"] .shared-line-agent-role-head {
+  background: linear-gradient(135deg, rgba(112, 180, 142, 0.14), rgba(112, 180, 142, 0.035));
+}
+
+body[data-theme="dark"] .shared-line-agent-role-avatar {
+  background: var(--control-bg-soft);
+  box-shadow: 0 0 0 1px rgba(112, 180, 142, 0.24);
+}
+
 body[data-theme="dark"] .gateway-activity-header {
   background: var(--surface-soft);
 }
@@ -189,17 +200,22 @@ body[data-theme="dark"] .gateway-activity-row {
 
 body[data-theme="dark"] .shared-line-card:hover,
 body[data-theme="dark"] .shared-line-card.active-line {
-  border-color: var(--green);
+  border-color: var(--border);
   background: #1f3b31 !important;
   color: var(--text);
 }
 
 body[data-theme="dark"] .shared-line-card:not(.active-line) {
-  background: #262c28 !important;
+  background: transparent !important;
+}
+
+body[data-theme="dark"] .shared-line-card:not(.active-line):hover {
+  background: var(--surface-soft) !important;
 }
 
 body[data-theme="dark"] .innerlife-thought,
 body[data-theme="dark"] .innerlife-advanced-body > section,
+body[data-theme="dark"] .innerlife-advanced-subdetails,
 body[data-theme="dark"] .innerlife-raw-grid pre {
   border-color: var(--border);
   background: var(--surface) !important;

@@ -82,17 +82,6 @@ function createClaraCoreHomePresence({ t, actionableGatewayErrors }) {
     };
   }
 
-  function emergingThought(snapshot) {
-    const innerLife = snapshot?.innerLife || {};
-    const candidates = [...(innerLife.pendingShares || []), ...(innerLife.inbox || [])];
-    const item = candidates.find((candidate) => {
-      const status = String(candidate?.status || "").toLowerCase();
-      return !status || ["pending", "waiting", "candidate", "ready"].includes(status);
-    });
-    if (!item) return "";
-    return compactText(item.body || item.content || item.message || item.summary || item.text || item.prompt, 180);
-  }
-
   function actionableIssue(snapshot) {
     const healthIssue = (snapshot?.health?.checks || []).find((check) => check.level === "error");
     if (healthIssue) {
@@ -116,33 +105,38 @@ function createClaraCoreHomePresence({ t, actionableGatewayErrors }) {
     const dominant = agents[0] || null;
     const hasSharedLine = Boolean(sharedLine.summary);
     const coreState = issue ? "error" : agents.some((agent) => agent.presence === "active") ? "active" : agents.length ? "recent" : "quiet";
-    const title = dominant
+    const recentActivityTitle = dominant
       ? dominant.presence === "active"
         ? t("home.presence.agentActive", { agent: dominant.label })
         : dominant.presence === "recent"
           ? t("home.presence.agentJustHere", { agent: dominant.label })
           : t("home.presence.agentRecentlyHere", { agent: dominant.label })
-      : hasSharedLine
-        ? t("home.presence.noRecentAgents")
-        : t("home.presence.emptyTitle");
-    const detail = dominant?.toolName
+      : "";
+    const recentActivityDetail = dominant?.toolName
       ? t("home.presence.observedThrough", { tool: dominant.toolName })
       : agents.length
         ? t("home.presence.observedActivity")
-        : hasSharedLine
-          ? t("home.presence.quietDetail")
-          : t("home.presence.emptyDetail");
+        : "";
+    const title = hasSharedLine
+      ? (/^default shared line$/i.test(sharedLine.title) ? t("home.presence.currentLine") : sharedLine.title) || t("home.presence.noRecentAgents")
+      : t("home.presence.emptyTitle");
+    const detail = hasSharedLine
+      ? sharedLine.summary
+      : agents.length
+        ? t("home.presence.noSharedLineDetail")
+        : t("home.presence.emptyDetail");
 
     return {
       core: {
         state: coreState,
         dominantColor: dominant?.color || "#7f95ad",
         currentLineTitle: sharedLine.title,
-        currentSummary: sharedLine.summary,
-        emergingThought: emergingThought(snapshot)
+        currentSummary: sharedLine.summary
       },
       title,
       detail,
+      recentActivityTitle,
+      recentActivityDetail,
       agents,
       empty: !agents.length && !hasSharedLine,
       actionableIssue: issue

@@ -1,6 +1,132 @@
+#agentSetupView .agent-access-page {
+  display: grid;
+  gap: 18px;
+}
+
 #agentSetupView .agent-access-grid {
   grid-template-columns: minmax(520px, 1fr) minmax(300px, 0.38fr);
+  grid-template-areas: "activity invite";
   align-items: start;
+}
+
+.agent-access-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.65fr);
+  gap: 34px;
+  align-items: end;
+  padding: clamp(25px, 4vw, 42px);
+  background: linear-gradient(138deg, var(--surface) 58%, color-mix(in srgb, var(--blue-bg) 58%, transparent));
+}
+
+.agent-access-overview-copy h2 {
+  max-width: 760px;
+  margin: 8px 0 10px;
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.agent-access-overview-copy p {
+  max-width: 680px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.agent-access-status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.agent-access-status-grid article {
+  display: grid;
+  gap: 5px;
+  min-height: 74px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--surface) 88%, var(--blue-bg));
+}
+
+.agent-access-status-grid span {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.agent-access-state {
+  align-self: end;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.agent-access-state.is-ready {
+  color: var(--green);
+}
+
+.agent-access-state.is-error {
+  color: var(--red);
+}
+
+.agent-access-process {
+  padding: clamp(22px, 3vw, 30px);
+}
+
+.agent-access-process-flow {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.agent-access-process-flow::before {
+  position: absolute;
+  top: 25px;
+  inset-inline: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, var(--border), var(--blue), var(--green));
+  content: "";
+}
+
+.agent-access-process-flow article {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  text-align: center;
+}
+
+.agent-access-process-flow article > span {
+  z-index: 1;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.agent-access-process-flow strong {
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.agent-access-process-flow small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.agent-access-activity {
+  grid-area: activity;
 }
 
 .agent-access-section {
@@ -28,7 +154,7 @@
   border: 1px solid var(--border);
   border-left: 3px solid var(--border-strong);
   border-radius: 8px;
-  background: #fffefa;
+  background: var(--surface);
 }
 
 .agent-roster-card.active {
@@ -164,8 +290,32 @@
 
 .agent-access-side {
   display: grid;
+  grid-area: invite;
   gap: 24px;
-  min-height: 300px;
+}
+
+.agent-guide-note {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-soft);
+}
+
+.agent-guide-note p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.agent-guide-note code {
+  color: var(--green);
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 .agent-invite-action {
@@ -180,10 +330,46 @@
   font-size: 14px;
 }
 
-.agent-invite-action p,
 .agent-setup-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.agent-setup-status::before {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--amber);
+  content: "";
+}
+
+.agent-setup-status.is-ready::before {
+  background: var(--green);
+}
+
+.agent-invite-action p {
   margin: 0;
-  text-align: center;
+  text-align: start;
+}
+
+.agent-access-section .section-heading-line h3,
+.agent-access-section .section-heading-line p {
+  margin: 0;
+}
+
+.agent-access-section .section-heading-line h3 {
+  font-size: 14px;
+}
+
+.agent-access-section .section-heading-line p,
+.agent-access-section .section-heading-line > span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .agent-access-side .section-title {
@@ -235,13 +421,39 @@
 }
 
 @media (max-width: 1200px) {
+  .agent-access-overview,
   #agentSetupView .agent-access-grid,
   .agent-roster {
     grid-template-columns: 1fr;
   }
+
+  #agentSetupView .agent-access-grid {
+    grid-template-areas: "invite" "activity";
+  }
+
+  .agent-access-process-flow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .agent-access-process-flow::before {
+    display: none;
+  }
 }
 
 @media (max-width: 760px) {
+  .agent-access-status-grid,
+  .agent-access-process-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-guide-note {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-guide-note code {
+    white-space: normal;
+  }
+
   .gateway-activity-header {
     display: none;
   }

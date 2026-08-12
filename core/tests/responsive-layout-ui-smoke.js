@@ -39,12 +39,19 @@ async function main() {
 
     await page.setViewportSize({ width: 1440, height: 960 });
     await page.click("[data-view='memory']");
-    const desktopMemory = await page.locator(".memory-browser-panel").boundingBox();
-    if (!desktopMemory || desktopMemory.height > 540) {
-      throw new Error(`Desktop Memory panels remain too tall: ${JSON.stringify(desktopMemory)}`);
-    }
-    if ((await page.locator(".memory-detail-readonly").count()) !== 0) {
-      throw new Error("Memory detail repeats the page-level read-only badge.");
+    const desktopMemory = await page.evaluate(() => {
+      const overview = document.querySelector(".memory-overview").getBoundingClientRect();
+      const process = document.querySelector(".memory-process-flow");
+      return {
+        left: overview.left,
+        right: overview.right,
+        viewportWidth: innerWidth,
+        processColumns: getComputedStyle(process).gridTemplateColumns
+      };
+    });
+    assertInsideViewport("Desktop Memory", desktopMemory);
+    if (desktopMemory.processColumns.split(" ").length !== 5) {
+      throw new Error(`Desktop Memory should show the five recall steps in one row: ${desktopMemory.processColumns}`);
     }
     if (screenshotRoot) await page.screenshot({ path: path.join(screenshotRoot, "desktop-memory.png"), fullPage: false });
 
@@ -64,16 +71,35 @@ async function main() {
     if (mediumSharedLine.columns.includes(" ")) {
       throw new Error(`Shared Line should use one column at medium width: ${mediumSharedLine.columns}`);
     }
+    const darkSharedLineCounts = await page.evaluate(() => {
+      document.body.dataset.theme = "dark";
+      const card = document.querySelector(".shared-line-overview-counts p");
+      const value = document.querySelector(".shared-line-overview-counts strong");
+      return {
+        background: getComputedStyle(card).backgroundColor,
+        valueColor: getComputedStyle(value).color
+      };
+    });
+    const darkBackgroundChannels = (darkSharedLineCounts.background.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+    if (!darkBackgroundChannels.length || Math.max(...darkBackgroundChannels) > 90) {
+      throw new Error(`Shared Line dark overview count card stayed light: ${JSON.stringify(darkSharedLineCounts)}`);
+    }
+    if (screenshotRoot) await page.screenshot({ path: path.join(screenshotRoot, "medium-shared-line-dark.png"), fullPage: false });
+    await page.evaluate(() => { document.body.dataset.theme = "light"; });
 
     await page.setViewportSize({ width: 900, height: 760 });
     await page.click("[data-view='memory']");
     const memoryRects = await page.evaluate(() =>
-      [".memory-toolbar", ".memory-browser-panel", ".memory-detail-panel", "#memoryAdvancedDetails"].map((selector) => {
+      [".memory-overview", ".memory-toolbar", ".memory-process-section", ".memory-recall-section", ".memory-knowledge-actions"].map((selector) => {
         const rect = document.querySelector(selector).getBoundingClientRect();
         return { selector, left: rect.left, right: rect.right, viewportWidth: innerWidth };
       })
     );
     memoryRects.forEach((item) => assertInsideViewport("Memory", item));
+    const narrowProcessColumns = await page.locator(".memory-process-flow").evaluate((element) => getComputedStyle(element).gridTemplateColumns);
+    if (narrowProcessColumns.includes(" ")) {
+      throw new Error(`Narrow Memory should stack the five recall steps: ${narrowProcessColumns}`);
+    }
     if (screenshotRoot) await page.screenshot({ path: path.join(screenshotRoot, "narrow-memory.png"), fullPage: false });
 
     await page.click("[data-view='shared-line']");
@@ -87,8 +113,8 @@ async function main() {
     if (screenshotRoot) await page.screenshot({ path: path.join(screenshotRoot, "narrow-shared-line.png"), fullPage: false });
 
     await page.click("[data-view='settings']");
-    await page.click("[data-settings-tab='advanced']");
-    await page.evaluate(() => { document.querySelector("#advancedDataRecoveryDetails").open = true; });
+    await page.click("[data-settings-tab='app-data']");
+    await page.evaluate(() => { document.querySelector("#dataRecoveryDetails").open = true; });
     const dataGroupRects = await page.locator(".data-action-group").evaluateAll((elements) =>
       elements.map((element) => {
         const rect = element.getBoundingClientRect();

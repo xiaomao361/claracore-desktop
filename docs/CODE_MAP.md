@@ -206,8 +206,10 @@ Repository ownership:
 - `core/gateway/tool-profiles.js`: the `core` and `full` tool manifests. `full`
   is the canonical definitions byte-for-byte; `core` narrows the tool list and
   the advertised schema properties. Profile resolution fails closed to `core`.
-- `core/gateway/docs.js`: progressive `gateway_docs` — a bounded default summary
-  plus independently bounded sections. It must not restate `tools/list`.
+- `core/gateway/docs.js`: versioned progressive `gateway_docs` — a bounded
+  default summary, independently bounded sections, and bounded passage search
+  through `query`. The release gate requires its explicit guide version to
+  match the Desktop product version. It must not restate `tools/list`.
 - `core/gateway/auto-context.js`: the deterministic one-winner arbiter for
   automatic per-prompt context. Read-only; it selects at most one bounded block
   or abstains and never claims delivery or use. Host hooks call it so the logic

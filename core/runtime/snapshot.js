@@ -6,6 +6,7 @@ const { buildFlavorInfo } = require("../build-flavor");
 const { buildDecayAudit } = require("./decay");
 const { readDesktopSettings } = require("./paths");
 const { DEFAULT_PROFILE: DEFAULT_TOOL_PROFILE } = require("../gateway/tool-profiles");
+const { DOCS_RELEASE } = require("../gateway/docs");
 
 function productModules(input = {}) {
   const innerLife = input.innerLife || {};
@@ -74,6 +75,12 @@ function productAgentSetup(app, paths) {
   const agentIdentityExamples = ["lara", "clara", "codex"];
   return {
     gatewayStatus: "available",
+    agentGuide: {
+      toolName: "gateway_docs",
+      version: DOCS_RELEASE.version,
+      updatedAt: DOCS_RELEASE.updatedAt,
+      supportsSearch: true
+    },
     mcpServerName: "claracore-desktop",
     mcpCommand: launch.displayCommand,
     agentIdentity: {
@@ -245,12 +252,14 @@ function createSnapshotRuntime({ ensureProductCore }) {
       database.getSummary()
     ]);
     const [
-      recentMemories, memoryStats, memoryMaintenance, resumePacket, activeLines,
-      innerLifeLite, recentInnerLifeShares, gatewayTraces, canWriteProbe
+      recentMemories, memoryStats, memoryMaintenance, memoryControllerEvidence,
+      resumePacket, activeLines, innerLifeLite, recentInnerLifeShares,
+      gatewayTraces, canWriteProbe
     ] = await Promise.all([
       database.listMemories(20),
       database.getMemoryStats(),
       database.getMemoryMaintenanceReport(),
+      database.getMemoryControlObservationSnapshot({ limit: 3, overview: true }),
       database.getResumePacket({ lite: true }),
       database.listContinuityLines({ limit: 30, allAgents: true, status: "active" }),
       database.getInnerLifeSnapshotLite("all"),
@@ -298,7 +307,8 @@ function createSnapshotRuntime({ ensureProductCore }) {
       innerLife,
       trace: {},
       memoryController: {
-        mode: configuration.memoryController?.mode || "off"
+        mode: configuration.memoryController?.mode || "off",
+        ...memoryControllerEvidence
       },
       decayAudit: {},
       gatewayTraces,
@@ -318,6 +328,18 @@ function createSnapshotRuntime({ ensureProductCore }) {
   async function buildProductViewSnapshot(app, view = "") {
     const { database } = await ensureProductCore(app);
     switch (String(view || "").trim()) {
+      case "memory": {
+        const [memoryControllerEvidence, settings] = await Promise.all([
+          database.getMemoryControlObservationSnapshot({ limit: 10 }),
+          database.getSettings()
+        ]);
+        return {
+          memoryController: {
+            mode: settings["memory.controller.mode"] || "off",
+            ...memoryControllerEvidence
+          }
+        };
+      }
       case "home":
         return { agentActivitySummary: await database.getAgentActivitySummary() };
       case "shared-line":

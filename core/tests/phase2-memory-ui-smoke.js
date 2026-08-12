@@ -45,6 +45,32 @@ async function main() {
       kind: "related",
       note: "Restricted-layer graph coverage."
     });
+    await database.recordMemoryControlEvent({
+      id: "memory-control-observe-relevant",
+      policyVersion: "memory-controller-v1",
+      policyMode: "observe",
+      agentId: "codex",
+      queryPreview: "我们之前是怎么决定记忆页面设计的？",
+      stageAAction: "RETRIEVE",
+      stageAReason: "prior_decision_request",
+      stageBAction: "INJECT_TOP1",
+      stageBReason: "high_confidence_top1",
+      candidates: [
+        { id: currentResidence.id, title: "Current residence", score: 0.87, source: "keyword+vector", status: "active" },
+        { id: historicalResidence.id, title: "Residence before the move", score: 0.66, source: "vector", status: "superseded" }
+      ],
+      resultStatus: "completed"
+    });
+    await database.recordMemoryControlEvent({
+      id: "memory-control-ordinary-noop",
+      policyVersion: "memory-controller-v1",
+      policyMode: "observe",
+      agentId: "codex",
+      queryPreview: "把按钮往左移动一点",
+      stageAAction: "NOOP",
+      stageAReason: "ordinary_current_turn",
+      resultStatus: "completed"
+    });
 
     app = await electron.launch({
       executablePath: electronPath,
@@ -70,6 +96,7 @@ async function main() {
     });
 
     await page.evaluate(async () => {
+      await window.ClaraCoreDesktop.saveSettings({ "memory.controller.mode": "observe" });
       await window.ClaraCoreDesktop.createMemory({
         title: "UI Memoria visible fact",
         body: "Memoria UI should prioritize viewing, search, labels, and graph.",
@@ -101,8 +128,16 @@ async function main() {
     const pageContract = await page.evaluate(() => ({
       body: document.querySelector("#viewSubtitle")?.textContent || "",
       focusBlock: Boolean(document.querySelector("#memoryView > .page-focus")),
-      advancedOpen: document.querySelector("#memoryAdvancedDetails")?.open,
       detailPresent: Boolean(document.querySelector("#memoryDetail")),
+      detailDialog: Boolean(document.querySelector("#memoryDetailDialog")),
+      processSteps: document.querySelectorAll("#memoryProcessFlow > div").length,
+      processBeforeToolbar: Boolean(
+        document.querySelector(".memory-process-section")?.compareDocumentPosition(document.querySelector(".memory-toolbar"))
+        & Node.DOCUMENT_POSITION_FOLLOWING
+      ),
+      recallRows: document.querySelectorAll("#memoryRecallList .memory-recall-row").length,
+      nestedDetails: document.querySelectorAll("#memoryView details").length,
+      listOverflow: getComputedStyle(document.querySelector("#memoryList")).overflowY,
       factForm: Boolean(document.querySelector("#saveMemory")),
       recordForm: Boolean(document.querySelector("#saveMemoryRecord")),
       aliasForm: Boolean(document.querySelector("#saveMemoryAlias")),
@@ -114,9 +149,14 @@ async function main() {
       memoriaTabs: document.querySelectorAll("[data-memory-tab]").length
     }));
     if (
-      (!pageContract.body.includes("not a full chat history") && !pageContract.body.includes("不是完整聊天记录")) ||
-      pageContract.advancedOpen ||
+      (!pageContract.body.includes("Facts, decisions") && !pageContract.body.includes("事实、决定")) ||
       !pageContract.detailPresent ||
+      !pageContract.detailDialog ||
+      pageContract.processSteps !== 5 ||
+      !pageContract.processBeforeToolbar ||
+      pageContract.recallRows !== 2 ||
+      pageContract.nestedDetails !== 0 ||
+      pageContract.listOverflow === "auto" ||
       pageContract.focusBlock ||
       pageContract.factForm ||
       pageContract.recordForm ||
@@ -130,23 +170,36 @@ async function main() {
       throw new Error(`Memoria UI did not keep the Agent First read-only contract: ${JSON.stringify(pageContract)}`);
     }
     if (pageContract.memoriaTabs !== 2) {
-      throw new Error(`Memoria UI should render exactly 2 advanced tabs: ${JSON.stringify(pageContract)}`);
+      throw new Error(`Memoria UI should render exactly 2 knowledge tabs: ${JSON.stringify(pageContract)}`);
     }
 
-    await page.click("[data-memory-id]", { position: { x: 20, y: 20 } });
     await page.click("[data-memory-id]:has-text('UI Memoria visible fact')");
+    await page.waitForFunction(() => document.querySelector("#memoryDetailDialog")?.open);
     await page.waitForFunction(() => document.querySelector("#memoryDetail")?.textContent.includes("prioritize viewing"), null, {
       timeout: 15000
     });
     const selectedState = await page.evaluate(() => ({
-      selectedCount: document.querySelectorAll("#memoryList [aria-selected='true']").length,
-      selectedTitle: document.querySelector("#memoryList [aria-selected='true'] strong")?.textContent || "",
+      selectedCount: document.querySelectorAll("#memoryList [aria-pressed='true']").length,
+      selectedTitle: document.querySelector("#memoryList [aria-pressed='true'] strong")?.textContent || "",
       detailText: document.querySelector("#memoryDetail")?.textContent || "",
       actionCount: document.querySelectorAll("#memoryDetail button, #memoryDetail [data-memory-action]").length
     }));
     if (selectedState.selectedCount !== 1 || selectedState.selectedTitle !== "UI Memoria visible fact" || !selectedState.detailText.includes("prioritize viewing") || selectedState.actionCount !== 0) {
       throw new Error(`Memoria UI selection/detail failed: ${JSON.stringify(selectedState)}`);
     }
+    await page.keyboard.press("Escape");
+
+    await page.click("#memoryRecallList .memory-recall-row:has-text('怎么决定记忆页面设计')");
+    await page.waitForFunction(() => document.querySelector("#memoryRecallDetail")?.textContent.includes("相关，但仅观察"));
+    const recallEvidence = await page.evaluate(() => ({
+      text: document.querySelector("#memoryRecallDetail")?.textContent || "",
+      candidateCount: document.querySelectorAll("#memoryRecallDetail .memory-candidate-row").length,
+      backVisible: !document.querySelector("#memoryDetailBack")?.hidden
+    }));
+    if (!recallEvidence.text.includes("关键词 + 语义") || !recallEvidence.text.includes("87%") || recallEvidence.candidateCount !== 2 || !recallEvidence.backVisible) {
+      throw new Error(`Memory recall evidence is incomplete: ${JSON.stringify(recallEvidence)}`);
+    }
+    await page.keyboard.press("Escape");
 
     await page.fill("#memorySearchInput", "prioritize viewing");
     await page.click("#searchMemory");
@@ -174,24 +227,35 @@ async function main() {
     }
     await page.selectOption("#memoryAgentFilter", "");
 
-    await page.click("#memoryAdvancedDetails > summary");
-    await page.waitForFunction(() => document.querySelector("#memoryAdvancedDetails")?.open, null, { timeout: 15000 });
+    await page.click('[data-memory-open="labels"]');
+    await page.waitForFunction(() => document.querySelector("#memoryDetailDialog")?.open, null, { timeout: 15000 });
     await page.waitForFunction(() => document.querySelector("#memoryAllLabelList")?.textContent.includes("inspect"), null, {
       timeout: 15000
     });
-    await page.click("[data-memory-label='inspect']");
+    const knowledgeDialogLayout = await page.evaluate(() => {
+      const dialog = document.querySelector("#memoryDetailDialog");
+      const head = dialog.querySelector(".memory-dialog-head").getBoundingClientRect();
+      const close = document.querySelector("#memoryDetailClose").getBoundingClientRect();
+      const back = document.querySelector("#memoryDetailBack");
+      return {
+        closeAtTrailingEdge: close.right > head.left + head.width * 0.85 && close.right <= head.right,
+        hiddenBackDisplay: getComputedStyle(back).display,
+        scrollbarWidth: getComputedStyle(dialog).scrollbarWidth
+      };
+    });
+    if (!knowledgeDialogLayout.closeAtTrailingEdge || knowledgeDialogLayout.hiddenBackDisplay !== "none" || knowledgeDialogLayout.scrollbarWidth !== "none") {
+      throw new Error(`Memoria knowledge dialog chrome regressed: ${JSON.stringify(knowledgeDialogLayout)}`);
+    }
+    await page.click("#memoryAllLabelList [data-memory-label='inspect']");
     await page.waitForFunction(() => document.querySelector("#memorySearchInput")?.value === "inspect", null, {
       timeout: 15000
     });
     await page.waitForFunction(() => document.querySelector("#memoryList")?.textContent.includes("UI Memoria second fact"), null, {
       timeout: 15000
     });
-    if (await page.locator("#memoryAdvancedDetails").getAttribute("open")) {
-      throw new Error("Memoria label navigation should return to the normal reading path.");
-    }
+    if (await page.locator("#memoryDetailDialog").getAttribute("open")) throw new Error("Memoria label navigation should return to the normal reading path.");
 
-    await page.click("#memoryAdvancedDetails > summary");
-    await page.click("[data-memory-tab='graph']");
+    await page.click('[data-memory-open="graph"]');
     await page.waitForSelector("#memoryGraphCanvas", { timeout: 15000 });
     await page.waitForFunction(
       () => Number(document.querySelector("#memoryGraphCanvas")?.dataset.nodeCount || 0) > 0,
@@ -277,11 +341,11 @@ async function main() {
     }
     await page.click("#memoryGraph [data-graph-mode='all']");
     await page.waitForFunction(() => document.querySelector("#memoryGraphCanvas")?.dataset.mode === "all", null, { timeout: 15000 });
-    await page.click("#memoryAdvancedDetails > summary");
-    await page.click("#memoryAdvancedDetails > summary");
+    await page.click("#memoryDetailClose");
+    await page.click('[data-memory-open="graph"]');
     await page.waitForSelector("#memoryGraphCanvas", { timeout: 15000 });
     const reopenedDisclosureGraph = await page.evaluate(() => ({
-      open: document.querySelector("#memoryAdvancedDetails")?.open,
+      open: document.querySelector("#memoryDetailDialog")?.open,
       activeGraph: document.querySelector("[data-memory-tab='graph']")?.classList.contains("active"),
       nodes: Number(document.querySelector("#memoryGraphCanvas")?.dataset.nodeCount || 0),
       edges: Number(document.querySelector("#memoryGraphCanvas")?.dataset.edgeCount || 0)
@@ -342,8 +406,7 @@ async function main() {
       throw new Error(`Memoria UI reopened the wrong window: ${reopenedTitle}`);
     }
     await reopenedPage.click("[data-view='memory']");
-    await reopenedPage.click("#memoryAdvancedDetails > summary");
-    await reopenedPage.click("[data-memory-tab='graph']");
+    await reopenedPage.click('[data-memory-open="graph"]');
     await reopenedPage.waitForSelector("#memoryGraphCanvas", { timeout: 15000 });
     await reopenedPage.waitForFunction(
       () => Number(document.querySelector("#memoryGraphCanvas")?.dataset.nodeCount || 0) > 0
@@ -362,6 +425,7 @@ async function main() {
       throw new Error(`Memoria UI renderer logged errors: ${JSON.stringify(rendererErrors)}`);
     }
     if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
+      await reopenedPage.click("#memoryDetailClose");
       await reopenedPage.screenshot({ path: process.env.CLARACORE_UI_SCREENSHOT_PATH });
     }
     await app.close();

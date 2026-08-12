@@ -29,10 +29,9 @@ function createClaraCoreHomeView(context) {
     homePresenceTitle,
     homePresenceDetail,
     homePresenceEmptyAction,
-    homeSharedLineSection,
-    homeSharedLineText,
-    homeEmergingSection,
-    homeEmergingText,
+    homeRecentActivitySection,
+    homeRecentActivityText,
+    homeRecentActivityAction,
     homeActionableIssue,
     homeVisionField,
     homeHorizonLabel,
@@ -79,8 +78,7 @@ function createClaraCoreHomeView(context) {
         state,
         dominantColor: state === "error" ? "#c85d63" : "#7f95ad",
         currentLineTitle: "",
-        currentSummary: "",
-        emergingThought: ""
+        currentSummary: ""
       },
       agents: []
     };
@@ -103,8 +101,7 @@ function createClaraCoreHomeView(context) {
   }
 
   function clearHomeDetailSections() {
-    homeSharedLineSection.hidden = true;
-    homeEmergingSection.hidden = true;
+    homeRecentActivitySection.hidden = true;
     homeActionableIssue.hidden = true;
     homeActionableIssue.textContent = "";
     homeActionableIssue.className = "home-presence-issue";
@@ -666,20 +663,19 @@ function createClaraCoreHomeView(context) {
     homePresence.setAttribute("aria-busy", "false");
     homePresenceTitle.textContent = model.title;
     homePresenceDetail.textContent = model.detail;
-    setHomeAction({
-      hidden: model.agents.length > 0,
-      labelKey: "home.presence.openAgentAccess",
-      viewTarget: "agent-setup"
-    });
+    setHomeAction(model.actionableIssue
+      ? { hidden: false, labelKey: "home.presence.openLogs", viewTarget: "logs" }
+      : model.core.currentSummary
+        ? { hidden: false, labelKey: "home.presence.openSharedLine", viewTarget: "shared-line" }
+        : model.empty
+          ? { hidden: false, labelKey: "home.presence.openAgentAccess", viewTarget: "agent-setup" }
+          : {});
     homeHorizonLabel.textContent = model.core.currentSummary && model.core.currentLineTitle
       ? `${t("home.presence.horizon")} · ${model.core.currentLineTitle}`
       : t("home.presence.horizon");
-    homeSharedLineSection.hidden = !model.core.currentSummary;
-    homeSharedLineText.textContent = model.core.currentLineTitle
-      ? `${model.core.currentLineTitle} · ${model.core.currentSummary}`
-      : model.core.currentSummary;
-    homeEmergingSection.hidden = !model.core.emergingThought;
-    homeEmergingText.textContent = model.core.emergingThought;
+    homeRecentActivitySection.hidden = !model.recentActivityTitle;
+    homeRecentActivityText.textContent = [model.recentActivityTitle, model.recentActivityDetail].filter(Boolean).join(" · ");
+    homeRecentActivityAction.hidden = !model.recentActivityTitle;
     homeActionableIssue.hidden = !model.actionableIssue;
     homeActionableIssue.textContent = model.actionableIssue?.text || "";
     homeActionableIssue.className = `home-presence-issue ${model.actionableIssue?.tone || ""}`.trim();

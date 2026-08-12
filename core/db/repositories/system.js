@@ -293,8 +293,7 @@ function createSystemRepository(helpers) {
           source: "claracore.db",
           backend: settings["innerlife.provider"] || "disabled",
           baseUrl: settings["innerlife.base_url"] || "http://127.0.0.1:11434",
-          lightModel: settings["innerlife.light_model"] || "",
-          deepModel: settings["innerlife.deep_model"] || "",
+          model: settings["innerlife.model"] || settings["innerlife.light_model"] || settings["innerlife.deep_model"] || "",
           pollSeconds: String(settings["innerlife.loop_seconds"] || 3600),
           lightIdleSeconds: "",
           deepIdleSeconds: "",
@@ -361,10 +360,9 @@ function createSystemRepository(helpers) {
       const provider = String(settings["innerlife.provider"] || "disabled").trim().toLowerCase();
       if (!provider || provider === "disabled") return null;
       const baseUrl = settings["innerlife.base_url"] || "http://127.0.0.1:11434";
-      const tier = String(input.tier || "light").trim().toLowerCase();
-      const lightModel = String(settings["innerlife.light_model"] || "").trim();
-      const deepModel = String(settings["innerlife.deep_model"] || "").trim();
-      const model = tier === "deep" ? deepModel || lightModel : lightModel || deepModel;
+      const model = String(
+        settings["innerlife.model"] || settings["innerlife.light_model"] || settings["innerlife.deep_model"] || ""
+      ).trim();
       if (!model) return null;
       const secrets = await this.getSecretRefs();
       const apiKeyRef = secrets["innerlife.llm.api_key"]?.ref || "";

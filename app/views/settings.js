@@ -6,18 +6,17 @@ function createClaraCoreSettingsView(context) {
     desktop,
     t,
     getSnapshot,
-    getSystemTimeZone,
     state = {}
   } = context;
   const {
     memoriaProvider, memoriaEndpointField, memoriaEndpoint, memoriaModelField, memoriaModel, memoriaApiKeyField, memoriaApiKey,
     memoriaConnectionRow, memoriaModelStatus, memoriaProviderNotice,
-    innerLifeBackend, innerLifeEndpointField, innerLifeEndpoint, innerLifeLightModelField, innerLifeLightModel,
-    innerLifeDeepModelField, innerLifeDeepModel, innerLifePollField, innerLifePollSeconds, innerLifeApiKeyField, innerLifeApiKey,
+    innerLifeBackend, innerLifeEndpointField, innerLifeEndpoint, innerLifeModelField, innerLifeModel,
+    innerLifePollField, innerLifePollSeconds, innerLifeApiKeyField, innerLifeApiKey,
     innerLifeConnectionRow,
     innerLifeApiKeySummary, innerLifeModelStatus, memoriaCapabilityProvider, innerLifeCapabilityProvider,
-    settingsLanguage, settingsTheme, settingsMotion, settingsTimeZone, settingsCloseBehavior, settingsCloseBehaviorSummary, settingsTrayStatus,
-    settingsThemeSummary, settingsMotionSummary, settingsDataStatus, settingsDataRoot, settingsPathSummary, settingsPathDetails,
+    settingsLanguage, settingsTheme, settingsCloseBehavior, settingsCloseBehaviorSummary, settingsTrayStatus,
+    settingsThemeSummary, settingsDataStatus, settingsDataRoot, settingsPathSummary, settingsPathDetails,
     settingsDataRootOverride, relaunchForDataRoot,
     settingsAgentGatewayStatus, settingsAgentGatewayPort, settingsAgentGatewayToken, settingsAgentGatewayEndpoint, settingsAgentGatewayTokenFile,
     settingsMemoryControllerMode, settingsMemoryControllerStatus,
@@ -97,6 +96,18 @@ function setInputValue(input, value) {
   if (input) input.value = value == null ? "" : String(value);
 }
 
+function setModelSelectValue(select, value) {
+  if (!select) return;
+  const model = String(value || "").trim();
+  select.replaceChildren();
+  if (!model) return;
+  const option = document.createElement("option");
+  option.value = model;
+  option.textContent = model;
+  select.append(option);
+  select.value = model;
+}
+
 function setHidden(element, hidden) {
   if (element) element.hidden = Boolean(hidden);
 }
@@ -113,8 +124,7 @@ function updateModelFieldVisibility() {
   const innerLifeEnabled = innerLifeProvider !== "disabled";
   const innerLifeUsesApiKey = innerLifeProvider === "openai-compatible";
   setHidden(innerLifeEndpointField, !innerLifeEnabled);
-  setHidden(innerLifeLightModelField, !innerLifeEnabled);
-  setHidden(innerLifeDeepModelField, !innerLifeEnabled);
+  setHidden(innerLifeModelField, !innerLifeEnabled);
   setHidden(innerLifePollField, !innerLifeEnabled);
   setHidden(innerLifeApiKeyField, !innerLifeUsesApiKey);
   setHidden(innerLifeConnectionRow, !innerLifeEnabled);
@@ -299,8 +309,7 @@ function renderSettings() {
   setSecretInput(memoriaApiKey, memoria.apiKeyRef || "");
   innerLifeBackend.value = innerlife.backend;
   innerLifeEndpoint.value = innerlife.baseUrl;
-  innerLifeLightModel.value = innerlife.lightModel;
-  innerLifeDeepModel.value = innerlife.deepModel;
+  setModelSelectValue(innerLifeModel, innerlife.model);
   innerLifePollSeconds.value = secondsToDisplayMinutes(innerlife.pollSeconds);
   setInputValue(settingsMemoryControllerMode, memoryController.mode || "off");
   if (settingsMemoryControllerStatus) {
@@ -327,10 +336,10 @@ function renderSettings() {
       ? t("settings.provider.needsSetup")
       : providerSummary(memoria.provider, memoria.model);
   }
-  const innerLifeStatus = modelStatus(innerlife.backend, Boolean(innerlife.lightModel || innerlife.deepModel));
+  const innerLifeStatus = modelStatus(innerlife.backend, Boolean(innerlife.model));
   applyModelStatus(innerLifeModelStatus, innerLifeStatus);
   if (innerLifeCapabilityProvider) {
-    innerLifeCapabilityProvider.textContent = providerSummary(innerlife.backend, innerlife.deepModel || innerlife.lightModel);
+    innerLifeCapabilityProvider.textContent = providerSummary(innerlife.backend, innerlife.model);
   }
   updateModelFieldVisibility();
 }
@@ -340,8 +349,6 @@ function renderAppearanceSettings() {
   const preferences = getAppearancePreferences();
   setInputValue(settingsLanguage, preferences.language);
   setInputValue(settingsTheme, preferences.theme);
-  setInputValue(settingsMotion, preferences.motion);
-  if (settingsTimeZone) settingsTimeZone.textContent = t("settings.timeZoneSystemValue", { zone: getSystemTimeZone() });
   setInputValue(settingsCloseBehavior, preferences.closeBehavior);
   if (settingsCloseBehaviorSummary) {
     settingsCloseBehaviorSummary.textContent =
@@ -352,9 +359,6 @@ function renderAppearanceSettings() {
   }
   if (settingsThemeSummary) {
     settingsThemeSummary.textContent = t(`settings.theme.${preferences.resolvedTheme}`);
-  }
-  if (settingsMotionSummary) {
-    settingsMotionSummary.textContent = t(`settings.motion.${preferences.resolvedMotion}`);
   }
   renderDataPaths();
   renderAgentGatewaySettings();
@@ -378,19 +382,13 @@ function collectSettingsForm() {
     "memory.embedding.model": memoryProvider === "claracore-built-in" ? BUILT_IN_EMBEDDING_MODEL : memoriaModel.value,
     "innerlife.provider": innerLifeProvider,
     "innerlife.base_url": innerLifeEndpoint.value,
-    "innerlife.deep_model": innerLifeDeepModel.value
+    "innerlife.model": innerLifeModel.value,
+    "innerlife.loop_seconds": displayMinutesToSeconds(innerLifePollSeconds.value)
   };
   if (innerLifeProvider === "openai-compatible") {
     form["innerlife.llm.api_key_ref"] = getSecretInputValue(innerLifeApiKey);
   }
   return form;
-}
-
-function collectRuntimeSettingsForm() {
-  return {
-    "innerlife.light_model": innerLifeLightModel.value,
-    "innerlife.loop_seconds": displayMinutesToSeconds(innerLifePollSeconds.value)
-  };
 }
 
 function collectMemoryControllerSettingsForm() {
@@ -416,7 +414,6 @@ function collectAppearanceSettingsForm() {
   return {
     language: settingsLanguage.value,
     theme: settingsTheme.value,
-    motion: settingsMotion.value,
     closeBehavior: settingsCloseBehavior.value
   };
 }
@@ -454,7 +451,6 @@ function agentGatewayCopyBlock() {
     bindEvents,
     collectAppearanceSettingsForm,
     collectAgentGatewayConfigForm,
-    collectRuntimeSettingsForm,
     collectMemoryControllerSettingsForm,
     collectSettingsForm,
     settingsValidationError,

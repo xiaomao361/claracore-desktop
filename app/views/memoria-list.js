@@ -84,14 +84,14 @@ function createClaraCoreMemoriaList(context) {
         const summary = memoryBodySummary(memory.body);
         const isSelected = memory.id === options.selectedId;
         return `
-          <article class="memory-item ${isSelected ? "selected" : ""}" data-memory-id="${escapeHtml(memory.id)}" role="option" aria-selected="${isSelected ? "true" : "false"}" tabindex="${isSelected ? "0" : "-1"}">
+          <button type="button" class="memory-item ${isSelected ? "selected" : ""}" data-memory-id="${escapeHtml(memory.id)}" aria-pressed="${isSelected ? "true" : "false"}">
             <strong>${escapeHtml(memory.title || t("memory.form.body"))}</strong>
             <p class="memory-summary">${escapeHtml(summary || t("memory.empty"))}</p>
             <div class="memory-meta">
               <span>${escapeHtml(agentId || t("memory.detail.unknownAgent"))} · ${escapeHtml(formatLocalDateTime(memory.created_at || memory.updated_at))}</span>
               <div>${labels}</div>
             </div>
-          </article>
+          </button>
         `;
       })
       .join("");

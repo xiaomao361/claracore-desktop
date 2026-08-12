@@ -67,7 +67,7 @@ async function main() {
     if (
       empty.state !== "empty" ||
       empty.busy !== "false" ||
-      !empty.title.includes("共同位置") ||
+      !empty.title.includes("共同线") ||
       empty.detail.includes("共同线仍然保持") ||
       empty.horizon !== "共同线" ||
       !empty.actionVisible ||
@@ -90,7 +90,7 @@ async function main() {
         busy: presence.getAttribute("aria-busy"),
         detail: document.querySelector("#homePresenceDetail")?.textContent || "",
         actionHidden: document.querySelector("#homePresenceEmptyAction").hidden,
-        sharedLineHidden: document.querySelector("#homeSharedLineSection").hidden,
+        recentActivityHidden: document.querySelector("#homeRecentActivitySection").hidden,
         issueHidden: document.querySelector("#homeActionableIssue").hidden
       };
     });
@@ -99,7 +99,7 @@ async function main() {
       loading.busy !== "true" ||
       !loading.detail ||
       !loading.actionHidden ||
-      !loading.sharedLineHidden ||
+      !loading.recentActivityHidden ||
       !loading.issueHidden
     ) {
       throw new Error(`Loading Home presence contract failed: ${JSON.stringify(loading)}`);
@@ -150,7 +150,7 @@ async function main() {
     await database.submitInnerLifeInbox({
       agentId: "codex",
       source: "home-presence-smoke",
-      body: "A long emerging thought remains readable beside the bounded Shared Line preview without either column covering the horizon, the presence markers, or the edge of the Home surface."
+      body: "PRIVATE PENDING INNERLIFE CONTENT MUST NOT APPEAR ON HOME."
     });
     for (const agentId of ["codex", "clara", "hermes", "fourth-agent", "fifth-agent"]) {
       await database.recordGatewayTrace({
@@ -171,11 +171,20 @@ async function main() {
 
     const initial = await page.evaluate(() => ({
       title: document.querySelector("#homePresenceTitle")?.textContent || "",
-      sharedLine: document.querySelector("#homeSharedLineText")?.textContent || "",
-      emergingThought: document.querySelector("#homeEmergingText")?.textContent || "",
+      sharedLine: document.querySelector("#homePresenceDetail")?.textContent || "",
+      recentActivity: document.querySelector("#homeRecentActivityText")?.textContent || "",
+      pendingInnerLifeExposed: document.querySelector("#homeView")?.textContent.includes("PRIVATE PENDING INNERLIFE CONTENT") || false,
+      primaryAction: {
+        hidden: document.querySelector("#homePresenceEmptyAction")?.hidden,
+        target: document.querySelector("#homePresenceEmptyAction")?.dataset.viewTarget || ""
+      },
+      recentActivityAction: {
+        hidden: document.querySelector("#homeRecentActivityAction")?.hidden,
+        target: document.querySelector("#homeRecentActivityAction")?.dataset.viewTarget || ""
+      },
       sharedLineLayout: (() => {
         const presence = document.querySelector(".home-presence");
-        const line = document.querySelector("#homeSharedLineText");
+        const line = document.querySelector("#homePresenceDetail");
         const style = getComputedStyle(line);
         const lineHeight = Number.parseFloat(style.lineHeight) || 0;
         const lineRect = line.getBoundingClientRect();
@@ -187,16 +196,6 @@ async function main() {
           overflow: style.overflow,
           lineClamp: style.webkitLineClamp,
           bottomGap: presenceRect.bottom - lineRect.bottom
-        };
-      })(),
-      lowerColumns: (() => {
-        const sharedLineRect = document.querySelector("#homeSharedLineSection").getBoundingClientRect();
-        const emergingRect = document.querySelector("#homeEmergingSection").getBoundingClientRect();
-        const presenceRect = document.querySelector(".home-presence").getBoundingClientRect();
-        return {
-          separated: sharedLineRect.right < emergingRect.left,
-          alignedBottom: Math.abs(sharedLineRect.bottom - emergingRect.bottom) <= 1,
-          emergingBottomGap: presenceRect.bottom - emergingRect.bottom
         };
       })(),
       container: (() => {
@@ -220,16 +219,19 @@ async function main() {
     }));
     if (
       initial.agents.length !== 3 ||
+      initial.title !== "当前共同线" ||
       !initial.sharedLine.includes("truthful shared consciousness space") ||
-      !initial.emergingThought.includes("long emerging thought") ||
+      !initial.recentActivity.includes("gateway_context") ||
+      initial.pendingInnerLifeExposed ||
+      initial.primaryAction.hidden ||
+      initial.primaryAction.target !== "shared-line" ||
+      initial.recentActivityAction.hidden ||
+      initial.recentActivityAction.target !== "trace" ||
       initial.sharedLineLayout.overflow !== "hidden" ||
-      initial.sharedLineLayout.lineClamp !== "6" ||
-      initial.sharedLineLayout.clientHeight > initial.sharedLineLayout.lineHeight * 6 + 1 ||
+      initial.sharedLineLayout.lineClamp !== "3" ||
+      initial.sharedLineLayout.clientHeight > initial.sharedLineLayout.lineHeight * 3 + 1 ||
       initial.sharedLineLayout.scrollHeight <= initial.sharedLineLayout.clientHeight ||
       initial.sharedLineLayout.bottomGap < 40 ||
-      !initial.lowerColumns.separated ||
-      !initial.lowerColumns.alignedBottom ||
-      initial.lowerColumns.emergingBottomGap < 40 ||
       initial.legacyPeriods ||
       initial.legacyModules ||
       initial.legacyRuntime ||
@@ -261,6 +263,15 @@ async function main() {
       throw new Error(`Agent colors/order changed across the same snapshot: ${JSON.stringify(stableAgents)}`);
     }
 
+    await page.click("#homePresenceEmptyAction");
+    await page.waitForFunction(() => document.querySelector("#sharedLineView")?.classList.contains("active-view"));
+    await page.click("[data-view='home']");
+    await page.waitForFunction(() => document.querySelector("#homeView")?.classList.contains("active-view"));
+    await page.click("#homeRecentActivityAction");
+    await page.waitForFunction(() => document.querySelector("#traceView")?.classList.contains("active-view"));
+    await page.click("[data-view='home']");
+    await page.waitForFunction(() => document.querySelector("#homeView")?.classList.contains("active-view"));
+
     await page.click("[data-view='memory']");
     await page.waitForFunction(() => window.ClaraCoreTestHooks.homeVision().scheduled === 0);
     const away = await page.evaluate(() => window.ClaraCoreTestHooks.homeVision());
@@ -272,7 +283,7 @@ async function main() {
     if (!returned.running || returned.scheduled !== 1) throw new Error(`Home scheduler did not resume exactly once: ${JSON.stringify(returned)}`);
 
     await page.evaluate(() => {
-      document.body.dataset.motionPreference = "off";
+      document.body.dataset.motion = "off";
     });
     await page.waitForFunction(() => {
       const state = window.ClaraCoreTestHooks.homeVision();
@@ -281,7 +292,7 @@ async function main() {
     const reduced = await page.evaluate(() => window.ClaraCoreTestHooks.homeVision());
 
     await page.evaluate(() => {
-      document.body.dataset.motionPreference = "on";
+      document.body.dataset.motion = "on";
     });
     await new Promise((resolve) => setTimeout(resolve, 1100));
     await database.recordGatewayTrace({
@@ -306,25 +317,24 @@ async function main() {
     await page.waitForFunction(() => document.querySelector("#homeView")?.classList.contains("active-view"));
     const narrow = await page.evaluate(() => {
       const presence = document.querySelector(".home-presence");
-      const sharedLine = document.querySelector("#homeSharedLineSection");
-      const emerging = document.querySelector("#homeEmergingSection");
-      const lineText = document.querySelector("#homeSharedLineText");
+      const recentActivity = document.querySelector("#homeRecentActivitySection");
+      const lineText = document.querySelector("#homePresenceDetail");
       const presenceRect = presence.getBoundingClientRect();
-      const sharedLineRect = sharedLine.getBoundingClientRect();
-      const emergingRect = emerging.getBoundingClientRect();
+      const recentActivityRect = recentActivity.getBoundingClientRect();
+      const actionRect = document.querySelector("#homeRecentActivityAction").getBoundingClientRect();
       return {
         lineClamp: getComputedStyle(lineText).webkitLineClamp,
-        sameColumn: Math.abs(sharedLineRect.left - emergingRect.left) <= 1,
-        stacked: emergingRect.top >= sharedLineRect.bottom,
-        rightGap: presenceRect.right - Math.max(sharedLineRect.right, emergingRect.right),
-        bottomGap: presenceRect.bottom - emergingRect.bottom,
+        actionBelowActivity: actionRect.top >= document.querySelector("#homeRecentActivityText").getBoundingClientRect().bottom,
+        actionInside: actionRect.right <= presenceRect.right,
+        rightGap: presenceRect.right - recentActivityRect.right,
+        bottomGap: presenceRect.bottom - recentActivityRect.bottom,
         horizontalOverflow: presence.scrollWidth > presence.clientWidth
       };
     });
     if (
       narrow.lineClamp !== "4" ||
-      !narrow.sameColumn ||
-      !narrow.stacked ||
+      !narrow.actionBelowActivity ||
+      !narrow.actionInside ||
       narrow.rightGap < 20 ||
       narrow.bottomGap < 30 ||
       narrow.horizontalOverflow

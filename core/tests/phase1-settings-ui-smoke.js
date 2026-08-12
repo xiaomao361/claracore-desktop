@@ -72,6 +72,14 @@ async function main() {
             }
           };
         }
+        if (String(url).endsWith("/v1/models")) {
+          return {
+            ok: true,
+            async json() {
+              return { data: [{ id: "ui-model-a" }, { id: "ui-model-b" }] };
+            }
+          };
+        }
         return originalFetch(url, options);
       };
     });
@@ -80,16 +88,37 @@ async function main() {
     page.on("dialog", (dialog) => dialog.accept().catch(() => {}));
     await page.waitForSelector("[data-view='settings']", { timeout: 15000 });
     await page.click("[data-view='settings']");
-    await page.waitForFunction(() => document.querySelector(".settings-tab-panel.active")?.dataset.settingsPanel === "common");
-    const commonHierarchy = await page.evaluate(() => ({
+    await page.waitForFunction(() => document.querySelector(".settings-tab-panel.active")?.dataset.settingsPanel === "capabilities");
+    const settingsHierarchy = await page.evaluate(() => ({
       activePanel: document.querySelector(".settings-tab-panel.active")?.dataset.settingsPanel,
-      timeZoneIsFormField: document.querySelector("#settingsTimeZone")?.matches("input, select, textarea"),
-      gatewayInCommon: Boolean(document.querySelector("[data-settings-panel='common'] #settingsAgentGatewayPort")),
-      visibleCards: [...document.querySelectorAll("[data-settings-panel='common'] .settings-section-card")].map((node) => node.textContent.trim())
+      hasMotionSetting: Boolean(document.querySelector("#settingsMotion")),
+      hasTimeZoneNote: Boolean(document.querySelector("#settingsTimeZone")),
+      tabNames: [...document.querySelectorAll("[data-settings-tab]")].map((node) => node.dataset.settingsTab),
+      hasCommonTab: Boolean(document.querySelector("[data-settings-tab='common']")),
+      tabsLeft: document.querySelector(".settings-tabs")?.getBoundingClientRect().left,
+      panelLeft: document.querySelector(".settings-tab-panel.active .settings-primary-panel")?.getBoundingClientRect().left
     }));
-    if (commonHierarchy.activePanel !== "common" || commonHierarchy.timeZoneIsFormField || commonHierarchy.gatewayInCommon || commonHierarchy.visibleCards.length !== 3) {
-      throw new Error(`Common settings hierarchy is wrong: ${JSON.stringify(commonHierarchy)}`);
+    if (settingsHierarchy.activePanel !== "capabilities" || settingsHierarchy.hasMotionSetting || settingsHierarchy.hasTimeZoneNote || settingsHierarchy.hasCommonTab || settingsHierarchy.tabNames.join(",") !== "capabilities,app-data,advanced" || Math.abs(settingsHierarchy.tabsLeft - settingsHierarchy.panelLeft) > 1) {
+      throw new Error(`Settings hierarchy is wrong: ${JSON.stringify(settingsHierarchy)}`);
     }
+    const tabSemantics = await page.evaluate(() => ({
+      roles: [...document.querySelectorAll("[data-settings-tab]")].map((node) => node.getAttribute("role")),
+      selected: [...document.querySelectorAll("[data-settings-tab]")].map((node) => node.getAttribute("aria-selected")),
+      tabIndexes: [...document.querySelectorAll("[data-settings-tab]")].map((node) => node.tabIndex),
+      panelRoles: [...document.querySelectorAll("[data-settings-panel]")].map((node) => node.getAttribute("role")),
+      visiblePanels: [...document.querySelectorAll("[data-settings-panel]")].filter((node) => !node.hidden).map((node) => node.dataset.settingsPanel)
+    }));
+    if (tabSemantics.roles.some((role) => role !== "tab") || tabSemantics.selected.join(",") !== "true,false,false" || tabSemantics.tabIndexes.join(",") !== "0,-1,-1" || tabSemantics.panelRoles.some((role) => role !== "tabpanel") || tabSemantics.visiblePanels.join(",") !== "capabilities") {
+      throw new Error(`Settings tab semantics are wrong: ${JSON.stringify(tabSemantics)}`);
+    }
+    await page.locator("[data-settings-tab='capabilities']").focus();
+    await page.keyboard.press("ArrowRight");
+    await page.waitForFunction(() => document.querySelector(".settings-tab-panel.active")?.dataset.settingsPanel === "app-data");
+    if ((await page.evaluate(() => document.activeElement?.dataset?.settingsTab)) !== "app-data") {
+      throw new Error("Settings arrow-key navigation did not move focus with the active tab.");
+    }
+    await page.keyboard.press("ArrowLeft");
+    await page.waitForFunction(() => document.querySelector(".settings-tab-panel.active")?.dataset.settingsPanel === "capabilities");
     if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
       await stabilizeScreenshot(page);
       await page.screenshot({ path: process.env.CLARACORE_UI_SCREENSHOT_PATH });
@@ -100,8 +129,8 @@ async function main() {
       innerLifeOpen: document.querySelector("#innerLifeCapabilityDetails").open,
       runtimeInsideCapabilities: Boolean(document.querySelector("[data-settings-panel='capabilities'] #innerLifePollSeconds"))
     }));
-    if (collapsedCapabilities.memoryOpen || collapsedCapabilities.innerLifeOpen || collapsedCapabilities.runtimeInsideCapabilities) {
-      throw new Error(`Capabilities should start collapsed and exclude runtime tuning: ${JSON.stringify(collapsedCapabilities)}`);
+    if (collapsedCapabilities.memoryOpen || collapsedCapabilities.innerLifeOpen || !collapsedCapabilities.runtimeInsideCapabilities) {
+      throw new Error(`Capabilities should start collapsed and keep InnerLife settings together: ${JSON.stringify(collapsedCapabilities)}`);
     }
     if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
       await stabilizeScreenshot(page);
@@ -125,8 +154,6 @@ async function main() {
       innerlifeEndpoint: document.querySelector("#innerLifeEndpoint").value,
       innerlifeApiKeyReadonly: document.querySelector("#innerLifeApiKey").hasAttribute("readonly"),
       innerlifeLoop: document.querySelector("#innerLifePollSeconds").value,
-      timeZone: document.querySelector("#settingsTimeZone").textContent,
-      expectedTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       innerlifeStatus: document.querySelector("#innerLifeModelStatus").textContent,
       memoriaOptions: [...document.querySelectorAll("#memoriaProvider option")].map((option) => option.value),
       innerlifeOptions: [...document.querySelectorAll("#innerLifeBackend option")].map((option) => option.value),
@@ -150,9 +177,6 @@ async function main() {
     if (defaults.innerlifeEndpoint !== "https://api.deepseek.com") throw new Error(`Unexpected InnerLife endpoint: ${defaults.innerlifeEndpoint}`);
     if (defaults.innerlifeApiKeyReadonly) throw new Error("InnerLife API key reference should be editable.");
     if (defaults.innerlifeLoop !== "60") throw new Error(`Unexpected InnerLife loop minutes: ${defaults.innerlifeLoop}`);
-    if (!defaults.timeZone.includes(defaults.expectedTimeZone)) {
-      throw new Error(`Settings should show the current system time zone: ${JSON.stringify(defaults)}`);
-    }
     if (!["configured", "已配置"].some((label) => defaults.innerlifeStatus.toLowerCase().includes(label))) {
       throw new Error(`Unexpected InnerLife status: ${defaults.innerlifeStatus}`);
     }
@@ -194,17 +218,23 @@ async function main() {
       { timeout: 10000 }
     );
     await fillExact(page, "#memoriaModel", "bge-m3-ui-smoke");
-    await page.selectOption("#innerLifeBackend", "ollama");
-    await fillExact(page, "#innerLifeEndpoint", "http://127.0.0.1:11438");
-    await fillExact(page, "#innerLifeDeepModel", "ui-deep");
+    await fillExact(page, "#innerLifeEndpoint", "https://models.example.test");
+    await page.click("#refreshInnerLifeModels");
+    await page.waitForFunction(
+      () => [...document.querySelectorAll("#innerLifeModel option")].filter((option) => option.value).length === 2,
+      null,
+      { timeout: 10000 }
+    );
+    await page.selectOption("#innerLifeModel", "ui-model-b");
+    await fillExact(page, "#innerLifePollSeconds", "44");
     const modelFormBeforeSave = await page.evaluate(() => ({
       memoriaProvider: document.querySelector("#memoriaProvider").value,
       memoriaEndpoint: document.querySelector("#memoriaEndpoint").value,
       memoriaModel: document.querySelector("#memoriaModel").value,
       innerLifeBackend: document.querySelector("#innerLifeBackend").value,
       innerLifeEndpoint: document.querySelector("#innerLifeEndpoint").value,
-      innerLifeLightModel: document.querySelector("#innerLifeLightModel").value,
-      innerLifeDeepModel: document.querySelector("#innerLifeDeepModel").value,
+      innerLifeModel: document.querySelector("#innerLifeModel").value,
+      innerLifeModelOptions: [...document.querySelectorAll("#innerLifeModel option")].map((option) => option.value).filter(Boolean),
       innerLifePollSeconds: document.querySelector("#innerLifePollSeconds").value,
       activePanel: document.querySelector(".settings-tab-panel.active")?.dataset.settingsPanel
     }));
@@ -212,9 +242,11 @@ async function main() {
       modelFormBeforeSave.memoriaProvider !== "ollama"
       || modelFormBeforeSave.memoriaEndpoint !== "http://127.0.0.1:11437"
       || modelFormBeforeSave.memoriaModel !== "bge-m3-ui-smoke"
-      || modelFormBeforeSave.innerLifeBackend !== "ollama"
-      || modelFormBeforeSave.innerLifeEndpoint !== "http://127.0.0.1:11438"
-      || modelFormBeforeSave.innerLifeDeepModel !== "ui-deep"
+      || modelFormBeforeSave.innerLifeBackend !== "openai-compatible"
+      || modelFormBeforeSave.innerLifeEndpoint !== "https://models.example.test"
+      || modelFormBeforeSave.innerLifeModel !== "ui-model-b"
+      || modelFormBeforeSave.innerLifeModelOptions.join(",") !== "ui-model-a,ui-model-b"
+      || modelFormBeforeSave.innerLifePollSeconds !== "44"
       || modelFormBeforeSave.activePanel !== "capabilities"
     ) {
       throw new Error(`Settings model form was not ready before save: ${JSON.stringify(modelFormBeforeSave)}`);
@@ -233,40 +265,43 @@ async function main() {
       (snapshot) => (
         snapshot.configuration.memoria.provider === "ollama"
         && snapshot.configuration.memoria.endpoint === "http://127.0.0.1:11437"
+        && snapshot.configuration.innerlife.pollSeconds === "2640"
       )
     );
+
+    await page.click("[data-settings-tab='app-data']");
+    const appDataHierarchy = await page.evaluate(() => ({
+      preferenceCards: document.querySelectorAll("[data-settings-panel='app-data'] .settings-section-card").length,
+      dataGroups: document.querySelectorAll("#appDataSettingsGroups > details").length,
+      hasLanguage: Boolean(document.querySelector("[data-settings-panel='app-data'] #settingsLanguage")),
+      hasBackup: Boolean(document.querySelector("[data-settings-panel='app-data'] #dataRecoveryDetails")),
+      hasStorage: Boolean(document.querySelector("[data-settings-panel='app-data'] #storageDetails")),
+      hasGateway: Boolean(document.querySelector("[data-settings-panel='app-data'] #settingsAgentGatewayPort"))
+    }));
+    if (appDataHierarchy.preferenceCards !== 2 || appDataHierarchy.dataGroups !== 2 || !appDataHierarchy.hasLanguage || !appDataHierarchy.hasBackup || !appDataHierarchy.hasStorage || appDataHierarchy.hasGateway) {
+      throw new Error(`App and data settings hierarchy is wrong: ${JSON.stringify(appDataHierarchy)}`);
+    }
+    if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
+      await stabilizeScreenshot(page);
+      await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "app-data") });
+    }
 
     await page.click("[data-settings-tab='advanced']");
     const advancedHierarchy = await page.evaluate(() => ({
       groups: document.querySelectorAll("[data-settings-panel='advanced'] > .settings-primary-panel > .advanced-settings-list > details").length,
       openGroups: document.querySelectorAll("[data-settings-panel='advanced'] > .settings-primary-panel > .advanced-settings-list > details[open]").length,
       memoryControllerGroups: document.querySelectorAll("#advancedMemoryControllerDetails").length,
+      modelInputs: document.querySelectorAll("[data-settings-panel='advanced'] #innerLifeModel").length,
       copiedAgentConfigPresent: Boolean(document.querySelector("#copyAgentGatewayConfig")),
       duplicateDataRoot: document.querySelectorAll("#dataRootPath").length
     }));
-    if (advancedHierarchy.groups !== 6 || advancedHierarchy.openGroups !== 0 || advancedHierarchy.memoryControllerGroups !== 1 || advancedHierarchy.copiedAgentConfigPresent || advancedHierarchy.duplicateDataRoot !== 1) {
+    if (advancedHierarchy.groups !== 3 || advancedHierarchy.openGroups !== 0 || advancedHierarchy.memoryControllerGroups !== 1 || advancedHierarchy.modelInputs !== 0 || advancedHierarchy.copiedAgentConfigPresent || advancedHierarchy.duplicateDataRoot !== 1) {
       throw new Error(`Advanced settings hierarchy is wrong: ${JSON.stringify(advancedHierarchy)}`);
     }
     if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
-      await page.evaluate(() => {
-        const details = document.querySelector("#advancedDataRecoveryDetails");
-        details.open = true;
-        details.open = false;
-      });
       await stabilizeScreenshot(page);
       await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "advanced") });
     }
-    await page.evaluate(() => { document.querySelector("#advancedModelRuntimeDetails").open = true; });
-    await fillExact(page, "#innerLifeLightModel", "ui-light");
-    await fillExact(page, "#innerLifePollSeconds", "44");
-    await page.click("#saveRuntimeSettings");
-    await waitForRuntimeSnapshot(
-      page,
-      (currentSnapshot) => (
-        currentSnapshot.configuration.innerlife.lightModel === "ui-light"
-        && currentSnapshot.configuration.innerlife.pollSeconds === "2640"
-      )
-    );
 
     const snapshot = await page.evaluate(() => window.ClaraCoreDesktop.getRuntimeSnapshot());
     if (!snapshot.data.databasePath.startsWith(dataRoot)) {
@@ -281,17 +316,14 @@ async function main() {
     if (snapshot.configuration.memoria.model !== "bge-m3-ui-smoke") {
       throw new Error(`Settings UI did not persist Memoria model: ${JSON.stringify(snapshot.configuration.memoria)}`);
     }
-    if (snapshot.configuration.innerlife.backend !== "ollama") {
-      throw new Error("Settings UI did not persist InnerLife backend.");
+    if (snapshot.configuration.innerlife.backend !== "openai-compatible") {
+      throw new Error("Settings UI did not persist the OpenAI-compatible InnerLife backend.");
     }
-    if (snapshot.configuration.innerlife.baseUrl !== "http://127.0.0.1:11438") {
+    if (snapshot.configuration.innerlife.baseUrl !== "https://models.example.test") {
       throw new Error("Settings UI did not persist InnerLife endpoint.");
     }
-    if (snapshot.configuration.innerlife.lightModel !== "ui-light") {
-      throw new Error("Settings UI did not persist InnerLife light model.");
-    }
-    if (snapshot.configuration.innerlife.deepModel !== "ui-deep") {
-      throw new Error("Settings UI did not persist InnerLife deep model.");
+    if (snapshot.configuration.innerlife.model !== "ui-model-b") {
+      throw new Error("Settings UI did not persist the selected InnerLife model.");
     }
     if (snapshot.configuration.innerlife.pollSeconds !== "2640") {
       throw new Error("Settings UI did not persist InnerLife loop minutes as seconds.");
@@ -324,12 +356,14 @@ async function main() {
     const gatewayDefaults = await page.evaluate(() => ({
       port: document.querySelector("#settingsAgentGatewayPort").value,
       token: document.querySelector("#settingsAgentGatewayToken").value,
+      tokenType: document.querySelector("#settingsAgentGatewayToken").type,
       endpoint: document.querySelector("#settingsAgentGatewayEndpoint").textContent,
       tokenFile: document.querySelector("#settingsAgentGatewayTokenFile").textContent,
       status: document.querySelector("#settingsAgentGatewayStatus").textContent
     }));
     if (!Number(gatewayDefaults.port)) throw new Error(`Agent Gateway port was not rendered: ${JSON.stringify(gatewayDefaults)}`);
     if (gatewayDefaults.token.length < 32) throw new Error("Agent Gateway token was not rendered.");
+    if (gatewayDefaults.tokenType !== "password") throw new Error("Agent Gateway token should be masked by default.");
     if (!gatewayDefaults.endpoint.includes(`:${gatewayDefaults.port}/mcp`)) {
       throw new Error(`Agent Gateway endpoint did not match rendered port: ${JSON.stringify(gatewayDefaults)}`);
     }
@@ -342,6 +376,8 @@ async function main() {
     if (generatedToken === gatewayDefaults.token || generatedToken.length !== 64) {
       throw new Error("Agent Gateway random token generation did not update the token field.");
     }
+    const generatedNotice = await page.locator("#agentGatewaySettingsNotice").textContent();
+    if (!generatedNotice?.trim()) throw new Error("Agent Gateway token generation did not provide an adjacent status message.");
     await page.click("#saveAgentGatewayConfig");
     await waitForRuntimeSnapshot(
       page,
@@ -359,14 +395,16 @@ async function main() {
     if (renderedGateway.token !== generatedToken || renderedGateway.endpoint !== gatewaySnapshot.endpoint) {
       throw new Error(`Agent Gateway settings fields did not refresh after save: ${JSON.stringify(renderedGateway)}`);
     }
+    const savedGatewayNotice = await page.locator("#agentGatewaySettingsNotice").textContent();
+    if (!savedGatewayNotice?.trim()) throw new Error("Agent Gateway save did not provide an adjacent status message.");
 
     await page.setViewportSize({ width: 820, height: 720 });
-    await page.click("[data-settings-tab='common']");
+    await page.click("[data-settings-tab='app-data']");
     const narrowLayout = await page.evaluate(() => ({
       horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
       activePanel: document.querySelector(".settings-tab-panel.active")?.dataset.settingsPanel
     }));
-    if (narrowLayout.horizontalOverflow || narrowLayout.activePanel !== "common") {
+    if (narrowLayout.horizontalOverflow || narrowLayout.activePanel !== "app-data") {
       throw new Error(`Narrow Settings layout regressed: ${JSON.stringify(narrowLayout)}`);
     }
     const unexpectedRendererErrors = rendererErrors.filter((message) => !message.includes("visual QA connection failure"));

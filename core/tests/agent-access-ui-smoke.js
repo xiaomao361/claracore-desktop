@@ -45,7 +45,13 @@ async function main() {
           )
         ),
         helper: side.querySelector("[data-i18n='agentSetup.copyHelper']")?.textContent || "",
-        status: document.querySelector("#agentSetupStatus")?.textContent || ""
+        status: document.querySelector("#agentSetupStatus")?.textContent || "",
+        gatewayStatus: document.querySelector("#agentGatewayStatus")?.textContent || "",
+        httpStatus: document.querySelector("#agentHttpStatus")?.textContent || "",
+        stdioStatus: document.querySelector("#agentStdioStatus")?.textContent || "",
+        guideStatus: document.querySelector("#agentGuideStatus")?.textContent || "",
+        guideVersion: document.querySelector("#agentGuideVersion")?.textContent || "",
+        processSteps: document.querySelectorAll(".agent-access-process-flow article").length
       };
     });
     if (
@@ -54,7 +60,13 @@ async function main() {
       !hierarchy.recentActivityPresent ||
       hierarchy.removedControlsPresent ||
       !hierarchy.helper ||
-      !hierarchy.status
+      !hierarchy.status ||
+      !hierarchy.gatewayStatus ||
+      !hierarchy.httpStatus ||
+      !hierarchy.stdioStatus ||
+      !hierarchy.guideStatus ||
+      !hierarchy.guideVersion.includes("v0.6.9") ||
+      hierarchy.processSteps !== 4
     ) {
       throw new Error(`Agent Access hierarchy contract failed: ${JSON.stringify(hierarchy)}`);
     }
@@ -72,6 +84,7 @@ async function main() {
       "claracore_connection_test",
       "gateway_context",
       "gateway_docs",
+      "pass `query` to search maintained guide passages",
       "X-ClaraCore-Tool-Profile",
       "CLARACORE_TOOL_PROFILE",
       "Keep four states separate",
@@ -100,6 +113,7 @@ async function main() {
     }
 
     await page.click("[data-view='settings']");
+    await page.click("[data-settings-tab='app-data']");
     await page.selectOption("#settingsLanguage", "en");
     await page.selectOption("#settingsTheme", "dark");
     await page.click("#saveAppearanceSettings");
