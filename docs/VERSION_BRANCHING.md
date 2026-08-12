@@ -11,8 +11,9 @@
 `0.6.9` publishes the unified Desktop design language, direct human-facing
 copy, versioned searchable Agent Guide, single-model InnerLife settings, and
 clearer Memory/Trace/Logs evidence boundaries. It is a Developer ID signed and
-Apple-notarized macOS Apple Silicon Lite release. Full, Windows, and Intel macOS
-packages are outside this release. See
+Apple-notarized macOS Apple Silicon Full/Lite release with Windows x64
+Full/Lite installers. Intel macOS and Mac App Store packages are outside this
+release. See
 [v0.6.9 Release Notes](RELEASE_NOTES_V0.6.9.md).
 
 `0.6.8` was a local design checkpoint and was never published.
@@ -94,8 +95,10 @@ Current packaging commands and artifact checks live in
 ## Current Checkpoint
 
 `0.6.9` is the current public release on `main`, tagged `v0.6.9`. Its macOS
-Apple Silicon Lite DMG is Developer ID signed, Apple-notarized, stapled,
-Gatekeeper accepted, and published with a SHA-256 checksum.
+Apple Silicon Full/Lite DMGs are Developer ID signed, Apple-notarized, stapled,
+and Gatekeeper accepted. Its Windows x64 Full/Lite installers are built and
+package-verified on `windows-latest`. All four assets are published with
+SHA-256 checksums.
 
 - 2026-08-12: the complete human UI adopts one design language; the Agent Guide
   is versioned and searchable; InnerLife settings use one migrated model.

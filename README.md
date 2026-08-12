@@ -40,8 +40,8 @@ Read these before adding new features:
   pagination, resource ownership, memory telemetry, and long-run checks.
 - [macOS Packaging](docs/mac-packaging.md): current local packaging and packaged
   Gateway validation notes.
-- [v0.6.9 release notes](docs/RELEASE_NOTES_V0.6.9.md): current signed and
-  notarized macOS Apple Silicon Lite release.
+- [v0.6.9 release notes](docs/RELEASE_NOTES_V0.6.9.md): current macOS Apple
+  Silicon and Windows x64 Full/Lite release.
 - [v0.6.7 release notes](docs/RELEASE_NOTES_V0.6.7.md): previous signed and
   notarized macOS Apple Silicon Lite release.
 - [v0.6.5 release notes](docs/RELEASE_NOTES_V0.6.5.md): previous signed and
@@ -67,9 +67,9 @@ Read these before adding new features:
 ## Current Status
 
 The current development and public stable version is `0.6.9`. The public
-release is a signed and notarized macOS Apple Silicon Lite build; Full,
-Windows, Intel macOS, and Mac App Store packages are outside that release. It
-is a working desktop shell with a
+release contains Developer ID signed and notarized macOS Apple Silicon
+Full/Lite builds plus Windows x64 Full/Lite installers. Intel macOS and Mac App
+Store packages are outside that release. It is a working desktop shell with a
 product-owned local data store, Desktop-native Memoria, Shared Line, InnerLife,
 a Desktop-owned Gateway, with model configuration merged into the Settings
 surface.

@@ -3,8 +3,8 @@
 ## Current Release Boundary
 
 The current development and public stable release is `0.6.9`. The `v0.6.9`
-release contains a Developer ID signed and Apple-notarized macOS arm64 Lite
-DMG plus its checksum file. Treat
+release contains Developer ID signed and Apple-notarized macOS arm64 Full/Lite
+DMGs and Windows x64 Full/Lite installers, with platform checksum files. Treat
 [Version Branching](VERSION_BRANCHING.md) and
 [v0.6.9 Release Notes](RELEASE_NOTES_V0.6.9.md) as the current release truth.
 Changes on a post-release maintenance branch are not part of the immutable
@@ -38,7 +38,8 @@ Create a Lite `.dmg`:
 npm run dist:mac:lite
 ```
 
-Create the explicit Developer ID signed, notarized, and stapled release DMG:
+Create the explicit Developer ID signed, notarized, and stapled Lite release
+DMG:
 
 ```bash
 npm run release:mac:lite
@@ -51,12 +52,15 @@ not submit test packages to Apple.
 Current App output and future DMG output:
 
 ```text
+dist/mac-arm64/ClaraCore Desktop.app
+dist/ClaraCore-Desktop-0.6.9-arm64.dmg
 dist-lite/mac-arm64/ClaraCore Desktop.app
 dist-lite/ClaraCore-Desktop-0.6.9-lite-arm64.dmg
 ```
 
-The signed and notarized `0.6.9` Lite artifact is recorded in the release
-notes. Packages built with the local `dist` command remain test artifacts.
+The signed and notarized `0.6.9` Full/Lite artifacts are recorded in the
+release notes. Packages built with the unsigned local `dist` commands remain
+test artifacts.
 
 Run `npm run test:package:lite` after creating the unpacked Lite App. The check
 validates the Lite package independently; when a matching unpacked Full App is
@@ -84,8 +88,9 @@ ClaraCore-Desktop-<version>-lite-x64-Setup.exe
 ```
 
 All four distribution scripts pass `--publish never` to electron-builder.
-Creating the tag, GitHub Release, and uploaded assets is an explicit release
-step after validation; CI packaging never publishes implicitly.
+Creating the tag and GitHub Release is explicit. The Windows workflow may
+publish its verified installers only when manually dispatched with an existing
+`publish_tag`; pull-request builds and ordinary dispatches never publish.
 
 macOS artifacts are built and validated locally. Windows Full and Lite
 artifacts are built by the manually triggered
@@ -103,7 +108,7 @@ performing a live published-Release check.
 
 Earlier release assets and checksums remain documented in their versioned
 release notes. The current artifact boundary is the `v0.6.9` macOS Apple
-Silicon Lite release described above.
+Silicon and Windows x64 Full/Lite release described above.
 
 ## Gateway In Packaged Mode
 
@@ -148,17 +153,20 @@ node core/gateway/mcp-server.js
 Current released-artifact evidence is recorded in
 [v0.6.9 Release Notes](RELEASE_NOTES_V0.6.9.md).
 
-### `0.6.9` Lite release checkpoint
+### `0.6.9` Full/Lite release checkpoint
 
 Validated locally and after publication:
 
 - source, lockfile, bundle, and packaged Gateway versions are `0.6.9`;
 - source smoke, Gateway, Memory Controller, Lite, update, responsive-layout,
   and UI polish checks pass;
-- the Lite package boundary and packaged Gateway smoke pass;
+- macOS Full built-in embedding, Full/Lite package boundaries, and packaged
+  Gateway smokes pass;
 - App and DMG notarization submissions are accepted, both tickets validate,
   and Gatekeeper reports `Notarized Developer ID`;
-- `hdiutil verify` passes and the published DMG matches `SHA256SUMS.txt`.
+- the Windows workflow builds and validates Full/Lite installers, including a
+  real packaged Full embedding generation;
+- `hdiutil verify` and published-platform checksum verification pass.
 
 ### `0.6.7` Lite release checkpoint
 

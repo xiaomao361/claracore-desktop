@@ -2,6 +2,15 @@ name: Build Windows Release
 
 on:
   workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Source ref to build (for example v0.6.9)
+        required: false
+        type: string
+      publish_tag:
+        description: Existing GitHub Release tag to receive verified installers
+        required: false
+        type: string
   pull_request:
     paths:
       - ".github/workflows/build-windows-release.yml"
@@ -12,7 +21,7 @@ on:
       - "resources/models/**"
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: build-windows-release-${{ github.ref }}
@@ -29,6 +38,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source_ref || github.ref }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
@@ -76,3 +87,18 @@ jobs:
             SHA256SUMS-windows.txt
           if-no-files-found: error
           retention-days: 7
+
+      - name: Publish verified Windows installers
+        if: ${{ inputs.publish_tag != '' }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLISH_TAG: ${{ inputs.publish_tag }}
+        run: |
+          $files = @(
+            Get-ChildItem dist, dist-lite -Filter '*-Setup.exe'
+            Get-Item SHA256SUMS-windows.txt
+          )
+          $arguments = @('release', 'upload', $env:PUBLISH_TAG, '--clobber') + $files.FullName
+          & gh @arguments
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

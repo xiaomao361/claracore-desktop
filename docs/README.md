@@ -29,8 +29,8 @@ instructions.
 
 - [macOS Packaging](mac-packaging.md): current Full/Lite packaging commands and
   packaged Gateway checks.
-- [v0.6.9 Release Notes](RELEASE_NOTES_V0.6.9.md): current signed and notarized
-  macOS Apple Silicon Lite GitHub Release.
+- [v0.6.9 Release Notes](RELEASE_NOTES_V0.6.9.md): current macOS Apple Silicon
+  and Windows x64 Full/Lite GitHub Release.
 - [v0.6.7 Release Notes](RELEASE_NOTES_V0.6.7.md): previous signed and notarized
   macOS Apple Silicon Lite GitHub Release.
 - [v0.6.5 Release Notes](RELEASE_NOTES_V0.6.5.md): previous signed and notarized
