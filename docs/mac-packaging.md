@@ -38,10 +38,11 @@ Create a Lite `.dmg`:
 npm run dist:mac:lite
 ```
 
-Create the explicit Developer ID signed, notarized, and stapled Lite release
-DMG:
+Create the explicit Developer ID signed, notarized, and stapled Full/Lite
+release DMGs:
 
 ```bash
+npm run release:mac
 npm run release:mac:lite
 ```
 

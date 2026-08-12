@@ -76,6 +76,7 @@
     "pack:mac:lite": "electron-builder --mac --dir --config scripts/lite-builder-config.js",
     "dist:mac": "electron-builder --mac --publish never",
     "dist:mac:lite": "electron-builder --mac --config scripts/lite-builder-config.js --publish never",
+    "release:mac": "APPLE_KEYCHAIN_PROFILE=claracore-notary electron-builder --mac --arm64 --config scripts/signed-builder-config.js --publish never && node scripts/notarize-dmg.js full",
     "release:mac:lite": "APPLE_KEYCHAIN_PROFILE=claracore-notary electron-builder --mac --arm64 --config scripts/signed-lite-builder-config.js --publish never && node scripts/notarize-dmg.js lite",
     "pack:win": "electron-builder --win --x64 --dir",
     "pack:win:lite": "electron-builder --win --x64 --dir --config scripts/lite-builder-config.js",
