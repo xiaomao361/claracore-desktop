@@ -2,13 +2,10 @@
 
 ## Current Release Boundary
 
-The current development and public stable release is `0.6.9`. The `v0.6.9`
-release contains Developer ID signed and Apple-notarized macOS arm64 Full/Lite
-DMGs and Windows x64 Full/Lite installers, with platform checksum files. Treat
-[Version Branching](VERSION_BRANCHING.md) and
-[v0.6.9 Release Notes](RELEASE_NOTES_V0.6.9.md) as the current release truth.
-Changes on a post-release maintenance branch are not part of the immutable
-`v0.6.9` tag unless they are separately versioned and released.
+The current development version is `0.6.10`; the public stable release remains
+`0.6.9` until the complete `v0.6.10` matrix passes and the GitHub Release is
+published. Treat [Version Branching](VERSION_BRANCHING.md) and the versioned
+release notes as the release truth.
 
 ## Historical Pre-Release Checkpoint
 
@@ -54,14 +51,14 @@ Current App output and future DMG output:
 
 ```text
 dist/mac-arm64/ClaraCore Desktop.app
-dist/ClaraCore-Desktop-0.6.9-arm64.dmg
+dist/ClaraCore-Desktop-0.6.10-arm64.dmg
 dist-lite/mac-arm64/ClaraCore Desktop.app
-dist-lite/ClaraCore-Desktop-0.6.9-lite-arm64.dmg
+dist-lite/ClaraCore-Desktop-0.6.10-lite-arm64.dmg
 ```
 
-The signed and notarized `0.6.9` Full/Lite artifacts are recorded in the
-release notes. Packages built with the unsigned local `dist` commands remain
-test artifacts.
+Only artifacts built with the signed release commands and accepted by the
+validation contract below may be uploaded to a public release. Packages built
+with the unsigned local `dist` commands remain test artifacts.
 
 Run `npm run test:package:lite` after creating the unpacked Lite App. The check
 validates the Lite package independently; when a matching unpacked Full App is
@@ -108,8 +105,8 @@ Run `npm run test:update` for mocked release and Settings UI coverage before
 performing a live published-Release check.
 
 Earlier release assets and checksums remain documented in their versioned
-release notes. The current artifact boundary is the `v0.6.9` macOS Apple
-Silicon and Windows x64 Full/Lite release described above.
+release notes. The `v0.6.10` release candidate targets macOS Apple Silicon and
+Windows x64 Full/Lite artifacts plus per-platform checksum files.
 
 ## Gateway In Packaged Mode
 

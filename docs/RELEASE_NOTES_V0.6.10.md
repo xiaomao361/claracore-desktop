@@ -1,10 +1,24 @@
-# ClaraCore Desktop v0.6.10 Checkpoint Notes
+# ClaraCore Desktop v0.6.10 Release Notes
 
 Date: 2026-08-13
 
-Status: source checkpoint on `main` with an ad-hoc-signed local Lite test
-package. No tag, Developer ID signing, notarization, or public release is
-claimed by this document. The current public release remains v0.6.9.
+Status: release candidate. Source acceptance and a local Lite tester package
+have passed; public status requires the complete signed/notarized macOS and
+verified Windows asset matrix. Until then, the current public release remains
+v0.6.9.
+
+## Release Assets
+
+The public release is complete only when all six files are present:
+
+- `ClaraCore-Desktop-0.6.10-arm64.dmg` — macOS Full, Developer ID signed,
+  Apple-notarized, and stapled
+- `ClaraCore-Desktop-0.6.10-lite-arm64.dmg` — macOS Lite, Developer ID signed,
+  Apple-notarized, and stapled
+- `ClaraCore-Desktop-0.6.10-x64-Setup.exe` — Windows Full
+- `ClaraCore-Desktop-0.6.10-lite-x64-Setup.exe` — Windows Lite
+- `SHA256SUMS-macos.txt`
+- `SHA256SUMS-windows.txt`
 
 ## Product Direction
 
@@ -77,6 +91,20 @@ safe decision.
   cards reserve a separate footer for the full-reader action, and Agent Access
   keeps guide copy and version evidence in a non-overlapping vertical flow.
 
+## Upgrade Notes
+
+- Existing product data, Memoria, Shared Lines, InnerLife records, Agent
+  identities, Gateway token, and provider settings remain in place.
+- Restart Desktop and reconnect each Agent after upgrading so its MCP schema
+  and versioned `gateway_docs` contract refresh.
+- Agent clients that parsed raw response fields must adopt the names and
+  catalog/detail split above. In particular, `gateway_context` no longer
+  defaults to the historical full payload.
+- Lite continues to exclude the bundled embedding runtime; Full retains it.
+- Windows installers remain unsigned. Windows CI validates package boundaries
+  and a real packaged Full embedding, but real-device installation acceptance
+  remains a separate layer.
+
 ## Validation Contract
 
 The context-budget suite now measures default Shared Line, Memory-link, and
@@ -86,6 +114,7 @@ also lock the dedicated summary read paths so future handlers do not regress
 to full hydration followed by response trimming.
 
 Local acceptance additionally covers the ad-hoc-signed arm64 Lite App and DMG,
-the Lite flavor boundary, DMG integrity, and a packaged Gateway workflow. This
-is tester evidence only; it is not Developer ID signing, notarization, or live
-installed-app acceptance.
+the Lite flavor boundary, DMG integrity, and a packaged Gateway workflow. The
+release matrix separately requires Developer ID signing, Apple notarization,
+stapling, Gatekeeper assessment, Full/Lite package checks, packaged Gateway
+verification, Windows packaged Full embedding, and published checksum parity.
