@@ -2,9 +2,8 @@
 
 ## Current Release Boundary
 
-The current development version is `0.6.10`; the public stable release remains
-`0.6.9` until the complete `v0.6.10` matrix passes and the GitHub Release is
-published. Treat [Version Branching](VERSION_BRANCHING.md) and the versioned
+The current development and public stable release is `0.6.10`, tagged
+`v0.6.10`. Treat [Version Branching](VERSION_BRANCHING.md) and the versioned
 release notes as the release truth.
 
 ## Historical Pre-Release Checkpoint
@@ -105,8 +104,8 @@ Run `npm run test:update` for mocked release and Settings UI coverage before
 performing a live published-Release check.
 
 Earlier release assets and checksums remain documented in their versioned
-release notes. The `v0.6.10` release candidate targets macOS Apple Silicon and
-Windows x64 Full/Lite artifacts plus per-platform checksum files.
+release notes. The `v0.6.10` release publishes macOS Apple Silicon and Windows
+x64 Full/Lite artifacts plus portable per-platform checksum files.
 
 ## Gateway In Packaged Mode
 
@@ -149,7 +148,24 @@ node core/gateway/mcp-server.js
 ## Validation Status
 
 Current released-artifact evidence is recorded in
-[v0.6.9 Release Notes](RELEASE_NOTES_V0.6.9.md).
+[v0.6.10 Release Notes](RELEASE_NOTES_V0.6.10.md).
+
+### `0.6.10` Full/Lite release checkpoint
+
+Validated locally, in Windows CI, and from downloaded GitHub assets:
+
+- source, lockfile, bundle, Agent Guide, and packaged Gateway versions are
+  `0.6.10`;
+- source, context-budget, Gateway, update, responsive-layout, and UI checks
+  pass;
+- macOS Full built-in embedding, Full/Lite package boundaries, and both
+  isolated packaged Gateway smokes pass;
+- both Apps and DMGs are Developer ID signed, Apple-notarized, stapled,
+  Gatekeeper accepted, and DMG-verified;
+- Windows workflow `31687116961` validates both installers, a real packaged
+  Full embedding, package boundaries, and portable LF checksums;
+- all six release assets were downloaded again and their sizes and SHA-256
+  hashes matched the published manifests and GitHub metadata.
 
 ### `0.6.9` Full/Lite release checkpoint
 

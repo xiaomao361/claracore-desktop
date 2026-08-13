@@ -42,10 +42,11 @@ Read these before adding new features:
   pagination, resource ownership, memory telemetry, and long-run checks.
 - [macOS Packaging](docs/mac-packaging.md): current local packaging and packaged
   Gateway validation notes.
-- [v0.6.10 checkpoint notes](docs/RELEASE_NOTES_V0.6.10.md): current source
-  contract for minimum-sufficient context delivery; not yet published.
-- [v0.6.9 release notes](docs/RELEASE_NOTES_V0.6.9.md): current macOS Apple
-  Silicon and Windows x64 Full/Lite release.
+- [v0.6.10 release notes](docs/RELEASE_NOTES_V0.6.10.md): current macOS Apple
+  Silicon and Windows x64 Full/Lite release with minimum-sufficient context
+  delivery.
+- [v0.6.9 release notes](docs/RELEASE_NOTES_V0.6.9.md): previous Full/Lite
+  release.
 - [Home Shared Horizon](docs/HOME_SHARED_HORIZON.md): current Home presence,
   performance, and test-isolation contract.
 - [Trace page](docs/TRACE_PAGE.md): read-only narrative, metric definitions,
@@ -66,8 +67,7 @@ Read these before adding new features:
 
 ## Current Status
 
-The current development version is `0.6.10`; the public stable release remains
-`0.6.9`. The public
+The current development and public stable release is `0.6.10`. The public
 release contains Developer ID signed and notarized macOS Apple Silicon
 Full/Lite builds plus Windows x64 Full/Lite installers. Intel macOS and Mac App
 Store packages are outside that release. It is a working desktop shell with a

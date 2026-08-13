@@ -5,15 +5,16 @@
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
 - Current development version: `0.6.10`.
-- Current public release: `0.6.9`.
-- Tag `v0.6.9` is the current stable GitHub Release.
+- Current public release: `0.6.10`.
+- Tag `v0.6.10` is the current stable GitHub Release.
 
-`0.6.10` is the current source checkpoint. It makes context delivery
+`0.6.10` is the current public release. It makes context delivery
 minimum-sufficient by default, adds server-enforced catalog projections and
 one-object expansion paths, light write acknowledgements, bounded InnerLife
-and trace reads, and a final Gateway response ceiling. A local tester package
-exists, but it is not yet a tag or public release. See
-[v0.6.10 Checkpoint Notes](RELEASE_NOTES_V0.6.10.md).
+and trace reads, and a final Gateway response ceiling. It ships Developer ID
+signed and Apple-notarized macOS Apple Silicon Full/Lite DMGs plus verified
+Windows x64 Full/Lite installers. See
+[v0.6.10 Release Notes](RELEASE_NOTES_V0.6.10.md).
 
 `0.6.9` publishes the unified Desktop design language, direct human-facing
 copy, versioned searchable Agent Guide, single-model InnerLife settings, and
@@ -72,18 +73,15 @@ through to the daily-use Application Support directory.
 
 Current packaging commands and artifact checks live in
 [macOS Packaging](mac-packaging.md). Current public-release details live in
-[v0.6.9 Release Notes](RELEASE_NOTES_V0.6.9.md).
+[v0.6.10 Release Notes](RELEASE_NOTES_V0.6.10.md).
 
-## Current Checkpoint
+## Current Release
 
-`0.6.10` is the current source checkpoint on `main`. A local ad-hoc-signed Lite
-DMG has been built and package-verified for testing; it is not Developer ID
-signed, notarized, tagged, or publicly released. The current public release is
-`0.6.9`, tagged `v0.6.9`. Its macOS
-Apple Silicon Full/Lite DMGs are Developer ID signed, Apple-notarized, stapled,
-and Gatekeeper accepted. Its Windows x64 Full/Lite installers are built and
-package-verified on `windows-latest`. All four assets are published with
-SHA-256 checksums.
+`0.6.10` is the current source and public release on `main`, tagged `v0.6.10`.
+Its macOS Apple Silicon Full/Lite DMGs are Developer ID signed,
+Apple-notarized, stapled, and Gatekeeper accepted. Its Windows x64 Full/Lite
+installers are built and package-verified on `windows-latest`. All four assets
+are published with portable per-platform SHA-256 manifests.
 
 - 2026-08-12: the complete human UI adopts one design language; the Agent Guide
   is versioned and searchable; InnerLife settings use one migrated model.
@@ -92,11 +90,12 @@ SHA-256 checksums.
 - 2026-08-13: Agent-facing boolean names, secret-safe status, trace evidence,
   core-module filters, dialogs, Memoria paging, and compact responsive layouts
   are aligned under the same contract and visual language.
-- See [v0.6.10 Checkpoint Notes](RELEASE_NOTES_V0.6.10.md).
+- See [v0.6.10 Release Notes](RELEASE_NOTES_V0.6.10.md).
 - See [v0.6.9 Release Notes](RELEASE_NOTES_V0.6.9.md).
 
 ### Previous checkpoints
 
+- `v0.6.9` was the previous signed, notarized Full/Lite public release.
 - `0.6.8` was a local design checkpoint and was never published.
 - `v0.6.7` was the newest signed, notarized public release before `v0.6.9`.
 - `0.6.6` was an unpublished source and local-package checkpoint for the

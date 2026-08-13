@@ -2,10 +2,8 @@
 
 Date: 2026-08-13
 
-Status: release candidate. Source acceptance and a local Lite tester package
-have passed; public status requires the complete signed/notarized macOS and
-verified Windows asset matrix. Until then, the current public release remains
-v0.6.9.
+Status: public stable release. The complete macOS Apple Silicon and Windows
+x64 Full/Lite matrix has passed its release contract.
 
 ## Release Assets
 
@@ -19,6 +17,15 @@ The public release is complete only when all six files are present:
 - `ClaraCore-Desktop-0.6.10-lite-x64-Setup.exe` — Windows Lite
 - `SHA256SUMS-macos.txt`
 - `SHA256SUMS-windows.txt`
+
+Published artifact evidence:
+
+| Asset | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `ClaraCore-Desktop-0.6.10-arm64.dmg` | 207,783,510 | `2fe9a7cbcb4c0fdb4edb87b8e7260ac84dfaed7196e79e383ba9df3ac7c21e8f` |
+| `ClaraCore-Desktop-0.6.10-lite-arm64.dmg` | 126,733,390 | `f3c9f45b8e22853faf020900168e3c4471248fa2f0838cc6be1f6173dba7ecef` |
+| `ClaraCore-Desktop-0.6.10-x64-Setup.exe` | 178,738,928 | `a35a357946c2bcc97ee850963b008508707df0e670ba4b4fc1245f1ff60a8e9e` |
+| `ClaraCore-Desktop-0.6.10-lite-x64-Setup.exe` | 108,734,470 | `c9178692e1da2b606c7b3d116685dcd345f853301361d118ee9ceefeac8cef59` |
 
 ## Product Direction
 
@@ -113,8 +120,18 @@ Gateway context, and the oversize-response refusal. Repository-boundary tests
 also lock the dedicated summary read paths so future handlers do not regress
 to full hydration followed by response trimming.
 
-Local acceptance additionally covers the ad-hoc-signed arm64 Lite App and DMG,
-the Lite flavor boundary, DMG integrity, and a packaged Gateway workflow. The
-release matrix separately requires Developer ID signing, Apple notarization,
-stapling, Gatekeeper assessment, Full/Lite package checks, packaged Gateway
-verification, Windows packaged Full embedding, and published checksum parity.
+Release acceptance covers both macOS Apps and DMGs with Developer ID signing,
+Apple notarization, stapling, Gatekeeper assessment, DMG integrity, Full/Lite
+package boundaries, and isolated packaged-Gateway workflows. Apple accepted
+the Full App/DMG submissions `ad677a98-248e-4e65-9c36-562b2e10ae77` and
+`448ef4fe-3e61-4c77-acbc-5a0670f3c68c`, plus the Lite App/DMG submissions
+`4e2921a2-4c57-4398-a8b5-3589b7cfc179` and
+`82ce2a41-d52e-4b7e-98d5-0217bf009cb6`.
+
+Windows release workflow
+[`31687116961`](https://github.com/xiaomao361/claracore-desktop/actions/runs/31687116961)
+passed source checks, both installer builds, packaged Full embedding, package
+boundaries, portable LF checksum generation, and release upload. All six
+GitHub assets were downloaded again before publication; both checksum files
+passed `shasum -a 256 -c`, and the downloaded sizes and hashes matched GitHub's
+asset metadata.
