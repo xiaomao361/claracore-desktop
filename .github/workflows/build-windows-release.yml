@@ -75,7 +75,14 @@ jobs:
             $hash = (Get-FileHash -Algorithm SHA256 $file.FullName).Hash.ToLowerInvariant()
             "$hash  $($file.Name)"
           }
-          $lines | Set-Content -Encoding ascii SHA256SUMS-windows.txt
+          # Keep the published manifest portable across PowerShell, sha256sum,
+          # and macOS shasum by writing explicit LF line endings.
+          $manifest = ($lines -join "`n") + "`n"
+          [System.IO.File]::WriteAllText(
+            (Join-Path $PWD 'SHA256SUMS-windows.txt'),
+            $manifest,
+            [System.Text.Encoding]::ASCII
+          )
 
       - name: Upload Windows installers
         uses: actions/upload-artifact@v7
