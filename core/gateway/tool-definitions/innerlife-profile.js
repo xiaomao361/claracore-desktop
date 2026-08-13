@@ -31,15 +31,32 @@ const innerlifeProfileToolDefinitions = [
   {
     "name": "innerlife_profile_list",
     "title": "List InnerLife Profiles",
-    "description": "List Desktop-owned InnerLife agent profiles.",
+    "description": "List bounded Desktop-owned InnerLife agent profile summaries. Defaults to 10 rows; limit can explicitly request up to 50. Use innerlife_profile_get for one complete profile and state.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "limit": {
           "type": "number",
           "minimum": 1,
-          "maximum": 200
+          "maximum": 50
+        },
+        "offset": {
+          "type": "number",
+          "minimum": 0
         }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "innerlife_profile_get",
+    "title": "Get InnerLife Profile",
+    "description": "Get one complete Desktop-owned InnerLife profile and state without creating it.",
+    "inputSchema": {
+      "type": "object",
+      "required": ["agentId"],
+      "properties": {
+        "agentId": { "type": "string" }
       },
       "additionalProperties": false
     }

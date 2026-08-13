@@ -135,6 +135,41 @@ function createInnerLifeProfileRepository(helpers) {
     }
     ,
 
+    async listInnerLifeProfileSummariesPage(input = {}) {
+      const requestedLimit = Number.parseInt(String(input.limit ?? 10), 10);
+      const limit = Math.max(1, Math.min(Number.isFinite(requestedLimit) ? requestedLimit : 10, 50));
+      const offset = Math.max(0, Number.parseInt(String(input.offset || 0), 10) || 0);
+      const [rows, totals] = await Promise.all([
+        this.query(`
+          SELECT p.agent_id, p.display_name, p.enabled, p.created_at, p.updated_at,
+                 a.label AS agent_label, a.status AS agent_status
+          FROM innerlife_profiles p
+          LEFT JOIN agents a ON a.id = p.agent_id
+          ORDER BY p.updated_at DESC, p.agent_id ASC
+          LIMIT ${limit} OFFSET ${offset};
+        `),
+        this.query("SELECT COUNT(*) AS total FROM innerlife_profiles;")
+      ]);
+      return {
+        items: rows.map((row) => ({
+          agentId: row.agent_id,
+          displayName: row.display_name,
+          enabled: Boolean(row.enabled),
+          agent: {
+            label: row.agent_label || row.display_name || row.agent_id,
+            status: row.agent_status || "active"
+          },
+          createdAt: row.created_at,
+          updatedAt: row.updated_at
+        })),
+        total: Number(totals[0]?.total || 0),
+        limit,
+        offset,
+        requestedLimit
+      };
+    }
+    ,
+
     async deleteInnerLifeProfile(input = {}) {
       // Destructive: never resolve the target through identity fallbacks
       // (env vars, DEFAULT_AGENT_ID) — an empty input must fail, not delete

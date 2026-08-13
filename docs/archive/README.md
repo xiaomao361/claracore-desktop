@@ -24,12 +24,33 @@ active as `../HOME_SHARED_HORIZON.md`.
 - `RELEASE_NOTES_V0.5.4.md`
 - `RELEASE_NOTES_V0.5.5.md`
 - `RELEASE_NOTES_V0.5.6.md`
+- `RELEASE_NOTES_V0.5.8.md`
+- `RELEASE_NOTES_V0.6.2.md`
+- `RELEASE_NOTES_V0.6.3.md`
+- `RELEASE_NOTES_V0.6.4.md`
+- `RELEASE_NOTES_V0.6.5.md`
+- `RELEASE_NOTES_V0.6.6.md`
+- `RELEASE_NOTES_V0.6.7.md`
 - `VERSION_HISTORY_PRE_V0.5.7.md`
 
-The historical `v0.5.8` public release is documented in
-`../RELEASE_NOTES_V0.5.8.md`. Current release truth lives in
-`../VERSION_BRANCHING.md`, and current package commands remain in
-`../mac-packaging.md`.
+Current release truth lives in `../VERSION_BRANCHING.md`, and current package
+commands remain in `../mac-packaging.md`.
+
+## Completed v0.6.x Plans And Handoffs
+
+- `V0.6.0_MEMORY_CONTROLLER_PLAN.md`
+- `V0.6.1_PERFORMANCE_PLAN.md`
+- `V0.6.2_PERFORMANCE_HARDENING_PLAN.md`
+- `V0.6.6_CONTEXT_BUDGET_PLAN.md`
+- `V0.6.6_TURN_CONTEXT_PATCH.md`
+- `PERFORMANCE_BASELINE_V0.6.0.md`
+- `MEMORY_CONTROLLER_CANARY_HANDOFF.md`
+- `HERMES_V0.6.2_UPDATE.md`
+- `HANDOFF_V0.6.8_TRACE_DESIGN.md`
+
+Their maintained boundaries now live in `../CONTEXT_DELIVERY.md`,
+`../RUNTIME_MEMORY_POLICY.md`, `../MULTI_AGENT_CLIENTS.md`,
+`../TRACE_PAGE.md`, and the current module READMEs.
 
 ## Superseded Plans And Research
 

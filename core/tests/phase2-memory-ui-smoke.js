@@ -2,6 +2,7 @@ const fs = require("fs/promises");
 const os = require("os");
 const path = require("path");
 const runtime = require("../runtime");
+const PAGING_FIXTURE_COUNT = 45;
 
 async function main() {
   const { _electron: electron } = require("playwright");
@@ -71,6 +72,13 @@ async function main() {
       stageAReason: "ordinary_current_turn",
       resultStatus: "completed"
     });
+    for (let index = 0; index < PAGING_FIXTURE_COUNT; index += 1) {
+      await runtime.createProductMemory(runtimeApp, {
+        title: `Paged memory ${String(index + 1).padStart(2, "0")}`,
+        body: `Pagination fixture ${index + 1} should appear when the full memory library loads more.`,
+        labels: "pagination"
+      });
+    }
 
     app = await electron.launch({
       executablePath: electronPath,
@@ -125,7 +133,10 @@ async function main() {
       timeout: 15000
     });
 
-    const pageContract = await page.evaluate(() => ({
+    const pageContract = await page.evaluate(() => {
+      const searchLabel = document.querySelector(".memory-search > label")?.getBoundingClientRect();
+      const searchControls = document.querySelector(".memory-search > div")?.getBoundingClientRect();
+      return {
       body: document.querySelector("#viewSubtitle")?.textContent || "",
       focusBlock: Boolean(document.querySelector("#memoryView > .page-focus")),
       detailPresent: Boolean(document.querySelector("#memoryDetail")),
@@ -135,6 +146,9 @@ async function main() {
         document.querySelector(".memory-process-section")?.compareDocumentPosition(document.querySelector(".memory-toolbar"))
         & Node.DOCUMENT_POSITION_FOLLOWING
       ),
+      searchLabelCenterDelta: searchLabel && searchControls
+        ? Math.abs((searchLabel.top + searchLabel.height / 2) - (searchControls.top + searchControls.height / 2))
+        : null,
       recallRows: document.querySelectorAll("#memoryRecallList .memory-recall-row").length,
       nestedDetails: document.querySelectorAll("#memoryView details").length,
       listOverflow: getComputedStyle(document.querySelector("#memoryList")).overflowY,
@@ -147,13 +161,15 @@ async function main() {
       archivePanel: Boolean(document.querySelector("[data-memory-panel='archive']")),
       mutationControls: document.querySelectorAll("[data-memory-action]").length,
       memoriaTabs: document.querySelectorAll("[data-memory-tab]").length
-    }));
+      };
+    });
     if (
       (!pageContract.body.includes("Facts, decisions") && !pageContract.body.includes("事实、决定")) ||
       !pageContract.detailPresent ||
       !pageContract.detailDialog ||
       pageContract.processSteps !== 5 ||
       !pageContract.processBeforeToolbar ||
+      pageContract.searchLabelCenterDelta > 1 ||
       pageContract.recallRows !== 2 ||
       pageContract.nestedDetails !== 0 ||
       pageContract.listOverflow === "auto" ||
@@ -172,6 +188,37 @@ async function main() {
     if (pageContract.memoriaTabs !== 2) {
       throw new Error(`Memoria UI should render exactly 2 knowledge tabs: ${JSON.stringify(pageContract)}`);
     }
+
+    const mainMemoryCount = await page.locator("#memoryList .memory-item").count();
+    if (mainMemoryCount !== 6 || await page.locator(".memory-recent-section > .load-more-button").count()) {
+      throw new Error(`Memoria main page should stay bounded without an orphan load-more control: ${JSON.stringify({ mainMemoryCount })}`);
+    }
+    await page.click("#memoryAllAction");
+    await page.waitForFunction(() => document.querySelector("#memoryDetailDialog")?.open);
+    const libraryCountBefore = await page.locator("#memoryDialogLibrary .memory-item").count();
+    const libraryLoadMore = page.locator("#memoryLibraryLoadMore");
+    if (libraryCountBefore < 20 || !await libraryLoadMore.isVisible()) {
+      throw new Error(`Memoria library did not expose meaningful paging: ${JSON.stringify({ libraryCountBefore, loadMoreVisible: await libraryLoadMore.isVisible() })}`);
+    }
+    await libraryLoadMore.click();
+    await page.waitForFunction((before) => document.querySelectorAll("#memoryDialogLibrary .memory-item").length > before, libraryCountBefore);
+    const libraryPaging = await page.evaluate((before) => ({
+      before,
+      after: document.querySelectorAll("#memoryDialogLibrary .memory-item").length,
+      meta: document.querySelector("#memoryDetailMeta")?.textContent || "",
+      mainCount: document.querySelectorAll("#memoryList .memory-item").length,
+      orphanLoadMore: Boolean(document.querySelector(".memory-recent-section > .load-more-button")),
+      loadMoreDisabled: document.querySelector("#memoryLibraryLoadMore")?.disabled ?? null
+    }), libraryCountBefore);
+    if (
+      libraryPaging.after <= libraryPaging.before ||
+      libraryPaging.mainCount !== 6 ||
+      libraryPaging.orphanLoadMore ||
+      !libraryPaging.meta.includes(String(libraryPaging.after))
+    ) {
+      throw new Error(`Memoria library paging did not visibly append records: ${JSON.stringify(libraryPaging)}`);
+    }
+    await page.click("#memoryDetailClose");
 
     await page.click("[data-memory-id]:has-text('UI Memoria visible fact')");
     await page.waitForFunction(() => document.querySelector("#memoryDetailDialog")?.open);
@@ -371,7 +418,7 @@ async function main() {
     if (!result.databasePath.startsWith(dataRoot)) {
       throw new Error(`Memoria UI wrote outside product data root: ${result.databasePath}`);
     }
-    if (result.activeCount !== 5 || result.deletedCount !== 0 || result.restrictedCount !== 1) {
+    if (result.activeCount !== 5 + PAGING_FIXTURE_COUNT || result.deletedCount !== 0 || result.restrictedCount !== 1) {
       throw new Error(`Memoria UI counts mismatch: ${JSON.stringify(result)}`);
     }
     if (!result.labels.some((item) => item.label === "inspect" && item.count === 2)) {

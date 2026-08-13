@@ -34,11 +34,12 @@ async function main() {
       "shared_line_create",
       "shared_line_activate",
       "shared_line_update",
+      "shared_line_archive",
       "shared_line_handoff_create"
     ]) {
       if (!toolNames.has(tool)) throw new Error(`Core profile missing tool: ${tool}`);
     }
-    for (const tool of ["shared_line_rename", "shared_line_archive", "shared_line_restore"]) {
+    for (const tool of ["shared_line_rename", "shared_line_restore"]) {
       if (toolNames.has(tool)) throw new Error(`Core profile should not advertise maintenance tool: ${tool}`);
     }
 
@@ -78,10 +79,11 @@ async function main() {
     if (
       !sharedLineDocsText.includes("shared_line_get") ||
       !sharedLineDocsText.includes("shared_line_update") ||
+      !sharedLineDocsText.includes("shared_line_archive") ||
       !sharedLineDocsText.includes("shared_line_handoff_create") ||
       !sharedLineDocsText.includes("SHARED_LINE_ID_REQUIRED") ||
       !sharedLineDocsText.includes("shared_line_list with status=active") ||
-      !sharedLineDocsText.includes("gateway_context detail=brief")
+      !sharedLineDocsText.includes("gateway_context; omitted detail defaults to brief")
     ) {
       throw new Error("Gateway docs shared-line section does not include Shared Line tools.");
     }
@@ -239,6 +241,12 @@ async function main() {
     if (!listed.lines.some((line) => line.id === createdLine.line.id && line.summary.includes("parallel line position"))) {
       throw new Error("Gateway shared_line_list did not include the parallel line.");
     }
+    if (listed.lines.some((line) => "positionHistory" in line || "affectiveTrace" in line || "metadata" in line)) {
+      throw new Error(`Gateway shared_line_list leaked rich line content: ${JSON.stringify(listed.lines)}`);
+    }
+    if (!listed.lines.every((line) => line.detailRef?.tool === "shared_line_get")) {
+      throw new Error(`Gateway shared_line_list omitted explicit detail references: ${JSON.stringify(listed.lines)}`);
+    }
     const renamed = parseTextResult(
       await client.callTool("shared_line_rename", {
         lineId: createdLine.line.id,
@@ -306,9 +314,12 @@ async function main() {
     );
     if (
       explicitGatewayContext.sharedLine?.lineId !== ambiguousLineB.id ||
-      explicitGatewayContext.sharedLine?.currentPosition?.summary !== "Ambiguous context candidate B."
+      explicitGatewayContext.sharedLine?.summary !== "Ambiguous context candidate B."
     ) {
       throw new Error(`Gateway context explicit retry selected the wrong line: ${JSON.stringify(explicitGatewayContext.sharedLine)}`);
+    }
+    if (explicitGatewayContext.detail !== "brief") {
+      throw new Error(`Gateway context without detail must default to brief: ${JSON.stringify(explicitGatewayContext)}`);
     }
     let ambiguityMessage = "";
     try {

@@ -55,6 +55,24 @@ function createMemoriaLinkRepository(helpers) {
     };
   }
 
+  function normalizeLinkSummaryRow(row) {
+    return {
+      id: row.id,
+      fromMemoryId: row.from_memory_id,
+      toMemoryId: row.to_memory_id,
+      fromTitle: row.from_title || "",
+      toTitle: row.to_title || "",
+      fromStatus: row.from_status || "active",
+      toStatus: row.to_status || "active",
+      kind: row.kind,
+      strength: row.strength,
+      source: row.source,
+      note: row.note || "",
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+  }
+
   return {
     async createMemoryLink(input = {}) {
       const fromId = String(input.fromMemoryId || input.from_memory_id || input.fromId || "").trim();
@@ -224,6 +242,52 @@ function createMemoriaLinkRepository(helpers) {
         LIMIT ${safeLimit};
       `);
       return rows.map(normalizeLinkRow);
+    },
+
+    async listMemoryLinkSummaries(input = {}) {
+      const memoryId = String(input.memoryId || input.memory_id || input.id || "").trim();
+      const kind = String(input.kind || "").trim().toLowerCase();
+      const requestedLimit = Number.parseInt(String(input.limit ?? 10), 10);
+      const limit = Math.max(1, Math.min(Number.isFinite(requestedLimit) ? requestedLimit : 10, 50));
+      const offset = Math.max(0, Number.parseInt(String(input.offset || 0), 10) || 0);
+      const clauses = [];
+      if (memoryId) {
+        clauses.push(`(k.from_memory_id = ${sqlString(memoryId)} OR k.to_memory_id = ${sqlString(memoryId)})`);
+      }
+      if (kind) clauses.push(`k.kind = ${sqlString(kind)}`);
+      const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+      const [rows, totals] = await Promise.all([
+        this.query(`
+          SELECT
+            k.id,
+            k.from_memory_id,
+            k.to_memory_id,
+            k.kind,
+            k.strength,
+            k.source,
+            substr(k.note, 1, 240) AS note,
+            k.created_at,
+            k.updated_at,
+            f.title AS from_title,
+            f.status AS from_status,
+            t.title AS to_title,
+            t.status AS to_status
+          FROM memory_links k
+          JOIN memories f ON f.id = k.from_memory_id
+          JOIN memories t ON t.id = k.to_memory_id
+          ${whereClause}
+          ORDER BY k.strength DESC, k.updated_at DESC
+          LIMIT ${limit} OFFSET ${offset};
+        `),
+        this.query(`SELECT COUNT(*) AS total FROM memory_links k ${whereClause};`)
+      ]);
+      return {
+        items: rows.map(normalizeLinkSummaryRow),
+        total: Number(totals[0]?.total || 0),
+        limit,
+        offset,
+        requestedLimit
+      };
     },
 
     async deleteMemoryLink(id) {

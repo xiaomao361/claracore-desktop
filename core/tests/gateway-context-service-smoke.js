@@ -146,10 +146,21 @@ async function main() {
   assert.deepStrictEqual(utf8, { text: "你🙂", truncated: true });
   assert(!utf8.text.includes("\uFFFD"), "UTF-8 truncation must not split a character.");
 
+  const omittedCalls = [];
+  const service = createGatewayContextService(buildPorts(omittedCalls));
+  const omitted = await service.get({}, { agentId: "agent-alpha", limit: 7 });
+  assert.strictEqual(omitted.detail, "brief", "Omitted detail must select the bounded brief payload.");
+  assert(!omittedCalls.some(([name]) => name === "listInnerLifeInbox"));
+  assert(!omittedCalls.some(([name]) => name === "listInnerLifeShares"));
+  assert(!omittedCalls.some(([name]) => name === "listInnerLifeThoughts"));
+
   const fullCalls = [];
-  const service = createGatewayContextService(buildPorts(fullCalls));
-  const full = await service.get({}, { agentId: "agent-alpha", limit: 7 });
-  assert.strictEqual(full.detail, "full", "Omitted detail must preserve the 0.6.4 full payload.");
+  const full = await createGatewayContextService(buildPorts(fullCalls)).get({}, {
+    agentId: "agent-alpha",
+    detail: "full",
+    limit: 7
+  });
+  assert.strictEqual(full.detail, "full", "Explicit full detail must preserve the complete compatibility payload.");
   assert.strictEqual(full.generatedAt, FIXED_NOW.toISOString());
   assert(full.sharedLine.currentPosition.metadata.privateFullMetadata, "Full context lost Shared Line metadata.");
   assert.strictEqual(full.memories.length, 7);

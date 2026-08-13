@@ -173,6 +173,19 @@ async function main() {
     if (superseded.historical?.status !== "superseded") {
       throw new Error(`Gateway memoria_supersede did not preserve historical state: ${JSON.stringify(superseded)}`);
     }
+    const temporalLinks = parseTextResult(await client.callTool("memoria_link_list", {
+      memoryId: oldState.id,
+      limit: 10
+    }));
+    if (!temporalLinks.links.some((link) => link.id === superseded.link.id)) {
+      throw new Error(`Gateway memoria_link_list did not include the supersession link: ${JSON.stringify(temporalLinks)}`);
+    }
+    if (temporalLinks.links.some((link) => "fromBody" in link || "toBody" in link)) {
+      throw new Error(`Gateway memoria_link_list leaked endpoint bodies: ${JSON.stringify(temporalLinks.links)}`);
+    }
+    if (!temporalLinks.links.every((link) => link.detailRefs?.from && link.detailRefs?.to)) {
+      throw new Error(`Gateway memoria_link_list omitted endpoint detail references: ${JSON.stringify(temporalLinks.links)}`);
+    }
     const historical = parseTextResult(await client.callTool("memoria_search", {
       query: "Gateway temporal subject",
       timeView: "historical"
@@ -299,8 +312,17 @@ async function main() {
     if (JSON.stringify(bodyOnlyUpdated.labels) !== JSON.stringify(updated.labels)) {
       throw new Error(`Gateway body-only memoria_update cleared labels: ${JSON.stringify(bodyOnlyUpdated)}`);
     }
-    if (bodyOnlyUpdated.body !== "Gateway body-only Memory update should preserve omitted metadata.") {
-      throw new Error(`Gateway body-only memoria_update did not persist the body: ${JSON.stringify(bodyOnlyUpdated)}`);
+    if ("body" in bodyOnlyUpdated) {
+      throw new Error(`Gateway memoria_update acknowledgement leaked the full body: ${JSON.stringify(bodyOnlyUpdated)}`);
+    }
+    if (bodyOnlyUpdated.detailRef?.tool !== "memoria_get") {
+      throw new Error(`Gateway memoria_update acknowledgement omitted its detail reference: ${JSON.stringify(bodyOnlyUpdated)}`);
+    }
+    const bodyOnlyDetail = parseTextResult(
+      await client.callTool("memoria_get", { id: created.id })
+    ).memory;
+    if (bodyOnlyDetail.body !== "Gateway body-only Memory update should preserve omitted metadata.") {
+      throw new Error(`Gateway body-only memoria_update did not persist the body: ${JSON.stringify(bodyOnlyDetail)}`);
     }
     const tagged = parseTextResult(await client.callTool("memoria_tag", { id: created.id, add: "agent-facing", remove: "updated" }));
     if (!tagged.memory.labels.includes("agent-facing") || tagged.memory.labels.includes("updated")) {
@@ -354,8 +376,14 @@ async function main() {
       source: "phase2-gateway-smoke"
     });
     const record = parseTextResult(recordResponse).record;
-    if (!record?.id || record.recordType !== "metric" || record.value.score !== 8) {
-      throw new Error(`Gateway memoria_record_create did not return the saved record: ${JSON.stringify(record)}`);
+    if (!record?.id || record.recordType !== "metric" || "value" in record) {
+      throw new Error(`Gateway memoria_record_create did not return a bounded acknowledgement: ${JSON.stringify(record)}`);
+    }
+    const recordDetail = parseTextResult(
+      await client.callTool("memoria_record_get", { id: record.id })
+    ).record;
+    if (recordDetail.value.score !== 8) {
+      throw new Error(`Gateway memoria_record_get did not return the saved value: ${JSON.stringify(recordDetail)}`);
     }
     const recordList = parseTextResult(await client.callTool("memoria_record_list", {
       recordType: "metric",

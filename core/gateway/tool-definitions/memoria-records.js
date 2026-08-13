@@ -57,7 +57,7 @@ const memoriaRecordToolDefinitions = [
   {
     "name": "memoria_record_list",
     "title": "List Structured Memory Records",
-    "description": "List typed ClaraCore Desktop structured memory records.",
+    "description": "List typed ClaraCore Desktop structured memory record summaries. Defaults to 10 rows; limit can explicitly request up to 50. Full value and metadata are available one record at a time through memoria_record_get.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -79,12 +79,25 @@ const memoriaRecordToolDefinitions = [
         "limit": {
           "type": "number",
           "minimum": 1,
-          "maximum": 100
+          "maximum": 50
         },
         "offset": {
           "type": "number",
           "minimum": 0
         }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "memoria_record_get",
+    "title": "Get Structured Memory Record",
+    "description": "Get one complete structured Memory record by id.",
+    "inputSchema": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string" }
       },
       "additionalProperties": false
     }

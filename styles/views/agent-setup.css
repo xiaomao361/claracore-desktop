@@ -296,10 +296,10 @@
 
 .agent-guide-note {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
-  padding: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  padding: 16px;
   border: 1px solid var(--border);
   border-radius: 9px;
   background: var(--surface-soft);
@@ -313,9 +313,11 @@
 }
 
 .agent-guide-note code {
+  display: block;
   color: var(--green);
   font-size: 11px;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .agent-invite-action {

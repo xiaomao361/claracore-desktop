@@ -2,7 +2,7 @@ const systemToolDefinitions = [
   {
     "name": "claracore_status",
     "title": "ClaraCore Status",
-    "description": "Read ClaraCore Desktop product data status.",
+    "description": "Read ClaraCore Desktop product data status, the authenticated caller connection, and a secret-safe configuration projection. Inline API keys are never returned.",
     "inputSchema": {
       "type": "object",
       "properties": {},
@@ -55,7 +55,7 @@ const systemToolDefinitions = [
   {
     "name": "gateway_context",
     "title": "Gateway Context",
-    "description": "Read one assembled agent context packet from Memory, Shared Line, InnerLife, and Doctor. Use detail=brief for bounded startup and resume reads; omitted detail preserves the 0.6.4 full payload. Start without lineId; when the identified agent owns multiple active Shared Lines, the call returns SHARED_LINE_ID_REQUIRED with candidates instead of guessing. Retry with the chosen lineId.",
+    "description": "Read one assembled agent context packet from Memory, Shared Line, InnerLife, and Doctor. Omitted detail defaults to the bounded brief packet. Pass detail=full only for an explicit compatibility or diagnostic read. Start without lineId; when the identified agent owns multiple active Shared Lines, the call returns SHARED_LINE_ID_REQUIRED with candidates instead of guessing.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -79,7 +79,7 @@ const systemToolDefinitions = [
             "brief",
             "full"
           ],
-          "description": "Use brief for bounded startup context. Omit or use full for the 0.6.4 compatibility payload."
+          "description": "brief is the default bounded startup context. full is an explicit compatibility and diagnostic payload."
         }
       },
       "additionalProperties": false
@@ -120,14 +120,18 @@ const systemToolDefinitions = [
   {
     "name": "gateway_trace_list",
     "title": "Gateway Trace List",
-    "description": "List recent ClaraCore Desktop Gateway tool-call traces.",
+    "description": "List bounded recent ClaraCore Desktop Gateway trace summaries. Defaults to 10 rows; limit can explicitly request up to 50. Use gateway_trace_get for one request record.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "limit": {
           "type": "number",
           "minimum": 1,
-          "maximum": 100
+          "maximum": 50
+        },
+        "offset": {
+          "type": "number",
+          "minimum": 0
         },
         "toolName": {
           "type": "string"
@@ -139,6 +143,19 @@ const systemToolDefinitions = [
             "error"
           ]
         }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "gateway_trace_get",
+    "title": "Get Gateway Trace",
+    "description": "Get one complete ClaraCore Desktop Gateway trace by id.",
+    "inputSchema": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string" }
       },
       "additionalProperties": false
     }

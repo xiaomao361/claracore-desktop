@@ -1,5 +1,20 @@
 const continuity = require("../../continuity");
 const { shapeSharedLinePacket } = require("../../continuity/resume-detail");
+const {
+  catalogPage,
+  shapeHandoffAck,
+  shapeSharedLineCatalogEntry,
+  shapeSharedLineDescriptor
+} = require("../bounded-response");
+
+function shapeSharedLineMutation(result, detail) {
+  return {
+    ...(result.line ? { line: shapeSharedLineDescriptor(result.line) } : {}),
+    ...(result.sharedLine ? { sharedLine: shapeSharedLinePacket(result.sharedLine, detail) } : {}),
+    ...(result.handoff ? { handoff: shapeHandoffAck(result.handoff) } : {}),
+    persisted: true
+  };
+}
 
 async function handleSharedLineTool(name, args, context) {
   const { core, currentMcpAgentId, textResult } = context;
@@ -14,31 +29,36 @@ async function handleSharedLineTool(name, args, context) {
   }
 
   if (name === "shared_line_list") {
+    const page = await continuity.listSummaries(core, args);
     return textResult({
-      lines: await continuity.list(core, args)
+      lines: page.items.map(shapeSharedLineCatalogEntry),
+      page: catalogPage(page.items, page.total, page)
     });
   }
 
   if (name === "shared_line_create") {
     const result = await continuity.create(core, args, { lite: true });
-    return textResult({ ...result, sharedLine: shapeSharedLinePacket(result.sharedLine, args?.detail) });
+    return textResult(shapeSharedLineMutation(result, args?.detail));
   }
 
   if (name === "shared_line_activate") {
     const result = await continuity.activate(core, args.lineId, { lite: true });
-    return textResult({ ...result, sharedLine: shapeSharedLinePacket(result.sharedLine, args?.detail) });
+    return textResult(shapeSharedLineMutation(result, args?.detail));
   }
 
   if (name === "shared_line_rename") {
-    return textResult(await continuity.rename(core, args.lineId, args.title, { lite: true }));
+    return textResult(shapeSharedLineMutation(await continuity.rename(core, args.lineId, args.title, { lite: true }), args?.detail));
   }
 
   if (name === "shared_line_archive") {
-    return textResult(await continuity.archive(core, args.lineId, { lite: true }));
+    return textResult(shapeSharedLineMutation(await continuity.archive(core, args.lineId, { lite: true }), args?.detail));
   }
 
   if (name === "shared_line_restore") {
-    return textResult(await continuity.restore(core, args.lineId, Boolean(args.makeActive), { lite: true }));
+    return textResult(shapeSharedLineMutation(
+      await continuity.restore(core, args.lineId, Boolean(args.makeActive), { lite: true }),
+      args?.detail
+    ));
   }
 
   if (name === "shared_line_update") {
@@ -48,7 +68,7 @@ async function handleSharedLineTool(name, args, context) {
 
   if (name === "shared_line_handoff_create") {
     const result = await continuity.createHandoff(core, args, { lite: true });
-    return textResult({ ...result, sharedLine: shapeSharedLinePacket(result.sharedLine, args?.detail) });
+    return textResult(shapeSharedLineMutation(result, args?.detail));
   }
 
   if (name === "shared_line_agent_state") {
@@ -75,7 +95,12 @@ async function handleSharedLineTool(name, args, context) {
   }
 
   if (name === "shared_line_compact") {
-    return textResult(await continuity.compact(core, args));
+    const result = await continuity.compact(core, args);
+    return textResult({
+      compact: result.compact,
+      sharedLine: shapeSharedLinePacket(result.sharedLine, args?.detail),
+      persisted: true
+    });
   }
 
   return undefined;

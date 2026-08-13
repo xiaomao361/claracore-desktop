@@ -33,6 +33,8 @@ Read these before adding new features:
 
 - [Architecture](docs/ARCHITECTURE.md): current runtime, renderer, core, database,
   Gateway, and documentation boundaries.
+- [Context Delivery](docs/CONTEXT_DELIVERY.md): minimum-sufficient defaults,
+  progressive disclosure, bounded explicit reads, and response budgets.
 - [Code Map](docs/CODE_MAP.md): shortest source-reading paths by task.
 - [Version and Branching](docs/VERSION_BRANCHING.md): current development,
   isolation, checkpoint, and release rules.
@@ -40,12 +42,10 @@ Read these before adding new features:
   pagination, resource ownership, memory telemetry, and long-run checks.
 - [macOS Packaging](docs/mac-packaging.md): current local packaging and packaged
   Gateway validation notes.
+- [v0.6.10 checkpoint notes](docs/RELEASE_NOTES_V0.6.10.md): current source
+  contract for minimum-sufficient context delivery; not yet published.
 - [v0.6.9 release notes](docs/RELEASE_NOTES_V0.6.9.md): current macOS Apple
   Silicon and Windows x64 Full/Lite release.
-- [v0.6.7 release notes](docs/RELEASE_NOTES_V0.6.7.md): previous signed and
-  notarized macOS Apple Silicon Lite release.
-- [v0.6.5 release notes](docs/RELEASE_NOTES_V0.6.5.md): previous signed and
-  notarized macOS Apple Silicon Lite release.
 - [Home Shared Horizon](docs/HOME_SHARED_HORIZON.md): current Home presence,
   performance, and test-isolation contract.
 - [Trace page](docs/TRACE_PAGE.md): read-only narrative, metric definitions,
@@ -66,7 +66,8 @@ Read these before adding new features:
 
 ## Current Status
 
-The current development and public stable version is `0.6.9`. The public
+The current development version is `0.6.10`; the public stable release remains
+`0.6.9`. The public
 release contains Developer ID signed and notarized macOS Apple Silicon
 Full/Lite builds plus Windows x64 Full/Lite installers. Intel macOS and Mac App
 Store packages are outside that release. It is a working desktop shell with a
@@ -335,8 +336,9 @@ contract by themselves. If a client supports Streamable HTTP MCP, use the
 current endpoint and bearer header from Agent Access or Settings > General >
 Agent Gateway. If it only supports local stdio MCP, use the generated fallback
 config, fully quit and restart the client, then run
-`claracore_connection_test` followed by `gateway_context(detail=brief)`.
-Omitting `detail` remains the 0.6.4 full-payload compatibility path.
+`claracore_connection_test` followed by `gateway_context`. Omitting `detail`
+now selects the bounded `brief` contract; `detail=full` must be explicit and
+still remains subject to the Gateway response ceiling.
 
 The old ClaraCore Gateway web console remains a reference for useful overview
 ideas, but its service Web UI launcher/supervisor model is not the Desktop

@@ -4,9 +4,16 @@
 
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
-- Current development version: `0.6.9`.
+- Current development version: `0.6.10`.
 - Current public release: `0.6.9`.
 - Tag `v0.6.9` is the current stable GitHub Release.
+
+`0.6.10` is the current source checkpoint. It makes context delivery
+minimum-sufficient by default, adds server-enforced catalog projections and
+one-object expansion paths, light write acknowledgements, bounded InnerLife
+and trace reads, and a final Gateway response ceiling. A local tester package
+exists, but it is not yet a tag or public release. See
+[v0.6.10 Checkpoint Notes](RELEASE_NOTES_V0.6.10.md).
 
 `0.6.9` publishes the unified Desktop design language, direct human-facing
 copy, versioned searchable Agent Guide, single-model InnerLife settings, and
@@ -18,34 +25,9 @@ release. See
 
 `0.6.8` was a local design checkpoint and was never published.
 
-`0.6.7` is the previous public release. It made automatic context Memory-only
-and restored complete everyday Memory workflows to the core tool profile. See
-[v0.6.7 Release Notes](RELEASE_NOTES_V0.6.7.md).
-
-`0.6.5` is the previous public release. It publishes the post-`0.6.4`
-architecture/runtime hardening and complete Home states as a signed and
-notarized macOS Apple Silicon Lite DMG. See
-[v0.6.5 Release Notes](RELEASE_NOTES_V0.6.5.md).
-
-`0.6.4` is the previous stable release. It provides signed and Apple-notarized
-macOS Apple Silicon Full/Lite DMGs and unsigned Windows x64 Full/Lite NSIS
-installers. See [v0.6.4 Release Notes](RELEASE_NOTES_V0.6.4.md).
-
-`0.6.3` is the previous stable release. It carries
-the `0.6.0` observe-only Memory Controller, the `0.6.1` measured performance
-pass, the `0.6.2` multi-Agent runtime hardening, and the `0.6.3` pre-canary
-safety fixes. Its small-audience distribution is the unsigned macOS arm64 Lite
-DMG; Full, Windows, Intel macOS, signing, and notarization remain outside this
-release. See
-[v0.6.3 Release Notes](RELEASE_NOTES_V0.6.3.md),
-[v0.6.2 Performance Hardening](V0.6.2_PERFORMANCE_HARDENING_PLAN.md), and the
-[Hermes Update Guide](HERMES_V0.6.2_UPDATE.md).
-
-The `0.5.8` release adds the read-only Trace page and its bounded aggregate
-snapshot to the Agent First page set, Home Shared Horizon, strict test-instance
-isolation, and partial MCP `memoria_update` semantics. See
-[Trace Page](TRACE_PAGE.md), [Home Shared Horizon](HOME_SHARED_HORIZON.md), and
-the current architecture/code-map docs for the maintained contract.
+Older release notes, completed plans, and checkpoint-specific handoffs are
+historical evidence under [archive](archive/README.md). They are not current
+implementation or release instructions.
 
 ## Isolated Development
 
@@ -94,7 +76,10 @@ Current packaging commands and artifact checks live in
 
 ## Current Checkpoint
 
-`0.6.9` is the current public release on `main`, tagged `v0.6.9`. Its macOS
+`0.6.10` is the current source checkpoint on `main`. A local ad-hoc-signed Lite
+DMG has been built and package-verified for testing; it is not Developer ID
+signed, notarized, tagged, or publicly released. The current public release is
+`0.6.9`, tagged `v0.6.9`. Its macOS
 Apple Silicon Full/Lite DMGs are Developer ID signed, Apple-notarized, stapled,
 and Gatekeeper accepted. Its Windows x64 Full/Lite installers are built and
 package-verified on `windows-latest`. All four assets are published with
@@ -102,6 +87,12 @@ SHA-256 checksums.
 
 - 2026-08-12: the complete human UI adopts one design language; the Agent Guide
   is versioned and searchable; InnerLife settings use one migrated model.
+- 2026-08-13: Agent context delivery adopts minimum-sufficient defaults,
+  progressive one-object expansion, server-side projections, and byte guards.
+- 2026-08-13: Agent-facing boolean names, secret-safe status, trace evidence,
+  core-module filters, dialogs, Memoria paging, and compact responsive layouts
+  are aligned under the same contract and visual language.
+- See [v0.6.10 Checkpoint Notes](RELEASE_NOTES_V0.6.10.md).
 - See [v0.6.9 Release Notes](RELEASE_NOTES_V0.6.9.md).
 
 ### Previous checkpoints

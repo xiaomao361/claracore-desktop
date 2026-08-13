@@ -14,6 +14,14 @@ async function recentSessions(core, agentId, limit = 20) {
   return core.database.listInnerLifeSessions(agentId, limit);
 }
 
+async function recentSessionsPage(core, input = {}) {
+  return core.database.listInnerLifeSessionsPage(input || {});
+}
+
+async function session(core, id) {
+  return core.database.getInnerLifeSession(id);
+}
+
 async function digestRuns(core, input = {}) {
   return core.database.listInnerLifeDigestRunsPage(input);
 }
@@ -46,6 +54,14 @@ async function updateProfile(core, input = {}) {
 
 async function profiles(core, input = {}) {
   return core.database.listInnerLifeProfiles(input);
+}
+
+async function profile(core, agentId) {
+  return core.database.getInnerLifeProfileReadOnly(agentId);
+}
+
+async function profileSummaries(core, input = {}) {
+  return core.database.listInnerLifeProfileSummariesPage(input || {});
 }
 
 async function deleteProfile(core, input = {}) {
@@ -84,8 +100,16 @@ async function pendingShares(core, status = "pending", limit = 20, agentId = "al
   return core.database.listInnerLifeShares(status, limit, agentId);
 }
 
+async function pendingShareSummaries(core, input = {}) {
+  return core.database.listInnerLifeShareSummariesPage(input || {});
+}
+
 async function shareActions(core, shareId = null, limit = 20, agentId = "all") {
   return core.database.listInnerLifeShareActions(shareId, limit, agentId);
+}
+
+async function shareActionSummaries(core, shareId = null, limit = 20, agentId = "all") {
+  return core.database.listInnerLifeShareActionSummaries(shareId, limit, agentId);
 }
 
 async function setDaemon(core, input) {
@@ -120,12 +144,24 @@ async function history(core, input = {}) {
   return core.database.getInnerLifeHistory(input?.agentId, input?.limit);
 }
 
+async function historySummaries(core, input = {}) {
+  return core.database.getInnerLifeHistorySummaries(input?.agentId, input?.limit);
+}
+
 async function experiences(core, input = {}) {
   return core.database.listInnerLifeExperiences(input?.agentId, input?.limit);
 }
 
+async function experienceSummaries(core, input = {}) {
+  return core.database.listInnerLifeExperienceSummaries(input?.agentId, input?.limit);
+}
+
 async function summaries(core, input = {}) {
   return core.database.listInnerLifeSummaries(input?.agentId, input?.limit);
+}
+
+async function summaryPreviews(core, input = {}) {
+  return core.database.listInnerLifeSummaryPreviews(input?.agentId, input?.limit);
 }
 
 async function explore(core, input) {
@@ -149,26 +185,35 @@ module.exports = {
   doctor,
   endSession,
   experiences,
+  experienceSummaries,
   explore,
   history,
+  historySummaries,
   inbox,
   markShare,
   pendingShares,
+  pendingShareSummaries,
   pendingInbox,
   processOnce,
   profiles,
+  profile,
+  profileSummaries,
   recentThoughts,
   recentSessions,
+  recentSessionsPage,
+  session,
   reviewShare,
   resolveAfterthoughtFailure,
   sessions,
   setDaemon,
   shareActions,
+  shareActionSummaries,
   snapshot,
   snapshotLite,
   startSession,
   submitInbox,
   summaries,
+  summaryPreviews,
   tickDaemon,
   updateProfile
 };

@@ -73,6 +73,10 @@ async function links(core, input = {}) {
   return core.database.listMemoryLinks(input || {});
 }
 
+async function linkSummaries(core, input = {}) {
+  return core.database.listMemoryLinkSummaries(input || {});
+}
+
 async function deleteLink(core, id) {
   return core.database.deleteMemoryLink(id);
 }
@@ -94,6 +98,14 @@ async function records(core, input = {}) {
     records: await core.database.listMemoryRecords(input || {}),
     stats: await core.database.getMemoryRecordStats()
   };
+}
+
+async function record(core, id) {
+  return core.database.getMemoryRecord(id);
+}
+
+async function recordSummaries(core, input = {}) {
+  return core.database.listMemoryRecordSummaries(input || {});
 }
 
 async function createLabelAlias(core, input) {
@@ -208,6 +220,10 @@ async function list(core, input = {}) {
   return core.database.listMemories(paging.limit, "", { offset: paging.offset, agentId: paging.agentId });
 }
 
+async function listSummaries(core, input = {}) {
+  return core.database.listMemorySummariesPage(input || {});
+}
+
 async function restricted(core, input = {}) {
   const paging = normalizeListInput(input, 20);
   return core.database.listRestrictedMemories(paging.limit, { offset: paging.offset, agentId: paging.agentId });
@@ -276,7 +292,9 @@ module.exports = {
   graph,
   labelAliases,
   links,
+  linkSummaries,
   list,
+  listSummaries,
   maintenance,
   maintenanceAudit,
   maintenanceRun,
@@ -285,6 +303,8 @@ module.exports = {
   processEmbeddings,
   recordStats,
   recordSummary,
+  record,
+  recordSummaries,
   records,
   remove,
   restore,

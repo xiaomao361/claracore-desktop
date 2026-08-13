@@ -1,7 +1,9 @@
 const { getGatewayContext } = require("../context");
 const { buildGatewayDocs } = require("../docs");
 const { arbitrateAutomaticContext } = require("../auto-context");
+const { shapeGatewayTraceCatalogEntry } = require("../bounded-response");
 const { createTurnContextService } = require("../turn-context");
+const { shapeAgentConfiguration, shapeCallerConnection } = require("../status-shape");
 const { runMemoryContext } = require("./memory-controller");
 
 // Memory retrieval reuses the Memory Controller handler's own gate logic rather
@@ -25,12 +27,15 @@ async function handleSystemTool(name, args, context) {
   } = context;
 
   if (name === "claracore_status") {
+    const caller = currentCallerContext(args);
+    const configuration = await database.getConfiguration({
+      dataRoot: paths.dataRoot
+    });
     return textResult({
       dataRoot: paths.dataRoot,
       database: await database.getSummary(),
-      configuration: await database.getConfiguration({
-        dataRoot: paths.dataRoot
-      })
+      connection: shapeCallerConnection(caller, toolProfile),
+      configuration: shapeAgentConfiguration(configuration)
     });
   }
 
@@ -121,9 +126,22 @@ async function handleSystemTool(name, args, context) {
   }
 
   if (name === "gateway_trace_list") {
+    const page = await database.listGatewayTraceSummaries(args);
     return textResult({
-      traces: await database.listGatewayTraces(args)
+      traces: page.items.map(shapeGatewayTraceCatalogEntry),
+      page: {
+        returned: page.items.length,
+        total: page.total,
+        limit: page.limit,
+        offset: page.offset,
+        hasMore: page.offset + page.items.length < page.total
+      }
     });
+  }
+
+  if (name === "gateway_trace_get") {
+    const trace = await database.getGatewayTrace(args.id);
+    return textResult(trace ? { trace } : { error: "not found", id: args.id });
   }
 
   if (name === "agent_identity_merge") {

@@ -111,6 +111,12 @@
     align-self: flex-start;
   }
 
+  .module-agent-bar {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    align-items: stretch;
+  }
+
   .topbar {
     display: grid;
   }

@@ -113,27 +113,30 @@ function createInnerLifeShareTimingService(inputPorts = {}) {
     const hasAsk =
       /\b(ask|asked|question|share|need|use|recall|remember)\b/i.test(providedContext)
       || /分享|需要|使用|记得|回忆|问题/u.test(providedContext);
-    const hasConnection = hasAsk || explicitOverlap.length > 0 || lineOverlap.length > 0;
+    const hasDirectUseSignal = hasAsk || explicitOverlap.length > 0 || lineOverlap.length > 0;
     let decision = "defer";
-    let reason = "Context is not specific enough yet.";
+    let reason = "The share is not available for timing review.";
     if (!context) {
       decision = "defer";
       reason = "No current context or Shared Line context was available.";
-    } else if (share.status === "pending" && hasConnection) {
+    } else if (share.status === "pending") {
       decision = "review_first";
-      reason = overlap.length > 0
+      reason = hasDirectUseSignal && overlap.length > 0
         ? `Pending share connects to the ${sharedLineContext ? "current line" : "provided context"}: ${overlap.slice(0, 5).join(", ")}. Review before use.`
-        : "Pending share may fit the current context, but it still requires review before use.";
-    } else if (share.status === "approved" && hasConnection) {
+        : hasDirectUseSignal
+          ? "Pending share may fit the current context, but it still requires review before use."
+          : "Pending share has no lexical connection to the current context. Topic overlap is only evidence; review the conversational register before use.";
+    } else if (share.status === "approved" && hasDirectUseSignal) {
       decision = "use";
       reason = overlap.length > 0
         ? `Approved share connects to the ${sharedLineContext ? "current line" : "provided context"}: ${overlap.slice(0, 5).join(", ")}.`
         : "Approved share fits the current context.";
-    } else if (share.status === "deferred") {
-      decision = hasConnection ? "use" : "defer";
-      reason = decision === "use"
-        ? "Deferred share now matches the current context."
-        : "Deferred share still does not match the current context.";
+    } else if (share.status === "deferred" && hasDirectUseSignal) {
+      decision = "use";
+      reason = "Deferred share now matches the current context.";
+    } else if (["approved", "deferred"].includes(share.status)) {
+      decision = "review_first";
+      reason = `${share.status[0].toUpperCase()}${share.status.slice(1)} share has no lexical connection to the current context. Topic overlap is only evidence; review the conversational register before use.`;
     }
     await ports.recordCheck(database, {
       id: checkId,

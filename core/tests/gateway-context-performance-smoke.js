@@ -61,7 +61,10 @@ async function main() {
     for (let index = 0; index < 20; index += 1) {
       queryCalls = 0;
       const startedAt = performance.now();
-      const context = await getGatewayContext({ database }, { agentId: "agent-alpha", limit: 5 });
+      const context = await getGatewayContext(
+        { database },
+        { agentId: "agent-alpha", detail: "full", limit: 5 }
+      );
       fullDurations.push(performance.now() - startedAt);
       fullCalls.push(queryCalls);
       fullBytes.push(Buffer.byteLength(JSON.stringify(context), "utf8"));
@@ -85,9 +88,9 @@ async function main() {
       briefBytes.push(Buffer.byteLength(JSON.stringify(context), "utf8"));
       assert.strictEqual(context.detail, "brief");
       assert(context.memories.length <= 5);
-      assert(context.innerLife.pendingInbox.every((item) => item.agentId === "agent-alpha"));
+      assert(!Object.hasOwn(context.innerLife, "pendingInbox"));
       assert(context.innerLife.pendingShares.every((item) => item.agentId === "agent-alpha"));
-      assert(!Object.hasOwn(context.sharedLine.currentPosition, "metadata"));
+      assert(!Object.hasOwn(context.sharedLine, "currentPosition"));
       assert(!JSON.stringify(context).includes("Beta must not leak"), "Brief Gateway context leaked another agent's data.");
     }
     database.query = query;
@@ -149,7 +152,11 @@ async function main() {
     assert(ambiguityError?.message.includes("SHARED_LINE_ID_REQUIRED"), "Ambiguous Gateway context did not fail closed.");
     assert(ambiguityError.message.includes("line_ambiguous_a") && ambiguityError.message.includes("line_ambiguous_b"));
     assert.deepStrictEqual(unrelatedReads, [], `Ambiguous Gateway context started unrelated reads: ${unrelatedReads.join(", ")}`);
-    assert.strictEqual(ambiguousQueryCalls, 1, `Ambiguous Gateway context should fail after one SQL read: ${ambiguousQueryCalls}`);
+    assert.strictEqual(
+      ambiguousQueryCalls,
+      2,
+      `Ambiguous Gateway context should stop after the bounded candidate query and truthful total count: ${ambiguousQueryCalls}`
+    );
 
     process.stdout.write(`${JSON.stringify({
       suite: "gateway-context-performance-smoke",

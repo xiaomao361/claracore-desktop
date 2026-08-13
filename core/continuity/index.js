@@ -6,6 +6,10 @@ async function list(core, input = {}) {
   return core.database.listContinuityLines(input || {});
 }
 
+async function listSummaries(core, input = {}) {
+  return core.database.listContinuityLineSummaries(input || {});
+}
+
 async function save(core, input, options = {}) {
   const currentPosition = await core.database.saveCurrentPosition(input);
   return core.database.getResumePacket({
@@ -104,6 +108,7 @@ module.exports = {
   deleteModelAdjustment,
   get,
   list,
+  listSummaries,
   modelAdjustment,
   modelAdjustments,
   rename,

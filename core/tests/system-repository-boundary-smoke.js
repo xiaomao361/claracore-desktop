@@ -12,6 +12,7 @@ const modules = {
     "cleanupGatewayTraces",
     "ensureGatewayTraceCompatibility",
     "getGatewayTrace",
+    "listGatewayTraceSummaries",
     "listGatewayTraces",
     "recordGatewayTrace"
   ]

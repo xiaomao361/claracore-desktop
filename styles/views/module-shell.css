@@ -55,6 +55,55 @@
   gap: clamp(28px, 4vw, 48px);
 }
 
+.module-page-heading {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.module-readonly-badge {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--green-bg);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.module-readonly-badge i {
+  width: 7px;
+  height: 7px;
+  margin: 0;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: none;
+}
+
+.module-agent-bar {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.55fr) minmax(0, 1.45fr);
+  gap: 24px;
+  align-items: center;
+  padding: 14px 16px;
+}
+
+.module-agent-filter {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.module-agent-bar > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 @media (max-width: 860px) {
   :is(
     .memory-page,

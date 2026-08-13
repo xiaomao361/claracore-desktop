@@ -125,7 +125,7 @@ SQL. The public digest repository keeps its existing query and compatibility
 methods as thin adapters.
 
 `core/innerlife/services/share-timing.js` owns Agent/share selection, provided
-plus Shared Line context matching, overlap metadata, and the
+plus Shared Line context assembly, overlap evidence, register-review routing, and the
 `review_first`/`use`/`defer`/`none` decision through 10 explicit ports.
 `core/db/repositories/innerlife/share-timing-store.js` owns candidate selection
 and timing-check receipts. `workflow-wiring.js` composes both focused workflows

@@ -118,7 +118,7 @@ const innerlifeSessionToolDefinitions = [
   {
     "name": "innerlife_sessions",
     "title": "List InnerLife Sessions",
-    "description": "List recent Desktop-owned InnerLife sessions.",
+    "description": "List bounded recent Desktop-owned InnerLife session summaries. Defaults to 10 rows; limit can explicitly request up to 50. Use innerlife_session_get for one complete session.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -134,8 +134,25 @@ const innerlifeSessionToolDefinitions = [
         "limit": {
           "type": "number",
           "minimum": 1,
-          "maximum": 100
+          "maximum": 50
+        },
+        "offset": {
+          "type": "number",
+          "minimum": 0
         }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "innerlife_session_get",
+    "title": "Get InnerLife Session",
+    "description": "Get one complete Desktop-owned InnerLife session by id.",
+    "inputSchema": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string" }
       },
       "additionalProperties": false
     }

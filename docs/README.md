@@ -7,6 +7,10 @@ instructions.
 ## Start Here
 
 - [Positioning](POSITIONING.md): product boundary and north star.
+- [Context Delivery](CONTEXT_DELIVERY.md): minimum-sufficient defaults,
+  progressive disclosure, bounded explicit reads, and Agent-facing budgets.
+- [UI Design Language](UI_DESIGN_LANGUAGE.md): shared product reading order,
+  visual restraint, and detail-layer rules.
 - [Architecture](ARCHITECTURE.md): runtime, renderer, database, Gateway,
   packaging, validation, and documentation boundaries.
 - [Code Map](CODE_MAP.md): shortest source-reading paths by task.
@@ -27,41 +31,16 @@ instructions.
 
 ## Build And Release
 
+- [v0.6.10 Checkpoint Notes](RELEASE_NOTES_V0.6.10.md): current source
+  checkpoint for minimum-sufficient context delivery; not yet published.
 - [macOS Packaging](mac-packaging.md): current Full/Lite packaging commands and
   packaged Gateway checks.
 - [v0.6.9 Release Notes](RELEASE_NOTES_V0.6.9.md): current macOS Apple Silicon
   and Windows x64 Full/Lite GitHub Release.
-- [v0.6.7 Release Notes](RELEASE_NOTES_V0.6.7.md): previous signed and notarized
-  macOS Apple Silicon Lite GitHub Release.
-- [v0.6.5 Release Notes](RELEASE_NOTES_V0.6.5.md): previous signed and notarized
-  macOS Apple Silicon Lite GitHub Release.
-- [v0.6.4 Release Notes](RELEASE_NOTES_V0.6.4.md): previous GitHub Release for
-  macOS Apple Silicon and Windows x64 Full/Lite.
-- [v0.5.8 Release Notes](RELEASE_NOTES_V0.5.8.md): previous cross-platform
-  public release.
 
-## Versioned Design And Acceptance Records
-
-These documents preserve the decisions and evidence of the version named in
-the file. They are not the source of current version or release truth; use
-[Version and Branching](VERSION_BRANCHING.md) for that.
-
-- [v0.6.6 Context Budget Plan](V0.6.6_CONTEXT_BUDGET_PLAN.md): MCP interface
-  reduction, progressive disclosure, byte budgets, and staged acceptance.
-- [v0.6.6 Turn Context Patch](V0.6.6_TURN_CONTEXT_PATCH.md): the single-call
-  automatic-context host integration and its v0.6.7 supersession note.
-- [v0.6.6 Release Notes](RELEASE_NOTES_V0.6.6.md): unpublished source and local
-  package checkpoint.
-- [Memory Controller Canary Handoff](MEMORY_CONTROLLER_CANARY_HANDOFF.md):
-  authenticated multi-Agent trusted-context boundary and canary evidence.
-- [Hermes v0.6.2 Update](HERMES_V0.6.2_UPDATE.md): checkpoint-specific Agent
-  reconnect and lifecycle guidance.
-- [v0.6.2 Performance Hardening](V0.6.2_PERFORMANCE_HARDENING_PLAN.md),
-  [v0.6.1 Performance Plan](V0.6.1_PERFORMANCE_PLAN.md), and
-  [v0.6.0 Performance Baseline](PERFORMANCE_BASELINE_V0.6.0.md): measured
-  performance history and acceptance evidence.
-- [v0.6.0 Memory Controller Plan](V0.6.0_MEMORY_CONTROLLER_PLAN.md): original
-  staged retrieval-control plan and safety boundary.
+Older release notes, completed handoffs, superseded plans, and historical
+performance evidence live under [archive](archive/README.md). They remain
+available for traceability but are not active implementation instructions.
 
 ## Module Notes
 

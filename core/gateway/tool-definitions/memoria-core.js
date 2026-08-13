@@ -2,14 +2,18 @@ const memoriaCoreToolDefinitions = [
   {
     "name": "memoria_list",
     "title": "List Memories",
-    "description": "List recent ClaraCore Desktop memory records.",
+    "description": "List bounded recent ClaraCore Desktop Memory summaries. Defaults to 10 rows; limit can explicitly request up to 50. Use memoria_get for one complete Memory.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "limit": {
           "type": "number",
           "minimum": 1,
-          "maximum": 100
+          "maximum": 50
+        },
+        "offset": {
+          "type": "number",
+          "minimum": 0
         }
       },
       "additionalProperties": false
@@ -195,14 +199,18 @@ const memoriaCoreToolDefinitions = [
   {
     "name": "memoria_restricted_list",
     "title": "List Restricted Memories",
-    "description": "List restricted ClaraCore Desktop memory records through an explicit restricted-content tool.",
+    "description": "List bounded restricted ClaraCore Desktop Memory summaries through an explicit restricted-content tool. Defaults to 10 rows; limit can explicitly request up to 50.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "limit": {
           "type": "number",
           "minimum": 1,
-          "maximum": 100
+          "maximum": 50
+        },
+        "offset": {
+          "type": "number",
+          "minimum": 0
         }
       },
       "additionalProperties": false
@@ -296,14 +304,18 @@ const memoriaCoreToolDefinitions = [
   {
     "name": "memoria_archived_list",
     "title": "List Archived Memories",
-    "description": "List archived ClaraCore Desktop memory records.",
+    "description": "List bounded archived ClaraCore Desktop Memory summaries. Defaults to 10 rows; limit can explicitly request up to 50. Use memoria_get for one complete Memory.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "limit": {
           "type": "number",
           "minimum": 1,
-          "maximum": 100
+          "maximum": 50
+        },
+        "offset": {
+          "type": "number",
+          "minimum": 0
         }
       },
       "additionalProperties": false

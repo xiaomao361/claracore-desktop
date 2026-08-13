@@ -42,6 +42,7 @@ function createGatewayTraceRepository(helpers) {
   // shorter than the bound is still recorded in full, so `truncated` says
   // plainly whether anything was actually withheld.
   const REDACTED_PREVIEW_BYTES = 80;
+  const BOUNDED_REQUEST_PREVIEW_BYTES = 8 * 1024;
 
   function boundedUtf8Preview(text, maxBytes) {
     if (Buffer.byteLength(text, "utf8") <= maxBytes) return text;
@@ -88,19 +89,23 @@ function createGatewayTraceRepository(helpers) {
   }
 
   function boundedGatewayTraceRequest(inputRequest = {}, maxBytes = 16 * 1024) {
-    const request = redactGatewayTraceRequest(inputRequest);
+    let request;
     let serialized;
     try {
+      request = redactGatewayTraceRequest(inputRequest);
       serialized = JSON.stringify(request || {});
     } catch (_error) {
-      return { truncated: true, error: "request_not_serializable" };
+      return { serializationFailed: true, error: "request_not_serializable" };
     }
     const bytes = Buffer.byteLength(serialized);
     if (bytes <= maxBytes) return request || {};
     return {
-      truncated: true,
+      previewOnly: true,
       originalBytes: bytes,
-      preview: serialized.slice(0, Math.min(8000, serialized.length))
+      preview: boundedUtf8Preview(
+        serialized,
+        Math.max(0, Math.min(BOUNDED_REQUEST_PREVIEW_BYTES, maxBytes - 256))
+      )
     };
   }
 
@@ -304,6 +309,50 @@ function createGatewayTraceRepository(helpers) {
         LIMIT ${safeLimit};
       `);
       return rows.map(mapGatewayTraceRow);
+    },
+
+    async listGatewayTraceSummaries(input = {}) {
+      await this.ensureGatewayTraceCompatibility();
+      const requestedLimit = Number.parseInt(String(input.limit ?? 10), 10);
+      const limit = Math.max(1, Math.min(Number.isFinite(requestedLimit) ? requestedLimit : 10, 50));
+      const offset = Math.max(0, Number.parseInt(String(input.offset || 0), 10) || 0);
+      const toolName = String(input.toolName || "").trim();
+      const status = String(input.status || "").trim();
+      const filters = [];
+      if (toolName) filters.push(`tool_name = ${sqlString(toolName)}`);
+      if (status) filters.push(`status = ${sqlString(status)}`);
+      const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
+      const [rows, totals] = await Promise.all([
+        this.query(`
+          SELECT id, agent_id, client_id, conversation_id, session_id, transport,
+                 tool_name, status, duration_ms, substr(response_summary, 1, 400) AS response_summary,
+                 substr(error, 1, 400) AS error, created_at
+          FROM gateway_traces
+          ${where}
+          ORDER BY created_at DESC, id DESC
+          LIMIT ${limit} OFFSET ${offset};
+        `),
+        this.query(`SELECT COUNT(*) AS total FROM gateway_traces ${where};`)
+      ]);
+      return {
+        items: rows.map((row) => ({
+          id: row.id,
+          agentId: row.agent_id,
+          clientId: row.client_id || "",
+          conversationId: row.conversation_id || row.session_id || "",
+          transport: row.transport || "stdio",
+          toolName: row.tool_name,
+          status: row.status,
+          durationMs: row.duration_ms,
+          responseSummary: row.response_summary || "",
+          error: row.error || "",
+          createdAt: row.created_at
+        })),
+        total: Number(totals[0]?.total || 0),
+        limit,
+        offset,
+        requestedLimit
+      };
     }
   };
 }

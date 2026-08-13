@@ -102,7 +102,12 @@ async function main() {
     }
     // The workflow pairs that made this profile wrong once must survive
     // packaging, not just the source tree.
-    for (const name of ["memoria_supersede", "memoria_link_list", "memoria_record_list"]) {
+    for (const name of [
+      "memoria_supersede",
+      "memoria_link_list",
+      "memoria_record_list",
+      "shared_line_archive"
+    ]) {
       if (!packagedTools.some((tool) => tool.name === name)) {
         throw new Error(`Packaged core profile is missing everyday tool ${name}.`);
       }
@@ -253,6 +258,13 @@ async function main() {
     if ("agentState" in sharedLine) {
       throw new Error("Packaged Gateway resume packet must not carry Agent-level state.");
     }
+    const packagedLineCatalog = parseTextResult(await client.callTool("shared_line_list", { status: "active" }));
+    if (
+      !packagedLineCatalog.lines?.length ||
+      packagedLineCatalog.lines.some((line) => "active" in line || typeof line.isCurrent !== "boolean")
+    ) {
+      throw new Error(`Packaged Gateway Shared Line catalog must use isCurrent: ${JSON.stringify(packagedLineCatalog)}`);
+    }
     const handoffResult = parseTextResult(
       await client.callTool("shared_line_handoff_create", {
         objective: "Packaged Gateway handoff",
@@ -275,11 +287,15 @@ async function main() {
     }
     const context = parseTextResult(
       await client.callTool("gateway_context", {
-        query: "packaged Gateway",
+        query: "Desktop-owned Gateway",
         limit: 5
       })
     );
-    if (!context.text?.includes("Packaged Gateway can update Shared Line") || !context.memories?.some((memory) => memory.id === created.id)) {
+    if (
+      context.detail !== "brief" ||
+      context.sharedLine?.summary !== "Packaged Gateway can update Shared Line from --gateway mode." ||
+      !context.memories?.some((memory) => memory.id === created.id)
+    ) {
       throw new Error(`Packaged Gateway context did not assemble Memory and Shared Line: ${JSON.stringify(context)}`);
     }
     if (context.innerLife?.doctor?.status !== "ok") {
@@ -297,6 +313,22 @@ async function main() {
     const status = parseTextResult(await client.callTool("claracore_status"));
     if (status.dataRoot !== dataRoot) throw new Error(`Packaged Gateway status data root mismatch: ${status.dataRoot}`);
     if (!status.database?.initialized) throw new Error("Packaged Gateway did not initialize the product database.");
+    if (
+      status.connection?.agentId !== "codex" ||
+      status.connection?.clientId !== "packaged-gateway-smoke" ||
+      status.connection?.transport !== "stdio"
+    ) {
+      throw new Error(`Packaged Gateway status did not report its actual caller: ${JSON.stringify(status.connection)}`);
+    }
+    if (status.configuration?.innerlife?.apiKeyRef !== "inline") {
+      throw new Error("Packaged Gateway status did not classify its inline API key safely.");
+    }
+    const packagedSecret = (await runtime.ensureProductCore(runtimeApp)).database
+      ? (await (await runtime.ensureProductCore(runtimeApp)).database.getSecretRefs())["innerlife.llm.api_key"]?.ref || ""
+      : "";
+    if (packagedSecret && JSON.stringify(status).includes(packagedSecret)) {
+      throw new Error("Packaged Gateway status leaked its inline API key.");
+    }
 
     console.log(
       JSON.stringify(

@@ -208,6 +208,30 @@ async function main() {
     if (!eventDetailText.includes("missing_gateway_tool")) {
       throw new Error(`Log raw event detail missing expected evidence: ${eventDetailText}`);
     }
+    const closeButtonContract = await page.locator("#logDetailClose").evaluate((button) => {
+      const icon = button.querySelector("svg");
+      const styles = window.getComputedStyle(button);
+      const beforeStyles = window.getComputedStyle(button, "::before");
+      return {
+        accessibleName: button.getAttribute("aria-label"),
+        hasSvg: Boolean(icon),
+        iconHiddenFromAssistiveTechnology: icon?.getAttribute("aria-hidden") === "true",
+        color: styles.color,
+        beforeDisplay: beforeStyles.display
+      };
+    });
+    if (
+      closeButtonContract.accessibleName !== "Close" ||
+      !closeButtonContract.hasSvg ||
+      !closeButtonContract.iconHiddenFromAssistiveTechnology ||
+      closeButtonContract.color === "rgba(0, 0, 0, 0)" ||
+      closeButtonContract.beforeDisplay !== "none"
+    ) {
+      throw new Error(`Log detail close button contract failed: ${JSON.stringify(closeButtonContract)}`);
+    }
+    if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
+      await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "detail") });
+    }
     await page.keyboard.press("Escape");
     await page.waitForFunction(() => !document.querySelector("#logDetailDialog")?.open);
     const focusRestored = await page.evaluate(() => document.activeElement === document.querySelector("#logIssueList .log-event-row"));

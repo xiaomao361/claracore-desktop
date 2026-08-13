@@ -164,8 +164,8 @@ async function main() {
         primaryCount: document.querySelectorAll("#sharedLinePrimaryList .shared-line-card").length,
         readerCount: document.querySelectorAll("#sharedLineOverflowList .shared-line-card").length,
         processSteps: document.querySelectorAll("#sharedLineProcessFlow > div").length,
-        processBeforeToolbar: Boolean(
-          document.querySelector(".shared-line-process-section")?.compareDocumentPosition(document.querySelector(".shared-line-toolbar"))
+        agentScopeBeforeOverview: Boolean(
+          document.querySelector(".module-agent-bar")?.compareDocumentPosition(document.querySelector(".shared-line-overview"))
           & Node.DOCUMENT_POSITION_FOLLOWING
         ),
         titleLineClamp: getComputedStyle(document.querySelector(".shared-line-card-head strong")).webkitLineClamp,
@@ -186,7 +186,7 @@ async function main() {
       layoutStructure.primaryCount !== 6
       || layoutStructure.readerCount < 7
       || layoutStructure.processSteps !== 4
-      || !layoutStructure.processBeforeToolbar
+      || !layoutStructure.agentScopeBeforeOverview
       || layoutStructure.titleLineClamp !== "2"
       || !layoutStructure.agentContextOutsideLineDetail
       || !layoutStructure.alignedColumns

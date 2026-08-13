@@ -308,6 +308,49 @@ function installMemoriaRepository(ProductDatabase, helpers) {
       return normalizeSearchRows(rows);
     }
     ,
+
+    async listMemorySummariesPage(input = {}) {
+      const requestedLimit = Number.parseInt(String(input.limit ?? 10), 10);
+      const limit = Math.max(1, Math.min(Number.isFinite(requestedLimit) ? requestedLimit : 10, 50));
+      const offset = Math.max(0, Number.parseInt(String(input.offset || 0), 10) || 0);
+      const bucket = String(input.bucket || "active").trim().toLowerCase();
+      const clauses = [];
+      if (bucket === "restricted") clauses.push("m.status = 'active'", "m.sensitivity = 'restricted'");
+      else if (bucket === "deleted") clauses.push("m.status = 'deleted'");
+      else if (bucket === "archived") clauses.push("m.status = 'archived'");
+      else clauses.push("m.status = 'active'", "m.sensitivity != 'restricted'");
+      const agentClause = input.agentId || input.agent_id ? agentLabelClause(input.agentId || input.agent_id) : "";
+      const where = `${clauses.join(" AND ")} ${agentClause}`;
+      const [rows, totals] = await Promise.all([
+        this.query(`
+          SELECT m.id, m.title, m.status, m.sensitivity, m.created_at, m.updated_at,
+                 COALESCE(group_concat(l.label, ','), '') AS labels
+          FROM memories m
+          LEFT JOIN memory_labels l ON l.memory_id = m.id
+          WHERE ${where}
+          GROUP BY m.id
+          ORDER BY m.updated_at DESC, m.created_at DESC, m.id DESC
+          LIMIT ${limit} OFFSET ${offset};
+        `),
+        this.query(`SELECT COUNT(*) AS total FROM memories m WHERE ${where};`)
+      ]);
+      return {
+        items: rows.map((row) => ({
+          id: row.id,
+          title: row.title || "",
+          status: row.status || "active",
+          sensitivity: row.sensitivity || "normal",
+          labels: row.labels ? row.labels.split(",").filter(Boolean) : [],
+          createdAt: row.created_at,
+          updatedAt: row.updated_at
+        })),
+        total: Number(totals[0]?.total || 0),
+        limit,
+        offset,
+        requestedLimit
+      };
+    }
+    ,
     
     async listRestrictedMemories(limit = 20, options = {}) {
       const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 20));

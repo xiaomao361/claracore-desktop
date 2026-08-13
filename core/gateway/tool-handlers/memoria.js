@@ -1,5 +1,14 @@
 const memoria = require("../../memoria");
 const { exportProductMemoryArchive, importProductMemoryArchive } = require("../../runtime");
+const {
+  catalogPage,
+  boundedText,
+  shapeMemoryAck,
+  shapeMemoryCatalogEntry,
+  shapeMemoryLinkCatalogEntry,
+  shapeMemoryRecordCatalogEntry,
+  shapeMemoryRecordDetail
+} = require("../bounded-response");
 
 function withoutAgentFilter(args = {}) {
   const input = { ...args };
@@ -22,8 +31,10 @@ async function handleMemoriaTool(name, args, context) {
   const { core, runtimeAppForGateway, textResult } = context;
 
   if (name === "memoria_list") {
+    const page = await memoria.listSummaries(core, { ...withoutAgentFilter(args), bucket: "active" });
     return textResult({
-      results: await memoria.list(core, withoutAgentFilter(args))
+      results: page.items.map(shapeMemoryCatalogEntry),
+      page: catalogPage(page.items, page.total, page)
     });
   }
 
@@ -38,34 +49,37 @@ async function handleMemoriaTool(name, args, context) {
 
   if (name === "memoria_create") {
     const memory = await memoria.create(core, args);
-    return textResult({ memory, embedding: { status: memory.embeddingStatus || "pending", persisted: true } });
+    return textResult({ memory: shapeMemoryAck(memory), persisted: true });
   }
 
   if (name === "memoria_update") {
     const existing = await memoria.get(core, args.id);
     const memory = await memoria.update(core, args.id, preserveMissingMemoryFields(existing, args));
-    return textResult({ memory, embedding: { status: memory.embeddingStatus || "pending", persisted: true } });
+    return textResult({ memory: shapeMemoryAck(memory), persisted: true });
   }
 
   if (name === "memoria_tag") {
-    return textResult(await memoria.tag(core, args.id, args));
+    const result = await memoria.tag(core, args.id, args);
+    return textResult({ ...result, memory: shapeMemoryAck(result.memory) });
   }
 
   if (name === "memoria_restricted_list") {
+    const page = await memoria.listSummaries(core, { ...withoutAgentFilter(args), bucket: "restricted" });
     return textResult({
-      results: await memoria.restricted(core, withoutAgentFilter(args))
+      results: page.items.map(shapeMemoryCatalogEntry),
+      page: catalogPage(page.items, page.total, page)
     });
   }
 
   if (name === "memoria_restrict") {
     return textResult({
-      memory: await memoria.restrict(core, args.id)
+      memory: shapeMemoryAck(await memoria.restrict(core, args.id))
     });
   }
 
   if (name === "memoria_unrestrict") {
     return textResult({
-      memory: await memoria.unrestrict(core, args.id)
+      memory: shapeMemoryAck(await memoria.unrestrict(core, args.id))
     });
   }
 
@@ -75,25 +89,27 @@ async function handleMemoriaTool(name, args, context) {
 
   if (name === "memoria_restore") {
     return textResult({
-      memory: await memoria.restore(core, args.id)
+      memory: shapeMemoryAck(await memoria.restore(core, args.id))
     });
   }
 
   if (name === "memoria_archive") {
     return textResult({
-      memory: await memoria.archive(core, args.id)
+      memory: shapeMemoryAck(await memoria.archive(core, args.id))
     });
   }
 
   if (name === "memoria_archived_list") {
+    const page = await memoria.listSummaries(core, { ...withoutAgentFilter(args), bucket: "archived" });
     return textResult({
-      results: await memoria.archived(core, withoutAgentFilter(args))
+      results: page.items.map(shapeMemoryCatalogEntry),
+      page: catalogPage(page.items, page.total, page)
     });
   }
 
   if (name === "memoria_restore_archived") {
     return textResult({
-      memory: await memoria.restoreArchived(core, args.id)
+      memory: shapeMemoryAck(await memoria.restoreArchived(core, args.id))
     });
   }
 
@@ -110,7 +126,20 @@ async function handleMemoriaTool(name, args, context) {
   }
 
   if (name === "memoria_graph") {
-    return textResult(await memoria.graph(core, args));
+    const graph = await memoria.graph(core, args);
+    return textResult({
+      ...graph,
+      nodes: (graph.nodes || []).map((node) => {
+        const { excerpt: _excerpt, ...summary } = node;
+        return {
+          ...summary,
+          ...(node.excerpt ? { excerptPreview: boundedText(node.excerpt, 320) } : {}),
+          ...(node.kind === "memory" && node.refId
+            ? { detailRef: { tool: "memoria_get", arguments: { id: node.refId } } }
+            : {})
+        };
+      })
+    });
   }
 
   if (name === "memoria_maintenance_check") {
@@ -157,17 +186,26 @@ async function handleMemoriaTool(name, args, context) {
 
   if (name === "memoria_link_create") {
     return textResult({
-      link: await memoria.createLink(core, args)
+      link: shapeMemoryLinkCatalogEntry(await memoria.createLink(core, args)),
+      persisted: true
     });
   }
 
   if (name === "memoria_supersede") {
-    return textResult(await memoria.supersede(core, args));
+    const result = await memoria.supersede(core, args);
+    return textResult({
+      link: shapeMemoryLinkCatalogEntry(result.link),
+      current: shapeMemoryAck(result.current),
+      historical: shapeMemoryAck(result.historical),
+      persisted: true
+    });
   }
 
   if (name === "memoria_link_list") {
+    const page = await memoria.linkSummaries(core, args);
     return textResult({
-      links: await memoria.links(core, args)
+      links: page.items.map(shapeMemoryLinkCatalogEntry),
+      page: catalogPage(page.items, page.total, page)
     });
   }
 
@@ -178,13 +216,22 @@ async function handleMemoriaTool(name, args, context) {
   if (name === "memoria_record_create") {
     const record = await memoria.createRecord(core, args);
     return textResult({
-      record,
-      stats: await memoria.recordStats(core)
+      record: shapeMemoryRecordCatalogEntry(record),
+      persisted: true
     });
   }
 
   if (name === "memoria_record_list") {
-    return textResult(await memoria.records(core, args));
+    const page = await memoria.recordSummaries(core, args);
+    return textResult({
+      records: page.items.map(shapeMemoryRecordCatalogEntry),
+      page: catalogPage(page.items, page.total, page)
+    });
+  }
+
+  if (name === "memoria_record_get") {
+    const record = await memoria.record(core, args.id);
+    return textResult(record ? { record: shapeMemoryRecordDetail(record) } : { error: "not found", id: args.id });
   }
 
   if (name === "memoria_record_summary") {

@@ -17,7 +17,8 @@ function createClaraCoreMemoriaView(context) {
     memoryOverviewCount, memoryTopicList, memoryProcessFlow, memoryAllAction,
     memoryRecallStatus, memoryRecallList, memoryAllRecallAction,
     memoryDetailDialog, memoryDetailBack, memoryDetailClose, memoryDetailKicker,
-    memoryDetailDialogTitle, memoryDetailMeta, memoryRecallDetail, memoryKnowledgeWorkbench
+    memoryDetailDialogTitle, memoryDetailMeta, memoryLibraryFooter, memoryLibraryLoadMore,
+    memoryRecallDetail, memoryKnowledgeWorkbench
   } = dom;
 
   let activeMemoryTab = "labels";
@@ -39,8 +40,9 @@ function createClaraCoreMemoriaView(context) {
   let dialogTrigger = null;
   let dialogMode = "";
   let dialogBackMode = "";
+  let memoryPageRequestSequence = 0;
   const loadedMemoryTabs = { all: false, graph: false };
-  const memoryPaging = { pageSize: 20, all: { loaded: 0 } };
+  const memoryPaging = { pageSize: 20, all: { loaded: 0, hasMore: true } };
   let snapshot = null;
   const memoryHydration = window.createClaraCoreMemoryHydrationCoordinator({
     getGeneration: getSnapshotGeneration,
@@ -158,8 +160,21 @@ function renderRecallEvent(event, compact = false) {
 
 function setMemoryDialogPane(mode) {
   if (memoryDetail) memoryDetail.hidden = !["memory", "library"].includes(mode);
+  if (memoryLibraryFooter) memoryLibraryFooter.hidden = mode !== "library";
   if (memoryRecallDetail) memoryRecallDetail.hidden = mode !== "recall";
   if (memoryKnowledgeWorkbench) memoryKnowledgeWorkbench.hidden = !["labels", "graph"].includes(mode);
+}
+
+function renderMemoryLibrary() {
+  const total = snapshot?.memoryStats?.activeCount ?? visibleMemories.length;
+  memoryDetailKicker.textContent = "MEMORY LIBRARY";
+  memoryDetailDialogTitle.textContent = searchActive ? "搜索结果" : "最近载入的长期记忆";
+  memoryDetailMeta.textContent = searchActive
+    ? `找到 ${visibleMemories.length} 条 · 点击任一条阅读全文`
+    : `当前载入 ${visibleMemories.length}${activeMemoryAgentFilter ? "" : ` / ${total}`} 条 · 点击任一条阅读全文`;
+  memoryDetail.innerHTML = `<div id="memoryDialogLibrary" class="memory-dialog-library"></div>`;
+  memoryListRenderer.renderMemoryResults(visibleMemories, memoryDetail.querySelector("#memoryDialogLibrary"));
+  if (memoryLibraryFooter) memoryLibraryFooter.hidden = searchActive || !memoryPaging.all.hasMore;
 }
 
 function openMemoryDialog(mode, options = {}) {
@@ -176,11 +191,7 @@ function openMemoryDialog(mode, options = {}) {
     memoryDetailMeta.textContent = "完整内容与持久化依据";
     renderMemoryDetail(memory);
   } else if (mode === "library") {
-    memoryDetailKicker.textContent = "MEMORY LIBRARY";
-    memoryDetailDialogTitle.textContent = searchActive ? "搜索结果" : "最近载入的长期记忆";
-    memoryDetailMeta.textContent = `当前载入 ${visibleMemories.length} 条 · 点击任一条阅读全文`;
-    memoryDetail.innerHTML = `<div id="memoryDialogLibrary" class="memory-dialog-library"></div>`;
-    memoryListRenderer.renderMemoryResults(visibleMemories, memoryDetail.querySelector("#memoryDialogLibrary"));
+    renderMemoryLibrary();
   } else if (mode === "recall") {
     const events = getSnapshot()?.memoryController?.recent || [];
     const selected = options.decisionId ? events.filter((event) => event.id === options.decisionId) : events;
@@ -214,7 +225,8 @@ function renderMemoryResults(memories, target = memoryList, options = {}) {
     memoryAllAction.hidden = searchActive || visibleMemories.length <= displayed.length;
     memoryAllAction.textContent = `查看最近载入的 ${visibleMemories.length} 条记忆 →`;
   }
-  renderMemoryDetail();
+  if (dialogMode === "library" && memoryDetailDialog?.open) renderMemoryLibrary();
+  else renderMemoryDetail();
 }
 
 function renderMemoryList() {
@@ -244,24 +256,6 @@ function renderMemoryTabs() {
   }
 }
 
-function removeLoadMoreButton(kind) {
-  document.querySelector(`[data-load-more="${kind}"]`)?.remove();
-}
-
-function renderLoadMore(kind) {
-  syncSnapshot();
-  const total = snapshot?.memoryStats?.activeCount ?? 0;
-  const loaded = memoryPaging.all.loaded;
-  const container = kind === "all" ? memoryList : null;
-  if (!container) return;
-  removeLoadMoreButton(kind);
-  if (loaded >= total) return;
-  container.insertAdjacentHTML(
-    "afterend",
-    `<button class="secondary load-more-button" data-load-more="${kind}">${t("memory.loadMore")}</button>`
-  );
-}
-
 function loadMemoryTabData(tabName, options = {}) {
   const targetSnapshot = syncSnapshot();
   if (!targetSnapshot) {
@@ -270,28 +264,42 @@ function loadMemoryTabData(tabName, options = {}) {
   const force = Boolean(options.force);
   const append = Boolean(options.append);
   if ((tabName === "all" || tabName === "search") && (force || append || !loadedMemoryTabs.all)) {
-    const offset = append ? memoryPaging.all.loaded : 0;
+    const offset = append ? visibleMemories.length : 0;
     const requestAgentId = activeMemoryAgentFilter;
-    return memoryHydration.run("all", {
-      force: force || append,
-      load: () => window.ClaraCoreDesktop.getMemories({
+    const baseRows = append ? [...visibleMemories] : [];
+    const requestSequence = ++memoryPageRequestSequence;
+    return window.ClaraCoreDesktop.getMemories({
         limit: memoryPaging.pageSize,
         offset,
         agentId: requestAgentId
-      }),
-      apply: (rows, requestSnapshot) => {
-        requestSnapshot.memories = append ? [...(requestSnapshot.memories || []), ...rows] : rows;
+      })
+      .then((rows) => {
+        if (requestSequence !== memoryPageRequestSequence || requestAgentId !== activeMemoryAgentFilter) {
+          return { applied: false, stale: true };
+        }
+        const requestSnapshot = syncSnapshot();
+        if (!requestSnapshot) return { applied: false, stale: true };
+        const merged = append ? [...baseRows, ...rows] : rows;
+        const seen = new Set();
+        requestSnapshot.memories = merged.filter((memory) => {
+          const id = String(memory?.id || "");
+          if (!id || seen.has(id)) return false;
+          seen.add(id);
+          return true;
+        });
         snapshot = requestSnapshot;
         memoryPaging.all.loaded = requestSnapshot.memories.length;
+        memoryPaging.all.hasMore = rows.length === memoryPaging.pageSize
+          && (Boolean(requestAgentId) || memoryPaging.all.loaded < (requestSnapshot?.memoryStats?.activeCount ?? 0));
         loadedMemoryTabs.all = true;
         renderMemoryResults(filterByAgent(requestSnapshot.memories, activeMemoryAgentFilter, memoryAgentId));
         memoryAllHint.textContent = t("memory.list.sample", {
           shown: requestSnapshot.memories.length,
           total: requestSnapshot?.memoryStats?.activeCount ?? 0
         });
-        renderLoadMore("all");
-      }
-    });
+        if (dialogMode === "library" && memoryDetailDialog?.open) renderMemoryLibrary();
+        return { applied: true, stale: false };
+      });
   }
   if (tabName === "graph" && (force || !loadedMemoryTabs.graph)) {
     return memoryHydration.run("graph", {
@@ -1080,6 +1088,10 @@ function renderMemoryOverview() {
   const memories = snapshot?.memories || snapshot?.recentMemories || [];
   const labels = stats.labels || [];
   if (memoryOverviewCount) memoryOverviewCount.textContent = String(stats.activeCount || 0);
+  if (!loadedMemoryTabs.all) {
+    memoryPaging.all.loaded = memories.length;
+    memoryPaging.all.hasMore = memories.length < (stats.activeCount ?? 0);
+  }
   const visibleTopics = labels.filter((item) => !/^(agent|agent-id|tool):/.test(String(item.label || ""))).slice(0, 6);
   if (memoryTopicList) memoryTopicList.innerHTML = visibleTopics.length
     ? visibleTopics.map((item) => `<button type="button" data-memory-label="${escapeHtml(item.label)}"><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.count)}</strong></button>`).join("")
@@ -1428,6 +1440,17 @@ function renderMemoryGraph() {
     });
     memoryDetailClose?.addEventListener("click", () => memoryDetailDialog.close());
     memoryDetailBack?.addEventListener("click", () => openMemoryDialog(dialogBackMode));
+    memoryLibraryLoadMore?.addEventListener("click", () => {
+      memoryLibraryLoadMore.disabled = true;
+      loadMemoryTabData("all", { append: true })
+        .catch((error) => {
+          console.error(error);
+          showCopyNotice(t("runtime.unavailable"));
+        })
+        .finally(() => {
+          memoryLibraryLoadMore.disabled = false;
+        });
+    });
     memoryDetailDialog?.addEventListener("close", () => {
       const trigger = dialogTrigger;
       dialogTrigger = null;
@@ -1442,7 +1465,7 @@ function renderMemoryGraph() {
     loadedMemoryTabs.all = false;
     loadedMemoryTabs.graph = false;
     memoryPaging.all.loaded = 0;
-    removeLoadMoreButton("all");
+    memoryPaging.all.hasMore = true;
   }
 
   function getActiveTab() { return activeMemoryTab; }

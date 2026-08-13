@@ -43,7 +43,7 @@ X-ClaraCore-Tool-Profile: core|full
 conversation. New integrations should use `X-ClaraCore-Conversation-ID` so it
 cannot be confused with an InnerLife `sessionId` tool argument.
 
-`X-ClaraCore-Tool-Profile` is new in v0.6.6 and optional. It selects which
+`X-ClaraCore-Tool-Profile` is optional. It selects which
 manifest `tools/list` returns. Omitting it, or sending an unknown value, gives
 the smaller `core` manifest; only an explicit `full` broadens the surface.
 The stdio equivalent is `CLARACORE_TOOL_PROFILE`. Every tool still executes
@@ -156,7 +156,8 @@ For a resume read:
 
 Before a write, call `shared_line_list` with `status: "active"`, select the
 intended line when more than one is present, and pass its `lineId` to
-`shared_line_update`. `shared_line_list` remains the full catalog operation.
+`shared_line_update`. `shared_line_list` is a bounded summary catalog;
+`shared_line_get(lineId)` is the content read.
 
 Do not guess the line from recency or summary text.
 
@@ -175,17 +176,17 @@ Claude operating as `clara` cannot act on Lara's shares or sessions. Hermes
 operating as `lara` cannot act on Clara's or Codex's data. The Desktop UI may
 still request an all-agent inspection snapshot.
 
-## v0.6.6 Compatibility Matrix
+## v0.6.10 Compatibility Matrix
 
 Read this as: what each client gets by default after upgrading Desktop, and what
 it must change to keep its previous behavior.
 
 | Client / transport | Default tool manifest | Default payload shapes | Needs a client change? |
 | --- | --- | --- | --- |
-| **Codex** (HTTP MCP) | `core` (29 tools) | new bounded defaults | Only if it used maintenance tools by advertisement; then send `X-ClaraCore-Tool-Profile: full`. Its per-prompt hook should move to `gateway_auto_context`. |
-| **Claude Code** (HTTP MCP) | `core` (29 tools) | new bounded defaults | No, for ordinary recall/continuation. Its SessionStart hook now receives a much smaller briefing. |
-| **Hermes / Lara** (HTTP MCP) | `core` (29 tools) | new bounded defaults | Only if it parsed `currentPosition` from Shared Line writes; use `detail: "full"` or read the new top-level fields. |
-| **Any stdio client** | `core` (29 tools) | new bounded defaults | Set `CLARACORE_TOOL_PROFILE=full` to keep the old manifest. |
+| **Codex** (HTTP MCP) | `core` (31 tools) | minimum-sufficient defaults | Use returned `detailRef` or one-object get tools when content is needed. Send `X-ClaraCore-Tool-Profile: full` only for advanced tools. |
+| **Claude Code** (HTTP MCP) | `core` (31 tools) | minimum-sufficient defaults | No change for ordinary recall/continuation; do not assume list rows contain bodies. |
+| **Hermes / Lara** (HTTP MCP) | `core` (31 tools) | minimum-sufficient defaults | Stop treating `shared_line_list` as resume content; select a line, then call `shared_line_get`. |
+| **Any stdio client** | `core` (31 tools) | minimum-sufficient defaults | Set `CLARACORE_TOOL_PROFILE=full` only to advertise advanced tools; payload bounds still apply. |
 | **HTTP `/agent/setup`** | reports `toolProfiles` and `contextStates` | `firstCalls` no longer requires `gateway_docs` | No. |
 | **HTTP `/gateway/context`** | unchanged endpoint | bounded ambiguity body with `candidateCount`, `totalCount`, `detailRef` | No, unless it assumed an unbounded `candidates` array. |
 | **Desktop UI / CLI** | not applicable | **unchanged — full records** | No. Shaping is a Gateway-boundary concern only. |
@@ -201,13 +202,24 @@ Behavior that is identical on every client and transport:
   filtering remain fail-closed.
 
 
-## v0.6.6 Default Payload Changes
+## Default Payload Contract
 
 Every domain default read is smaller. Clients that parsed the old shapes must
 adapt or pass the explicit detail argument during the compatibility window:
 
+General catalogs default to 10 rows and accept an explicit `limit` up to 50.
+This is a useful browsing range, not a promise to make every response tiny;
+single-object reads retain meaningful evidence up to the final safety ceiling.
+
 - `memoria_search` returns 3 bounded summaries with `bodyPreview`, not whole
   bodies; pass `detail: "full"` for the previous shape.
+- `memoria_list`, restricted/archived lists, `memoria_link_list`, and
+  `memoria_record_list` are paged catalogs. Use `memoria_get` or
+  `memoria_record_get` for one complete object.
+- Memory and structured-record writes return bounded acknowledgements; follow
+  `detailRef` instead of reading a body/value from the write response.
+- `shared_line_list` returns line summaries only. It never carries position
+  history, affective trace, or raw position metadata.
 - `shared_line_get` and the Shared Line write acknowledgements return a resume
   packet with top-level `summary` / `interpretationStatus` / `factsUsed`, not a
   nested `currentPosition`. Pass `detail: "full"` for the previous shape.
@@ -225,6 +237,25 @@ adapt or pass the explicit detail argument during the compatibility window:
 - `gateway_context(detail=brief)` embeds the resume packet and the InnerLife
   status shape. Its `text` field is now a short orientation summary and no
   longer repeats the structured content.
+- Omitting `gateway_context.detail` now selects `brief`; `full` must be explicit.
+- InnerLife session/profile/activity lists and Gateway traces default to
+  bounded summaries. Use `innerlife_session_get`, `innerlife_profile_get`, or
+  `gateway_trace_get` for one complete record.
+- `innerlife_share_check` returns the one selected share and compact timing
+  evidence. It no longer repeats the pending-share catalog in a snapshot.
+- `claracore_status` never returns inline API keys. Read `connection` for the
+  authenticated caller and `configuration.gateway` for stored defaults.
+- All Agent-facing InnerLife profile tools use `profileEnabled`; status keeps
+  the independent daemon scheduler state at `daemon.loopEnabled`.
+- Gateway trace request flags distinguish shortened text (`truncated`), a
+  whole-request bounded preview (`previewOnly`), and JSON conversion failure
+  (`serializationFailed`).
+- Shared Line catalog and mutation descriptors rename `active` to `isCurrent`.
+  `status` remains lifecycle; `isCurrent` is only the global fallback
+  selection and may be false for every row in an Agent-filtered page.
+- Both transports return `GATEWAY_RESPONSE_TOO_LARGE` when a final serialized
+  tool result exceeds 128 KiB. Narrow the page or select one object; `full`
+  does not mean an unlimited bulk dump.
 
 Hosts that inject context per prompt should route Memory and InnerLife
 candidates through `gateway_auto_context` so at most one bounded block enters a
@@ -391,7 +422,7 @@ prompt shorter than the bound is still recorded in full.
     and do not fan out more concurrent calls.
 
 The current copy-ready Hermes upgrade message and verification receipt live in
-[Hermes v0.6.2 Update](HERMES_V0.6.2_UPDATE.md).
+[Hermes v0.6.2 Update](archive/HERMES_V0.6.2_UPDATE.md).
 
 ## Compatibility And Verification
 

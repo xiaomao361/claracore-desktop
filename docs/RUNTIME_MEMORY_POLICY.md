@@ -3,6 +3,12 @@
 ClaraCore Desktop is a long-running Electron app plus agent-facing Gateway.
 Runtime memory should stay bounded by design, not by manual restarts.
 
+Agent-facing context follows the same physical rule through
+[Context Delivery](CONTEXT_DELIVERY.md): default catalogs use SQL projections
+instead of hydrating full bodies and trimming afterward; writes return light
+acknowledgements; explicit expansion stays paged or one-object scoped; and the
+Gateway refuses final responses above 128 KiB.
+
 ## Snapshot Contract
 
 `buildProductOverviewSnapshot()` is the shell/Home runtime snapshot.
@@ -54,7 +60,7 @@ Large surfaces must page or lazy-load:
   specific record through its detail repository method when full data is
   required. The maintained detail-snapshot ceiling is 160 KiB.
 - Gateway trace review should stay recent by default; deep trace browsing should
-  be a separate paged surface before trace volume grows.
+  use the paged summary catalog and `gateway_trace_get` for one trace.
 
 Refreshing the Home page must not imply refreshing every record in the product
 database. Home Agent activity scans its five source domains once per summary,
@@ -186,7 +192,7 @@ current product-scale reads without mutating the live database, set
 `CLARACORE_PERFORMANCE_DB` to its path; the baseline creates and later removes
 a consistent SQLite backup in an isolated test root. The current v0.6.0
 reference results and interpretation live in
-`docs/PERFORMANCE_BASELINE_V0.6.0.md`.
+`docs/archive/PERFORMANCE_BASELINE_V0.6.0.md`.
 
 Use `npm run baseline:http-ui` for the combined shared HTTP Gateway and UI IPC
 profile. The maintained Worker threshold is a 50 ms p95 on the local health

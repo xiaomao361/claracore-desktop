@@ -151,12 +151,14 @@ function gatewayLaunchConfig(paths) {
   };
 }
 
+const { serializeGatewayResult } = require("./result-budget");
+
 function textResult(value) {
   return {
     content: [
       {
         type: "text",
-        text: JSON.stringify(value, null, 2)
+        text: serializeGatewayResult(value)
       }
     ]
   };

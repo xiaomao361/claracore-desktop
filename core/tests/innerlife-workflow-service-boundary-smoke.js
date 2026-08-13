@@ -267,6 +267,87 @@ async function main() {
   assert.strictEqual(shareResult.share.id, "share-1");
   assert.strictEqual(shareResult.check.decision, "review_first");
 
+  let registerOnlyCheck = null;
+  const registerOnlyShare = {
+    id: "share-register-only",
+    agent_id: "codex",
+    status: "pending",
+    body: "release trace evidence"
+  };
+  const registerOnlyTiming = createInnerLifeShareTimingService(createSharePorts({
+    findAvailableShareId: async () => registerOnlyShare.id,
+    getShare: async (_database, id) => id === registerOnlyShare.id ? registerOnlyShare : null,
+    getShareCheck: async (_database, id) => ({
+      id,
+      decision: registerOnlyCheck.decision,
+      reason: registerOnlyCheck.reason,
+      metadata: registerOnlyCheck.metadata
+    }),
+    recordCheck: async (_database, input) => {
+      registerOnlyCheck = input;
+    }
+  }));
+  const registerOnlyResult = await registerOnlyTiming({}, {
+    agentId: "codex",
+    context: "We are wrapping up an engineering task together."
+  });
+  assert.strictEqual(registerOnlyCheck.decision, "review_first");
+  assert.deepStrictEqual(registerOnlyCheck.metadata.overlap, []);
+  assert.deepStrictEqual(registerOnlyCheck.metadata.explicitOverlap, []);
+  assert.deepStrictEqual(registerOnlyCheck.metadata.lineOverlap, []);
+  assert.strictEqual(registerOnlyCheck.metadata.contextSource, "provided");
+  assert.match(registerOnlyCheck.reason, /Topic overlap is only evidence/);
+  assert.strictEqual(registerOnlyResult.share.id, registerOnlyShare.id);
+
+  for (const status of ["approved", "deferred"]) {
+    let statusCheck = null;
+    const statusShare = {
+      id: `share-register-only-${status}`,
+      agent_id: "codex",
+      status,
+      body: "release trace evidence"
+    };
+    const statusTiming = createInnerLifeShareTimingService(createSharePorts({
+      findAvailableShareId: async () => statusShare.id,
+      getShare: async (_database, id) => id === statusShare.id ? statusShare : null,
+      getShareCheck: async (_database, id) => ({
+        id,
+        decision: statusCheck.decision,
+        reason: statusCheck.reason,
+        metadata: statusCheck.metadata
+      }),
+      recordCheck: async (_database, input) => {
+        statusCheck = input;
+      }
+    }));
+    const statusResult = await statusTiming({}, {
+      agentId: "codex",
+      context: "We are wrapping up an engineering task together."
+    });
+    assert.strictEqual(statusCheck.decision, "review_first");
+    assert.deepStrictEqual(statusCheck.metadata.overlap, []);
+    assert.strictEqual(statusCheck.metadata.contextSource, "provided");
+    assert.match(statusCheck.reason, /Topic overlap is only evidence/);
+    assert.strictEqual(statusResult.share.id, statusShare.id);
+  }
+
+  let contextlessCheck = null;
+  const contextlessTiming = createInnerLifeShareTimingService(createSharePorts({
+    findAvailableShareId: async () => registerOnlyShare.id,
+    getShare: async (_database, id) => id === registerOnlyShare.id ? registerOnlyShare : null,
+    getShareCheck: async (_database, id) => ({
+      id,
+      decision: contextlessCheck.decision,
+      reason: contextlessCheck.reason
+    }),
+    recordCheck: async (_database, input) => {
+      contextlessCheck = input;
+    }
+  }));
+  await contextlessTiming({}, { agentId: "codex" });
+  assert.strictEqual(contextlessCheck.decision, "defer");
+  assert.match(contextlessCheck.reason, /No current context/);
+
   const noShareCalls = [];
   let noShareCheck = null;
   const noShareTiming = createInnerLifeShareTimingService(createSharePorts({
@@ -393,12 +474,30 @@ async function main() {
     );
   }
   const installed = listInstalledRepositoryMethods(ProductDatabase);
-  // 178 since v0.6.6: getInnerLifeProfileReadOnly is the read-only counterpart
-  // of ensureInnerLifeProfile, so briefing reads create no product state.
-  assert.strictEqual(installed.length, 178, "The repository public API count must remain stable.");
+  // v0.6.10 adds seven summary-only read paths so default catalogs do not
+  // hydrate rich stored bodies, profile state, or trace requests.
+  for (const methodName of [
+    "listContinuityLineSummaries",
+    "listMemoryLinkSummaries",
+    "listMemoryRecordSummaries",
+    "listMemorySummariesPage",
+    "listInnerLifeShareSummariesPage",
+    "listInnerLifeProfileSummariesPage",
+    "listGatewayTraceSummaries",
+    "listInnerLifeShareActionSummaries",
+    "getInnerLifeHistorySummaries",
+    "listInnerLifeExperienceSummaries",
+    "listInnerLifeSummaryPreviews"
+  ]) {
+    assert(
+      installed.some((entry) => entry.name === methodName),
+      `The bounded repository read path ${methodName} must remain installed.`
+    );
+  }
+  assert.strictEqual(installed.length, 189, "The repository public API count must remain stable.");
   assert.strictEqual(
     installed.filter((entry) => entry.owner === "innerlife").length,
-    66,
+    72,
     "The InnerLife public API count must remain stable."
   );
 

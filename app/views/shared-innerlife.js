@@ -23,7 +23,7 @@ function createClaraCoreSharedInnerLifeView(context) {
     sharedLineAgentStatePanel, sharedLineMetadataPanel, sharedLineHistoryList, sharedLineSnapshotList, sharedLineArchiveList,
     sharedLineDetailDialog, sharedLineDialogClose, sharedLineDialogKicker, sharedLineDialogTitle, sharedLineDialogMeta,
     sharedLineDialogLines, sharedLineDialogAgents, sharedLineDialogEvidence, sharedLineDialogArchive,
-    innerLifeAgentFilter, innerLifeProfileName, innerLifeFocus, innerLifeInterests,
+    innerLifeAgentFilter, innerLifeFocus, innerLifeInterests,
     innerLifeUnsharedList, innerLifeAllUnsharedAction, innerLifeSharedList, innerLifeAllSharedAction,
     innerLifeProcessFlow, innerLifeDaemonStatus, innerLifeNextRun, innerLifeLastResult,
     innerLifeDoctorStatus, innerLifeDetailDialog, innerLifeDetailBack, innerLifeDetailClose,
@@ -534,12 +534,7 @@ function renderInnerLifeAgentSelector(profiles) {
     ? state.activeInnerLifeAgentFilter
     : ids[0] || "";
   innerLifeAgentFilter.innerHTML = available
-    .map((profile) => {
-      const label = profile.displayName && profile.displayName !== profile.agentId
-        ? `${profile.displayName} · ${profile.agentId}`
-        : profile.agentId;
-      return `<option value="${escapeHtml(profile.agentId)}">${escapeHtml(label)}</option>`;
-    })
+    .map((profile) => `<option value="${escapeHtml(profile.agentId)}">${escapeHtml(profile.agentId)}</option>`)
     .join("");
   innerLifeAgentFilter.disabled = available.length === 0;
   innerLifeAgentFilter.value = selected;
@@ -717,7 +712,9 @@ function bindInnerLifeReader() {
     innerLifeDialogTrigger = null;
     innerLifeDialogKind = "";
     innerLifeDialogBackKind = "";
-    trigger?.focus();
+    requestAnimationFrame(() => {
+      if (trigger?.isConnected) trigger.focus();
+    });
   });
 }
 
@@ -732,7 +729,6 @@ function renderInnerLife() {
     ? selectedState.current_interests.filter(Boolean)
     : [];
 
-  if (innerLifeProfileName) innerLifeProfileName.textContent = selectedProfile?.displayName || selectedAgentId || "";
   if (innerLifeFocus) {
     innerLifeFocus.textContent = selectedProfile
       ? previewInnerLifeText(selectedState.recent_focus, 120) || t("innerLife.focusEmpty")

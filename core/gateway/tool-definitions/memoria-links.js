@@ -43,7 +43,7 @@ const memoriaLinkToolDefinitions = [
   {
     "name": "memoria_link_list",
     "title": "List Memory Links",
-    "description": "List Memory links, optionally filtered to one Memory's neighborhood or one link kind.",
+    "description": "List bounded Memory link summaries, optionally filtered to one Memory's neighborhood or one link kind. Defaults to 10 rows; limit can explicitly request up to 50. Memory bodies are fetched one at a time with memoria_get.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -56,7 +56,13 @@ const memoriaLinkToolDefinitions = [
           "enum": ["related", "causes", "evolved-from", "contradicts", "part-of", "supersedes"]
         },
         "limit": {
-          "type": "number"
+          "type": "number",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "offset": {
+          "type": "number",
+          "minimum": 0
         }
       },
       "additionalProperties": false

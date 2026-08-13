@@ -15,7 +15,8 @@ const {
   SHARE_CANDIDATE_LIMIT,
   shapeInnerLifeBriefing,
   shapeInnerLifeStatus,
-  shapePendingShares
+  shapePendingShares,
+  shapeShareCheckResult
 } = require("../innerlife/selective");
 const { CONTEXT_BUDGET_CEILINGS } = require("./fixtures/context-budget-ceilings");
 const {
@@ -31,6 +32,22 @@ const {
   sharedLinePacketFixture
 } = require("./fixtures/context-budget-fixtures");
 const { createGatewayContextService } = require("../gateway/context");
+const {
+  publicApiKeyRef,
+  shapeAgentConfiguration,
+  shapeCallerConnection
+} = require("../gateway/status-shape");
+const {
+  catalogPage,
+  shapeMemoryAck,
+  shapeMemoryLinkCatalogEntry,
+  shapeMemoryRecordCatalogEntry,
+  shapeSharedLineCatalogEntry
+} = require("../gateway/bounded-response");
+const {
+  DEFAULT_GATEWAY_RESULT_MAX_BYTES,
+  serializeGatewayResult
+} = require("../gateway/result-budget");
 const {
   AUTO_CONTEXT_HARD_LIMIT_BYTES,
   AUTO_CONTEXT_HARD_LIMIT_TOKENS,
@@ -61,6 +78,40 @@ function checkProfileResolution() {
   assert.strictEqual(normalizeProfile("admin"), "core", "An invalid profile must fail closed to core.");
   assert.strictEqual(normalizeProfile(""), "core", "A missing profile must fail closed to core.");
   assert.strictEqual(normalizeProfile("FULL"), "full", "A valid profile must be accepted case-insensitively.");
+}
+
+function checkSecretSafeStatusShape() {
+  const inlineSecret = "INLINE_SECRET_MUST_NOT_ESCAPE";
+  const shaped = shapeAgentConfiguration({
+    memoria: { apiKeyStatus: "configured", apiKeyRef: inlineSecret },
+    innerlife: { apiKeyStatus: "configured", apiKeyRef: "env:INNERLIFE_TEST_KEY" },
+    gateway: { enabled: true, transport: "stdio", localOnly: true, agentId: "codex" }
+  });
+  assert.strictEqual(publicApiKeyRef(inlineSecret), "inline");
+  assert.strictEqual(shaped.memoria.apiKeyRef, "inline", "MCP status must not return an inline Memory key.");
+  assert.strictEqual(shaped.innerlife.apiKeyRef, "env:INNERLIFE_TEST_KEY", "Environment references may stay inspectable.");
+  assert.ok(!JSON.stringify(shaped).includes(inlineSecret), "MCP status leaked an inline secret.");
+  assert.deepStrictEqual(shaped.gateway, {
+    enabled: true,
+    configuredTransport: "stdio",
+    localOnly: true,
+    defaultAgentId: "codex"
+  });
+  assert.deepStrictEqual(
+    shapeCallerConnection({
+      agentId: "clara",
+      clientId: "claude-code",
+      conversationId: "conversation-test",
+      transport: "streamable-http"
+    }, "core"),
+    {
+      agentId: "clara",
+      clientId: "claude-code",
+      conversationId: "conversation-test",
+      transport: "streamable-http",
+      toolProfile: "core"
+    }
+  );
 }
 
 function checkCoreProfile() {
@@ -112,6 +163,7 @@ const CORE_WORKFLOW_PAIRS = Object.freeze([
   ["memoria_create", "memoria_supersede", "a confirmed replacement is create plus supersede"],
   ["memoria_link_create", "memoria_link_list", "reading a neighbourhood before adding to it"],
   ["memoria_record_create", "memoria_record_list", "writing a structured record implies reading them back"],
+  ["shared_line_create", "shared_line_archive", "a dynamic line that can be opened must be closable"],
   ["innerlife_session_start", "innerlife_session_end", "a session that can start must be closable"],
   ["innerlife_share_check", "innerlife_mark_share", "checking a share implies reporting the outcome"]
 ]);
@@ -402,6 +454,69 @@ function checkSharedLineResume() {
   assert.throws(() => shapeSharedLinePacket(stored, "everything"), /detail must be one of/);
 }
 
+function checkBoundedCatalogsAndAcknowledgements() {
+  const richMarker = "RICH_STORED_CONTENT_MUST_NOT_ENTER_A_CATALOG";
+  const rows = Array.from({ length: 10 }, (_, index) => ({
+    id: `fixture-${index}`,
+    agentId: "fixture-agent",
+    title: `Fixture ${index}`,
+    status: "active",
+    active: index === 0,
+    summary: `Continue bounded context work ${index}. ${"上下文".repeat(300)}`,
+    nextStep: `Open one object only when its content is needed. ${"下一步".repeat(200)}`,
+    interpretationStatus: "confirmed",
+    fromMemoryId: `from-${index}`,
+    toMemoryId: `to-${index}`,
+    fromTitle: `From ${index}`,
+    toTitle: `To ${index}`,
+    kind: "related",
+    strength: 1,
+    note: `A bounded relationship note. ${"关系".repeat(200)}`,
+    recordType: "metric",
+    valueType: "object",
+    notePreview: `A bounded record note. ${"记录".repeat(200)}`,
+    localDate: "2026-08-13",
+    timezone: "Asia/Shanghai",
+    value: { body: richMarker.repeat(200) },
+    metadata: { body: richMarker.repeat(200) },
+    metadata_json: richMarker.repeat(200),
+    fromBody: richMarker.repeat(200),
+    toBody: richMarker.repeat(200),
+    positionHistory: [richMarker.repeat(200)],
+    affectiveTrace: [richMarker.repeat(200)]
+  }));
+  const paging = { limit: 10, offset: 0, requestedLimit: 10 };
+  const catalogs = [
+    ["shared_line_list default", rows.map(shapeSharedLineCatalogEntry), CONTEXT_BUDGET_CEILINGS.sharedLineListDefault],
+    ["memoria_link_list default", rows.map(shapeMemoryLinkCatalogEntry), CONTEXT_BUDGET_CEILINGS.memoriaLinkListDefault],
+    ["memoria_record_list default", rows.map(shapeMemoryRecordCatalogEntry), CONTEXT_BUDGET_CEILINGS.memoriaRecordListDefault]
+  ];
+  for (const [label, items, ceiling] of catalogs) {
+    const payload = { items, page: catalogPage(items, rows.length, paging) };
+    assertWithin(label, payload, ceiling);
+    assert.ok(!JSON.stringify(payload).includes(richMarker), `${label} leaked rich stored content.`);
+    assert.ok(items.every((item) => item.detailRef || item.detailRefs), `${label} lost its explicit expansion path.`);
+  }
+  const sharedCatalog = rows.map(shapeSharedLineCatalogEntry);
+  assert.strictEqual(sharedCatalog[0].isCurrent, true);
+  assert.strictEqual(sharedCatalog[1].isCurrent, false);
+  assert.ok(sharedCatalog.every((line) => !("active" in line)), "Shared Line catalogs must not reuse active for selection state.");
+
+  const acknowledgement = shapeMemoryAck({
+    ...rows[0],
+    labels: ["context", "bounded"],
+    body: richMarker.repeat(1000)
+  });
+  assertWithin("mutation acknowledgement", acknowledgement, CONTEXT_BUDGET_CEILINGS.mutationAckDefault);
+  assert.ok(!JSON.stringify(acknowledgement).includes(richMarker), "A mutation acknowledgement leaked the saved body.");
+  assert.strictEqual(acknowledgement.detailRef.tool, "memoria_get");
+
+  const oversized = serializeGatewayResult({ body: "x".repeat(DEFAULT_GATEWAY_RESULT_MAX_BYTES + 1) });
+  const refusal = JSON.parse(oversized);
+  assert.strictEqual(refusal.code, "GATEWAY_RESPONSE_TOO_LARGE");
+  assert.ok(bytes(oversized) < 1024, "The oversize refusal must itself remain tiny.");
+}
+
 
 function checkInnerLifeSelective() {
   const snapshot = innerLifeSnapshotLiteFixture();
@@ -413,6 +528,10 @@ function checkInnerLifeSelective() {
   // `mode` is stated by the shape rather than inherited from the read model,
   // and the boolean argument stays a documented alias for the named level.
   assert.strictEqual(status.mode, "status", "The default status read must not still report mode=lite.");
+  assert.strictEqual(typeof status.profiles[0].profileEnabled, "boolean");
+  assert.ok(!("enabled" in status.profiles[0]), "Profile capability must not use the ambiguous enabled key.");
+  assert.strictEqual(typeof status.daemon.loopEnabled, "boolean");
+  assert.ok(!("enabled" in status.daemon), "Daemon scheduling must not use the ambiguous enabled key.");
   assert.strictEqual(shapeInnerLifeStatus(snapshot, "full").mode, "full");
   assert.strictEqual(shapeInnerLifeStatus(snapshot, true).detail, "full", "detail=true must alias the full level.");
   assert.strictEqual(shapeInnerLifeStatus(snapshot, false).detail, "summary");
@@ -420,6 +539,9 @@ function checkInnerLifeSelective() {
   assert.throws(() => shapeInnerLifeStatus(snapshot, "lite"), /detail must be one of/, "lite must not resolve as a detail level.");
   for (const shape of [status, shapeInnerLifeStatus(snapshot, "full")]) {
     assert.notStrictEqual(shape.mode, "lite", "No InnerLife status shape may still report the pre-0.6.6 lite mode.");
+    assert.ok(shape.profiles.every((profile) => !("enabled" in profile)));
+    assert.ok(!("enabled" in shape.daemon));
+    assert.strictEqual(typeof shape.daemon.loopEnabled, "boolean");
   }
 
   // Operational state only: no share catalog, no Inbox bodies.
@@ -444,6 +566,7 @@ function checkInnerLifeSelective() {
   // detail=true still returns everything.
   const fullStatus = shapeInnerLifeStatus(snapshot, true);
   assert.strictEqual(fullStatus.detail, "full");
+  assert.strictEqual(typeof fullStatus.profiles[0].profileEnabled, "boolean");
   assert.deepStrictEqual(fullStatus.pendingInbox, snapshot.pendingInbox);
   assert.deepStrictEqual(fullStatus.pendingShares, snapshot.pendingShares);
 
@@ -468,6 +591,33 @@ function checkInnerLifeSelective() {
     shares,
     "detail=full must recover the whole share bodies."
   );
+
+  // A timing check earns exactly one full share, not another copy of the
+  // pending catalog. Keep enough evidence for the model to judge register.
+  const shareCheck = shapeShareCheckResult({
+    check: {
+      id: "check_fixture",
+      shareId: shares[0].id,
+      agentId: "fixture-agent",
+      sessionId: "inner_session_fixture",
+      decision: "review_first",
+      reason: "The thought may fit the current engineering register.",
+      context: "Real conversational context",
+      metadata: {
+        contextSource: "provided",
+        sharedLineStatus: "selected",
+        candidateLineIds: Array.from({ length: 20 }, (_, index) => `line-${index}`),
+        overlap: Array.from({ length: 20 }, (_, index) => `term-${index}`)
+      }
+    },
+    share: shares[0],
+    snapshot
+  });
+  assertWithin("innerlife_share_check default", shareCheck, CONTEXT_BUDGET_CEILINGS.innerlifeShareCheckDefault);
+  assert.strictEqual(shareCheck.share.body, shares[0].body, "The selected share body must remain complete.");
+  assert.ok(!("snapshot" in shareCheck), "Share check must not repeat the pending-share snapshot.");
+  assert.ok(!("pendingShares" in shareCheck.status), "Compact share-check status must not contain a catalog.");
+  assert.strictEqual(shareCheck.check.metadata.candidateLineIds.length, 5, "Timing evidence must stay bounded.");
 
   // The briefing is one decision, not an aggregate dump.
   const stored = innerLifeBriefingFixture();
@@ -555,6 +705,9 @@ async function checkAggregateContext() {
 
   const withQuery = await service.get({}, { agentId: "fixture-agent", detail: "brief", query: "fixture" });
   const noQuery = await service.get({}, { agentId: "fixture-agent", detail: "brief" });
+  const omittedDetail = await service.get({}, { agentId: "fixture-agent" });
+  assert.strictEqual(omittedDetail.detail, "brief", "gateway_context must default to brief when detail is omitted.");
+  assert.deepStrictEqual(omittedDetail, noQuery, "Omitted detail must be exactly the maintained brief contract.");
 
   // Query and no-query paths meet the same ceiling.
   for (const [label, packet] of [["query", withQuery], ["no query", noQuery]]) {
@@ -758,7 +911,7 @@ async function checkBaselineScript() {
   assert.strictEqual(fullManifest.ceiling, null, "Full-profile payloads must not share the normal-use ceiling.");
 
   // Every group the measurement contract names must be present.
-  for (const group of ["toolProfiles", "docs", "errors", "memory", "sharedLine", "innerLife", "aggregate", "automatic"]) {
+  for (const group of ["toolProfiles", "docs", "errors", "catalogs", "memory", "sharedLine", "innerLife", "aggregate", "responseGuard", "automatic"]) {
     assert.ok(report.groups[group]?.length, `Baseline is missing the ${group} group.`);
   }
 
@@ -800,6 +953,7 @@ async function checkBaselineScript() {
 
 async function main() {
   checkProfileResolution();
+  checkSecretSafeStatusShape();
   checkCoreProfile();
   checkCoreWorkflowsAreComplete();
   checkFullProfileUnchanged();
@@ -807,6 +961,7 @@ async function main() {
   checkAmbiguityPayload();
   await checkMemorySummarySearch();
   checkSharedLineResume();
+  checkBoundedCatalogsAndAcknowledgements();
   checkInnerLifeSelective();
   checkSessionStartPacket();
   await checkAggregateContext();

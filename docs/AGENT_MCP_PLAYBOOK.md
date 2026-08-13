@@ -31,13 +31,13 @@ entry only when the host refreshes or relaunches its stdio MCP process for each
 conversation; otherwise remove it so a stale id is not traced across unrelated
 work. A caller conversation id never replaces an `inner_session_*` id.
 
-## Tool Profiles (v0.6.6)
+## Tool Profiles (v0.6.10)
 
 `tools/list` is served from a maintained profile.
 
 | Profile | Contents | Selection |
 | --- | --- | --- |
-| `core` (default) | 29 tools: connection/context, Memory recall/write/supersede/link, Shared Line continuation, InnerLife session and sharing | nothing to set |
+| `core` (default) | 31 tools: connection/context, Memory recall/write/supersede/link/structured-record detail, Shared Line continuation, InnerLife session and sharing | nothing to set |
 | `full` | every tool, including maintenance, import/export, graph, retention, identity, daemon, archive, and advanced editing | `X-ClaraCore-Tool-Profile: full` (HTTP) or `CLARACORE_TOOL_PROFILE=full` (stdio) |
 
 `core` covers complete everyday workflows, not just the write half of each: if a
@@ -54,7 +54,27 @@ arguments. Gateway tool input is not schema-validated, so every handler still
 accepts the full argument set and every tool still executes when called by
 name. Select `full` when you want those tools and arguments advertised.
 
-## Changed Defaults (v0.6.6)
+## Context Delivery Contract (v0.6.10)
+
+The product contract is: **minimum sufficient by default; disclose more through
+explicit scope; explicit reads remain bounded**. Storage richness is not
+delivery richness. Agents choose intent and the server enforces projection,
+pagination, field bounds, and a final response ceiling.
+
+This is progressive disclosure, not a blanket truncation policy. General
+catalogs return 10 items when `limit` is omitted and accept explicit pages up
+to 50. Byte ceilings are regression guardrails, not targets: default rows keep
+enough identity and preview to choose confidently, while one explicitly
+selected object stays semantically complete whenever it fits the final safety
+ceiling.
+
+Catalog calls answer which object to inspect. They return identity, status,
+bounded previews, truthful page metadata, and `detailRef`; they do not return
+full bodies, metadata, histories, or parallel text copies. A write returns a
+bounded acknowledgement and a detail reference rather than rehydrating the
+saved entity.
+
+## Changed Defaults
 
 Every default read below got smaller. Nothing was deleted: each one names the
 explicit call that recovers the full record.
@@ -62,12 +82,43 @@ explicit call that recovers the full record.
 | Tool | New default | Recover full detail with |
 | --- | --- | --- |
 | `memoria_search` | 3 results, bounded body previews, no embedding metadata, no related records | `detail: "full"`, or `memoria_get(id)` per result |
+| `memoria_list`, restricted and archived lists | paged identity/status summaries, no bodies | `memoria_get(id)` per result |
+| `memoria_link_list` | paged relationship summaries, no endpoint bodies | `memoria_get(fromMemoryId)` or `memoria_get(toMemoryId)` |
+| `memoria_record_list` | paged typed-record summaries, no value or metadata | `memoria_record_get(id)` |
 | `shared_line_get` | `resume` packet: line id/title, summary, interpretation status, facts used, next step, updated time, at most one recent handoff | `detail: "context"` adds relevant Shared Reality; `detail: "full"` restores history, snapshots, arcs, agent state, and the stored text |
+| `shared_line_list` | paged line summaries, no position history, affective trace, or raw position metadata | `shared_line_get(lineId)` |
 | `shared_line_update` / `create` / `activate` / `handoff_create` | acknowledgement uses the same `resume` shape | `detail: "full"`, or a follow-up `shared_line_get` |
 | `innerlife_status` | operational state only: counts, daemon, doctor, pending-work indicators. Reports `mode: "status"`; the pre-0.6.6 `mode: "lite"` is retired | `detail: "full"`, or the boolean `true` alias |
 | `innerlife_pending_shares` | 3 bounded previews | `detail: "full"`, or `innerlife_share_check` for one share |
+| `innerlife_share_check` | one selected share body, bounded timing evidence, and operational counts; no repeated pending-share catalog | `innerlife_pending_shares` when a catalog is actually needed |
 | `innerlife_briefing` | decision synthesis: selected line summary when unambiguous, open loops, counts, at most one candidate preview | `detail: "full"` |
-| `gateway_context(detail=brief)` | one resume packet, up to 3 Memory summaries, InnerLife status plus at most one candidate | `detail: "full"` |
+| `gateway_context` | omitted `detail` defaults to `brief`: one resume packet, up to 3 Memory summaries, InnerLife status plus at most one candidate | `detail: "full"` |
+| InnerLife session/profile/history/activity lists | bounded summaries or previews | the corresponding one-object get, or explicit bounded `detail: "full"` where advertised |
+| `gateway_trace_list` | paged trace summaries, no request JSON | `gateway_trace_get(id)` |
+| Memory and structured-record writes | bounded acknowledgement, no body/value/metadata | follow the returned `detailRef` |
+
+`claracore_status` is secret-safe: `apiKeyStatus` reports whether a key exists,
+while `apiKeyRef` is an `env:VARIABLE` reference, `inline`, or empty. It never
+returns inline credential text. `connection` describes this authenticated MCP
+caller; `configuration.gateway` contains separately named stored defaults.
+
+Across `innerlife_status` and the `innerlife_profile_list`,
+`innerlife_profile_get`, and `innerlife_profile_set` tools, `profileEnabled`
+means the Agent profile may participate in InnerLife. `loopEnabled` in
+`innerlife_status` means the background daemon is scheduled. They are
+independent states and must not be interpreted as a health contradiction.
+
+In one Gateway trace request, `truncated` means a text field was shortened,
+`previewOnly` means the complete request object was replaced by a bounded
+preview, and `serializationFailed` means no JSON request representation could
+be stored.
+
+In `shared_line_list`, `status` is the line lifecycle (`active` or `archived`).
+`isCurrent` separately identifies the globally selected fallback line used
+when no exact `lineId` or unambiguous Agent-owned line resolves. An
+Agent-filtered page may therefore contain active lines with `isCurrent=false`
+for every row; callers should choose by objective and pass an explicit
+`lineId`, not infer ownership or relevance from `isCurrent`.
 
 Two things that did **not** change:
 
@@ -96,8 +147,11 @@ compatibility path are still arbitrated:
 4. the winner is trimmed to a 600-token target and a 900-token hard limit;
 5. `selected` is returned — never `delivered` and never `used`.
 
-A Memory hit therefore suppresses a second InnerLife block in the same turn. An
-irrelevant timing candidate is rejected without being marked used.
+A Memory hit therefore suppresses a second InnerLife block in the same turn.
+For InnerLife timing, lexical relevance is supporting evidence rather than a
+hard gate: `innerlife_share_check` can return an adjacent thought for the model
+to review against the real conversational register. It is never marked used
+unless the response actually shares it and reports delivery evidence.
 
 Since the turn-context patch it takes `prompt` directly and collects both
 domains itself, so a host makes one call per turn:
@@ -119,7 +173,7 @@ updated, its turn behavior is unchanged.
 After MCP is installed, connected, or restarted, run this sequence:
 
 1. `claracore_connection_test`
-2. `gateway_context` with `detail: "brief"` and without `lineId`
+2. `gateway_context` without `detail` and without `lineId` (`brief` is the server default)
 
 If the context call returns `SHARED_LINE_ID_REQUIRED`, choose one of the
 returned candidates and retry with its explicit `lineId`. Use
@@ -141,9 +195,9 @@ passages. Every response carries the Agent Guide version and update date.
 
 `gateway_context` returns the current working packet: Shared Line, recent
 Memory, InnerLife state, Doctor guidance, and recovery advice. Use
-`detail: "brief"` for bounded startup and resume reads. Omit `detail`, or pass
-`detail: "full"`, only when a 0.6.4 compatibility client or a specific task
-needs the complete packet.
+the omitted-detail default or `detail: "brief"` for bounded startup and resume
+reads. Pass `detail: "full"` only when a specific task needs the complete,
+still response-bounded compatibility packet.
 
 Do not invent tool names. If a tool name is uncertain, read `tools/list`.
 
@@ -210,7 +264,7 @@ form on both transports.
 1. Call `shared_line_list` with `status: "active"`.
 2. When your agent owns multiple active lines, choose one and pass its explicit
    `lineId` to `shared_line_get` or `gateway_context`. Treat
-   `shared_line_list` as the line catalog and `shared_line_get` as the scoped
+   `shared_line_list` as the bounded line catalog and `shared_line_get` as the scoped
    content read; `shared_line_get` intentionally does not repeat active or
    archived catalogs or other agents' states.
 3. Pass the same `lineId` to `shared_line_update` after meaningful progress, a
@@ -250,7 +304,8 @@ form on both transports.
 ### Diagnose Gateway State
 
 1. Call `claracore_status` for product health and configuration.
-2. Call `gateway_trace_list` to inspect recent tool calls.
+2. Call `gateway_trace_list` to inspect bounded recent summaries, then
+   `gateway_trace_get(id)` for one request record.
 3. Do not mutate SQLite directly.
 
 ## CLI Fallback

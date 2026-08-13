@@ -22,7 +22,26 @@ async function main() {
       request: { body: "x".repeat(40 * 1024) }
     });
     assert.strictEqual(traceQueryCalls, 0, "Trace insert performed an unnecessary readback query.");
-    assert.strictEqual(recorded.request.truncated, true, "Oversized trace request was not bounded.");
+    assert.strictEqual(recorded.request.previewOnly, true, "Oversized trace request was not replaced with a preview.");
+    assert.strictEqual("truncated" in recorded.request, false, "Whole-request replacement must not masquerade as text truncation.");
+    assert(Buffer.byteLength(recorded.request.preview, "utf8") <= 8 * 1024, "Trace request preview exceeded its UTF-8 byte bound.");
+    assert(Buffer.byteLength(JSON.stringify(recorded.request), "utf8") <= 16 * 1024, "Bounded trace request exceeded its storage contract.");
+    const cjkRecorded = await database.recordGatewayTrace({
+      agentId: "trace-smoke",
+      toolName: "large_cjk_request",
+      request: { body: "你".repeat(20 * 1024) }
+    });
+    assert.strictEqual(cjkRecorded.request.previewOnly, true);
+    assert(Buffer.byteLength(cjkRecorded.request.preview, "utf8") <= 8 * 1024, "CJK trace preview used character rather than byte bounds.");
+    const circularRequest = {};
+    circularRequest.self = circularRequest;
+    const unserializable = await database.recordGatewayTrace({
+      agentId: "trace-smoke",
+      toolName: "circular_request",
+      request: circularRequest
+    });
+    assert.strictEqual(unserializable.request.serializationFailed, true);
+    assert.strictEqual("truncated" in unserializable.request, false, "Serialization failure must not be reported as truncation.");
     database.query = query;
     await database.exec("DELETE FROM gateway_traces;");
     await database.exec(`
@@ -63,7 +82,7 @@ async function main() {
     process.stdout.write(`${JSON.stringify({
       suite: "gateway-trace-retention-smoke",
       traceInsertReadQueries: traceQueryCalls,
-      requestBounded: recorded.request.truncated,
+      requestBounded: recorded.request.previewOnly,
       retention: result,
       remainingIds
     }, null, 2)}\n`);

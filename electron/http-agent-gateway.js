@@ -535,12 +535,14 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
     };
   }
 
+  const { serializeGatewayResult } = require("../core/gateway/result-budget");
+
   function textResult(value) {
     return {
       content: [
         {
           type: "text",
-          text: JSON.stringify(value, null, 2)
+          text: serializeGatewayResult(value)
         }
       ]
     };
@@ -827,7 +829,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
     }
     if (requestUrl.pathname === "/gateway/context") {
       const agentId = requestUrl.searchParams.get("agentId") || process.env.CLARACORE_AGENT_ID || "http-agent";
-      const detail = requestUrl.searchParams.get("detail") || "full";
+      const detail = requestUrl.searchParams.get("detail") || "brief";
       const lineId = requestUrl.searchParams.get("lineId") || undefined;
       try {
         sendJson(response, 200, await getProductGatewayContext(app, { agentId, detail, lineId }));

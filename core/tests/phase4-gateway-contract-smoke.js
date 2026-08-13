@@ -2,7 +2,9 @@ const fs = require("fs/promises");
 const os = require("os");
 const path = require("path");
 const runtime = require("../runtime");
+const { PRODUCT_VERSION } = require("../version");
 const { createGatewayClient, parseTextResult } = require("./gateway-client");
+const { CONTEXT_BUDGET_CEILINGS } = require("./fixtures/context-budget-ceilings");
 
 const EXPECTED_TOOLS = [
   "claracore_status",
@@ -76,7 +78,8 @@ async function main() {
   };
   await runtime.saveProductSettings(app, {
     "innerlife.provider": "disabled",
-    "innerlife.enabled": false
+    "innerlife.enabled": false,
+    "innerlife.llm.api_key_ref": "INLINE_SECRET_MUST_NOT_ESCAPE"
   });
 
   const snapshot = await runtime.buildProductSnapshot(app);
@@ -176,7 +179,7 @@ async function main() {
     const searchedDocsText = (
       await client.callTool("gateway_docs", { query: "automatic recall memory" })
     ).result?.content?.[0]?.text || "";
-    if (!searchedDocsText.includes("Guide version: 0.6.9") || !searchedDocsText.includes("memory_context")) {
+    if (!searchedDocsText.includes(`Guide version: ${PRODUCT_VERSION}`) || !searchedDocsText.includes("memory_context")) {
       throw new Error("Gateway docs search did not return versioned matching guidance.");
     }
     const docsResponse = await client.callTool("gateway_docs", { section: "full" });
@@ -221,8 +224,21 @@ async function main() {
     const status = parseTextResult(await client.callTool("claracore_status"));
     if (status.dataRoot !== dataRoot) throw new Error(`Gateway status data root mismatch: ${status.dataRoot}`);
     if (!status.database?.initialized) throw new Error("Gateway status did not initialize the product database.");
-    if (status.configuration?.gateway?.transport !== "stdio") {
-      throw new Error("Gateway status did not expose stdio transport.");
+    if (status.connection?.transport !== "stdio" || status.connection?.agentId !== "my-agent") {
+      throw new Error(`Gateway status did not expose the actual caller connection: ${JSON.stringify(status.connection)}`);
+    }
+    if (
+      status.configuration?.gateway?.configuredTransport !== "stdio" ||
+      status.configuration?.gateway?.defaultAgentId !== "codex"
+    ) {
+      throw new Error(`Gateway status did not distinguish configured Gateway defaults: ${JSON.stringify(status.configuration?.gateway)}`);
+    }
+    if (
+      status.configuration?.innerlife?.apiKeyStatus !== "configured" ||
+      status.configuration?.innerlife?.apiKeyRef !== "inline" ||
+      JSON.stringify(status).includes("INLINE_SECRET_MUST_NOT_ESCAPE")
+    ) {
+      throw new Error("Gateway status leaked an inline API key instead of returning the secret-safe source kind.");
     }
     const connection = parseTextResult(await client.callTool("claracore_connection_test"));
     // v0.6.6: the guide is no longer a mandatory startup read, so onboarding
@@ -320,8 +336,12 @@ async function main() {
       throw new Error("gateway_auto_context must refuse prompt and candidate arrays together.");
     }
     const autoTraces = parseTextResult(await client.callTool("gateway_trace_list", { limit: 20 })).traces || [];
-    const autoTrace = autoTraces.find((trace) => trace.toolName === "gateway_auto_context" && trace.status === "ok");
-    if (!autoTrace) throw new Error("gateway_auto_context call was not traced.");
+    const autoTraceSummary = autoTraces.find((trace) => trace.toolName === "gateway_auto_context" && trace.status === "ok");
+    if (!autoTraceSummary) throw new Error("gateway_auto_context call was not traced.");
+    if ("request" in autoTraceSummary) throw new Error("gateway_trace_list must not hydrate request JSON.");
+    const autoTrace = parseTextResult(
+      await client.callTool("gateway_trace_get", { id: autoTraceSummary.id })
+    ).trace;
     if (JSON.stringify(autoTrace.request).includes(SECRET_TAIL)) {
       throw new Error(`Gateway trace persisted the raw prompt: ${JSON.stringify(autoTrace.request)}`);
     }
@@ -337,9 +357,13 @@ async function main() {
 
     await client.callTool("gateway_auto_context", { prompt: CJK_PROMPT });
     const cjkTraces = parseTextResult(await client.callTool("gateway_trace_list", { limit: 20 })).traces || [];
-    const cjkTrace = cjkTraces.find(
-      (trace) => trace.toolName === "gateway_auto_context" && trace.request?.prompt?.bytes > 300
-    );
+    const cjkTraceSummary = cjkTraces.find((trace) => trace.toolName === "gateway_auto_context" && trace.status === "ok");
+    const cjkTrace = cjkTraceSummary
+      ? parseTextResult(await client.callTool("gateway_trace_get", { id: cjkTraceSummary.id })).trace
+      : null;
+    if (cjkTrace?.request?.prompt?.bytes <= 300) {
+      throw new Error(`The latest Chinese trace did not preserve bounded prompt evidence: ${JSON.stringify(cjkTrace)}`);
+    }
     if (!cjkTrace) throw new Error("The Chinese gateway_auto_context call was not traced.");
     const cjkPreviewBytes = Buffer.byteLength(cjkTrace.request.prompt.preview, "utf8");
     if (cjkPreviewBytes > 80) {
@@ -371,12 +395,64 @@ async function main() {
     if (!started.session?.id || !started.share_plan || started.briefing) {
       throw new Error("Gateway innerlife_session_start did not return a compact session start packet.");
     }
+    const sessionCatalog = parseTextResult(await client.callTool("innerlife_sessions", { limit: 10 }));
+    const sessionSummary = sessionCatalog.sessions?.find((session) => session.id === started.session.id);
+    if (!sessionSummary || "transcript" in sessionSummary || "metadata" in sessionSummary) {
+      throw new Error(`Gateway innerlife_sessions did not return a bounded session summary: ${JSON.stringify(sessionCatalog)}`);
+    }
+    const sessionDetail = parseTextResult(
+      await client.callTool("innerlife_session_get", { id: started.session.id })
+    ).session;
+    if (sessionDetail.id !== started.session.id) {
+      throw new Error(`Gateway innerlife_session_get returned the wrong session: ${JSON.stringify(sessionDetail)}`);
+    }
+    const updatedProfile = parseTextResult(await client.callTool("innerlife_profile_set", {
+      agentId: "my-agent",
+      displayName: "My Agent",
+      profile: { role: "contract-test" },
+      state: { focus: "profile-shape" }
+    }));
+    if (
+      updatedProfile.agentId !== "my-agent" ||
+      typeof updatedProfile.profileEnabled !== "boolean" ||
+      "enabled" in updatedProfile ||
+      "profile_json" in updatedProfile ||
+      "state_json" in updatedProfile
+    ) {
+      throw new Error(`Gateway innerlife_profile_set did not return a normalized profile: ${JSON.stringify(updatedProfile)}`);
+    }
+    const profileCatalog = parseTextResult(await client.callTool("innerlife_profile_list", { limit: 10 }));
+    const profileSummary = profileCatalog.profiles?.find((profile) => profile.agentId === "my-agent");
+    if (
+      !profileSummary ||
+      "profile" in profileSummary ||
+      "state" in profileSummary ||
+      "enabled" in profileSummary ||
+      typeof profileSummary.profileEnabled !== "boolean"
+    ) {
+      throw new Error(`Gateway innerlife_profile_list leaked rich profile state: ${JSON.stringify(profileCatalog)}`);
+    }
+    const profileDetail = parseTextResult(
+      await client.callTool("innerlife_profile_get", { agentId: "my-agent" })
+    ).profile;
+    if (
+      profileDetail.agentId !== "my-agent" ||
+      !profileDetail.profile ||
+      !profileDetail.state ||
+      "enabled" in profileDetail ||
+      typeof profileDetail.profileEnabled !== "boolean"
+    ) {
+      throw new Error(`Gateway innerlife_profile_get did not recover one complete profile: ${JSON.stringify(profileDetail)}`);
+    }
     const activeLine = parseTextResult(
       await client.callTool("shared_line_create", {
         agentId: "my-agent",
         title: "Phase4 active Shared Line"
       })
     ).line;
+    if ("active" in activeLine || typeof activeLine.isCurrent !== "boolean") {
+      throw new Error(`Shared Line mutation descriptor must distinguish lifecycle from current selection: ${JSON.stringify(activeLine)}`);
+    }
     const archivedLine = parseTextResult(
       await client.callTool("shared_line_create", {
         agentId: "my-agent",
@@ -391,6 +467,15 @@ async function main() {
         makeActive: false
       })
     ).line;
+    const lineCatalog = parseTextResult(
+      await client.callTool("shared_line_list", { agentId: "my-agent", status: "active" })
+    );
+    if (
+      !lineCatalog.lines?.length ||
+      lineCatalog.lines.some((line) => "active" in line || typeof line.isCurrent !== "boolean")
+    ) {
+      throw new Error(`Gateway shared_line_list must distinguish status from isCurrent: ${JSON.stringify(lineCatalog)}`);
+    }
     const startedWithLines = parseTextResult(
       await client.callTool("innerlife_session_start", {
         agentId: "my-agent",
@@ -407,6 +492,9 @@ async function main() {
     }
     if (startedWithLines.shared_lines?.some((line) => line.id === archivedLine.id)) {
       throw new Error(`Gateway innerlife_session_start included an archived Shared Line: ${JSON.stringify(startedWithLines.shared_lines)}`);
+    }
+    if (startedWithLines.shared_lines?.some((line) => "active" in line || typeof line.isCurrent !== "boolean")) {
+      throw new Error(`InnerLife session line summaries must use isCurrent: ${JSON.stringify(startedWithLines.shared_lines)}`);
     }
     if (!startedWithLines.shared_line_error?.includes("SHARED_LINE_ID_REQUIRED")) {
       throw new Error(`Gateway innerlife_session_start should report Shared Line ambiguity without failing: ${JSON.stringify(startedWithLines)}`);
@@ -517,6 +605,12 @@ async function main() {
     if (typeof liteStatus.work?.hasPendingShares !== "boolean" || typeof liteStatus.work?.pendingInboxCount !== "number") {
       throw new Error(`Default innerlife_status must report pending-work indicators: ${JSON.stringify(liteStatus.work)}`);
     }
+    if (
+      liteStatus.profiles.some((profile) => "enabled" in profile || typeof profile.profileEnabled !== "boolean") ||
+      "enabled" in liteStatus.daemon || typeof liteStatus.daemon.loopEnabled !== "boolean"
+    ) {
+      throw new Error(`Default innerlife_status must distinguish profile capability from daemon scheduling: ${JSON.stringify(liteStatus)}`);
+    }
     const fullStatus = parseTextResult(await client.callTool("innerlife_status", { detail: true }));
     if (!Array.isArray(fullStatus.sessions) || !Array.isArray(fullStatus.digestRuns)) {
       throw new Error(`Gateway innerlife_status detail=true did not return full snapshot fields: ${JSON.stringify(Object.keys(fullStatus))}`);
@@ -618,6 +712,12 @@ async function main() {
     }
     if (shareCheck.check?.sessionId !== started.session.id) {
       throw new Error(`Gateway innerlife_share_check did not resolve externalSessionId to the canonical session: ${JSON.stringify(shareCheck.check)}`);
+    }
+    if (!shareCheck.share?.body || shareCheck.snapshot || shareCheck.status?.pendingShares) {
+      throw new Error(`Gateway innerlife_share_check must return one complete share without repeating the pending catalog: ${JSON.stringify(shareCheck)}`);
+    }
+    if (Buffer.byteLength(JSON.stringify(shareCheck), "utf8") > CONTEXT_BUDGET_CEILINGS.innerlifeShareCheckDefault) {
+      throw new Error(`Gateway innerlife_share_check exceeded its default context budget: ${Buffer.byteLength(JSON.stringify(shareCheck), "utf8")} bytes.`);
     }
     const unknownSessionShareCheck = parseTextResult(
       await client.callTool("innerlife_share_check", {

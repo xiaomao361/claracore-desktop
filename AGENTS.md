@@ -17,6 +17,18 @@ Default to simplicity and restraint. The current baseline is:
 - InnerLife can occasionally share proactive messages
 - Gateway routes access
 
+Context delivery is minimum-sufficient by default. Storage richness is not
+delivery richness: lists are bounded catalogs, selected objects use resume or
+summary shapes, and richer context requires an explicit scoped read. Explicit
+reads are still bounded; `full` never means an unlimited full-object catalog.
+Do not rely on Agent prompt discipline for this boundary—enforce projection,
+pagination, detail references, and response budgets in the server contract.
+Apply this as progressive disclosure, not a universal shrinking target. Use a
+default page of 10 for general Agent-facing catalogs and allow an explicit page
+up to 50. Preserve enough preview to identify the next object, and keep an
+explicitly selected object semantically complete when it fits the final safety
+ceiling. Byte ceilings are regression guardrails, not product quality goals.
+
 Do not broaden these roles, add hidden automation, or redesign the page unless the user explicitly asks. Treat "先维持" as a strong stop signal for UI/version changes.
 
 ## Safe Iteration

@@ -1,6 +1,7 @@
 const fs = require("fs/promises");
 const os = require("os");
 const path = require("path");
+const { PRODUCT_VERSION } = require("../version");
 
 const appRoot = path.resolve(__dirname, "..", "..");
 
@@ -51,6 +52,19 @@ async function main() {
         stdioStatus: document.querySelector("#agentStdioStatus")?.textContent || "",
         guideStatus: document.querySelector("#agentGuideStatus")?.textContent || "",
         guideVersion: document.querySelector("#agentGuideVersion")?.textContent || "",
+        guideLayout: (() => {
+          const note = document.querySelector(".agent-guide-note")?.getBoundingClientRect();
+          const copy = document.querySelector(".agent-guide-note > div")?.getBoundingClientRect();
+          const version = document.querySelector("#agentGuideVersion")?.getBoundingClientRect();
+          return {
+            noteLeft: note?.left,
+            noteRight: note?.right,
+            copyBottom: copy?.bottom,
+            versionTop: version?.top,
+            versionLeft: version?.left,
+            versionRight: version?.right
+          };
+        })(),
         processSteps: document.querySelectorAll(".agent-access-process-flow article").length
       };
     });
@@ -65,7 +79,10 @@ async function main() {
       !hierarchy.httpStatus ||
       !hierarchy.stdioStatus ||
       !hierarchy.guideStatus ||
-      !hierarchy.guideVersion.includes("v0.6.9") ||
+      !hierarchy.guideVersion.includes(`v${PRODUCT_VERSION}`) ||
+      hierarchy.guideLayout.versionTop < hierarchy.guideLayout.copyBottom ||
+      hierarchy.guideLayout.versionLeft < hierarchy.guideLayout.noteLeft ||
+      hierarchy.guideLayout.versionRight > hierarchy.guideLayout.noteRight ||
       hierarchy.processSteps !== 4
     ) {
       throw new Error(`Agent Access hierarchy contract failed: ${JSON.stringify(hierarchy)}`);

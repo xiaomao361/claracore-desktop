@@ -38,6 +38,51 @@ async function main() {
     await page.waitForSelector("[data-view='memory']", { timeout: 15000 });
 
     await page.setViewportSize({ width: 1440, height: 960 });
+    const desktopAgentBars = [];
+    for (const view of ["memory", "shared-line", "innerlife"]) {
+      await page.click(`[data-view='${view}']`);
+      const contract = await page.evaluate((viewName) => {
+        const activeView = document.querySelector(".view.active-view");
+        const pageSurface = activeView?.firstElementChild;
+        const header = activeView?.querySelector(".module-page-heading");
+        const bar = activeView?.querySelector(".module-agent-bar");
+        const select = bar?.querySelector("select");
+        const pageRect = pageSurface?.getBoundingClientRect();
+        const barRect = bar?.getBoundingClientRect();
+        const selectRect = select?.getBoundingClientRect();
+        return {
+          view: viewName,
+          followsHeader: header?.nextElementSibling === bar,
+          label: bar?.querySelector(".module-agent-filter > span")?.textContent || "",
+          relativeTop: pageRect && barRect ? barRect.top - pageRect.top : null,
+          left: barRect?.left,
+          right: barRect?.right,
+          selectHeight: selectRect?.height,
+          selectRadius: select ? getComputedStyle(select).borderRadius : "",
+          columns: bar ? getComputedStyle(bar).gridTemplateColumns : "",
+          viewportWidth: innerWidth
+        };
+      }, view);
+      desktopAgentBars.push(contract);
+      assertInsideViewport(`${view} agent scope`, contract);
+      if (screenshotRoot) await page.screenshot({ path: path.join(screenshotRoot, `desktop-${view}-agent-scope.png`), fullPage: false });
+    }
+    const desktopAgentBaseline = desktopAgentBars[0];
+    for (const contract of desktopAgentBars) {
+      if (
+        !contract.followsHeader ||
+        contract.label !== "智能体" ||
+        Math.abs(contract.relativeTop - desktopAgentBaseline.relativeTop) > 1 ||
+        Math.abs(contract.left - desktopAgentBaseline.left) > 1 ||
+        Math.abs(contract.right - desktopAgentBaseline.right) > 1 ||
+        Math.abs(contract.selectHeight - desktopAgentBaseline.selectHeight) > 1 ||
+        contract.selectRadius !== desktopAgentBaseline.selectRadius ||
+        contract.columns.trim().split(/\s+/).length !== 2
+      ) {
+        throw new Error(`Core module Agent scope bars are inconsistent: ${JSON.stringify(desktopAgentBars)}`);
+      }
+    }
+
     await page.click("[data-view='memory']");
     const desktopMemory = await page.evaluate(() => {
       const overview = document.querySelector(".memory-overview").getBoundingClientRect();
@@ -127,9 +172,36 @@ async function main() {
     }
     if (screenshotRoot) await page.screenshot({ path: path.join(screenshotRoot, "narrow-data-recovery.png"), fullPage: false });
 
+    await page.setViewportSize({ width: 620, height: 900 });
+    for (const view of ["memory", "shared-line", "innerlife"]) {
+      await page.click(`[data-view='${view}']`);
+      const narrowAgentBar = await page.evaluate(() => {
+        const bar = document.querySelector(".view.active-view .module-agent-bar");
+        const select = bar?.querySelector("select");
+        const barRect = bar?.getBoundingClientRect();
+        const selectRect = select?.getBoundingClientRect();
+        return {
+          columns: bar ? getComputedStyle(bar).gridTemplateColumns : "",
+          left: barRect?.left,
+          right: barRect?.right,
+          selectLeft: selectRect?.left,
+          selectRight: selectRect?.right,
+          viewportWidth: innerWidth
+        };
+      });
+      assertInsideViewport(`${view} narrow agent scope`, narrowAgentBar);
+      if (
+        narrowAgentBar.columns.trim().split(/\s+/).length !== 1 ||
+        narrowAgentBar.selectLeft < narrowAgentBar.left ||
+        narrowAgentBar.selectRight > narrowAgentBar.right
+      ) {
+        throw new Error(`${view} Agent scope did not stack cleanly: ${JSON.stringify(narrowAgentBar)}`);
+      }
+    }
+
     if (consoleErrors.length) throw new Error(`Responsive layout emitted console errors: ${consoleErrors.join(" | ")}`);
     await app.close();
-    console.log(JSON.stringify({ ok: true, viewports: ["1440x960", "1180x820", "900x760"], consoleErrors: 0 }, null, 2));
+    console.log(JSON.stringify({ ok: true, viewports: ["1440x960", "1180x820", "900x760", "620x900"], coreModuleAgentScopeUnified: true, consoleErrors: 0 }, null, 2));
   } catch (error) {
     if (app) await app.close().catch(() => {});
     throw error;

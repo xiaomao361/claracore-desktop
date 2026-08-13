@@ -173,19 +173,75 @@ async function main() {
       nestedDetails: document.querySelectorAll("#innerlifeView details").length,
       hasSingleReader: Boolean(document.querySelector("#innerLifeDetailDialog"))
     }));
+    const thoughtCardLayout = await page.evaluate(() => {
+      const card = document.querySelector("#innerLifeUnsharedList .innerlife-thought");
+      const body = card?.querySelector("p")?.getBoundingClientRect();
+      const action = card?.querySelector(".innerlife-read-more")?.getBoundingClientRect();
+      const cardRect = card?.getBoundingClientRect();
+      return {
+        bodyBottom: body?.bottom,
+        actionTop: action?.top,
+        actionBottom: action?.bottom,
+        cardBottom: cardRect?.bottom
+      };
+    });
+    if (
+      thoughtCardLayout.actionTop < thoughtCardLayout.bodyBottom ||
+      thoughtCardLayout.actionBottom > thoughtCardLayout.cardBottom
+    ) {
+      throw new Error(`InnerLife read action overlaps or escapes thought content: ${JSON.stringify(thoughtCardLayout)}`);
+    }
     if (readerStructure.thoughtCards !== 3 || readerStructure.sharedRows !== 1 || readerStructure.processSteps !== 5 || !readerStructure.processBeforeThoughts || readerStructure.insightEntries !== 3 || readerStructure.nestedDetails !== 0 || !readerStructure.hasSingleReader) {
       throw new Error(`InnerLife reader structure is wrong: ${JSON.stringify(readerStructure)}`);
     }
     const thoughtTrigger = page.locator(`#innerLifeUnsharedList [data-innerlife-share-id="${approved.id}"]`);
     await thoughtTrigger.click();
     await page.waitForFunction(() => document.querySelector("#innerLifeDetailDialog")?.open);
-    const thoughtDetail = await page.evaluate(() => document.querySelector("#innerLifeDetailBody")?.textContent || "");
-    if (!thoughtDetail.includes("APPROVED UNDELIVERED: Approval alone is not conversational delivery.")) {
-      throw new Error(`Thought detail is incomplete: ${thoughtDetail}`);
+    const thoughtDetail = await page.evaluate(() => {
+      const head = document.querySelector(".innerlife-dialog-head")?.getBoundingClientRect();
+      const close = document.querySelector("#innerLifeDetailClose")?.getBoundingClientRect();
+      return {
+        text: document.querySelector("#innerLifeDetailBody")?.textContent || "",
+        backHidden: document.querySelector("#innerLifeDetailBack")?.hidden,
+        closeRightInset: head && close ? head.right - close.right : null,
+        closeInTrailingQuarter: head && close ? close.left > head.left + head.width * 0.75 : false,
+        gridColumns: getComputedStyle(document.querySelector(".innerlife-dialog-head")).gridTemplateColumns
+      };
+    });
+    if (
+      !thoughtDetail.text.includes("APPROVED UNDELIVERED: Approval alone is not conversational delivery.") ||
+      !thoughtDetail.backHidden ||
+      thoughtDetail.closeRightInset < 17 ||
+      thoughtDetail.closeRightInset > 27 ||
+      !thoughtDetail.closeInTrailingQuarter ||
+      thoughtDetail.gridColumns.trim().split(/\s+/).length !== 2
+    ) {
+      throw new Error(`Thought detail layout is wrong: ${JSON.stringify(thoughtDetail)}`);
     }
+    const dialogViewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }));
+    await page.setViewportSize({ width: 620, height: 900 });
+    const narrowDialogLayout = await page.evaluate(() => {
+      const head = document.querySelector(".innerlife-dialog-head")?.getBoundingClientRect();
+      const close = document.querySelector("#innerLifeDetailClose")?.getBoundingClientRect();
+      return {
+        closeRightInset: head && close ? head.right - close.right : null,
+        closeInTrailingQuarter: head && close ? close.left > head.left + head.width * 0.75 : false
+      };
+    });
+    if (narrowDialogLayout.closeRightInset < 17 || narrowDialogLayout.closeRightInset > 19 || !narrowDialogLayout.closeInTrailingQuarter) {
+      throw new Error(`Narrow InnerLife detail layout is wrong: ${JSON.stringify(narrowDialogLayout)}`);
+    }
+    await page.setViewportSize(dialogViewport);
     await page.keyboard.press("Escape");
-    const focusRestored = await page.evaluate((id) => document.activeElement?.dataset?.innerlifeShareId === id, approved.id);
-    if (!focusRestored) throw new Error("InnerLife dialog did not restore focus to its trigger.");
+    await page.waitForFunction(() => !document.querySelector("#innerLifeDetailDialog")?.open);
+    await page.waitForFunction((id) => document.activeElement?.dataset?.innerlifeShareId === id, approved.id);
+    const focusState = await page.evaluate((id) => ({
+      restored: document.activeElement?.dataset?.innerlifeShareId === id,
+      activeId: document.activeElement?.id || "",
+      activeClass: document.activeElement?.className || "",
+      activeShareId: document.activeElement?.dataset?.innerlifeShareId || ""
+    }), approved.id);
+    if (!focusState.restored) throw new Error(`InnerLife dialog did not restore focus to its trigger: ${JSON.stringify(focusState)}`);
 
     await page.click('[data-innerlife-open="profile"]');
     await page.waitForFunction(() => document.querySelector("#innerLifeDetailDialog")?.open);
@@ -200,9 +256,28 @@ async function main() {
     const rawDetail = await page.evaluate(() => ({
       preCount: document.querySelectorAll("#innerLifeDetailBody pre").length,
       maxHeights: [...document.querySelectorAll("#innerLifeDetailBody pre")].map((node) => getComputedStyle(node).maxHeight),
-      backVisible: !document.querySelector("#innerLifeDetailBack")?.hidden
+      backVisible: !document.querySelector("#innerLifeDetailBack")?.hidden,
+      closeRightInset: (() => {
+        const head = document.querySelector(".innerlife-dialog-head")?.getBoundingClientRect();
+        const close = document.querySelector("#innerLifeDetailClose")?.getBoundingClientRect();
+        return head && close ? head.right - close.right : null;
+      })(),
+      closeInTrailingQuarter: (() => {
+        const head = document.querySelector(".innerlife-dialog-head")?.getBoundingClientRect();
+        const close = document.querySelector("#innerLifeDetailClose")?.getBoundingClientRect();
+        return head && close ? close.left > head.left + head.width * 0.75 : false;
+      })(),
+      gridColumns: getComputedStyle(document.querySelector(".innerlife-dialog-head")).gridTemplateColumns
     }));
-    if (rawDetail.preCount !== 2 || rawDetail.maxHeights.some((value) => value !== "none") || !rawDetail.backVisible) {
+    if (
+      rawDetail.preCount !== 2 ||
+      rawDetail.maxHeights.some((value) => value !== "none") ||
+      !rawDetail.backVisible ||
+      rawDetail.closeRightInset < 17 ||
+      rawDetail.closeRightInset > 27 ||
+      !rawDetail.closeInTrailingQuarter ||
+      rawDetail.gridColumns.trim().split(/\s+/).length !== 3
+    ) {
       throw new Error(`Raw configuration is not a full single-reader view: ${JSON.stringify(rawDetail)}`);
     }
     await page.click("#innerLifeDetailClose");
@@ -227,6 +302,7 @@ async function main() {
     const result = await page.evaluate(({ pendingId, approvedId, deferredId, deliveredId }) => ({
       title: document.querySelector("#viewTitle")?.textContent || "",
       profileOptions: [...document.querySelectorAll("#innerLifeAgentFilter option")].map((option) => option.value),
+      profileOptionLabels: [...document.querySelectorAll("#innerLifeAgentFilter option")].map((option) => option.textContent.trim()),
       focus: document.querySelector("#innerLifeFocus")?.textContent || "",
       interests: document.querySelector("#innerLifeInterests")?.textContent || "",
       unsharedText: document.querySelector("#innerLifeUnsharedList")?.textContent || "",
@@ -250,6 +326,9 @@ async function main() {
 
     if (result.profileOptions.join(",") !== "codex,lara") {
       throw new Error(`InnerLife selector must come only from profiles: ${JSON.stringify(result.profileOptions)}`);
+    }
+    if (result.profileOptionLabels.join(",") !== "codex,lara") {
+      throw new Error(`InnerLife selector labels must match the stable Agent ids used by other modules: ${JSON.stringify(result.profileOptionLabels)}`);
     }
     if (!result.focus.includes("Keep read paths observational") || !result.interests.includes("read-only UI")) {
       throw new Error(`InnerLife profile focus did not render: ${JSON.stringify(result)}`);

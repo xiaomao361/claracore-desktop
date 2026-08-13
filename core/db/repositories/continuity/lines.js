@@ -17,9 +17,34 @@ function createContinuityLineRepository(helpers) {
       l.status,
       l.created_at,
       l.updated_at,
-      p.summary,
+      substr(p.summary, 1, 360) AS summary,
       p.interpretation_status,
       p.metadata_json,
+      p.updated_at AS position_updated_at
+    FROM continuity_lines l
+    LEFT JOIN current_positions p ON p.rowid = (
+      SELECT candidate.rowid
+      FROM current_positions candidate
+      WHERE candidate.line_id = l.id
+      ORDER BY
+        candidate.updated_at DESC,
+        CASE WHEN candidate.id = 'position_' || candidate.line_id THEN 0 ELSE 1 END,
+        candidate.id DESC
+      LIMIT 1
+    )
+  `;
+
+  const CONTINUITY_LINE_SUMMARY_SELECT = `
+    SELECT
+      l.id,
+      l.agent_id,
+      l.title,
+      l.status,
+      l.created_at,
+      l.updated_at,
+      p.summary,
+      p.interpretation_status,
+      substr(json_extract(p.metadata_json, '$.nextStep'), 1, 240) AS next_step,
       p.updated_at AS position_updated_at
     FROM continuity_lines l
     LEFT JOIN current_positions p ON p.rowid = (
@@ -44,6 +69,22 @@ function createContinuityLineRepository(helpers) {
       summary: row.summary || "",
       interpretationStatus: row.interpretation_status || "draft",
       metadata: parseJson(row.metadata_json, {}),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      positionUpdatedAt: row.position_updated_at
+    };
+  }
+
+  function mapContinuityLineSummaryRow(row, activeLineId) {
+    return {
+      id: row.id,
+      agentId: row.agent_id || DEFAULT_AGENT_ID,
+      title: row.title || "Shared Line",
+      status: row.status || "active",
+      active: row.id === activeLineId,
+      summary: row.summary || "",
+      interpretationStatus: row.interpretation_status || "draft",
+      nextStep: row.next_step || "",
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       positionUpdatedAt: row.position_updated_at
@@ -195,6 +236,40 @@ function createContinuityLineRepository(helpers) {
         LIMIT ${safeLimit};
       `);
       return rows.map((row) => mapContinuityLineRow(row, activeLineId));
+    },
+
+    async listContinuityLineSummaries(input = {}) {
+      const activeLineId = await this.getActiveContinuityLineIdReadOnly();
+      const options = typeof input === "object" && input !== null ? input : { limit: input };
+      const requestedLimit = Number.parseInt(String(options.limit ?? 10), 10);
+      const limit = Math.max(1, Math.min(Number.isFinite(requestedLimit) ? requestedLimit : 10, 50));
+      const offset = Math.max(0, Number.parseInt(String(options.offset || 0), 10) || 0);
+      const agentId = String(options.agentId || options.agent_id || "").trim();
+      const status = String(options.status || "").trim();
+      const filters = ["l.status != 'deleted'"];
+      if (status === "active") filters.push("l.status = 'active'");
+      if (status === "archived") filters.push("l.status = 'archived'");
+      if (agentId && !options.allAgents) filters.push(`l.agent_id = ${sqlString(agentId)}`);
+      const where = filters.join(" AND ");
+      const [rows, totals] = await Promise.all([
+        this.query(`
+          ${CONTINUITY_LINE_SUMMARY_SELECT}
+          WHERE ${where}
+          ORDER BY
+            CASE WHEN l.id = ${sqlString(activeLineId)} THEN 0 ELSE 1 END,
+            l.updated_at DESC,
+            l.created_at DESC
+          LIMIT ${limit} OFFSET ${offset};
+        `),
+        this.query(`SELECT COUNT(*) AS total FROM continuity_lines l WHERE ${where};`)
+      ]);
+      return {
+        items: rows.map((row) => mapContinuityLineSummaryRow(row, activeLineId)),
+        total: Number(totals[0]?.total || 0),
+        limit,
+        offset,
+        requestedLimit
+      };
     },
 
     async getContinuityLine(lineId) {

@@ -19,9 +19,21 @@ const { shapeSharedLinePacket } = require("../core/continuity/resume-detail");
 const {
   shapeInnerLifeBriefing,
   shapeInnerLifeStatus,
-  shapePendingShares
+  shapePendingShares,
+  shapeShareCheckResult
 } = require("../core/innerlife/selective");
 const { arbitrateAutomaticContext } = require("../core/gateway/auto-context");
+const {
+  catalogPage,
+  shapeMemoryAck,
+  shapeMemoryLinkCatalogEntry,
+  shapeMemoryRecordCatalogEntry,
+  shapeSharedLineCatalogEntry
+} = require("../core/gateway/bounded-response");
+const {
+  DEFAULT_GATEWAY_RESULT_MAX_BYTES,
+  serializeGatewayResult
+} = require("../core/gateway/result-budget");
 const { CONTEXT_BUDGET_CEILINGS } = require("../core/tests/fixtures/context-budget-ceilings");
 const {
   ambiguousSharedLineFixture,
@@ -96,6 +108,57 @@ async function collect() {
     )
   ];
 
+  const catalogRows = Array.from({ length: 10 }, (_, index) => ({
+    id: `fixture-${index}`,
+    agentId: "fixture-agent",
+    title: `Fixture ${index}`,
+    status: "active",
+    active: index === 0,
+    summary: `Continue bounded context work ${index}. ${"上下文".repeat(300)}`,
+    interpretationStatus: "confirmed",
+    nextStep: `Open one object only when its content is needed. ${"下一步".repeat(200)}`,
+    fromMemoryId: `from-${index}`,
+    toMemoryId: `to-${index}`,
+    fromTitle: `From ${index}`,
+    toTitle: `To ${index}`,
+    kind: "related",
+    strength: 1,
+    note: `A bounded relationship note. ${"关系".repeat(200)}`,
+    recordType: "metric",
+    valueType: "object",
+    notePreview: `A bounded record note. ${"记录".repeat(200)}`,
+    localDate: "2026-08-13",
+    timezone: "Asia/Shanghai"
+  }));
+  const paging = { limit: 10, offset: 0, requestedLimit: 10 };
+  const sharedLineCatalog = catalogRows.map(shapeSharedLineCatalogEntry);
+  const memoryLinkCatalog = catalogRows.map(shapeMemoryLinkCatalogEntry);
+  const memoryRecordCatalog = catalogRows.map(shapeMemoryRecordCatalogEntry);
+  const mutationAck = shapeMemoryAck({ ...catalogRows[0], labels: ["context", "bounded"] });
+  const catalogs = [
+    measurement(
+      "shared_line_list default",
+      { lines: sharedLineCatalog, page: catalogPage(sharedLineCatalog, 10, paging) },
+      CONTEXT_BUDGET_CEILINGS.sharedLineListDefault,
+      { returned: 10, detailRefs: sharedLineCatalog.filter((item) => item.detailRef).length }
+    ),
+    measurement(
+      "memoria_link_list default",
+      { links: memoryLinkCatalog, page: catalogPage(memoryLinkCatalog, 10, paging) },
+      CONTEXT_BUDGET_CEILINGS.memoriaLinkListDefault,
+      { returned: 10, detailRefs: memoryLinkCatalog.filter((item) => item.detailRefs).length }
+    ),
+    measurement(
+      "memoria_record_list default",
+      { records: memoryRecordCatalog, page: catalogPage(memoryRecordCatalog, 10, paging) },
+      CONTEXT_BUDGET_CEILINGS.memoriaRecordListDefault,
+      { returned: 10, detailRefs: memoryRecordCatalog.filter((item) => item.detailRef).length }
+    ),
+    measurement("mutation acknowledgement", mutationAck, CONTEXT_BUDGET_CEILINGS.mutationAckDefault, {
+      detailRef: mutationAck.detailRef?.tool || ""
+    })
+  ];
+
   const memoryCore = memorySearchCore();
   const memoryDefault = await memoria.searchSummary(memoryCore, { query: "fixture recall" });
   const memoryFull = await memoria.searchSummary(memoryCore, { query: "fixture recall", detail: "full", limit: 3 });
@@ -161,6 +224,20 @@ async function collect() {
   const statusDefault = shapeInnerLifeStatus(storedSnapshot);
   const statusFull = shapeInnerLifeStatus(storedSnapshot, "full");
   const candidates = shapePendingShares(innerLifeSharesFixture());
+  const shareCheck = shapeShareCheckResult({
+    check: {
+      id: "check_fixture",
+      shareId: innerLifeSharesFixture()[0].id,
+      agentId: "fixture-agent",
+      sessionId: "inner_session_fixture",
+      decision: "review_first",
+      reason: "The thought may fit the current engineering register.",
+      context: "Real conversational context",
+      metadata: { contextSource: "provided", sharedLineStatus: "selected" }
+    },
+    share: innerLifeSharesFixture()[0],
+    snapshot: storedSnapshot
+  });
   const briefingDefault = shapeInnerLifeBriefing(storedBriefing);
   const briefingFull = shapeInnerLifeBriefing(storedBriefing, "full");
   const innerLife = [
@@ -188,6 +265,10 @@ async function collect() {
       totalPending: candidates.totalPending,
       previewBytes: sumOf(candidates.shares, (share) => share.preview),
       envelopeBytes: bytes({ ...candidates, shares: undefined })
+    }),
+    measurement("innerlife_share_check default", shareCheck, CONTEXT_BUDGET_CEILINGS.innerlifeShareCheckDefault, {
+      shareBodyBytes: bytes(shareCheck.share?.body),
+      repeatedSnapshot: "snapshot" in shareCheck
     }),
     measurement("innerlife_briefing default", briefingDefault, CONTEXT_BUDGET_CEILINGS.innerlifeBriefingDefault, {
       ...familyBytes({
@@ -233,6 +314,15 @@ async function collect() {
     measurement("gateway_context brief (query)", briefWithQuery, CONTEXT_BUDGET_CEILINGS.gatewayContextBrief),
     measurement("gateway_context brief (no query)", briefNoQuery, CONTEXT_BUDGET_CEILINGS.gatewayContextBrief),
     measurement("gateway_context full", await contextService.get({}, { agentId: "fixture-agent", detail: "full" }), null)
+  ];
+
+  const responseGuard = [
+    measurement(
+      "oversize response refusal",
+      serializeGatewayResult({ body: "x".repeat(DEFAULT_GATEWAY_RESULT_MAX_BYTES + 1) }),
+      1024,
+      { maxResponseBytes: DEFAULT_GATEWAY_RESULT_MAX_BYTES }
+    )
   ];
 
   // Automatic context: what was offered, what was selected, and what a host
@@ -281,15 +371,17 @@ async function collect() {
     })
   ];
 
-  const groups = { toolProfiles, docs, errors, memory, sharedLine, innerLife, aggregate, automatic };
+  const groups = { toolProfiles, docs, errors, catalogs, memory, sharedLine, innerLife, aggregate, responseGuard, automatic };
   const all = [
     ...toolProfiles,
     ...docs,
     ...errors,
+    ...catalogs,
     ...memory,
     ...sharedLine,
     ...innerLife,
     ...aggregate,
+    ...responseGuard,
     ...automatic
   ];
   return {

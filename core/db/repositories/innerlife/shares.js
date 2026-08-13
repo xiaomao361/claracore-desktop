@@ -134,6 +134,36 @@ function createInnerLifeShareRepository(helpers, dependencies = {}) {
       return rows.map(mapShareRow);
     },
 
+    async listInnerLifeShareSummariesPage(input = {}) {
+      const statusFilter = String(input.status || "pending").trim();
+      const agentFilter = String(input.agentId || input.agent_id || "all").trim();
+      const requestedLimit = Number.parseInt(String(input.limit ?? 3), 10);
+      const limit = Math.max(1, Math.min(Number.isFinite(requestedLimit) ? requestedLimit : 3, 10));
+      const offset = Math.max(0, Number.parseInt(String(input.offset || 0), 10) || 0);
+      const filters = [];
+      if (statusFilter !== "all") filters.push(`s.status = ${sqlString(statusFilter)}`);
+      if (agentFilter !== "all") filters.push(`s.agent_id = ${sqlString(agentFilter)}`);
+      const whereClause = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
+      const [rows, totals] = await Promise.all([
+        this.query(`
+          SELECT s.id, s.agent_id, s.status, substr(s.body, 1, 400) AS preview,
+                 s.created_at, s.updated_at
+          FROM innerlife_shares s
+          ${whereClause}
+          ORDER BY s.updated_at DESC, s.created_at DESC
+          LIMIT ${limit} OFFSET ${offset};
+        `),
+        this.query(`SELECT COUNT(*) AS total FROM innerlife_shares s ${whereClause};`)
+      ]);
+      return {
+        items: rows,
+        total: Number(totals[0]?.total || 0),
+        limit,
+        offset,
+        requestedLimit
+      };
+    },
+
     async listInnerLifeShareChecks(agentId = DEFAULT_AGENT_ID, limit = 10) {
       const safeLimit = Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 10));
       const agentFilter = String(agentId || DEFAULT_AGENT_ID).trim();
@@ -290,6 +320,29 @@ function createInnerLifeShareRepository(helpers, dependencies = {}) {
         ORDER BY created_at DESC, id DESC
         LIMIT ${safeLimit};
       `);
+    },
+
+    async listInnerLifeShareActionSummaries(shareId = null, limit = 20, agentId = "all") {
+      const safeLimit = Math.max(1, Math.min(50, Number.parseInt(String(limit), 10) || 20));
+      const filters = [];
+      if (shareId) filters.push(`share_id = ${sqlString(shareId)}`);
+      if (agentId && agentId !== "all") filters.push(`agent_id = ${sqlString(agentId)}`);
+      const whereClause = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
+      const rows = await this.query(`
+        SELECT id, share_id, agent_id, action, substr(reason, 1, 320) AS reason, created_at
+        FROM innerlife_share_actions
+        ${whereClause}
+        ORDER BY created_at DESC, id DESC
+        LIMIT ${safeLimit};
+      `);
+      return rows.map((row) => ({
+        id: row.id,
+        shareId: row.share_id,
+        agentId: row.agent_id,
+        action: row.action,
+        reason: row.reason || "",
+        createdAt: row.created_at
+      }));
     },
 
     async getInnerLifeShare(id) {

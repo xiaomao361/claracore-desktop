@@ -53,3 +53,21 @@ Every proposed feature must answer one question:
 
 If it only adds capability, it belongs in the base model or in another tool,
 not here. Prefer deepening connections over adding surfaces.
+
+## Context delivery is part of maintaining the world
+
+ClaraCore keeps the shared world richer than any one conversation should
+receive. Preserving a complete Memory, Shared Line, or InnerLife history does
+not mean transmitting it by default.
+
+The delivery principle is:
+
+> 默认最小充分，按明确范围逐层展开；显式请求仍然有界。
+
+An ordinary read should provide enough state for the next safe decision and a
+clear path to inspect more. Catalogs remain catalogs, one selected object may
+be expanded deliberately, and large exports become artifacts rather than chat
+payloads. This protects continuity and attention as the shared world grows.
+
+The maintained engineering contract is
+[Context Delivery](./CONTEXT_DELIVERY.md).

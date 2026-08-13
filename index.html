@@ -73,9 +73,17 @@
 
       <section id="memoryView" class="view">
         <div class="memory-page">
-          <header class="memory-page-heading">
-            <span class="memory-readonly-badge" data-i18n="memory.readOnly">Read only</span>
+          <header class="memory-page-heading module-page-heading">
+            <span class="memory-readonly-badge module-readonly-badge"><i aria-hidden="true"></i><span data-i18n="memory.readOnly">Read only</span></span>
           </header>
+
+          <div class="panel module-agent-bar">
+            <label class="agent-filter module-agent-filter">
+              <span data-i18n="sharedLine.filter.agent">Agent</span>
+              <select id="memoryAgentFilter"></select>
+            </label>
+            <p data-i18n="memory.filter.body">View long-term memories by agent.</p>
+          </div>
 
           <section class="panel memory-overview" aria-labelledby="memoryOverviewTitle">
             <div>
@@ -101,10 +109,6 @@
               <button id="searchMemory" class="secondary" data-i18n="actions.search">Search</button>
               </div>
             </div>
-            <label class="agent-filter memory-agent-filter">
-              <span data-i18n="sharedLine.filter.agent">Agent</span>
-              <select id="memoryAgentFilter"></select>
-            </label>
           </div>
 
           <section class="memory-recent-section" aria-labelledby="memoryRecentTitle">
@@ -142,6 +146,9 @@
             </div>
             <div class="memory-dialog-body">
               <div id="memoryDetail"></div>
+              <div id="memoryLibraryFooter" class="memory-library-footer" hidden>
+                <button id="memoryLibraryLoadMore" class="secondary load-more-button" type="button" data-i18n="memory.loadMore">Load more</button>
+              </div>
               <div id="memoryRecallDetail" hidden></div>
               <div id="memoryKnowledgeWorkbench" hidden>
                 <div class="memoria-tabs" role="tablist" aria-label="记忆组织方式">
@@ -167,9 +174,17 @@
 
       <section id="sharedLineView" class="view">
         <div class="shared-line-page">
-        <header class="shared-line-page-heading">
-          <span class="shared-line-readonly-badge"><i aria-hidden="true"></i><span data-i18n="sharedLine.readOnly">Read only</span></span>
+        <header class="shared-line-page-heading module-page-heading">
+          <span class="shared-line-readonly-badge module-readonly-badge"><i aria-hidden="true"></i><span data-i18n="sharedLine.readOnly">Read only</span></span>
         </header>
+
+        <div class="panel module-agent-bar">
+          <label class="agent-filter module-agent-filter">
+            <span data-i18n="sharedLine.filter.agent">Agent</span>
+            <select id="sharedLineAgentFilter"></select>
+          </label>
+          <p data-i18n="sharedLine.filter.body">View Shared Lines by agent.</p>
+        </div>
 
         <section class="panel shared-line-overview" aria-labelledby="sharedLineOverviewTitle">
           <div>
@@ -190,14 +205,6 @@
           </div>
           <div id="sharedLineProcessFlow" class="shared-line-process-flow"></div>
         </section>
-
-        <div class="panel shared-line-toolbar">
-          <label class="agent-filter shared-line-heading-filter">
-            <span data-i18n="sharedLine.agentView">Agent view</span>
-            <select id="sharedLineAgentFilter"></select>
-          </label>
-          <p data-i18n="sharedLine.filter.body">按智能体查看共同线。</p>
-        </div>
 
         <div class="shared-line-layout">
           <article class="panel shared-line-list-panel">
@@ -304,19 +311,19 @@
 
       <section id="innerlifeView" class="view">
         <div class="innerlife-shell">
-          <header class="innerlife-page-heading">
-            <span class="innerlife-readonly-badge"><i aria-hidden="true"></i><span data-i18n="innerLife.readOnly">Read only</span></span>
+          <header class="innerlife-page-heading module-page-heading">
+            <span class="innerlife-readonly-badge module-readonly-badge"><i aria-hidden="true"></i><span data-i18n="innerLife.readOnly">Read only</span></span>
           </header>
 
-          <article class="panel innerlife-reader">
-            <div class="innerlife-agent-row">
-              <label class="agent-filter">
-                <span data-i18n="innerLife.agentLabel">Agent</span>
-                <select id="innerLifeAgentFilter"></select>
-              </label>
-              <span id="innerLifeProfileName" class="innerlife-profile-name"></span>
-            </div>
+          <div class="panel module-agent-bar">
+            <label class="agent-filter module-agent-filter">
+              <span data-i18n="innerLife.agentLabel">Agent</span>
+              <select id="innerLifeAgentFilter"></select>
+            </label>
+            <p data-i18n="innerLife.filter.body">View InnerLife by agent.</p>
+          </div>
 
+          <article class="panel innerlife-reader">
             <section class="innerlife-focus-section">
               <span class="innerlife-section-kicker" data-i18n="innerLife.currentFocus">Currently noticing</span>
               <p id="innerLifeFocus" class="innerlife-focus"></p>
@@ -549,7 +556,11 @@
                     <h3 id="logDetailTitle"></h3>
                     <p id="logDetailMeta" class="quiet"></p>
                   </div>
-                  <button id="logDetailClose" class="icon-button" type="button" data-i18n-aria-label="actions.close" aria-label="Close">×</button>
+                  <button id="logDetailClose" class="icon-button" type="button" data-i18n-aria-label="actions.close" aria-label="Close">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M6 6l12 12M18 6L6 18"></path>
+                    </svg>
+                  </button>
                 </header>
                 <div class="log-detail-body">
                   <section id="logEventDetail" class="log-event-detail" hidden></section>

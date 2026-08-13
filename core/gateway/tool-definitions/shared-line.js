@@ -31,7 +31,7 @@ const sharedLineToolDefinitions = [
   {
     "name": "shared_line_list",
     "title": "List Shared Lines",
-    "description": "List ClaraCore Desktop Shared Lines and identify the active line. Defaults to every non-deleted line; pass status to narrow to active or archived lines.",
+    "description": "List bounded ClaraCore Desktop Shared Line summaries. status is lifecycle; isCurrent identifies the globally selected fallback line and may be false for every row in an Agent-filtered page. Defaults to 10 rows; limit can explicitly request up to 50. Full metadata and history are available one line at a time through shared_line_get.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -48,7 +48,11 @@ const sharedLineToolDefinitions = [
         "limit": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 100
+          "maximum": 50
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0
         }
       },
       "additionalProperties": false

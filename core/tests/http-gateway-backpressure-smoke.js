@@ -30,10 +30,10 @@ async function main() {
   process.env.CLARACORE_DESKTOP_HTTP_MAX_QUEUE = "2";
   process.env.CLARACORE_DESKTOP_HTTP_QUEUE_WAIT_MS = "1000";
 
-  const originalListMemories = database.listMemories.bind(database);
-  database.listMemories = async (...args) => {
+  const originalListMemorySummaries = database.listMemorySummariesPage.bind(database);
+  database.listMemorySummariesPage = async (...args) => {
     await new Promise((resolve) => setTimeout(resolve, 120));
-    return originalListMemories(...args);
+    return originalListMemorySummaries(...args);
   };
   const app = {
     isPackaged: false,

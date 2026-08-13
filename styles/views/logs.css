@@ -336,11 +336,26 @@
 }
 
 .log-detail-header .icon-button {
+  display: grid;
+  place-items: center;
   width: 40px;
   min-width: 40px;
   height: 40px;
   padding: 0;
-  font-size: 22px;
+  color: var(--muted);
+}
+
+.log-detail-header .icon-button::before {
+  display: none;
+}
+
+.log-detail-header .icon-button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.5;
 }
 
 .log-detail-body {

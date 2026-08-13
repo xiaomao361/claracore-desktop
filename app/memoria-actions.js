@@ -25,7 +25,6 @@ function createClaraCoreMemoriaActions({
       agentId: selectedAgentId
     });
     const results = Array.isArray(response) ? response : response?.results || [];
-    document.querySelector('[data-load-more="all"]')?.remove();
     renderMemoryResults(results);
     if (response?.error) showCopyNotice(t("memory.search.fallback"));
   }
@@ -57,22 +56,6 @@ function createClaraCoreMemoriaActions({
       const button = event.target.closest("[data-memory-label]");
       if (!button) return;
       searchLabel(button.dataset.memoryLabel || "");
-    });
-  }
-
-  function bindLoadMore() {
-    document.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-load-more]");
-      if (!button) return;
-      button.disabled = true;
-      loadMemoryTabData(button.dataset.loadMore, { append: true })
-        .catch((error) => {
-          console.error(error);
-          showCopyNotice(t("runtime.unavailable"));
-        })
-        .finally(() => {
-          button.disabled = false;
-        });
     });
   }
 
@@ -135,7 +118,6 @@ function createClaraCoreMemoriaActions({
     });
     bindLabelList(dom.memoryAllLabelList);
     bindLabelList(dom.memoryTopicList);
-    bindLoadMore();
     bindGraph();
     bindMemorySelection();
   }

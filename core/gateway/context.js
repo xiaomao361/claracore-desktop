@@ -52,7 +52,7 @@ function boundedText(value, maxBytes) {
 }
 
 function normalizeDetail(value) {
-  const detail = String(value || "full").trim().toLowerCase() || "full";
+  const detail = String(value || "brief").trim().toLowerCase() || "brief";
   if (!["brief", "full"].includes(detail)) {
     throw new Error("gateway_context detail must be brief or full.");
   }

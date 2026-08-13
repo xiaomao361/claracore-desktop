@@ -185,12 +185,12 @@ async function main() {
     assert(setup.memoriaUsage?.confirmedChange?.includes("memoria_supersede"), "Agent setup should explain confirmed Memory replacement");
     assert(setup.memoriaUsage?.unresolvedConflict?.includes("contradicts"), "Agent setup should preserve unresolved conflicts");
     assert(setup.memoriaUsage?.recall?.includes("timeView=current"), "Agent setup should explain current and historical recall");
-    const httpBriefResponse = await fetch(`http://127.0.0.1:${port}/gateway/context?detail=brief`, {
+    const httpBriefResponse = await fetch(`http://127.0.0.1:${port}/gateway/context`, {
       headers: { Authorization: headers.Authorization }
     });
     assert.strictEqual(httpBriefResponse.status, 200);
     assert.strictEqual((await httpBriefResponse.json()).detail, "brief");
-    const httpFullResponse = await fetch(`http://127.0.0.1:${port}/gateway/context`, {
+    const httpFullResponse = await fetch(`http://127.0.0.1:${port}/gateway/context?detail=full`, {
       headers: { Authorization: headers.Authorization }
     });
     assert.strictEqual(httpFullResponse.status, 200);
@@ -198,7 +198,7 @@ async function main() {
     assert.deepStrictEqual(
       httpContextInputs.map((input) => input.detail),
       ["brief", "full"],
-      "Legacy HTTP context must support brief while preserving the omitted-detail full default."
+      "HTTP context must default to brief and require an explicit full read."
     );
     const ambiguousContextResponse = await fetch(
       `http://127.0.0.1:${port}/gateway/context?detail=brief&agentId=ambiguous`,
@@ -285,6 +285,25 @@ async function main() {
     assert.deepStrictEqual(connectionPacket.nextCalls, ["gateway_context"]);
     assert.strictEqual(connectionPacket.toolProfile, "core", "HTTP must report the resolved tool profile truthfully.");
     assert(connectionPacket.afterOnboarding.includes("Tell the user"));
+    await database.updateSettings({ "innerlife.llm.api_key_ref": "HTTP_INLINE_SECRET_MUST_NOT_ESCAPE" });
+    const statusCall = await postMcp({
+      jsonrpc: "2.0",
+      id: 30,
+      method: "tools/call",
+      params: { name: "claracore_status", arguments: {} }
+    });
+    const statusPacket = JSON.parse(statusCall.result.content[0].text);
+    assert.deepStrictEqual(statusPacket.connection, {
+      agentId: "clara",
+      clientId: "claude-code",
+      conversationId: "session-smoke",
+      transport: "streamable-http",
+      toolProfile: "core"
+    });
+    assert.strictEqual(statusPacket.configuration.gateway.configuredTransport, "stdio");
+    assert.strictEqual(statusPacket.configuration.gateway.defaultAgentId, "codex");
+    assert.strictEqual(statusPacket.configuration.innerlife.apiKeyRef, "inline");
+    assert(!JSON.stringify(statusPacket).includes("HTTP_INLINE_SECRET_MUST_NOT_ESCAPE"));
     const contentBeforeOnboarding = await database.getSummary();
     const docsCall = await postMcp({
       jsonrpc: "2.0",
@@ -329,8 +348,8 @@ async function main() {
     });
     assert.strictEqual(
       JSON.parse(compatibilityContextCall.result.content[0].text).detail,
-      "full",
-      "Omitted Gateway detail must preserve the 0.6.4 full payload."
+      "brief",
+      "Omitted Gateway detail must select the bounded brief payload."
     );
     const contentAfterOnboarding = await database.getSummary();
     assert.strictEqual(contentAfterOnboarding.memories_count, contentBeforeOnboarding.memories_count);

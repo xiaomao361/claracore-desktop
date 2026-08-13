@@ -31,7 +31,7 @@ const innerlifeShareToolDefinitions = [
   {
     "name": "innerlife_share_check",
     "title": "Check InnerLife Share Timing",
-    "description": "Check whether a waiting InnerLife share fits the current context. Pass lineId for exact Shared Line context; provided context still works when Shared Line selection is ambiguous.",
+    "description": "Return one waiting InnerLife share plus compact timing and operational evidence for model review against the real conversational register. It does not repeat the pending-share catalog. Topic overlap is supporting evidence, not a hard gate. Pass lineId for exact Shared Line context; provided context still works when Shared Line selection is ambiguous.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -158,6 +158,10 @@ const innerlifeShareToolDefinitions = [
           "maximum": 10,
           "description": "Default 3."
         },
+        "offset": {
+          "type": "number",
+          "minimum": 0
+        },
         "detail": {
           "type": "string",
           "enum": ["summary", "full"],
@@ -170,7 +174,7 @@ const innerlifeShareToolDefinitions = [
   {
     "name": "innerlife_share_actions",
     "title": "List InnerLife Share Actions",
-    "description": "List review, use, defer, and discard actions for InnerLife shares.",
+    "description": "List review, use, defer, and discard actions for InnerLife shares. Defaults to 10 summaries; detail=full and limit can explicitly request up to 50.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -180,7 +184,11 @@ const innerlifeShareToolDefinitions = [
         "limit": {
           "type": "number",
           "minimum": 1,
-          "maximum": 100
+          "maximum": 50
+        },
+        "detail": {
+          "type": "string",
+          "enum": ["summary", "full"]
         }
       },
       "additionalProperties": false

@@ -25,6 +25,7 @@ const modules = {
     "getActiveContinuityLineId",
     "getActiveContinuityLineIdReadOnly",
     "getContinuityLine",
+    "listContinuityLineSummaries",
     "listContinuityLines",
     "renameContinuityLine",
     "resolveContinuityLineId",

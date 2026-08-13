@@ -133,6 +133,54 @@ function createMemoriaRecordRepository(helpers) {
       return rows.map((row) => mapMemoryRecordRow(row, parseJson));
     },
 
+    async listMemoryRecordSummaries(input = {}) {
+      const requestedLimit = Number.parseInt(String(input.limit ?? 10), 10);
+      const limit = Math.max(1, Math.min(Number.isFinite(requestedLimit) ? requestedLimit : 10, 50));
+      const offset = Math.max(0, Number.parseInt(String(input.offset || 0), 10) || 0);
+      const userId = String(input.userId || input.user_id || "").trim();
+      const recordType = String(input.recordType || input.type || "").trim().toLowerCase();
+      const filters = ["status = 'active'"];
+      if (userId) filters.push(`user_id = ${sqlString(userId)}`);
+      if (recordType) filters.push(`record_type = ${sqlString(recordType)}`);
+      if (input.localDate || input.local_date) filters.push(`local_date = ${sqlString(input.localDate || input.local_date)}`);
+      if (input.start) filters.push(`occurred_at >= ${sqlString(parseAwareDate(input.start, "start").toISOString())}`);
+      if (input.end) filters.push(`occurred_at < ${sqlString(parseAwareDate(input.end, "end").toISOString())}`);
+      const where = filters.join(" AND ");
+      const [rows, totals] = await Promise.all([
+        this.query(`
+          SELECT id, user_id, record_type, title, json_type(value_json) AS value_type,
+                 occurred_at, local_date, timezone, substr(note, 1, 240) AS note_preview,
+                 status, memory_id, created_at, updated_at
+          FROM memory_records
+          WHERE ${where}
+          ORDER BY occurred_at DESC, created_at DESC
+          LIMIT ${limit} OFFSET ${offset};
+        `),
+        this.query(`SELECT COUNT(*) AS total FROM memory_records WHERE ${where};`)
+      ]);
+      return {
+        items: rows.map((row) => ({
+          id: row.id,
+          userId: row.user_id || "local-user",
+          recordType: row.record_type,
+          title: row.title || "",
+          valueType: row.value_type || "object",
+          occurredAt: row.occurred_at,
+          localDate: row.local_date || "",
+          timezone: row.timezone || "Asia/Shanghai",
+          notePreview: row.note_preview || "",
+          status: row.status,
+          memoryId: row.memory_id || null,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at
+        })),
+        total: Number(totals[0]?.total || 0),
+        limit,
+        offset,
+        requestedLimit
+      };
+    },
+
     async getMemoryRecordStats() {
       const rows = await this.query(`
         SELECT record_type, COUNT(*) AS count, MAX(occurred_at) AS latest_at

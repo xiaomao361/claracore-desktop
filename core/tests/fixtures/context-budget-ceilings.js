@@ -1,6 +1,8 @@
 // v0.6.6 default-surface byte ceilings.
 //
-// These are the acceptance numbers from docs/V0.6.6_CONTEXT_BUDGET_PLAN.md.
+// These began as the acceptance numbers in
+// docs/archive/V0.6.6_CONTEXT_BUDGET_PLAN.md and are now enforced by the
+// maintained docs/CONTEXT_DELIVERY.md contract.
 // They bound DEFAULT reads only. Full-profile manifests, explicit detail reads,
 // and diagnostic payloads are measured and reported but never share these
 // ceilings; storage richness is not delivery richness.
@@ -20,7 +22,9 @@ const CONTEXT_BUDGET_CEILINGS = Object.freeze({
   // spend 2 KB than to make every tool description shallower. core is still
   // 31.7% of the full manifest and 65% below the 37,130-byte 0.6.5 baseline.
   coreToolsList: 14 * 1024,
-  coreToolCount: 30,
+  // v0.6.10 adds memoria_record_get so the bounded record catalog has an
+  // explicit one-object expansion path.
+  coreToolCount: 31,
   docsDefault: 4 * 1024,
   docsSection: 8 * 1024,
   // `full` concatenates every section, so it is bounded as the sum rather than
@@ -32,12 +36,17 @@ const CONTEXT_BUDGET_CEILINGS = Object.freeze({
 
   // Track B: everyday product context (enforced by later phases)
   memoriaSearchDefault: 6 * 1024,
+  sharedLineListDefault: 16 * 1024,
+  memoriaLinkListDefault: 16 * 1024,
+  memoriaRecordListDefault: 16 * 1024,
+  mutationAckDefault: 2 * 1024,
   sharedLineGetDefault: 4 * 1024,
   // detail=context is an explicit escalation, not the default read, so it gets
   // its own bound rather than forcing Shared Reality to be cut to fit 4 KB.
   sharedLineGetContext: 6 * 1024,
   innerlifeStatusDefault: 3 * 1024,
   innerlifePendingSharesDefault: 3 * 1024,
+  innerlifeShareCheckDefault: 6 * 1024,
   innerlifeBriefingDefault: 6 * 1024,
   gatewayContextBrief: 8 * 1024,
   // innerlife_session_start is what a host hook injects at the top of every

@@ -51,11 +51,10 @@ fallback when MCP is unavailable.
   Its result reports each singleton action. If both ids own differing profile,
   daemon, or Continuity state, it fails with table/field conflict details and
   leaves every record, including the source Agent, unchanged.
-- First connection order is `claracore_connection_test` -> `gateway_docs` ->
-  `gateway_context(detail=brief)`. Start without `lineId`; if multiple
+- First connection order is `claracore_connection_test` -> `gateway_context`.
+  Omitted `detail` defaults to `brief`. Start without `lineId`; if multiple
   Agent-owned lines make the read ambiguous, choose a returned candidate and
-  retry explicitly. Omitted `detail` remains the 0.6.4 full-payload
-  compatibility contract.
+  retry explicitly. `gateway_docs` is an on-demand guide, not a startup dump.
   After reading context, the agent proactively explains ClaraCore's useful
   capabilities and the actual resumable context to the user.
 
@@ -98,6 +97,13 @@ conflict is unresolved. `memoria_search` defaults to current facts and accepts
 - `tools/call`
 - `ping`
 
+Agent delivery follows [Context Delivery](../../docs/CONTEXT_DELIVERY.md):
+catalogs are summary-only and paged, writes return bounded acknowledgements,
+one-object get tools provide explicit expansion, and both transports enforce a
+128 KiB final response ceiling. An over-budget result returns
+`GATEWAY_RESPONSE_TOO_LARGE` with a narrowing instruction rather than silently
+truncating JSON.
+
 `initialize` includes short server instructions: read Memoria and Shared Line
 only when prior context matters, review pending InnerLife selectively, and write
 Memoria only for explicit durable decisions or an explicit request to remember.
@@ -121,7 +127,8 @@ verified per-prompt lifecycle hook. Without such a hook, Hermes can still use
 `memory_context` explicitly as a pull operation and continue to use
 `memoria_search` when broader recall is requested; it must not claim automatic
 per-prompt routing. See
-`docs/HERMES_V0.6.2_UPDATE.md` for the reconnect and verification receipt.
+`docs/archive/HERMES_V0.6.2_UPDATE.md` for the historical reconnect and
+verification receipt.
 
 HTTP `tools/call` overload returns HTTP `429`, JSON-RPC code `-32001`, and
 `Retry-After: 1`. Clients should wait, retry a bounded number of times, and
@@ -146,8 +153,9 @@ fallback config from Agent Access.
   the current conversation.
 - Fully quit and restart Claude Desktop after config or identity changes so the
   stdio Gateway process is relaunched.
-- Verify with `claracore_connection_test`, read `gateway_docs`, then call
-  `gateway_context` with `detail=brief` and without `lineId`. Retry with a
+- Verify with `claracore_connection_test`, then call `gateway_context` without
+  `detail` or `lineId` (the default is `brief`). Read `gateway_docs` only when
+  usage guidance is needed. Retry with a
   returned candidate only when the read reports `SHARED_LINE_ID_REQUIRED`.
 
 ## Shared Line Rules
@@ -178,6 +186,8 @@ paths:
 ## Development Rules
 
 - Keep tool schemas stable and explicit.
+- A new list or write acknowledgement is incomplete until its default
+  projection, expansion path, pagination truth, and byte budget are tested.
 - Add new agent operations here only after the product domain facade exists.
 - Keep validation in smoke tests when adding or changing tools.
 - Prefer small tool groups if `mcp-server.js` grows further.
