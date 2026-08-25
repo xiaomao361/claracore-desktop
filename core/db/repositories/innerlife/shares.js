@@ -280,7 +280,10 @@ function createInnerLifeShareRepository(helpers, dependencies = {}) {
         throw new Error("InnerLife share belongs to another agent.");
       }
       if (!["pending", "approved", "deferred"].includes(share.status)) {
-        throw new Error(`InnerLife share cannot be marked ${normalized} from ${share.status}.`);
+        const error = new Error(`InnerLife share cannot be marked ${normalized} from ${share.status}.`);
+        error.code = "INNERLIFE_SHARE_INVALID_TRANSITION";
+        error.currentShare = share;
+        throw error;
       }
       const normalizedEvidence = normalized === "used" ? normalizeDeliveryEvidence(deliveryEvidence || {}) : null;
       const actionId = newId("inner_share_action");

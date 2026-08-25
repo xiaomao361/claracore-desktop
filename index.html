@@ -697,7 +697,7 @@
                 <div class="settings-section-head">
                   <div>
                     <h3 data-i18n="settings.appPreferencesTitle">App preferences</h3>
-                    <p data-i18n="settings.appPreferencesBody">Language, theme, and close-window behavior.</p>
+                    <p data-i18n="settings.appPreferencesBody">Language, theme, startup, and close-window behavior.</p>
                   </div>
                 </div>
                 <div class="settings-grid app-preferences-grid">
@@ -722,6 +722,13 @@
                       <option value="hide" data-i18n="settings.closeHide">Hide to tray</option>
                       <option value="quit" data-i18n="settings.closeQuit">Quit app</option>
                     </select>
+                  </label>
+                  <label class="toggle-row app-preference-toggle">
+                    <input id="settingsLaunchAtLogin" type="checkbox" aria-describedby="settingsLaunchAtLoginHint">
+                    <span>
+                      <strong data-i18n="settings.launchAtLogin">Start ClaraCore at login</strong>
+                      <small id="settingsLaunchAtLoginHint" data-i18n="settings.launchAtLoginHint">Available after ClaraCore is installed on macOS or Windows.</small>
+                    </span>
                   </label>
                 </div>
                 <div class="settings-actions compact-actions">

@@ -157,6 +157,10 @@ function initialLanguage() {
 }
 
 let currentLanguage = initialLanguage();
+let loginItemPreference = {
+  launchAtLogin: false,
+  launchAtLoginAvailable: false
+};
 
 function t(key, values = {}) {
   const template = translations[currentLanguage]?.[key] || translations.en[key] || key;
@@ -410,7 +414,8 @@ function collectAppearanceSettingsForm() {
 function getAppearancePreferences() {
   return {
     language: currentLanguage,
-    ...appearance.getPreferences()
+    ...appearance.getPreferences(),
+    ...loginItemPreference
   };
 }
 
@@ -797,7 +802,13 @@ function applyUiPreferences(preferences = {}) {
 
 async function hydrateUiPreferences() {
   const preferences = await window.ClaraCoreDesktop.getUiPreferences?.();
-  if (preferences) applyUiPreferences(preferences);
+  if (preferences) {
+    loginItemPreference = {
+      launchAtLogin: Boolean(preferences.launchAtLogin),
+      launchAtLoginAvailable: Boolean(preferences.launchAtLoginAvailable)
+    };
+    applyUiPreferences(preferences);
+  }
 }
 
 async function refresh() {
@@ -1121,14 +1132,17 @@ saveAppearanceSettings?.addEventListener("click", async () => {
   appearanceSettingsNotice.textContent = t("common.checking");
   try {
     const preferences = collectAppearanceSettingsForm();
-    setLanguage(preferences.language);
-    setTheme(preferences.theme);
-    setWindowCloseBehavior(preferences.closeBehavior);
+    const savedPreferences = await window.ClaraCoreDesktop.saveUiPreferences(preferences);
+    loginItemPreference = {
+      launchAtLogin: Boolean(savedPreferences.launchAtLogin),
+      launchAtLoginAvailable: Boolean(savedPreferences.launchAtLoginAvailable)
+    };
+    applyUiPreferences(savedPreferences);
     renderSettings();
-    showCopyNotice(t("settings.appearanceSaved"), appearanceSettingsNotice);
+    showCopyNotice(t("settings.appPreferencesSaved"), appearanceSettingsNotice);
   } catch (error) {
     console.error(error);
-    appearanceSettingsNotice.textContent = t("settings.appearanceSaveFailed");
+    appearanceSettingsNotice.textContent = t("settings.appPreferencesSaveFailed");
   } finally {
     saveAppearanceSettings.disabled = false;
   }

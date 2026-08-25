@@ -169,6 +169,45 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.app-preference-toggle {
+  grid-column: 1 / -1;
+  grid-template-columns: 20px minmax(0, 1fr);
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  cursor: pointer;
+}
+
+.app-preference-toggle input {
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+}
+
+.app-preference-toggle strong,
+.app-preference-toggle small {
+  display: block;
+}
+
+.app-preference-toggle small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 450;
+  line-height: 1.4;
+}
+
+.app-preference-toggle:has(input:disabled) {
+  cursor: not-allowed;
+}
+
+.app-preference-toggle input:disabled {
+  opacity: 0.55;
+}
+
 .settings-grid .field {
   min-width: 0;
 }

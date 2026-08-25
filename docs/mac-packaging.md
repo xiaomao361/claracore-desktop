@@ -2,9 +2,10 @@
 
 ## Current Release Boundary
 
-The current development and public stable release is `0.6.10`, tagged
-`v0.6.10`. Treat [Version Branching](VERSION_BRANCHING.md) and the versioned
-release notes as the release truth.
+The current development checkpoint is `0.6.12`; the current public stable
+release is `0.6.10`, tagged `v0.6.10`. Treat
+[Version Branching](VERSION_BRANCHING.md) and the versioned release notes as
+the release truth.
 
 ## Historical Pre-Release Checkpoint
 

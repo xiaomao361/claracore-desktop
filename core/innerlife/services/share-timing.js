@@ -47,16 +47,19 @@ function createInnerLifeShareTimingService(inputPorts = {}) {
     const providedContext = String(input.context || "").trim();
     const sessionId = String(input.sessionId || "").trim() || null;
     const requestedShareId = String(input.shareId || "").trim();
-    const requestedShare = requestedShareId
+    const requestedShareRecord = requestedShareId
       ? await ports.getShare(database, requestedShareId)
       : null;
     const hasExplicitAgent = Boolean(input?.agentId || input?.agent_id || input?.agent);
     const agentId = hasExplicitAgent
       ? ports.resolveAgentIdentity(input || {}).id
-      : requestedShare?.agent_id || ports.resolveAgentIdentity(input || {}).id;
-    if (requestedShare && requestedShare.agent_id !== agentId) {
+      : requestedShareRecord?.agent_id || ports.resolveAgentIdentity(input || {}).id;
+    if (requestedShareRecord && requestedShareRecord.agent_id !== agentId) {
       throw new Error("InnerLife share belongs to another agent.");
     }
+    const requestedShare = requestedShareRecord?.status === "drafting"
+      ? null
+      : requestedShareRecord;
     const profile = await ports.ensureProfile(database, agentId);
     const {
       resumePacket,
@@ -65,7 +68,7 @@ function createInnerLifeShareTimingService(inputPorts = {}) {
     const sharedLineContext = buildSharedLineTimingContext(resumePacket);
     const context = providedContext || sharedLineContext;
     let share = requestedShare;
-    if (!share) {
+    if (!share && !requestedShareId) {
       const availableShareId = await ports.findAvailableShareId(database, profile.agent_id);
       if (availableShareId) {
         share = await ports.getShare(database, availableShareId);
@@ -74,6 +77,7 @@ function createInnerLifeShareTimingService(inputPorts = {}) {
 
     const checkId = ports.newId("inner_share_check");
     if (!share) {
+      const draftingRequested = requestedShareRecord?.status === "drafting";
       await ports.recordCheck(database, {
         id: checkId,
         shareId: "",
@@ -81,9 +85,12 @@ function createInnerLifeShareTimingService(inputPorts = {}) {
         sessionId,
         context,
         decision: "none",
-        reason: "No shareable InnerLife thought is available.",
+        reason: draftingRequested
+          ? "The requested InnerLife thought is still being generated."
+          : "No shareable InnerLife thought is available.",
         metadata: {
           contextSource: providedContext ? "provided" : "none",
+          ...(draftingRequested ? { requestedShareStatus: "drafting" } : {}),
           sharedLineStatus: sharedLineSelection.status,
           candidateLineIds: sharedLineSelection.candidateLineIds
         }

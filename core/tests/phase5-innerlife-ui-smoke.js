@@ -33,8 +33,8 @@ function lifecycleFingerprint(databasePath) {
   }
 }
 
-async function createShare(page, agentId, summary) {
-  return page.evaluate(async ({ agentId: id, summary: body }) => {
+async function createShare(page, databasePath, agentId, summary) {
+  const share = await page.evaluate(async ({ agentId: id, summary: body }) => {
     const started = await window.ClaraCoreDesktop.startInnerLifeSession({
       agentId: id,
       userId: "local-user",
@@ -45,6 +45,35 @@ async function createShare(page, agentId, summary) {
     const ended = await window.ClaraCoreDesktop.endInnerLifeSession(sessionId, { agentId: id, summary: body });
     return ended.share;
   }, { agentId, summary });
+  const database = new DatabaseSync(databasePath);
+  try {
+    database.exec("BEGIN IMMEDIATE;");
+    database.prepare(`
+      UPDATE innerlife_shares
+      SET status = 'pending', body = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND status = 'drafting'
+    `).run(summary, share.id);
+    database.prepare(`
+      UPDATE innerlife_thoughts
+      SET body = ?
+      WHERE id = ?
+    `).run(summary, share.thought_id);
+    database.prepare(`
+      UPDATE innerlife_inbox
+      SET status = 'processed',
+          processed_at = CURRENT_TIMESTAMP,
+          metadata_json = json_set(metadata_json, '$.retryState', 'succeeded')
+      WHERE source = 'session_end_afterthought'
+        AND json_extract(metadata_json, '$.shareId') = ?
+    `).run(share.id);
+    database.exec("COMMIT;");
+  } catch (error) {
+    database.exec("ROLLBACK;");
+    throw error;
+  } finally {
+    database.close();
+  }
+  return { ...share, status: "pending", body: summary };
 }
 
 async function main() {
@@ -101,14 +130,14 @@ async function main() {
       });
     });
 
-    const pending = await createShare(page, "codex", "PENDING THOUGHT: Reading this complete thought must not share it.");
-    const approved = await createShare(page, "codex", "APPROVED UNDELIVERED: Approval alone is not conversational delivery.");
-    const deferred = await createShare(page, "codex", "DEFERRED THOUGHT: This remains readable but unshared.");
-    const delivered = await createShare(page, "codex", "DELIVERED THOUGHT: This was actually included in a response.");
-    await createShare(page, "lara", "LARA ONLY THOUGHT: This must never leak into the Codex view.");
-    const stale = await createShare(page, "stale-agent", "STALE ID THOUGHT: No profile should mean no selector entry.");
-
     const databasePath = path.join(dataRoot, "claracore.db");
+    const pending = await createShare(page, databasePath, "codex", "PENDING THOUGHT: Reading this complete thought must not share it.");
+    const approved = await createShare(page, databasePath, "codex", "APPROVED UNDELIVERED: Approval alone is not conversational delivery.");
+    const deferred = await createShare(page, databasePath, "codex", "DEFERRED THOUGHT: This remains readable but unshared.");
+    const delivered = await createShare(page, databasePath, "codex", "DELIVERED THOUGHT: This was actually included in a response.");
+    await createShare(page, databasePath, "lara", "LARA ONLY THOUGHT: This must never leak into the Codex view.");
+    const stale = await createShare(page, databasePath, "stale-agent", "STALE ID THOUGHT: No profile should mean no selector entry.");
+
     const fixtureDatabase = new DatabaseSync(databasePath);
     fixtureDatabase.prepare("DELETE FROM innerlife_profiles WHERE agent_id = ?").run("stale-agent");
     fixtureDatabase.close();
@@ -138,7 +167,7 @@ async function main() {
     });
 
     for (let index = 0; index < 22; index += 1) {
-      await createShare(page, "codex", `NEWER WAITING THOUGHT ${index}: keeps the unshared queue busy.`);
+      await createShare(page, databasePath, "codex", `NEWER WAITING THOUGHT ${index}: keeps the unshared queue busy.`);
     }
     const orderingDatabase = new DatabaseSync(databasePath);
     orderingDatabase.prepare(`

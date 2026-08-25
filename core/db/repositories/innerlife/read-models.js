@@ -85,6 +85,7 @@ function createInnerLifeReadModelRepository(helpers) {
           (SELECT COUNT(*) FROM innerlife_thoughts WHERE event_id IN (
             SELECT id FROM innerlife_events WHERE 1 = 1${agentClause}
           )) AS thoughts_count,
+          (SELECT COUNT(*) FROM innerlife_shares WHERE status = 'drafting'${agentClause}) AS drafting_shares_count,
           (SELECT COUNT(*) FROM innerlife_shares WHERE status = 'pending'${agentClause}) AS pending_shares_count,
           (SELECT COUNT(*) FROM innerlife_shares WHERE status = 'approved'${agentClause}) AS approved_shares_count,
           (SELECT COUNT(*) FROM innerlife_shares WHERE status = 'rejected'${agentClause}) AS rejected_shares_count,

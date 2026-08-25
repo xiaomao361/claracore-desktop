@@ -70,6 +70,24 @@ async function main() {
 
     await page.click("[data-view='settings']");
     await page.click("[data-settings-tab='app-data']");
+    const loginItemState = await page.evaluate(async () => {
+      const input = document.querySelector("#settingsLaunchAtLogin");
+      const label = input?.closest("label");
+      return {
+        disabled: input?.disabled,
+        describedBy: input?.getAttribute("aria-describedby") || "",
+        hint: document.querySelector("#settingsLaunchAtLoginHint")?.textContent || "",
+        label: label?.textContent?.trim() || "",
+        rowHeight: label?.getBoundingClientRect().height || 0,
+        preferences: await window.ClaraCoreDesktop.getUiPreferences()
+      };
+    });
+    if (!loginItemState.disabled || loginItemState.preferences.launchAtLoginAvailable) {
+      throw new Error(`Development mode should expose login items as unavailable: ${JSON.stringify(loginItemState)}`);
+    }
+    if (!loginItemState.label || !loginItemState.hint || loginItemState.describedBy !== "settingsLaunchAtLoginHint" || loginItemState.rowHeight < 44) {
+      throw new Error(`Login item control should have a label, hint, and 44px target: ${JSON.stringify(loginItemState)}`);
+    }
     await page.selectOption("#settingsLanguage", "zh");
     await page.selectOption("#settingsTheme", "dark");
     await page.selectOption("#settingsCloseBehavior", "quit");
@@ -80,7 +98,9 @@ async function main() {
         return (
           preferences.language === "zh" &&
           preferences.theme === "dark" &&
-          preferences.closeBehavior === "quit"
+          preferences.closeBehavior === "quit" &&
+          preferences.launchAtLogin === false &&
+          preferences.launchAtLoginAvailable === false
         );
       },
       null,

@@ -43,6 +43,31 @@ async function queueAfterthought(database, externalSessionId, summary) {
   });
 }
 
+function failAfterthoughtCompletion(database, jobId, message, maximumFailures = Infinity) {
+  const originalExec = database.exec.bind(database);
+  let failures = 0;
+  database.exec = async (sql) => {
+    const statement = String(sql || "");
+    if (
+      failures < maximumFailures
+      && statement.includes(jobId)
+      && statement.includes("completedLeaseToken")
+    ) {
+      failures += 1;
+      throw new Error(message);
+    }
+    return originalExec(sql);
+  };
+  return {
+    get failures() {
+      return failures;
+    },
+    restore() {
+      database.exec = originalExec;
+    }
+  };
+}
+
 async function main() {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "claracore-persisted-jobs-"));
   const databasePath = path.join(root, "claracore.db");
@@ -67,6 +92,12 @@ async function main() {
     });
     const acknowledgementMs = performance.now() - startedAt;
     assert.strictEqual(ended.afterthoughtJob?.status, "pending");
+    assert.strictEqual(ended.share.status, "drafting");
+    assert.strictEqual(
+      (await database.listInnerLifeShares("pending", 20, "jobs-smoke")).some((item) => item.id === ended.share.id),
+      false,
+      "An unfinished afterthought must not enter the pending share queue."
+    );
     assert(acknowledgementMs < 100, `Session end acknowledgement was too slow: ${acknowledgementMs} ms`);
 
     database.close();
@@ -87,6 +118,7 @@ async function main() {
     };
     assert.strictEqual(processed.processed, 1, "Concurrent workers processed the same persisted job twice.");
     const share = await database.getInnerLifeShare(ended.share.id);
+    assert.strictEqual(share.status, "pending");
     assert(share.body.includes("persisted worker"), "Persisted afterthought worker did not update the queued share.");
     const job = await database.getInnerLifeInboxItem(ended.afterthoughtJob.id);
     assert.strictEqual(job.status, "processed");
@@ -150,8 +182,14 @@ async function main() {
     let recoveringGenerationCalls = 0;
     database.innerLifeGenerate = async () => {
       recoveringGenerationCalls += 1;
-      throw new Error("synthetic transient afterthought failure");
+      return "Generated output whose first persistence attempt fails.";
     };
+    const recoveringCompletionFailure = failAfterthoughtCompletion(
+      database,
+      recovering.afterthoughtJob.id,
+      "synthetic transient afterthought persistence failure",
+      1
+    );
     const firstFailure = await database.processPendingSessionAfterthoughts(5);
     assert.strictEqual(firstFailure.processed, 0);
     assert.strictEqual(firstFailure.retrying, 1);
@@ -170,7 +208,10 @@ async function main() {
     assert.strictEqual(persistedRetry.metadata.retryState, "retrying");
     assert.strictEqual(persistedRetry.metadata.retrySeconds, 60);
     assert(persistedRetry.metadata.nextRetryAt, "Retry must persist the next eligible time.");
-    assert.strictEqual(persistedRetry.metadata.lastError, "synthetic transient afterthought failure");
+    assert.strictEqual(
+      persistedRetry.metadata.lastError,
+      "synthetic transient afterthought persistence failure"
+    );
     assert(
       persistedRetry.metadata.template.includes(recoveringSummary),
       "Retry metadata must preserve the original afterthought template."
@@ -185,6 +226,8 @@ async function main() {
       "InnerLife Doctor must expose a retrying afterthought."
     );
 
+    assert.strictEqual(recoveringCompletionFailure.failures, 1);
+    recoveringCompletionFailure.restore();
     database.close();
     database = await initializeProductDatabase(databasePath);
     database.innerLifeGenerate = async () => {
@@ -228,8 +271,13 @@ async function main() {
     let terminalGenerationCalls = 0;
     database.innerLifeGenerate = async () => {
       terminalGenerationCalls += 1;
-      throw new Error("synthetic permanent afterthought failure");
+      return "Generated output whose persistence keeps failing.";
     };
+    const terminalCompletionFailure = failAfterthoughtCompletion(
+      database,
+      terminal.afterthoughtJob.id,
+      "synthetic permanent afterthought persistence failure"
+    );
     for (let attempt = 1; attempt <= SESSION_AFTERTHOUGHT_MAX_ATTEMPTS; attempt += 1) {
       if (attempt > 1) {
         await makeAfterthoughtDue(database, terminal.afterthoughtJob.id);
@@ -262,6 +310,15 @@ async function main() {
       "Concurrent claims must not duplicate permanent-failure model calls."
     );
 
+    await database.exec(`
+      UPDATE innerlife_inbox
+      SET metadata_json = json_set(
+        metadata_json,
+        '$.lastErrorCode', 'SYNTHETIC_TERMINAL_CODE'
+      )
+      WHERE id = ${sqlString(terminal.afterthoughtJob.id)};
+    `);
+
     const terminalJob = await database.getInnerLifeInboxItem(terminal.afterthoughtJob.id);
     assert.strictEqual(terminalJob.status, "failed");
     assert.strictEqual(terminalJob.body, terminalSummary);
@@ -270,7 +327,10 @@ async function main() {
     assert.strictEqual(terminalJob.metadata.retrySeconds, 0);
     assert.strictEqual(terminalJob.metadata.nextRetryAt, null);
     assert(terminalJob.metadata.terminalAt);
-    assert.strictEqual(terminalJob.metadata.lastError, "synthetic permanent afterthought failure");
+    assert.strictEqual(
+      terminalJob.metadata.lastError,
+      "synthetic permanent afterthought persistence failure"
+    );
     assert(
       terminalJob.metadata.template.includes(terminalSummary),
       "Terminal failure must retain the original generation input."
@@ -287,7 +347,10 @@ async function main() {
     assert.strictEqual(terminalDoctor.status, "error");
     assert.strictEqual(terminalDoctor.afterthought.retryingCount, 0);
     assert.strictEqual(terminalDoctor.afterthought.terminalFailureCount, 1);
-    assert.strictEqual(terminalDoctor.afterthought.lastError, "synthetic permanent afterthought failure");
+    assert.strictEqual(
+      terminalDoctor.afterthought.lastError,
+      "synthetic permanent afterthought persistence failure"
+    );
     assert(
       terminalDoctor.issues.some((issue) => issue.code === "afterthought_terminal_failure"),
       "InnerLife Doctor must expose terminal afterthought failures."
@@ -321,6 +384,8 @@ async function main() {
       /not found for this agent/,
       "Afterthought recovery must remain scoped to the owning Agent."
     );
+    assert.strictEqual(terminalCompletionFailure.failures, SESSION_AFTERTHOUGHT_MAX_ATTEMPTS);
+    terminalCompletionFailure.restore();
     const requeued = await database.resolveInnerLifeSessionAfterthoughtFailure(
       terminal.afterthoughtJob.id,
       {
@@ -334,7 +399,12 @@ async function main() {
     assert.strictEqual(requeued.job.metadata.retryState, "pending");
     assert.strictEqual(requeued.job.metadata.attempts, 0);
     assert.strictEqual(requeued.job.metadata.lastTerminalAttempts, SESSION_AFTERTHOUGHT_MAX_ATTEMPTS);
-    assert.strictEqual(requeued.job.metadata.lastTerminalError, "synthetic permanent afterthought failure");
+    assert.strictEqual(
+      requeued.job.metadata.lastTerminalError,
+      "synthetic permanent afterthought persistence failure"
+    );
+    assert.strictEqual(requeued.job.metadata.lastTerminalErrorCode, "SYNTHETIC_TERMINAL_CODE");
+    assert.strictEqual(requeued.job.metadata.lastErrorCode, "");
     assert.strictEqual(requeued.job.metadata.requeueCount, 1);
     const requeuedDoctor = await database.getInnerLifeDoctor("jobs-smoke");
     assert.strictEqual(requeuedDoctor.afterthought.terminalFailureCount, 0);
@@ -367,6 +437,7 @@ async function main() {
             '$.nextRetryAt', NULL,
             '$.lastAttemptAt', '2026-07-31T00:00:00.000Z',
             '$.lastError', 'operator-reviewed terminal failure',
+            '$.lastErrorCode', 'OPERATOR_REVIEWED_CODE',
             '$.terminalAt', '2026-07-31T00:00:00.000Z'
           )
       WHERE id = ${sqlString(acknowledged.afterthoughtJob.id)};
@@ -394,6 +465,11 @@ async function main() {
       acknowledgement.job.metadata.lastTerminalError,
       "operator-reviewed terminal failure"
     );
+    assert.strictEqual(
+      acknowledgement.job.metadata.lastTerminalErrorCode,
+      "OPERATOR_REVIEWED_CODE"
+    );
+    assert.strictEqual(acknowledgement.job.metadata.lastErrorCode, "");
     assert.strictEqual(
       acknowledgement.job.metadata.acknowledgementReason,
       "The source summary was reviewed and no generated share is required."

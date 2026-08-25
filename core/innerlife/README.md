@@ -186,6 +186,15 @@ Useful MCP tools include:
 Marking a share as `used` requires `deliveryEvidence` with a conversation id,
 the actual response excerpt, and the share timestamp. Candidate, pending, or
 discarded rows are not counted as confirmed shares on Home.
+Session afterthought shares remain `drafting` while their persisted generation
+job is unfinished. Drafting rows are excluded from SessionStart share plans,
+pending-share catalogs, and timing checks; successful generation moves them to
+`pending`, while automatic quality rejection or acknowledged terminal failure
+moves them to `discarded`. Empty model output (`template`) is audited as
+`no_model_output` and discarded instead of exposing placeholder text. A model
+failure (`fallback` with an error) leaves the share drafting while the durable
+job retries. Invalid mark transitions return the current share to
+Gateway callers so stale decisions can be reconciled without guessing content.
 - `innerlife_daemon_status`
 - `innerlife_daemon_set`
 - `innerlife_daemon_tick`

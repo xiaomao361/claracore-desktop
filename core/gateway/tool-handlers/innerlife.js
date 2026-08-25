@@ -262,14 +262,26 @@ async function handleInnerLifeTool(name, args, context) {
   }
 
   if (name === "innerlife_mark_share") {
-    return textResult(await innerlife.markShare(
-      core,
-      args.id,
-      args.action,
-      args.reason || "",
-      currentMcpAgentId(args),
-      args.deliveryEvidence || null
-    ));
+    try {
+      return textResult(await innerlife.markShare(
+        core,
+        args.id,
+        args.action,
+        args.reason || "",
+        currentMcpAgentId(args),
+        args.deliveryEvidence || null
+      ));
+    } catch (error) {
+      if (error.code !== "INNERLIFE_SHARE_INVALID_TRANSITION") throw error;
+      return textResult({
+        ok: false,
+        error: {
+          code: error.code,
+          message: error.message
+        },
+        share: error.currentShare
+      });
+    }
   }
 
   if (name === "innerlife_daemon_status") {

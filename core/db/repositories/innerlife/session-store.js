@@ -224,7 +224,7 @@ function createInnerLifeSessionStore(helpers) {
       VALUES (${sqlString(input.thoughtId)}, ${sqlString(eventId)}, ${sqlString(input.template)}, 'unreviewed');
 
       INSERT INTO innerlife_shares (id, agent_id, thought_id, status, body)
-      VALUES (${sqlString(input.shareId)}, ${sqlString(session.agentId)}, ${sqlString(input.thoughtId)}, 'pending', ${sqlString(input.template)});
+      VALUES (${sqlString(input.shareId)}, ${sqlString(session.agentId)}, ${sqlString(input.thoughtId)}, 'drafting', ${sqlString(input.template)});
     `);
     return get(database, session.id);
   }
@@ -318,7 +318,9 @@ function createInnerLifeSessionStore(helpers) {
       completedLeaseToken: leaseToken
     };
     const shareUpdateEnabled = Boolean(share && shareDecision);
-    const nextShareStatus = shareDecision?.create ? (share?.status || "pending") : "discarded";
+    const nextShareStatus = shareDecision?.create
+      ? share?.status === "drafting" ? "pending" : (share?.status || "pending")
+      : "discarded";
     const nextDecisionReason = shareDecision?.create
       ? (share?.decision_reason || "")
       : shareDecision
@@ -353,7 +355,7 @@ function createInnerLifeSessionStore(helpers) {
           decision_reason = ${sqlString(nextDecisionReason)},
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ${sqlString(metadata.shareId)}
-        AND status IN ('pending', 'approved', 'deferred')
+        AND status IN ('drafting', 'pending', 'approved', 'deferred')
         AND ${sqlString(shareUpdateEnabled ? "1" : "0")} = '1'
         AND EXISTS (
           SELECT 1
@@ -403,6 +405,7 @@ function createInnerLifeSessionStore(helpers) {
             nextRetryAt,
             lastAttemptAt: failedAt,
             lastError: input.error,
+            lastErrorCode: input.errorCode || "",
             terminalAt: terminal ? failedAt : null,
             lastLeaseToken: leaseToken,
             leaseToken: null,
@@ -456,6 +459,7 @@ function createInnerLifeSessionStore(helpers) {
               CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END,
               '$.lastTerminalAttempts', COALESCE(json_extract(metadata_json, '$.attempts'), 0),
               '$.lastTerminalError', COALESCE(json_extract(metadata_json, '$.lastError'), ''),
+              '$.lastTerminalErrorCode', COALESCE(json_extract(metadata_json, '$.lastErrorCode'), ''),
               '$.lastTerminalAt', json_extract(metadata_json, '$.terminalAt'),
               '$.attempts', 0,
               '$.retryState', 'pending',
@@ -463,6 +467,7 @@ function createInnerLifeSessionStore(helpers) {
               '$.nextRetryAt', NULL,
               '$.lastAttemptAt', NULL,
               '$.lastError', '',
+              '$.lastErrorCode', '',
               '$.terminalAt', NULL,
               '$.requeuedAt', ${sqlString(resolvedAt)},
               '$.requeueReason', ${sqlString(reason)},
@@ -498,11 +503,13 @@ function createInnerLifeSessionStore(helpers) {
             CASE WHEN json_valid(metadata_json) THEN metadata_json ELSE '{}' END,
             '$.lastTerminalAttempts', COALESCE(json_extract(metadata_json, '$.attempts'), 0),
             '$.lastTerminalError', COALESCE(json_extract(metadata_json, '$.lastError'), ''),
+            '$.lastTerminalErrorCode', COALESCE(json_extract(metadata_json, '$.lastErrorCode'), ''),
             '$.lastTerminalAt', json_extract(metadata_json, '$.terminalAt'),
             '$.retryState', 'acknowledged',
             '$.retrySeconds', 0,
             '$.nextRetryAt', NULL,
             '$.lastError', '',
+            '$.lastErrorCode', '',
             '$.acknowledgedAt', ${sqlString(resolvedAt)},
             '$.acknowledgementReason', ${sqlString(reason)}
           )
@@ -524,7 +531,7 @@ function createInnerLifeSessionStore(helpers) {
             AND status = 'processed'
             AND json_extract(metadata_json, '$.retryState') = 'acknowledged'
         )
-        AND status = 'pending';
+        AND status IN ('drafting', 'pending');
 
       UPDATE innerlife_thoughts
       SET review_status = 'dismissed'

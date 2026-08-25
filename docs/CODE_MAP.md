@@ -134,10 +134,11 @@ Start here:
 1. `core/runtime/paths.js`
 2. `core/config/index.js`
 3. `core/db/database.js`
-4. `app/views/settings.js`
+4. `electron/login-item-settings.js`
+5. `app/views/settings.js`
 
 Use this path for data root resolution, Desktop settings, model settings,
-configuration defaults, and data-path display issues.
+configuration defaults, login-startup behavior, and data-path display issues.
 
 ### Database And Schema
 

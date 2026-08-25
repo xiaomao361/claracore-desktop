@@ -371,6 +371,41 @@ async function main() {
   assert.deepStrictEqual(noShareCalls, ["record", "snapshot"]);
   assert.strictEqual(noShareResult.share, null);
 
+  let draftingCheck = null;
+  const draftingTiming = createInnerLifeShareTimingService(createSharePorts({
+    findAvailableShareId: async () => {
+      throw new Error("An explicit drafting share must not fall through to another candidate.");
+    },
+    getShare: async () => ({
+      id: "share-drafting",
+      agent_id: "codex",
+      status: "drafting",
+      body: "Session afterthought placeholder"
+    }),
+    getShareCheck: async (_database, id) => ({
+      id,
+      decision: draftingCheck.decision,
+      reason: draftingCheck.reason,
+      metadata: draftingCheck.metadata
+    }),
+    recordCheck: async (_database, input) => {
+      draftingCheck = input;
+    }
+  }));
+  const draftingResult = await draftingTiming({}, {
+    agentId: "codex",
+    shareId: "share-drafting",
+    context: "Review the session afterthought."
+  });
+  assert.strictEqual(draftingCheck.decision, "none");
+  assert.strictEqual(
+    draftingCheck.reason,
+    "The requested InnerLife thought is still being generated."
+  );
+  assert.strictEqual(draftingCheck.metadata.requestedShareStatus, "drafting");
+  assert.strictEqual(draftingResult.check.reason, draftingCheck.reason);
+  assert.strictEqual(draftingResult.share, null);
+
   const crossAgentTiming = createInnerLifeShareTimingService(createSharePorts({
     getShare: async () => selectedShare
   }));

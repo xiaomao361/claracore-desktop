@@ -233,34 +233,37 @@ function createInnerLifeSessionLifecycleService(inputPorts = {}) {
         const share = await ports.getShare(database, metadata.shareId);
         let generated = { body: share?.body || template, source: "skipped" };
         let shareDecision = null;
-        if (share && ["pending", "approved", "deferred"].includes(share.status)) {
+        if (share && ["drafting", "pending", "approved", "deferred"].includes(share.status)) {
           generated = await ports.generateAfterthought(database, {
             tier: "light",
             system: IL_SYSTEM.session,
             prompt: template,
             template
           });
+          const noModelOutput = generated?.source === "template";
           if (generated?.error) {
             const generationError = new Error(String(generated.error));
             generationError.code = "INNERLIFE_AFTERTHOUGHT_GENERATION_FAILED";
             throw generationError;
           }
-          const noShareOutput = isNoShareInnerLifeOutput(generated.body);
-          const duplicate = noShareOutput
+          const noShareOutput = !noModelOutput && isNoShareInnerLifeOutput(generated.body);
+          const duplicate = noModelOutput || noShareOutput
             ? null
             : await ports.findSimilarShare(database, job.agentId, generated.body, {
                 excludeId: metadata.shareId
               });
-          shareDecision = noShareOutput
-            ? { create: false, reason: "model_no_share" }
-            : duplicate
-              ? {
-                  create: false,
-                  reason: "similar_share_exists",
-                  duplicateOf: duplicate.id,
-                  similarity: duplicate.similarity
-                }
-              : { create: true, reason: "distinct_shareable_thought" };
+          shareDecision = noModelOutput
+            ? { create: false, reason: "no_model_output" }
+            : noShareOutput
+              ? { create: false, reason: "model_no_share" }
+              : duplicate
+                ? {
+                    create: false,
+                    reason: "similar_share_exists",
+                    duplicateOf: duplicate.id,
+                    similarity: duplicate.similarity
+                  }
+                : { create: true, reason: "distinct_shareable_thought" };
           metadata.shareDecision = shareDecision;
         }
         const completion = await ports.completeAfterthought(database, {
@@ -306,6 +309,7 @@ function createInnerLifeSessionLifecycleService(inputPorts = {}) {
           ...(convergenceError ? { warning: `Convergence failed after persistence: ${convergenceError}` } : {})
         });
       } catch (error) {
+        const errorCode = String(error?.code || "").trim();
         const attempts = Math.max(0, Number.parseInt(String(metadata.attempts || 0), 10) || 0) + 1;
         const terminal = attempts >= SESSION_AFTERTHOUGHT_MAX_ATTEMPTS;
         const failedAt = new Date();
@@ -318,6 +322,7 @@ function createInnerLifeSessionLifecycleService(inputPorts = {}) {
           metadata,
           attempts,
           error: error.message || String(error),
+          ...(errorCode ? { errorCode } : {}),
           failedAt: failedAt.toISOString(),
           nextRetryAt,
           retrySeconds,
@@ -336,6 +341,7 @@ function createInnerLifeSessionLifecycleService(inputPorts = {}) {
           id: job.id,
           ok: false,
           error: error.message || String(error),
+          ...(errorCode ? { errorCode } : {}),
           status: terminal ? "failed" : "retrying",
           attempts,
           retrySeconds,

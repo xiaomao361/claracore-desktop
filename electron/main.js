@@ -12,6 +12,11 @@ const { createSchedulers } = require("./schedulers");
 const { ipcChannel } = require("./ipc-contracts");
 const { registerIpcHandlers } = require("./ipc-handlers");
 const {
+  getLoginItemPreference,
+  setLoginItemPreference,
+  shouldStartHiddenAtLogin
+} = require("./login-item-settings");
+const {
   deferredGatewayProcessSample,
   isResourceWarning,
   systemMemorySnapshot,
@@ -172,20 +177,28 @@ function normalizeUiPreferences(preferences = {}, defaults = {}) {
 
 function getUiPreferences() {
   const settings = readDesktopSettings(app, { fresh: true });
-  return normalizeUiPreferences(settings.uiPreferences || {});
+  return {
+    ...normalizeUiPreferences(settings.uiPreferences || {}),
+    ...getLoginItemPreference(app, process.env.CLARACORE_DESKTOP_TEST_INSTANCE === "1" ? "test" : process.platform)
+  };
 }
 
 async function saveUiPreferences(updates = {}) {
   const nextSave = uiPreferencesSaveQueue.catch(() => {}).then(async () => {
+    const safeUpdates = updates && typeof updates === "object" && !Array.isArray(updates) ? updates : {};
     const settings = readDesktopSettings(app, { fresh: true });
     const nextPreferences = normalizeUiPreferences({
       ...(settings.uiPreferences || {}),
-      ...(updates && typeof updates === "object" && !Array.isArray(updates) ? updates : {})
+      ...safeUpdates
     }, getUiPreferences());
     settings.uiPreferences = nextPreferences;
     await fs.mkdir(path.dirname(desktopSettingsPath(app)), { recursive: true });
     await fs.writeFile(desktopSettingsPath(app), `${JSON.stringify(settings, null, 2)}\n`, "utf8");
-    return nextPreferences;
+    const loginItemPlatform = process.env.CLARACORE_DESKTOP_TEST_INSTANCE === "1" ? "test" : process.platform;
+    const loginItemPreference = Object.prototype.hasOwnProperty.call(safeUpdates, "launchAtLogin")
+      ? setLoginItemPreference(app, safeUpdates.launchAtLogin, loginItemPlatform)
+      : getLoginItemPreference(app, loginItemPlatform);
+    return { ...nextPreferences, ...loginItemPreference };
   });
   uiPreferencesSaveQueue = nextSave.catch(() => {});
   return nextSave;
@@ -806,8 +819,9 @@ function createTray() {
   updateTrayMenu();
 }
 
-function createWindow() {
+function createWindow({ show = true } = {}) {
   mainWindow = new BrowserWindow({
+    show,
     width: 1440,
     height: 900,
     minWidth: 1120,
@@ -911,6 +925,7 @@ if (!isGatewayMode && hasSingleInstanceLock) {
 
   app.whenReady()
     .then(async () => {
+      const startHidden = shouldStartHiddenAtLogin(app, process.platform, { isTestInstance });
       const { database } = await ensureProductCore(app);
       httpAgentGateway = createHttpAgentGateway({
         app,
@@ -927,11 +942,16 @@ if (!isGatewayMode && hasSingleInstanceLock) {
         metadata: {
           version: PRODUCT_VERSION,
           packaged: app.isPackaged,
-          platform: process.platform
+          platform: process.platform,
+          startedHidden: startHidden
         }
       });
-      createWindow();
+      if (startHidden && process.platform === "darwin" && typeof app.setActivationPolicy === "function") {
+        app.setActivationPolicy("accessory");
+      }
+      createWindow({ show: !startHidden });
       createTray();
+      if (startHidden) hideMainWindowToTray();
       schedulers = createSchedulers({
         app,
         ensureProductCore,

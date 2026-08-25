@@ -102,14 +102,83 @@ async function main() {
     throw new Error(`Session [NO_SHARE] decision was not audited: ${JSON.stringify(quietJob.metadata)}`);
   }
 
+  const emptyModelSession = await runtime.startProductInnerLifeSession(app, {
+    agentId: "quality-agent",
+    host: "quality-smoke",
+    externalSessionId: "empty-model-output-session"
+  });
+  const emptyModelSessionEnd = await runtime.endProductInnerLifeSession(
+    app,
+    emptyModelSession.session.id,
+    {
+      agentId: "quality-agent",
+      summary: "The model path should not publish its placeholder when generation returns empty."
+    }
+  );
+  core.database.innerLifeGenerate = async () => "";
+  const emptyModelAfterthought = await core.database.processPendingSessionAfterthoughts(5);
+  const emptyModelShare = await core.database.getInnerLifeShare(emptyModelSessionEnd.share.id);
+  if (emptyModelAfterthought.processed !== 1 || emptyModelShare.status !== "discarded") {
+    throw new Error(`Empty model output was not discarded: ${JSON.stringify({ emptyModelAfterthought, emptyModelShare })}`);
+  }
+  const emptyModelJob = await core.database.getInnerLifeInboxItem(
+    emptyModelSessionEnd.afterthoughtJob.id
+  );
+  if (emptyModelJob.metadata?.shareDecision?.reason !== "no_model_output") {
+    throw new Error(`Empty model output decision was not audited: ${JSON.stringify(emptyModelJob.metadata)}`);
+  }
+
+  const failedModelSession = await runtime.startProductInnerLifeSession(app, {
+    agentId: "quality-agent",
+    host: "quality-smoke",
+    externalSessionId: "failed-model-session"
+  });
+  const failedModelSessionEnd = await runtime.endProductInnerLifeSession(
+    app,
+    failedModelSession.session.id,
+    {
+      agentId: "quality-agent",
+      summary: "A transient model outage must retain this afterthought for retry."
+    }
+  );
+  core.database.innerLifeGenerate = async () => {
+    const error = new Error("ECONNREFUSED");
+    error.code = "ECONNREFUSED";
+    throw error;
+  };
+  const failedModelAfterthought = await core.database.processPendingSessionAfterthoughts(5);
+  const failedModelShare = await core.database.getInnerLifeShare(failedModelSessionEnd.share.id);
+  const failedModelJob = await core.database.getInnerLifeInboxItem(
+    failedModelSessionEnd.afterthoughtJob.id
+  );
+  if (
+    failedModelAfterthought.processed !== 0 ||
+    failedModelAfterthought.retrying !== 1 ||
+    failedModelAfterthought.results[0]?.errorCode !== "INNERLIFE_AFTERTHOUGHT_GENERATION_FAILED" ||
+    failedModelShare.status !== "drafting" ||
+    failedModelJob.status !== "pending" ||
+    failedModelJob.metadata?.retryState !== "retrying" ||
+    failedModelJob.metadata?.lastErrorCode !== "INNERLIFE_AFTERTHOUGHT_GENERATION_FAILED" ||
+    !failedModelJob.metadata?.nextRetryAt
+  ) {
+    throw new Error(`Failed model generation did not remain retryable: ${JSON.stringify({
+      failedModelAfterthought,
+      failedModelShare,
+      failedModelJob
+    })}`);
+  }
+
   const counts = await core.database.getInnerLifeCounts("quality-agent");
   if (
+    counts.drafting_shares_count !== 1 ||
     counts.pending_shares_count !== 2 ||
     counts.pending_inbox_count !== 0 ||
-    counts.processed_inbox_count !== 5 ||
-    counts.thoughts_count !== 6 ||
-    counts.discarded_shares_count !== 1 ||
-    counts.ended_sessions_count !== 2
+    counts.processed_inbox_count !== 6 ||
+    counts.afterthought_retrying_count !== 1 ||
+    !counts.afterthought_next_retry_at ||
+    counts.thoughts_count !== 8 ||
+    counts.discarded_shares_count !== 2 ||
+    counts.ended_sessions_count !== 4
   ) {
     throw new Error(`InnerLife share-quality counts are wrong: ${JSON.stringify(counts)}`);
   }

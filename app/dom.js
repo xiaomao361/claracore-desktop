@@ -167,6 +167,8 @@ window.ClaraCoreDom = {
   settingsLanguage: document.querySelector("#settingsLanguage"),
   settingsTheme: document.querySelector("#settingsTheme"),
   settingsCloseBehavior: document.querySelector("#settingsCloseBehavior"),
+  settingsLaunchAtLogin: document.querySelector("#settingsLaunchAtLogin"),
+  settingsLaunchAtLoginHint: document.querySelector("#settingsLaunchAtLoginHint"),
   settingsCloseBehaviorSummary: document.querySelector("#settingsCloseBehaviorSummary"),
   settingsTrayStatus: document.querySelector("#settingsTrayStatus"),
   settingsThemeSummary: document.querySelector("#settingsThemeSummary"),

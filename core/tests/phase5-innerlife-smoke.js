@@ -85,10 +85,33 @@ async function main() {
   });
   if (sessionEnd.session.status !== "ended") throw new Error("InnerLife session end did not close the session.");
   if (!sessionEnd.share?.body.includes("Session afterthought")) {
-    throw new Error("InnerLife session end did not create a reviewable afterthought share.");
+    throw new Error("InnerLife session end did not create a durable afterthought draft.");
+  }
+  if (sessionEnd.share.status !== "drafting") {
+    throw new Error("InnerLife session afterthought must remain drafting until generation completes.");
   }
   if (sessionEnd.afterthoughtJob?.status !== "pending") {
     throw new Error("InnerLife session end did not persist an afterthought job before returning.");
+  }
+  const draftingCounts = await core.database.getInnerLifeCounts("my-agent");
+  if (draftingCounts.drafting_shares_count !== 1 || draftingCounts.pending_shares_count !== 0) {
+    throw new Error(`InnerLife counts must distinguish drafting from pending shares: ${JSON.stringify(draftingCounts)}`);
+  }
+  const startDuringDraft = await runtime.startProductInnerLifeSession(app, {
+    agentId: "my-agent",
+    userId: "phase5-user",
+    host: "phase5-smoke",
+    externalSessionId: "phase5-session-001"
+  });
+  if (startDuringDraft.share_plan.selected) {
+    throw new Error(`SessionStart exposed a drafting afterthought: ${JSON.stringify(startDuringDraft.share_plan)}`);
+  }
+  const checkDuringDraft = await runtime.checkProductInnerLifeShareTiming(app, {
+    agentId: "my-agent",
+    context: "Check whether the just-ended session has a thought ready to share."
+  });
+  if (checkDuringDraft.share || checkDuringDraft.check?.decision !== "none") {
+    throw new Error(`Share timing exposed a drafting afterthought: ${JSON.stringify(checkDuringDraft)}`);
   }
   const inboxItem = await runtime.submitProductInnerLifeInbox(app, {
     agentId: "my-agent",
@@ -111,15 +134,40 @@ async function main() {
   if (!firstRun.share.body.includes("Inbox material should be consumed")) {
     throw new Error("InnerLife share did not include pending inbox context.");
   }
-  if (firstRun.snapshot.counts.pending_shares_count !== 2) {
-    throw new Error("InnerLife pending share count should include session afterthought and process-once share.");
+  if (firstRun.snapshot.counts.pending_shares_count !== 1) {
+    throw new Error("InnerLife pending share count must exclude the drafting session afterthought.");
   }
   if (firstRun.snapshot.counts.pending_inbox_count !== 0 || firstRun.snapshot.counts.processed_inbox_count !== 1) {
     throw new Error(`InnerLife inbox counts are wrong after process once: ${JSON.stringify(firstRun.snapshot.counts)}`);
   }
+  const generatedAfterthought = "Generated afterthought that is complete and safe to review.";
+  const originalInnerLifeGenerate = core.database.innerLifeGenerate;
+  core.database.innerLifeGenerate = async () => generatedAfterthought;
   const processedAfterthoughts = await core.database.processPendingSessionAfterthoughts(5);
+  core.database.innerLifeGenerate = originalInnerLifeGenerate;
   if (processedAfterthoughts.processed !== 1 || processedAfterthoughts.results[0]?.id !== sessionEnd.afterthoughtJob.id) {
     throw new Error(`InnerLife afterthought worker did not process the persisted job: ${JSON.stringify(processedAfterthoughts)}`);
+  }
+  const completedAfterthought = await core.database.getInnerLifeShare(sessionEnd.share.id);
+  if (completedAfterthought.status !== "pending" || completedAfterthought.body !== generatedAfterthought) {
+    throw new Error(`Completed afterthought did not enter the pending queue with generated content: ${JSON.stringify(completedAfterthought)}`);
+  }
+  const completedCounts = await core.database.getInnerLifeCounts("my-agent");
+  if (completedCounts.drafting_shares_count !== 0 || completedCounts.pending_shares_count !== 2) {
+    throw new Error(`Completed afterthought counts are wrong: ${JSON.stringify(completedCounts)}`);
+  }
+  const startAfterGeneration = await runtime.startProductInnerLifeSession(app, {
+    agentId: "my-agent",
+    userId: "phase5-user",
+    host: "phase5-smoke",
+    externalSessionId: "phase5-session-001"
+  });
+  if (
+    !startAfterGeneration.share_plan.selected ||
+    startAfterGeneration.share_plan.share?.id !== sessionEnd.share.id ||
+    startAfterGeneration.share_plan.share?.preview !== generatedAfterthought
+  ) {
+    throw new Error(`SessionStart did not expose the completed afterthought: ${JSON.stringify(startAfterGeneration.share_plan)}`);
   }
 
   const pendingShareCheck = await runtime.checkProductInnerLifeShareTiming(app, {
@@ -367,7 +415,7 @@ async function main() {
     row.processed_inbox_count !== 5 ||
     row.share_actions_count !== 3 ||
     row.digest_runs_count !== 1 ||
-    row.share_checks_count !== 3 ||
+    row.share_checks_count !== 4 ||
     row.daemon_tick_count !== 3 ||
     row.daemon_status !== "paused"
   ) {
@@ -395,6 +443,12 @@ async function main() {
     agentId: "other-agent",
     summary: "Other agent data must not leak into my-agent status or actions."
   });
+  database.innerLifeGenerate = async () => "Generated other-agent afterthought for ownership checks.";
+  const otherAfterthoughts = await database.processPendingSessionAfterthoughts(5);
+  database.innerLifeGenerate = originalInnerLifeGenerate;
+  if (otherAfterthoughts.processed !== 1) {
+    throw new Error(`Other-agent afterthought did not complete: ${JSON.stringify(otherAfterthoughts)}`);
+  }
   const scopedSnapshot = await database.getInnerLifeSnapshotLite("my-agent");
   const globalSnapshot = await database.getInnerLifeSnapshotLite("all");
   if (scopedSnapshot.counts.pending_shares_count !== 0 || globalSnapshot.counts.pending_shares_count !== 1) {

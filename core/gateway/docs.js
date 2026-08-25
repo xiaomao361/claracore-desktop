@@ -4,8 +4,8 @@ const { BUILD_FLAVOR, HAS_BUILT_IN_EMBEDDING } = require("../build-flavor");
 // version bump must explicitly confirm that the Agent Guide still describes
 // the shipped product; context-budget-smoke enforces parity.
 const DOCS_RELEASE = Object.freeze({
-  version: "0.6.10",
-  updatedAt: "2026-08-13"
+  version: "0.6.12",
+  updatedAt: "2026-08-25"
 });
 
 const DOCS_SECTIONS = Object.freeze([
@@ -277,12 +277,13 @@ function innerLifeSection() {
     "",
     "- innerlife_session_start at the beginning of a real work session; it returns the session id, a compact share_plan, and a Shared Line resume packet.",
     "- innerlife_session_end with a structured summary of the actual conversation. Do not invent an afterthought; InnerLife decides whether one exists.",
+    "- Session afterthoughts stay drafting and cannot enter share_plan, pending shares, or share checks until generation completes. Empty model output is discarded as no_model_output; model failures stay drafting while the durable job retries. Never treat a session_end placeholder as shareable content.",
     "- innerlife_status returns operational state only: counts, daemon, doctor, and whether work is waiting. profileEnabled is profile participation across all InnerLife profile tools; loopEnabled is daemon scheduling. Pass detail=true for the full snapshot.",
     "- In Gateway trace request detail, truncated means one text field was shortened, previewOnly means the whole request was replaced by a bounded preview, and serializationFailed means JSON conversion failed.",
     "- innerlife_pending_shares returns three bounded previews. General catalogs default to 10 rows and accept an explicit page up to 50; expand one object or one useful page instead of treating the ceiling as a target.",
     "- innerlife_share_check before surfacing a waiting share. It returns one complete share plus compact timing and operational evidence, not a repeated pending catalog. Pass real conversation context, not keywords. Topic overlap is supporting evidence rather than a hard gate; review the returned thought against the conversational register. Use at most one share per turn.",
     "- A waiting thought does not have to be about the current topic. The gate is register, not relevance: an off-topic engineering thought during engineering work is fine, the same thought during an intimate conversation is not. Automatic context never delivers shares for exactly this reason — only the model can read register.",
-    "- innerlife_mark_share reports the outcome. action=used requires deliveryEvidence with conversationId, a responseExcerpt of at least 12 characters taken from what you actually said, and sharedAt. deferred and discarded need no evidence.",
+    "- innerlife_mark_share reports the outcome. action=used requires deliveryEvidence with conversationId, a responseExcerpt of at least 12 characters taken from what you actually said, and sharedAt. deferred and discarded need no evidence. An invalid transition returns the current share body and status for immediate reconciliation.",
     "- Reading candidates never marks delivery. Pending content stays pending until an explicit action.",
     "- innerlife_submit_inbox, innerlife_submit_fact, and innerlife_submit_continuity are for material to digest later, not immediate factual recall.",
     "- Shared Line context is optional. Pass lineId when one line matters; when several are active and lineId is omitted, briefing, digest, daemon tick, and share checks continue with sharedLineContext.status=ambiguous.",

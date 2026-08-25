@@ -204,6 +204,13 @@ async function main() {
         attempts: 0
       }
     }],
+    getShare: async (_database, id) => ({
+      id,
+      agent_id: "codex",
+      status: "drafting",
+      body: "Session afterthought template",
+      decision_reason: ""
+    }),
     completeAfterthought: async (_database, input) => afterthoughtTransitions.push(input),
     converge: async (_database, input) => {
       convergenceInputs.push(input);
@@ -213,8 +220,105 @@ async function main() {
   const processed = await afterthoughtWorker.processPendingSessionAfterthoughts({}, 5);
   assert.strictEqual(processed.processed, 1);
   assert.strictEqual(processed.results[0].converged, true);
+  assert.strictEqual(afterthoughtTransitions[0].share.status, "drafting");
   assert.strictEqual(afterthoughtTransitions[0].shareDecision.reason, "distinct_shareable_thought");
   assert.strictEqual(convergenceInputs[0].sourceThoughtId, "thought-1");
+
+  const noModelTransitions = [];
+  let noModelConvergenceCalls = 0;
+  const noModelWorker = createInnerLifeSessionLifecycleService(createPorts({
+    claimAfterthoughts: async () => [{
+      id: "job-template",
+      agentId: "codex",
+      body: "Session summary",
+      metadata: {
+        thoughtId: "thought-template",
+        shareId: "share-template",
+        template: "Session afterthought template",
+        attempts: 0
+      }
+    }],
+    generateAfterthought: async () => ({
+      body: "Session afterthought template",
+      source: "template"
+    }),
+    getShare: async (_database, id) => ({
+      id,
+      agent_id: "codex",
+      status: "drafting",
+      body: "Session afterthought template",
+      decision_reason: ""
+    }),
+    completeAfterthought: async (_database, input) => noModelTransitions.push(input),
+    converge: async () => {
+      noModelConvergenceCalls += 1;
+      return { converged: true };
+    }
+  }));
+  const noModelResult = await noModelWorker.processPendingSessionAfterthoughts({}, 5);
+  assert.strictEqual(noModelResult.processed, 1);
+  assert.strictEqual(noModelResult.retrying, 0);
+  assert.strictEqual(noModelTransitions[0].shareDecision.create, false);
+  assert.strictEqual(noModelTransitions[0].shareDecision.reason, "no_model_output");
+  assert.strictEqual(noModelConvergenceCalls, 0);
+
+  let fallbackRetryInput = null;
+  let fallbackCompletionCalls = 0;
+  let fallbackConvergenceCalls = 0;
+  const fallbackWorker = createInnerLifeSessionLifecycleService(createPorts({
+    claimAfterthoughts: async () => [{
+      id: "job-fallback",
+      agentId: "codex",
+      body: "Session summary",
+      metadata: {
+        thoughtId: "thought-fallback",
+        shareId: "share-fallback",
+        template: "Session afterthought template",
+        attempts: 0
+      }
+    }],
+    generateAfterthought: async () => ({
+      body: "Session afterthought template\n\n[InnerLife model fallback: ECONNREFUSED]",
+      source: "fallback",
+      error: "ECONNREFUSED"
+    }),
+    getShare: async (_database, id) => ({
+      id,
+      agent_id: "codex",
+      status: "drafting",
+      body: "Session afterthought template",
+      decision_reason: ""
+    }),
+    completeAfterthought: async () => {
+      fallbackCompletionCalls += 1;
+    },
+    converge: async () => {
+      fallbackConvergenceCalls += 1;
+      return { converged: true };
+    },
+    retryAfterthought: async (_database, input) => {
+      fallbackRetryInput = input;
+    }
+  }));
+  const fallbackResult = await fallbackWorker.processPendingSessionAfterthoughts({}, 5);
+  assert.strictEqual(fallbackResult.processed, 0);
+  assert.strictEqual(fallbackResult.retrying, 1);
+  assert.strictEqual(fallbackResult.results[0].status, "retrying");
+  assert.strictEqual(fallbackResult.results[0].error, "ECONNREFUSED");
+  assert.strictEqual(
+    fallbackResult.results[0].errorCode,
+    "INNERLIFE_AFTERTHOUGHT_GENERATION_FAILED"
+  );
+  assert.strictEqual(fallbackRetryInput.error, "ECONNREFUSED");
+  assert.strictEqual(
+    fallbackRetryInput.errorCode,
+    "INNERLIFE_AFTERTHOUGHT_GENERATION_FAILED"
+  );
+  assert.strictEqual(fallbackRetryInput.attempts, 1);
+  assert.strictEqual(fallbackRetryInput.terminal, false);
+  assert(fallbackRetryInput.nextRetryAt);
+  assert.strictEqual(fallbackCompletionCalls, 0);
+  assert.strictEqual(fallbackConvergenceCalls, 0);
 
   let convergenceWarningCompleted = 0;
   let convergenceWarningRetried = 0;

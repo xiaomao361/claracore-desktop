@@ -509,8 +509,8 @@ async function main() {
         summary: structuredSummary
       })
     );
-    if (ended.session.status !== "ended" || ended.share?.status !== "pending" || !ended.share?.body) {
-      throw new Error("Gateway innerlife_session_end did not create a reviewable afterthought.");
+    if (ended.session.status !== "ended" || ended.share?.status !== "drafting" || !ended.share?.body) {
+      throw new Error("Gateway innerlife_session_end did not create a durable drafting afterthought.");
     }
     const expectedStructuredSummary = JSON.stringify(structuredSummary, null, 2);
     if (ended.session.summary !== expectedStructuredSummary || ended.session.summary.includes("[object Object]")) {
@@ -641,6 +641,25 @@ async function main() {
     ) {
       throw new Error("Gateway innerlife_session_end did not preserve structured summary text across session, inbox, and event rows.");
     }
+    await database.exec(`
+      UPDATE innerlife_shares
+      SET status = 'pending',
+          body = 'Generated Gateway afterthought ready for sharing review.',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id IN ('${ended.share.id}', '${aliasEnded.share.id}')
+        AND status = 'drafting';
+
+      UPDATE innerlife_inbox
+      SET status = 'processed',
+          processed_at = CURRENT_TIMESTAMP,
+          metadata_json = json_set(metadata_json, '$.retryState', 'succeeded')
+      WHERE source = 'session_end_afterthought'
+        AND json_extract(metadata_json, '$.shareId') IN ('${ended.share.id}', '${aliasEnded.share.id}');
+    `);
+    const completedAfterthought = await database.getInnerLifeShare(ended.share.id);
+    if (completedAfterthought.status !== "pending" || completedAfterthought.body.includes("Session afterthought")) {
+      throw new Error(`Gateway afterthought did not become shareable with generated content: ${JSON.stringify(completedAfterthought)}`);
+    }
     await database.ensureInnerLifeProfile("retention-agent");
     for (let index = 0; index < 205; index += 1) {
       await database.exec(`
@@ -739,6 +758,26 @@ async function main() {
     );
     if (shareMark.share.status !== "discarded") {
       throw new Error("Gateway innerlife_mark_share did not update share status.");
+    }
+    const rejectedRemark = parseTextResult(
+      await client.callTool("innerlife_mark_share", {
+        id: ended.share.id,
+        action: "used",
+        reason: "Gateway contract illegal transition",
+        deliveryEvidence: {
+          conversationId: "phase4-conversation",
+          responseExcerpt: "The generated Gateway afterthought was included in this response.",
+          sharedAt: "2026-08-25T06:00:00.000Z"
+        }
+      })
+    );
+    if (
+      rejectedRemark.ok !== false ||
+      rejectedRemark.error?.code !== "INNERLIFE_SHARE_INVALID_TRANSITION" ||
+      rejectedRemark.share?.status !== "discarded" ||
+      rejectedRemark.share?.body !== completedAfterthought.body
+    ) {
+      throw new Error(`Gateway illegal share transition did not return current content: ${JSON.stringify(rejectedRemark)}`);
     }
 
     console.log(

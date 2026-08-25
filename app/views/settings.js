@@ -15,7 +15,8 @@ function createClaraCoreSettingsView(context) {
     innerLifePollField, innerLifePollSeconds, innerLifeApiKeyField, innerLifeApiKey,
     innerLifeConnectionRow,
     innerLifeApiKeySummary, innerLifeModelStatus, memoriaCapabilityProvider, innerLifeCapabilityProvider,
-    settingsLanguage, settingsTheme, settingsCloseBehavior, settingsCloseBehaviorSummary, settingsTrayStatus,
+    settingsLanguage, settingsTheme, settingsCloseBehavior, settingsLaunchAtLogin, settingsLaunchAtLoginHint,
+    settingsCloseBehaviorSummary, settingsTrayStatus,
     settingsThemeSummary, settingsDataStatus, settingsDataRoot, settingsPathSummary, settingsPathDetails,
     settingsDataRootOverride, relaunchForDataRoot,
     settingsAgentGatewayStatus, settingsAgentGatewayPort, settingsAgentGatewayToken, settingsAgentGatewayEndpoint, settingsAgentGatewayTokenFile,
@@ -350,6 +351,15 @@ function renderAppearanceSettings() {
   setInputValue(settingsLanguage, preferences.language);
   setInputValue(settingsTheme, preferences.theme);
   setInputValue(settingsCloseBehavior, preferences.closeBehavior);
+  if (settingsLaunchAtLogin) {
+    settingsLaunchAtLogin.checked = Boolean(preferences.launchAtLogin);
+    settingsLaunchAtLogin.disabled = !preferences.launchAtLoginAvailable;
+  }
+  if (settingsLaunchAtLoginHint) {
+    settingsLaunchAtLoginHint.textContent = preferences.launchAtLoginAvailable
+      ? t("settings.launchAtLoginHint")
+      : t("settings.launchAtLoginUnavailable");
+  }
   if (settingsCloseBehaviorSummary) {
     settingsCloseBehaviorSummary.textContent =
       preferences.closeBehavior === "quit" ? t("settings.closeQuit") : t("settings.closeHide");
@@ -414,7 +424,8 @@ function collectAppearanceSettingsForm() {
   return {
     language: settingsLanguage.value,
     theme: settingsTheme.value,
-    closeBehavior: settingsCloseBehavior.value
+    closeBehavior: settingsCloseBehavior.value,
+    launchAtLogin: Boolean(settingsLaunchAtLogin?.checked)
   };
 }
 
