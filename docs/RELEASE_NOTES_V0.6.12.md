@@ -2,9 +2,31 @@
 
 Date: 2026-08-26
 
-Status: release candidate. Local source and macOS Apple Silicon Lite checks
-have passed. Signed/notarized release packaging, Windows builds, publication,
-and public-download verification are not complete.
+Status: public stable release. The complete macOS Apple Silicon and Windows x64
+Full/Lite matrix has passed source, package, signing, notarization, and remote
+asset verification.
+
+## Release Assets
+
+The public release is complete only when all six files are present:
+
+- `ClaraCore-Desktop-0.6.12-arm64.dmg` — macOS Full, Developer ID signed,
+  Apple-notarized, and stapled
+- `ClaraCore-Desktop-0.6.12-lite-arm64.dmg` — macOS Lite, Developer ID signed,
+  Apple-notarized, and stapled
+- `ClaraCore-Desktop-0.6.12-x64-Setup.exe` — Windows Full
+- `ClaraCore-Desktop-0.6.12-lite-x64-Setup.exe` — Windows Lite
+- `SHA256SUMS-macos.txt`
+- `SHA256SUMS-windows.txt`
+
+Published artifact evidence:
+
+| Asset | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `ClaraCore-Desktop-0.6.12-arm64.dmg` | 207,780,290 | `890b60ff210549ebafde86a70ccc32259f2ce34a609622696231919f7e861977` |
+| `ClaraCore-Desktop-0.6.12-lite-arm64.dmg` | 126,761,555 | `0c29a6d87b0f2b482b40420276036e68f92e3e682f8b16072d61565ad82a7a53` |
+| `ClaraCore-Desktop-0.6.12-x64-Setup.exe` | 178,751,444 | `711d401c2902e53b28adf1f13fa58c3bf5c7635fec25aaaa2ddfb635942136f1` |
+| `ClaraCore-Desktop-0.6.12-lite-x64-Setup.exe` | 108,739,615 | `f6a79b4415888c719ba8d69b66063f7468a1da942edaaa6fc6a582584d26cb9b` |
 
 ## Shared Line Read Correctness
 
@@ -55,7 +77,23 @@ not modify system login items.
   and reasons, illegal-transition reconciliation, and legacy-data upgrade.
 - Shared Line UI coverage now verifies that an unrelated InnerLife refresh
   preserves hydrated Agent context and archived-line catalogs.
-- The local macOS Apple Silicon Lite DMG passed package-structure, disk-image,
-  and packaged-Gateway checks; it remains an ad-hoc, unnotarized test artifact.
-- Installed macOS and Windows login-startup acceptance remains required before
-  this version can be described as a public release.
+- The macOS Full/Lite Apps and DMGs are Developer ID signed, Apple-notarized,
+  stapled, Gatekeeper accepted, and DMG-verified. Apple accepted Full App/DMG
+  submissions `6a063b16-3ff8-4a6a-ad56-5f37b0ee3889` and
+  `861a172d-8a64-4be4-8b6f-a47d16247233`, plus Lite App/DMG submissions
+  `991b2790-802e-487d-b5cb-4d4dbabdac5c` and
+  `e6c69efc-b1f2-4dc8-a9a7-75e93812fa03`.
+- The macOS Full package generated a real 512-dimensional built-in embedding;
+  Full/Lite package boundaries, packaged settings, update UI, and both
+  isolated packaged Gateway workflows passed.
+- Windows workflow
+  [`32946450594`](https://github.com/xiaomao361/claracore-desktop/actions/runs/32946450594)
+  passed source checks, both installer builds, a real packaged Full embedding,
+  Full/Lite package boundaries, LF checksum generation, and draft-asset upload.
+- All six GitHub Release assets were downloaded again. Both checksum manifests,
+  downloaded sizes and hashes, macOS DMG integrity, stapled tickets, and
+  Gatekeeper assessments matched the published asset metadata.
+- Live macOS installed-app acceptance confirmed direct launch, quiet login
+  startup, and Shared Line Agent context/archive visibility. Windows installers
+  remain unsigned; CI package validation passed, while Windows real-device
+  installation acceptance remains a separate unverified layer.

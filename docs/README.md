@@ -31,11 +31,12 @@ instructions.
 
 ## Build And Release
 
-- [v0.6.12 Release Notes](RELEASE_NOTES_V0.6.12.md): current development
-  checkpoint for InnerLife share integrity and installed-app login startup.
+- [v0.6.12 Release Notes](RELEASE_NOTES_V0.6.12.md): current macOS Apple
+  Silicon and Windows x64 Full/Lite release, including the Shared Line refresh
+  fix, InnerLife share integrity, and installed-app login startup.
 - [v0.6.11 Release Notes](RELEASE_NOTES_V0.6.11.md): previous unpublished
   login-startup development checkpoint.
-- [v0.6.10 Release Notes](RELEASE_NOTES_V0.6.10.md): current macOS Apple
+- [v0.6.10 Release Notes](RELEASE_NOTES_V0.6.10.md): previous macOS Apple
   Silicon and Windows x64 Full/Lite release for minimum-sufficient context
   delivery.
 - [macOS Packaging](mac-packaging.md): current Full/Lite packaging commands and

@@ -5,19 +5,20 @@
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
 - Current development version: `0.6.12`.
-- Current public release: `0.6.10`.
-- Tag `v0.6.10` is the current stable GitHub Release.
+- Current public release: `0.6.12`.
+- Tag `v0.6.12` is the current stable GitHub Release.
 
-`0.6.12` is the current development checkpoint. It keeps session afterthoughts
-out of the shareable queue until generated content is complete, preserves
-retry and terminal-failure audit behavior, and includes the installed-app-only
-login-startup preference from the previous checkpoint. See
+`0.6.12` is the current public release. It preserves hydrated Shared Line
+catalogs across unrelated scoped refreshes, keeps session afterthoughts out of
+the shareable queue until generated content is complete, preserves retry and
+terminal-failure audit behavior, and includes the installed-app-only
+login-startup preference. See
 [v0.6.12 Release Notes](RELEASE_NOTES_V0.6.12.md).
 
 `0.6.11` was an unpublished login-startup development checkpoint. See
 [v0.6.11 Release Notes](RELEASE_NOTES_V0.6.11.md).
 
-`0.6.10` remains the current public release. It makes context delivery
+`0.6.10` was the previous public release. It makes context delivery
 minimum-sufficient by default, adds server-enforced catalog projections and
 one-object expansion paths, light write acknowledgements, bounded InnerLife
 and trace reads, and a final Gateway response ceiling. It ships Developer ID
@@ -81,15 +82,13 @@ through to the daily-use Application Support directory.
 - Packaging and deployment are separate from a local code checkpoint.
 
 Current packaging commands and artifact checks live in
-[macOS Packaging](mac-packaging.md). Development-checkpoint details live in
-[v0.6.12 Release Notes](RELEASE_NOTES_V0.6.12.md); current public-release
-details remain in [v0.6.10 Release Notes](RELEASE_NOTES_V0.6.10.md).
+[macOS Packaging](mac-packaging.md). Current public-release details live in
+[v0.6.12 Release Notes](RELEASE_NOTES_V0.6.12.md).
 
 ## Current Release
 
-`0.6.12` is the current source checkpoint on `main`; it is not tagged or
-published. `0.6.10` remains the public release, tagged `v0.6.10`.
-Its macOS Apple Silicon Full/Lite DMGs are Developer ID signed,
+`0.6.12` is the current source checkpoint and public release, tagged
+`v0.6.12`. Its macOS Apple Silicon Full/Lite DMGs are Developer ID signed,
 Apple-notarized, stapled, and Gatekeeper accepted. Its Windows x64 Full/Lite
 installers are built and package-verified on `windows-latest`. All four assets
 are published with portable per-platform SHA-256 manifests.
@@ -105,6 +104,9 @@ are published with portable per-platform SHA-256 manifests.
   for installed macOS and Windows builds.
 - 2026-08-25: Session afterthoughts stay drafting until generated content is
   ready, and legacy unfinished placeholders are removed from share candidates.
+- 2026-08-26: Unrelated scoped refreshes preserve hydrated Shared Line Agent
+  context and archived-line catalogs; the Full/Lite matrix is published as
+  `v0.6.12`.
 - See [v0.6.12 Release Notes](RELEASE_NOTES_V0.6.12.md).
 - See [v0.6.11 Release Notes](RELEASE_NOTES_V0.6.11.md).
 - See [v0.6.10 Release Notes](RELEASE_NOTES_V0.6.10.md).
@@ -112,7 +114,8 @@ are published with portable per-platform SHA-256 manifests.
 
 ### Previous checkpoints
 
-- `v0.6.9` was the previous signed, notarized Full/Lite public release.
+- `v0.6.10` was the previous signed, notarized Full/Lite public release.
+- `v0.6.9` was an earlier signed, notarized Full/Lite public release.
 - `0.6.8` was a local design checkpoint and was never published.
 - `v0.6.7` was the newest signed, notarized public release before `v0.6.9`.
 - `0.6.6` was an unpublished source and local-package checkpoint for the
