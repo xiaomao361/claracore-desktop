@@ -359,6 +359,21 @@ async function main() {
     }
     await page.click("#sharedLineDialogClose");
 
+    await page.evaluate(() => refreshForRuntimeScopes(["snapshot", "innerlife"]));
+    const preservedAfterUnrelatedRefresh = await page.evaluate(() => ({
+      roleContext: document.querySelector("#sharedLineAgentStatePanel")?.textContent || "",
+      archive: document.querySelector("#sharedLineArchiveList")?.textContent || "",
+      hydratedViews: window.ClaraCoreTestHooks?.runtimeRefreshState?.().hydratedViews || []
+    }));
+    if (
+      !preservedAfterUnrelatedRefresh.roleContext.includes("CODEX ROLE STYLE")
+      || !preservedAfterUnrelatedRefresh.roleContext.includes("CLARA ROLE STYLE")
+      || !preservedAfterUnrelatedRefresh.archive.includes("Already traveled line")
+      || !preservedAfterUnrelatedRefresh.hydratedViews.includes("shared-line")
+    ) {
+      throw new Error(`Unrelated runtime refresh discarded hydrated Shared Line catalogs: ${JSON.stringify(preservedAfterUnrelatedRefresh)}`);
+    }
+
     await page.evaluate(() => refresh());
     await page.waitForFunction(
       () => document.querySelector("#sharedLineSummary")?.textContent.includes("PARALLEL NOW"),
