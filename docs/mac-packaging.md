@@ -2,8 +2,8 @@
 
 ## Current Release Boundary
 
-The current development checkpoint is `0.6.12`; the current public stable
-release is `0.6.10`, tagged `v0.6.10`. Treat
+The current development checkpoint and public stable release are `0.6.12`,
+tagged `v0.6.12`. Treat
 [Version Branching](VERSION_BRANCHING.md) and the versioned release notes as
 the release truth.
 
@@ -51,9 +51,9 @@ Current App output and future DMG output:
 
 ```text
 dist/mac-arm64/ClaraCore Desktop.app
-dist/ClaraCore-Desktop-0.6.10-arm64.dmg
+dist/ClaraCore-Desktop-0.6.12-arm64.dmg
 dist-lite/mac-arm64/ClaraCore Desktop.app
-dist-lite/ClaraCore-Desktop-0.6.10-lite-arm64.dmg
+dist-lite/ClaraCore-Desktop-0.6.12-lite-arm64.dmg
 ```
 
 Only artifacts built with the signed release commands and accepted by the
@@ -105,7 +105,7 @@ Run `npm run test:update` for mocked release and Settings UI coverage before
 performing a live published-Release check.
 
 Earlier release assets and checksums remain documented in their versioned
-release notes. The `v0.6.10` release publishes macOS Apple Silicon and Windows
+release notes. The `v0.6.12` release publishes macOS Apple Silicon and Windows
 x64 Full/Lite artifacts plus portable per-platform checksum files.
 
 ## Gateway In Packaged Mode
@@ -149,7 +149,25 @@ node core/gateway/mcp-server.js
 ## Validation Status
 
 Current released-artifact evidence is recorded in
-[v0.6.10 Release Notes](RELEASE_NOTES_V0.6.10.md).
+[v0.6.12 Release Notes](RELEASE_NOTES_V0.6.12.md).
+
+### `0.6.12` Full/Lite release checkpoint
+
+Validated locally, in Windows CI, and from freshly downloaded public GitHub
+assets:
+
+- source, lockfile, bundle, Agent Guide, and packaged Gateway versions are
+  `0.6.12`;
+- source, Gateway, Memory Controller, Lite, update, responsive-layout, and UI
+  checks pass;
+- macOS Full built-in embedding, Full/Lite package boundaries, packaged
+  settings, update UI, and both isolated packaged Gateway smokes pass;
+- both Apps and DMGs are Developer ID signed, Apple-notarized, stapled,
+  Gatekeeper accepted, and DMG-verified;
+- Windows workflow `32946450594` validates both installers, a real packaged
+  Full embedding, package boundaries, and portable LF checksums;
+- all six public release assets were downloaded again and their sizes and
+  SHA-256 hashes matched the published manifests and GitHub metadata.
 
 ### `0.6.10` Full/Lite release checkpoint
 
