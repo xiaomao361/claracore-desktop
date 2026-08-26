@@ -1,10 +1,20 @@
 # ClaraCore Desktop v0.6.12 Release Notes
 
-Date: 2026-08-25
+Date: 2026-08-26
 
-Status: development checkpoint. A local macOS Apple Silicon Lite package has
-been verified. Signed/notarized release packaging, Windows builds, publication,
-and live installed-app acceptance are not complete.
+Status: release candidate. Local source and macOS Apple Silicon Lite checks
+have passed. Signed/notarized release packaging, Windows builds, publication,
+and public-download verification are not complete.
+
+## Shared Line Read Correctness
+
+- Background refreshes for InnerLife and other unrelated modules no longer
+  replace a fully hydrated Shared Line view with its lightweight overview.
+- Agent context and archived-line catalogs remain visible after those scoped
+  refreshes instead of incorrectly appearing empty while the underlying data
+  is still present.
+- The selected Shared Line and its independently scoped Agent context remain
+  separate: selecting another line does not erase or retarget the catalog.
 
 ## InnerLife Share Integrity
 
@@ -43,6 +53,8 @@ not modify system login items.
   cover drafting exclusion, generated-content visibility, retries, terminal
   acknowledgement, empty model output, failed-model retries, drafting counts
   and reasons, illegal-transition reconciliation, and legacy-data upgrade.
+- Shared Line UI coverage now verifies that an unrelated InnerLife refresh
+  preserves hydrated Agent context and archived-line catalogs.
 - The local macOS Apple Silicon Lite DMG passed package-structure, disk-image,
   and packaged-Gateway checks; it remains an ad-hoc, unnotarized test artifact.
 - Installed macOS and Windows login-startup acceptance remains required before

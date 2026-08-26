@@ -193,6 +193,7 @@ const localOnlyHydrationViews = new Set(["memory", "agent-setup"]);
 const viewOwnedSnapshotFields = {
   memory: ["memories", "memoryGraph", "restrictedMemoryGraph", "memoryController"],
   home: ["agentActivitySummary"],
+  "shared-line": ["sharedLine"],
   innerlife: ["innerLife"],
   trace: ["trace", "memoryController"],
   logs: ["decayAudit", "runtimeEvents"],
