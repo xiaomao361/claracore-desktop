@@ -96,6 +96,7 @@ async function handleSystemTool(name, args, context) {
   if (name === "gateway_auto_context") {
     const input = args || {};
     const prompt = String(input.prompt || "").trim();
+    const turnKind = String(input.turnKind || "user").trim();
     const hasCandidates = Array.isArray(input.memoryCandidates) || Array.isArray(input.shareCandidates);
     // Never merge the two paths silently. A precedence rule would just hide the
     // ambiguity; refusing makes the caller say which contract it meant.
@@ -110,6 +111,24 @@ async function handleSystemTool(name, args, context) {
       return textResult(arbitrateAutomaticContext({ ...input, agentId }));
     }
 
+    // Persistent hosts may represent an automatic goal continuation as a user-
+    // role item even though no person supplied a new prompt. Re-running the
+    // Memory Controller for that transport event cannot add new user context;
+    // it only repeats the same lookup and ledger work. The caller must label
+    // this case explicitly so ordinary user turns never enter this fast path.
+    if (turnKind === "goal_continuation") {
+      return textResult({
+        ...arbitrateAutomaticContext({
+          agentId,
+          domainStatus: { memory: "skipped", innerlife: "not_collected" }
+        }),
+        turnKind,
+        collectionSkipped: true,
+        reason: "non_user_goal_continuation",
+        latencyMs: 0
+      });
+    }
+
     const collected = await turnContextService.collect(
       { ...core, handlerContext: context },
       { prompt, agentId }
@@ -121,6 +140,8 @@ async function handleSystemTool(name, args, context) {
         shareCandidates: collected.shareCandidates,
         domainStatus: collected.domainStatus
       }),
+      turnKind,
+      collectionSkipped: false,
       latencyMs: collected.latencyMs
     });
   }

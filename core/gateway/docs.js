@@ -299,7 +299,7 @@ function diagnosticsSection({ launch, paths }) {
     "- claracore_status for product health, this authenticated connection, and secret-safe configuration. Inline API keys are reported only as inline; env references remain visible.",
     "- gateway_trace_list returns bounded recent summaries; gateway_trace_get opens one request record. The operator can see these traces.",
     "- Every final tool response is capped. GATEWAY_RESPONSE_TOO_LARGE means narrow a page, select one object, or request an artifact.",
-    "- gateway_auto_context arbitrates automatic per-prompt Memory context and returns one bounded block or abstains. It never marks delivery or use, and it never delivers InnerLife shares.",
+    "- gateway_auto_context arbitrates automatic per-prompt Memory context and returns one bounded block or abstains. Set turnKind=goal_continuation only for a host-generated continuation without a new human message; that explicit label skips collection. It never marks delivery or use, and it never delivers InnerLife shares.",
     "- Keep tool calls bounded. Never mutate SQLite directly.",
     "- Do not read local source files as the normal workflow; packaged Desktop runs from app.asar.",
     "",

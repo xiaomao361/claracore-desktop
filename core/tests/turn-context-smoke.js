@@ -1,5 +1,6 @@
 const assert = require("assert");
 const { arbitrateAutomaticContext } = require("../gateway/auto-context");
+const { handleSystemTool } = require("../gateway/tool-handlers/system");
 const {
   MEMORY_TIMEOUT_MS,
   TURN_BUDGET_MS,
@@ -37,6 +38,26 @@ function checkBudgetArithmetic() {
 
 function checkPortContract() {
   assert.throws(() => createTurnContextService({}), /requires ports/);
+}
+
+async function checkGoalContinuationSkipsCollection() {
+  const result = await handleSystemTool(
+    "gateway_auto_context",
+    {
+      prompt: '<codex_internal_context source="goal">continue</codex_internal_context>',
+      turnKind: "goal_continuation"
+    },
+    {
+      currentMcpAgentId: () => "codex",
+      textResult: (value) => value
+    }
+  );
+  assert.strictEqual(result.decision, "abstain");
+  assert.strictEqual(result.reason, "non_user_goal_continuation");
+  assert.strictEqual(result.collectionSkipped, true);
+  assert.strictEqual(result.turnKind, "goal_continuation");
+  assert.strictEqual(result.domainStatus.memory, "skipped");
+  assert.strictEqual(result.latencyMs, 0);
 }
 
 // InnerLife is reached through innerlife_share_check, not through automatic
@@ -214,6 +235,7 @@ async function checkControllerVerdictIsNotWidened() {
 async function main() {
   checkBudgetArithmetic();
   checkPortContract();
+  await checkGoalContinuationSkipsCollection();
   await checkInnerLifeIsNotCollected();
   checkMemoryScoreIsReal();
   await checkCollectorForwardsRealScore();

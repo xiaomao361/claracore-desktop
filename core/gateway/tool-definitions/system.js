@@ -88,13 +88,21 @@ const systemToolDefinitions = [
   {
     "name": "gateway_auto_context",
     "title": "Gateway Automatic Context",
-    "description": "Arbitrate automatic per-prompt Memory context in one call. Pass prompt and the Gateway runs the Memory Controller itself, then returns one bounded block or abstains. Do not retrieve Memory separately for this purpose. InnerLife is deliberately not collected here: whether a waiting thought fits is a question of register, not topic, and only the model can read register — use innerlife_share_check. Read-only: it never marks delivery or use, and never selects among active Shared Lines. Traces do not keep the prompt verbatim: they store a hash plus an 80-byte preview, so a prompt shorter than that is still recorded in full.",
+    "description": "Arbitrate one bounded Memory block for a user prompt or abstain. Set turnKind=goal_continuation only for a host-generated persistent-goal continuation with no new human message; collection is skipped. InnerLife remains model-gated through innerlife_share_check. Read-only; it never marks delivery or use or selects Shared Lines. Prompt traces keep a hash and bounded preview, not the full prompt.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "prompt": {
           "type": "string",
           "description": "The current user message. Mutually exclusive with the candidate arrays."
+        },
+        "turnKind": {
+          "type": "string",
+          "enum": [
+            "user",
+            "goal_continuation"
+          ],
+          "description": "Defaults to user. goal_continuation skips collection and is only for host-generated continuation without a new human message."
         },
         "sessionId": {
           "type": "string",

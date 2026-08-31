@@ -287,8 +287,17 @@ delivery can be revisited — but topic matching would still be the wrong gate.
 ### Request
 
 ```json
-{ "prompt": "the current user message", "sessionId": "optional InnerLife session id" }
+{
+  "prompt": "the current user message",
+  "turnKind": "user",
+  "sessionId": "optional InnerLife session id"
+}
 ```
+
+`turnKind` defaults to `user`. Set it to `goal_continuation` only when the host
+is continuing a persistent goal and no person supplied a new message. The
+Gateway does not infer this state from the prompt text. A labeled continuation
+skips Memory collection; it does not eliminate the outer MCP call.
 
 `prompt` and the `memoryCandidates` / `shareCandidates` arrays are **mutually
 exclusive**. Sending both is rejected, not merged. The arrays are the
@@ -305,11 +314,17 @@ Identity comes from the authenticated caller headers, never from the body.
   "selected": { "domain": "memory|innerlife", "id": "...", "evidenceState": "selected" },
   "block": { "domain": "...", "id": "...", "body": "...", "bytes": 0, "truncated": false },
   "candidates": [ { "domain": "...", "id": "...", "eligible": false, "discardReason": "..." } ],
-  "reason": "single_winner | no_eligible_candidate | no_eligible_candidate_degraded"
+  "reason": "single_winner | no_eligible_candidate | no_eligible_candidate_degraded | non_user_goal_continuation",
+  "turnKind": "user | goal_continuation",
+  "collectionSkipped": false,
+  "latencyMs": 0
 }
 ```
 
 Inject `block.body` only when `decision === "deliver_one"`. Nothing else.
+For `goal_continuation`, expect `decision=abstain`,
+`reason=non_user_goal_continuation`, `collectionSkipped=true`,
+`domainStatus.memory=skipped`, and `latencyMs=0`.
 
 ### Failure rules
 

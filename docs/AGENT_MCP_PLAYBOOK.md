@@ -153,12 +153,24 @@ hard gate: `innerlife_share_check` can return an adjacent thought for the model
 to review against the real conversational register. It is never marked used
 unless the response actually shares it and reports delivery evidence.
 
-Since the turn-context patch it takes `prompt` directly and collects both
-domains itself, so a host makes one call per turn:
+Since the turn-context patch it takes `prompt` directly and collects Memory
+itself, so a host makes one automatic-context call per turn:
 
 ```text
 gateway_auto_context({ prompt, sessionId })
 ```
+
+When a persistent host continues an existing goal without a new human message,
+it must label that transport event explicitly:
+
+```text
+gateway_auto_context({ prompt, turnKind: "goal_continuation", sessionId })
+```
+
+That label returns an observable `non_user_goal_continuation` abstention with
+`collectionSkipped=true` and does not run the Memory Controller. The Gateway
+never infers this state from prompt wording; omitted `turnKind` defaults to
+`user`, so ordinary prompts retain the existing collection path.
 
 Inject `block.body` only for `decision=deliver_one`. Branch fallback on
 `domainStatus`, which marks that the desktop actually arbitrated. The full

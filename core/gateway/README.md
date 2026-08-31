@@ -121,6 +121,14 @@ rollout. Non-allowlisted and historical/all callers remain observe-only.
 Malformed modes or allowlists fail closed without a ledger write.
 Explicit `memoria_search` and mutation tools remain separate operations.
 
+`gateway_auto_context` is the host-owned automatic Memory entry point. A normal
+user prompt omits `turnKind` or sends `turnKind=user` and follows the existing
+Memory Controller path. A persistent host may send
+`turnKind=goal_continuation` only when it is continuing a goal without a new
+human message; the Gateway then returns `non_user_goal_continuation` with
+`collectionSkipped=true` before collection. Prompt wording is never used to
+infer this fast path, and the outer MCP call still occurs.
+
 Hermes/Lara must keep `agentId=lara` and `clientId=hermes`. It should call
 `memory_context` once for each non-empty user prompt only when Hermes owns a
 verified per-prompt lifecycle hook. Without such a hook, Hermes can still use
