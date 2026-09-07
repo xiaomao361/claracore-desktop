@@ -99,7 +99,7 @@ function createClaraCoreMemoriaList(context) {
 
   function renderMemoryResults(memories, target, options = {}) {
     if (memories.length === 0) {
-      target.innerHTML = `<div class="endpoint-empty">${t("memory.empty")}</div>`;
+      target.innerHTML = `<div class="endpoint-empty">${escapeHtml(options.emptyMessage || t("memory.empty"))}</div>`;
       return;
     }
     const html = memoryItemsHtml(memories, options);

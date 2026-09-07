@@ -529,7 +529,8 @@ async function main() {
       `The bounded repository read path ${methodName} must remain installed.`
     );
   }
-  assert.strictEqual(installed.length, 189, "The repository public API count must remain stable.");
+  assert.strictEqual(installed.length, 190, "The repository API includes the Memoria embedding invalidation method.");
+  assert(installed.some((entry) => entry.name === "invalidateMemoryEmbeddings" && entry.owner === "memoria"));
   assert.strictEqual(
     installed.filter((entry) => entry.owner === "innerlife").length,
     72,

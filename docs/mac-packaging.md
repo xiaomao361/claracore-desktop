@@ -2,8 +2,8 @@
 
 ## Current Release Boundary
 
-The current development checkpoint and public stable release are `0.6.12`,
-tagged `v0.6.12`. Treat
+The current local development checkpoint is `0.6.14`; the public stable
+release remains `0.6.12`, tagged `v0.6.12`. Treat
 [Version Branching](VERSION_BRANCHING.md) and the versioned release notes as
 the release truth.
 
@@ -51,9 +51,9 @@ Current App output and future DMG output:
 
 ```text
 dist/mac-arm64/ClaraCore Desktop.app
-dist/ClaraCore-Desktop-0.6.12-arm64.dmg
+dist/ClaraCore-Desktop-0.6.14-arm64.dmg
 dist-lite/mac-arm64/ClaraCore Desktop.app
-dist-lite/ClaraCore-Desktop-0.6.12-lite-arm64.dmg
+dist-lite/ClaraCore-Desktop-0.6.14-lite-arm64.dmg
 ```
 
 Only artifacts built with the signed release commands and accepted by the

@@ -20,6 +20,8 @@ Desktop Memoria owns:
 - labels and label aliases,
 - restricted, archived, deleted, and active memory states,
 - graph and merge suggestions,
+- keyword-first hybrid search with a semantic relevance floor and a bounded
+  semantic result set,
 - structured records,
 - embedding queue and maintenance audit/run,
 - archive import/export,
@@ -52,6 +54,18 @@ Old Memoria text records can be imported as searchable product memories for
 compatibility, while structured product records continue to use the records
 surface.
 
+## Human Graph Reading
+
+The stored graph supports three different human questions. The memory map
+shows the overall memory-and-label structure and uses Agent identity only as a
+stable color distinction. The relationship network uses explicit memory links
+and opens one connected cluster at a time. State chains open as a catalog of
+all replacement histories; selecting one chain reveals its current conclusion,
+earlier versions, and replacement reasons in order.
+
+These views organize inspection only. They do not replace recall evidence or
+change memory lifecycle state when a person selects a node or chain.
+
 ## Label Rules
 
 Labels are user-visible grouping keys and graph inputs, not raw tokenizer
@@ -67,3 +81,17 @@ output. Import and write paths should keep them stable and meaningful:
 
 These rules prevent old imports from creating graph-polluting labels such as
 `,`, `:`, `a`, `系`, or `统`.
+
+## Semantic Retrieval Coverage
+
+Semantic search scans eligible stored vectors in 200-row keyset pages and keeps
+only the best 10 scores above the existing relevance floor. It does not limit
+recall to recently embedded memories. Provider, model, and actual query-vector
+dimension must match; Agent, time-view, and restricted-memory filters apply to
+every page. Saving changed embedding provider/model/endpoint/dimension/input
+length settings queues non-restricted active memories for rebuilding through existing embedding
+maintenance. Unchanged settings preserve ready vectors. Historical vectors are
+retained and only participate when they match the query model.
+
+Embedding completion writes check the saved configuration in SQL, so a delayed
+success or failure from an old configuration cannot overwrite queued rebuild work.

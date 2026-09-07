@@ -213,6 +213,7 @@ window.ClaraCoreDom = {
   appearanceSettingsNotice: document.querySelector("#appearanceSettingsNotice"),
   memorySearchInput: document.querySelector("#memorySearchInput"),
   searchMemory: document.querySelector("#searchMemory"),
+  memoryRecentTitle: document.querySelector("#memoryRecentTitle"),
   memoryList: document.querySelector("#memoryList"),
   memoryDetail: document.querySelector("#memoryDetail"),
   memoryLibraryFooter: document.querySelector("#memoryLibraryFooter"),

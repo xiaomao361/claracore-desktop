@@ -34,6 +34,12 @@ async function assertSqliteQuickCheck(database, label = "Product Core database")
   return quickCheck;
 }
 
+function assertVerifiedSafetyBackup(backup) {
+  if (backup?.status !== "verified" || backup?.metadata?.verification?.ok !== true) {
+    throw new Error("Safety backup verification failed. Database replacement was cancelled.");
+  }
+}
+
 async function recoverSqliteDatabaseFromBackup({
   backup,
   databasePath,
@@ -165,65 +171,78 @@ function createBackupRuntime({ ensureProductCore, productVersion, sqlString, tim
     }
   }
 
-  async function restorePreviewMemoryRows(database) {
-    const rows = await database.query(`
-      SELECT
-        id,
-        COALESCE(NULLIF(title, ''), substr(body, 1, 80), id) AS title,
-        substr(body, 1, 160) AS body_preview,
-        body,
-        updated_at,
-        created_at
-      FROM memories
-      WHERE status = 'active'
-      ORDER BY updated_at DESC, created_at DESC
-      LIMIT 500;
-    `);
-    return rows.map((row) => ({
-      id: row.id,
-      title: row.title || row.id,
-      bodyPreview: row.body_preview || "",
-      body: row.body || "",
-      updatedAt: row.updated_at || "",
-      createdAt: row.created_at || ""
-    }));
+  async function* restorePreviewMemoryRows(database) {
+    let afterId = "";
+    while (true) {
+      const rows = await database.query(`
+        SELECT id, COALESCE(NULLIF(title, ''), substr(body, 1, 80), id) AS title,
+          substr(body, 1, 160) AS body_preview, body, updated_at, created_at
+        FROM memories
+        WHERE status = 'active' AND id > ${sqlString(afterId)}
+        ORDER BY id COLLATE BINARY ASC
+        LIMIT 200;
+      `);
+      for (const row of rows) {
+        yield {
+          id: row.id, title: row.title || row.id, bodyPreview: row.body_preview || "",
+          body: row.body || "", updatedAt: row.updated_at || "", createdAt: row.created_at || ""
+        };
+      }
+      if (rows.length < 200) return;
+      afterId = rows[rows.length - 1].id;
+    }
   }
 
-  function summarizeRestoreMemoryDiff(currentRows, targetRows) {
-    const currentById = new Map(currentRows.map((row) => [row.id, row]));
-    const targetById = new Map(targetRows.map((row) => [row.id, row]));
-    const removed = currentRows.filter((row) => !targetById.has(row.id));
-    const restored = targetRows.filter((row) => !currentById.has(row.id));
-    const changed = targetRows.filter((target) => {
-      const current = currentById.get(target.id);
-      if (!current) return false;
-      return current.title !== target.title || current.body !== target.body || current.updatedAt !== target.updatedAt;
-    });
-    const keptCount = targetRows.filter((row) => currentById.has(row.id)).length - changed.length;
-    const previewRow = ({ body: _body, ...row }) => row;
-    return {
-      removedCount: removed.length,
-      restoredCount: restored.length,
-      changedCount: changed.length,
-      keptCount: Math.max(0, keptCount),
-      limit: 8,
-      removed: removed.slice(0, 8).map(previewRow),
-      restored: restored.slice(0, 8).map(previewRow),
-      changed: changed.slice(0, 8).map(previewRow)
+  async function summarizeRestoreMemoryDiff(database, candidate) {
+    const diff = {
+      removedCount: 0, restoredCount: 0, changedCount: 0, keptCount: 0,
+      limit: 8, removed: [], restored: [], changed: []
     };
+    function record(kind, { body: _body, ...row }) {
+      diff[`${kind}Count`] += 1;
+      diff[kind].push(row);
+      diff[kind].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)
+        || right.createdAt.localeCompare(left.createdAt) || left.id.localeCompare(right.id));
+      diff[kind] = diff[kind].slice(0, diff.limit);
+    }
+    const currentRows = restorePreviewMemoryRows(database);
+    const targetRows = restorePreviewMemoryRows(candidate);
+    let current = await currentRows.next();
+    let target = await targetRows.next();
+    while (!current.done || !target.done) {
+      // Match SQLite BINARY ordering, including non-ASCII imported ids.
+      const order = current.done ? 1 : target.done ? -1
+        : Buffer.compare(Buffer.from(current.value.id), Buffer.from(target.value.id));
+      if (order < 0) {
+        record("removed", current.value);
+        current = await currentRows.next();
+      } else if (order > 0) {
+        record("restored", target.value);
+        target = await targetRows.next();
+      } else {
+        const left = current.value;
+        const right = target.value;
+        if (left.title !== right.title || left.body !== right.body || left.updatedAt !== right.updatedAt) {
+          record("changed", right);
+        } else {
+          diff.keptCount += 1;
+        }
+        current = await currentRows.next();
+        target = await targetRows.next();
+      }
+    }
+    return diff;
   }
 
   async function previewProductRestore(app, backupId) {
     const { database, backup, quickCheck, candidate } = await resolveVerifiedBackup(app, backupId);
     try {
-      const currentMemories = await restorePreviewMemoryRows(database);
-      const targetMemories = await restorePreviewMemoryRows(candidate);
       return {
         backup,
         quickCheck,
         current: await database.getSummary(),
         target: await candidate.getSummary(),
-        memoryDiff: summarizeRestoreMemoryDiff(currentMemories, targetMemories)
+        memoryDiff: await summarizeRestoreMemoryDiff(database, candidate)
       };
     } finally {
       candidate.close();
@@ -236,6 +255,7 @@ function createBackupRuntime({ ensureProductCore, productVersion, sqlString, tim
 
     return withExclusiveProductCore(app, async ({ paths, ensure, invalidate }) => {
       const safetyBackup = await createProductBackupFromCore(await ensure());
+      assertVerifiedSafetyBackup(safetyBackup);
       try {
         await invalidate();
         await replaceSqliteDatabase(backupPath, paths.databasePath);
@@ -357,6 +377,7 @@ function createBackupRuntime({ ensureProductCore, productVersion, sqlString, tim
 }
 
 module.exports = {
+  assertVerifiedSafetyBackup,
   assertSqliteQuickCheck,
   createBackupRuntime,
   recoverSqliteDatabaseFromBackup,

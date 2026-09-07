@@ -66,6 +66,12 @@ const SAFE_IDENTIFIERS = new Set([
 // reviewed together. Keeping these exact prevents another repository from
 // gaining a same-named blanket escape hatch.
 const FILE_SAFE_EXPRESSIONS = new Map([
+  ["repositories/memoria/embeddings.js", new Set([
+    // Cursor/provider/model values use sqlString; dimension is array length.
+    "cursorClause",
+    "modelClause",
+    "embeddingSettingsClause"
+  ])],
   ["migrations/005_memory_controller_watermark.js", new Set([
     "operation",
     "operation.toUpperCase()",

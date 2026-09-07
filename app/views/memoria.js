@@ -12,7 +12,7 @@ function createClaraCoreMemoriaView(context) {
     setEmbeddingProgress
   } = context;
   const {
-    memorySearchInput, searchMemory, memoryList, memoryDetail, memoryAgentFilter,
+    memorySearchInput, searchMemory, memoryList, memoryDetail, memoryAgentFilter, memoryRecentTitle,
     memoryGraphSummary, memoryGraph, memoryAllLabelList, memoryAllHint, memoryTabs, memoryTabPanels,
     memoryOverviewCount, memoryTopicList, memoryProcessFlow, memoryAllAction,
     memoryRecallStatus, memoryRecallList, memoryAllRecallAction,
@@ -221,6 +221,11 @@ function renderMemoryResults(memories, target = memoryList, options = {}) {
   }
   const displayed = searchActive ? visibleMemories : visibleMemories.slice(0, 6);
   memoryListRenderer.renderMemoryResults(displayed, memoryList, { ...options, selectedId: selectedMemoryId });
+  if (searchActive && memoryAllHint) {
+    memoryAllHint.textContent = visibleMemories.length
+      ? t("memory.search.resultCount", { count: visibleMemories.length })
+      : options.emptyMessage || t("memory.search.noReliable", { query: "" });
+  }
   if (memoryAllAction) {
     memoryAllAction.hidden = searchActive || visibleMemories.length <= displayed.length;
     memoryAllAction.textContent = `查看最近载入的 ${visibleMemories.length} 条记忆 →`;
@@ -375,6 +380,14 @@ function graphHash(value) {
   return hash >>> 0;
 }
 
+function graphAgentColor(agentId, isDarkTheme = false) {
+  const palette = isDarkTheme
+    ? ["104, 177, 235", "190, 135, 229", "91, 202, 194", "225, 126, 184", "83, 190, 220", "139, 148, 235"]
+    : ["43, 105, 166", "126, 75, 169", "31, 132, 126", "154, 72, 127", "28, 135, 166", "75, 85, 173"];
+  const id = String(agentId || "").trim();
+  return id ? palette[graphHash(id) % palette.length] : "";
+}
+
 function isLinkEdge(edge) {
   return String(edge?.kind || "").startsWith("link:");
 }
@@ -383,7 +396,7 @@ function linkKindOf(edge) {
   return String(edge?.kind || "").slice(5);
 }
 
-function buildGraphModel(graph, mode) {
+function buildGraphModel(graph, mode, selectedNodeId = null) {
   const allNodes = graph.nodes || [];
   const allEdges = graph.edges || [];
   const linkEdges = allEdges.filter(isLinkEdge);
@@ -396,32 +409,117 @@ function buildGraphModel(graph, mode) {
 
   let nodes;
   let edges;
+  let stateChains = [];
+  let activeStateChainId = null;
+  let networkClusters = [];
+  let activeNetworkClusterId = null;
   if (effectiveMode === "state") {
-    const keep = new Set();
-    for (const edge of stateEdges) {
-      keep.add(edge.from);
-      keep.add(edge.to);
-    }
+    const stateNodeIds = new Set(stateEdges.flatMap((edge) => [edge.from, edge.to]));
     const contradictionEdges = linkEdges.filter(
-      (edge) => linkKindOf(edge) === "contradicts" && (keep.has(edge.from) || keep.has(edge.to))
+      (edge) => linkKindOf(edge) === "contradicts" && (stateNodeIds.has(edge.from) || stateNodeIds.has(edge.to))
     );
-    for (const edge of contradictionEdges) {
-      keep.add(edge.from);
-      keep.add(edge.to);
+    const stateGraphEdges = [...stateEdges, ...contradictionEdges];
+    const adjacency = new Map();
+    const connect = (from, to) => {
+      if (!adjacency.has(from)) adjacency.set(from, new Set());
+      adjacency.get(from).add(to);
+    };
+    for (const edge of stateGraphEdges) {
+      connect(edge.from, edge.to);
+      connect(edge.to, edge.from);
     }
+    const nodeById = new Map(allNodes.map((node) => [node.id, node]));
+    const remaining = new Set(stateNodeIds);
+    while (remaining.size > 0) {
+      const [start] = remaining;
+      const componentIds = new Set();
+      const queue = [start];
+      while (queue.length > 0) {
+        const id = queue.shift();
+        if (componentIds.has(id)) continue;
+        componentIds.add(id);
+        remaining.delete(id);
+        for (const neighbor of adjacency.get(id) || []) queue.push(neighbor);
+      }
+      const componentEdges = stateGraphEdges.filter(
+        (edge) => componentIds.has(edge.from) && componentIds.has(edge.to)
+      );
+      const currentNodes = [...componentIds]
+        .map((id) => nodeById.get(id))
+        .filter((node) => node && node.status !== "superseded")
+        .sort((left, right) => String(left.label || left.id).localeCompare(String(right.label || right.id)));
+      const focusNode = currentNodes[0] || nodeById.get(start);
+      stateChains.push({
+        id: focusNode?.id || start,
+        label: focusNode?.label || focusNode?.id || start,
+        nodeIds: [...componentIds],
+        nodeCount: componentIds.size,
+        edgeCount: componentEdges.filter((edge) => linkKindOf(edge) === "supersedes").length
+      });
+    }
+    stateChains.sort((left, right) => right.edgeCount - left.edgeCount || String(left.label).localeCompare(String(right.label)));
+    const activeChain = stateChains.find((chain) => chain.nodeIds.includes(selectedNodeId)) || stateChains[0];
+    activeStateChainId = activeChain?.id || null;
+    const keep = new Set(activeChain?.nodeIds || []);
     nodes = allNodes.filter((node) => keep.has(node.id) && node.kind === "memory");
-    edges = [...stateEdges, ...contradictionEdges].filter((edge) => keep.has(edge.from) && keep.has(edge.to));
+    edges = stateGraphEdges.filter((edge) => keep.has(edge.from) && keep.has(edge.to));
   } else if (effectiveMode === "network") {
-    const keep = new Set();
-    for (const edge of linkEdges) {
-      keep.add(edge.from);
-      keep.add(edge.to);
+    const nodeById = new Map(allNodes.filter((node) => node.kind === "memory").map((node) => [node.id, node]));
+    const usableEdges = linkEdges.filter((edge) => nodeById.has(edge.from) && nodeById.has(edge.to));
+    const adjacency = new Map();
+    const connect = (from, to) => {
+      if (!adjacency.has(from)) adjacency.set(from, new Set());
+      adjacency.get(from).add(to);
+    };
+    for (const edge of usableEdges) {
+      connect(edge.from, edge.to);
+      connect(edge.to, edge.from);
     }
-    for (const edge of allEdges) {
-      if (edge.kind === "uses" && keep.has(edge.to)) keep.add(edge.from);
+    const remaining = new Set(usableEdges.flatMap((edge) => [edge.from, edge.to]));
+    while (remaining.size > 0) {
+      const [start] = remaining;
+      const componentIds = new Set();
+      const queue = [start];
+      while (queue.length > 0) {
+        const id = queue.shift();
+        if (componentIds.has(id)) continue;
+        componentIds.add(id);
+        remaining.delete(id);
+        for (const neighbor of adjacency.get(id) || []) queue.push(neighbor);
+      }
+      const componentEdges = usableEdges.filter(
+        (edge) => componentIds.has(edge.from) && componentIds.has(edge.to)
+      );
+      const localDegree = new Map();
+      for (const edge of componentEdges) {
+        localDegree.set(edge.from, (localDegree.get(edge.from) || 0) + 1);
+        localDegree.set(edge.to, (localDegree.get(edge.to) || 0) + 1);
+      }
+      const focusNode = [...componentIds]
+        .map((id) => nodeById.get(id))
+        .filter(Boolean)
+        .sort((left, right) =>
+          (localDegree.get(right.id) || 0) - (localDegree.get(left.id) || 0)
+            || String(left.label || left.id).localeCompare(String(right.label || right.id))
+        )[0];
+      networkClusters.push({
+        id: focusNode?.id || start,
+        label: focusNode?.label || focusNode?.id || start,
+        nodeIds: [...componentIds],
+        nodeCount: componentIds.size,
+        edgeCount: componentEdges.length
+      });
     }
-    nodes = allNodes.filter((node) => keep.has(node.id) && node.kind !== "label");
-    edges = allEdges.filter((edge) => edge.kind !== "labeled" && keep.has(edge.from) && keep.has(edge.to));
+    networkClusters.sort((left, right) =>
+      right.edgeCount - left.edgeCount
+        || right.nodeCount - left.nodeCount
+        || String(left.label).localeCompare(String(right.label))
+    );
+    const activeCluster = networkClusters.find((cluster) => cluster.nodeIds.includes(selectedNodeId)) || networkClusters[0];
+    activeNetworkClusterId = activeCluster?.id || null;
+    const keep = new Set(activeCluster?.nodeIds || []);
+    nodes = allNodes.filter((node) => keep.has(node.id) && node.kind === "memory");
+    edges = usableEdges.filter((edge) => keep.has(edge.from) && keep.has(edge.to));
   } else {
     const labelDegree = new Map();
     for (const edge of allEdges) {
@@ -434,7 +532,9 @@ function buildGraphModel(graph, mode) {
       (hubLabels.length > 0 ? hubLabels : sortedLabels).slice(0, 40).map(([labelId]) => labelId)
     );
     nodes = allNodes.filter((node) => node.kind !== "label" || keptLabels.has(node.id));
-    edges = allEdges.filter((edge) => edge.kind !== "labeled" || keptLabels.has(edge.to));
+    edges = allEdges.filter(
+      (edge) => !isLinkEdge(edge) && (edge.kind === "uses" || (edge.kind === "labeled" && keptLabels.has(edge.to)))
+    );
   }
 
   const degree = new Map();
@@ -464,7 +564,11 @@ function buildGraphModel(graph, mode) {
     neighborhood,
     effectiveMode,
     linkEdgeCount: linkEdges.length,
-    stateEdgeCount: stateEdges.length
+    stateEdgeCount: stateEdges.length,
+    stateChains,
+    activeStateChainId,
+    networkClusters,
+    activeNetworkClusterId
   };
 }
 
@@ -488,42 +592,47 @@ function createStateChainLayout(model) {
     return depth;
   };
   const chainIds = new Set(supersedes.flatMap((edge) => [edge.from, edge.to]));
-  const maxDepth = Math.max(0, ...[...chainIds].map((id) => depthFor(id)));
-  const chainNodesByDepth = new Map();
-  for (const node of model.nodes.filter((item) => chainIds.has(item.id))) {
-    const depth = depthFor(node.id);
-    if (!chainNodesByDepth.has(depth)) chainNodesByDepth.set(depth, []);
-    chainNodesByDepth.get(depth).push(node);
-  }
-  for (const [depth, nodes] of chainNodesByDepth) {
-    nodes.sort((left, right) => String(left.label).localeCompare(String(right.label)));
-    nodes.forEach((node, index) => {
-      bodies.set(node.id, {
-        node,
-        x: (depth - maxDepth / 2) * 230,
-        y: (index - (nodes.length - 1) / 2) * 130,
-        vx: 0,
-        vy: 0,
-        size: node.status === "superseded" ? 8 : 10
-      });
+  const orderedChainNodes = model.nodes
+    .filter((item) => chainIds.has(item.id))
+    .sort((left, right) =>
+      depthFor(right.id) - depthFor(left.id)
+        || (left.status === "superseded" ? 1 : 0) - (right.status === "superseded" ? 1 : 0)
+        || String(left.label || left.id).localeCompare(String(right.label || right.id))
+    );
+  orderedChainNodes.forEach((node, row) => {
+    bodies.set(node.id, {
+      node,
+      row,
+      lane: 0,
+      x: 0,
+      y: row * 94,
+      vx: 0,
+      vy: 0,
+      size: node.status === "superseded" ? 8 : 10
     });
-  }
+  });
   const contradictionIds = new Set(contradictions.flatMap((edge) => [edge.from, edge.to]));
+  const contradictionCounts = new Map();
   for (const node of model.nodes.filter((item) => contradictionIds.has(item.id) && !bodies.has(item.id))) {
     const edge = contradictions.find((item) => item.from === node.id || item.to === node.id);
     const anchorId = edge?.from === node.id ? edge?.to : edge?.from;
     const anchor = bodies.get(anchorId);
+    const offsetIndex = contradictionCounts.get(anchorId) || 0;
+    contradictionCounts.set(anchorId, offsetIndex + 1);
     bodies.set(node.id, {
       node,
-      x: anchor?.x || 0,
-      y: (anchor?.y || 0) + 150,
+      row: (anchor?.row || 0) + 0.34 + offsetIndex * 0.72,
+      lane: 1,
+      x: 1,
+      y: ((anchor?.row || 0) + 0.34 + offsetIndex * 0.72) * 94,
       vx: 0,
       vy: 0,
       size: 8,
       contradiction: true
     });
   }
-  return { bodies, step: () => false, isSettled: () => true };
+  const rowCount = Math.max(1, orderedChainNodes.length, ...[...bodies.values()].map((body) => Math.ceil((body.row || 0) + 1)));
+  return { bodies, rowCount, step: () => false, isSettled: () => true };
 }
 
 function createForceLayout(model) {
@@ -537,7 +646,7 @@ function createForceLayout(model) {
     bodies.set(node.id, {
       node,
       x: Math.cos(theta) * radius,
-      y: Math.sin(theta) * radius * 0.82,
+      y: Math.sin(theta) * radius,
       vx: 0,
       vy: 0,
       size: node.kind === "memory"
@@ -652,12 +761,24 @@ function setMemoryGraphMode(mode) {
 }
 
 function selectMemoryGraphNode(nodeId) {
+  const previousDialogScroll = memoryDetailDialog?.scrollTop || 0;
+  const previousPanelScroll = document.querySelector("#memoryGraphPanel")?.scrollTop || 0;
+  const currentModel = memoryGraphState?.model;
+  const remainsInCurrentView = Boolean(memoryGraphState?.canvas)
+    && (!nodeId || currentModel?.nodes.some((node) => node.id === nodeId));
   memoryGraphSelection = nodeId || null;
-  renderGraphSidePanel();
-  drawMemoryGraphCanvas();
-  if (memoryGraphState?.model.effectiveMode === "state") {
-    requestAnimationFrame(() => drawMemoryGraphCanvas());
+  const returnsToStateOverview = currentModel?.effectiveMode === "state" && !nodeId;
+  if (returnsToStateOverview || (["state", "network"].includes(currentModel?.effectiveMode) && !remainsInCurrentView)) {
+    renderMemoryGraph();
+    requestAnimationFrame(() => {
+      if (memoryDetailDialog) memoryDetailDialog.scrollTop = previousDialogScroll;
+    });
+    return;
   }
+  renderGraphSidePanel();
+  const nextPanel = document.querySelector("#memoryGraphPanel");
+  if (nextPanel) nextPanel.scrollTop = previousPanelScroll;
+  drawMemoryGraphCanvas();
 }
 
 function stopMemoryGraphAnimation() {
@@ -739,7 +860,6 @@ function drawMemoryGraphCanvas() {
   ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
   ctx.clearRect(0, 0, rect.width, rect.height);
 
-  const reducedMotion = document.body?.dataset?.motion === "off";
   if (!sim.isSettled()) {
     sim.step();
     sim.step();
@@ -761,23 +881,45 @@ function drawMemoryGraphCanvas() {
   const boundsCenterX = (minX + maxX) / 2;
   const boundsCenterY = (minY + maxY) / 2;
   const stateMode = model.effectiveMode === "state";
-  const fitScale = Math.min((rect.width * (stateMode ? 0.72 : 0.84)) / boundsWidth, (rect.height * (stateMode ? 0.62 : 0.82)) / boundsHeight, stateMode ? 1.25 : 2.6);
+  const mapMode = model.effectiveMode === "all";
+  const networkMode = model.effectiveMode === "network";
+  const stateCardWidth = stateMode
+    ? Math.min(bodies.some((body) => body.contradiction) ? 280 : 360, Math.max(220, rect.width - 150))
+    : 0;
+  const stateCardHeight = 68;
+  const fitScale = Math.min(
+    (rect.width * (stateMode ? 0.72 : mapMode ? 0.76 : 0.72)) / boundsWidth,
+    (rect.height * (stateMode ? 0.62 : mapMode ? 0.76 : 0.72)) / boundsHeight,
+    stateMode ? 1.25 : 2.6
+  );
   const scale = fitScale * memoryGraphZoom;
   const centerX = rect.width / 2 + memoryGraphPan.x;
   const centerY = rect.height / 2 + memoryGraphPan.y;
-  const project = (body) => ({
-    x: centerX + (body.x - boundsCenterX) * scale,
-    y: centerY + (body.y - boundsCenterY) * scale
-  });
+  const stateRowGap = 86;
+  const stateContentHeight = Math.max(stateCardHeight, ((sim.rowCount || 1) - 1) * stateRowGap + stateCardHeight);
+  const stateTop = Math.max(34, (rect.height - stateContentHeight) / 2 + stateCardHeight / 2);
+  const stateMainX = bodies.some((body) => body.contradiction) ? rect.width * 0.32 : rect.width * 0.53;
+  const project = (body) => stateMode
+    ? {
+        x: stateMainX + (body.lane || 0) * (stateCardWidth + 44),
+        y: stateTop + (body.row || 0) * stateRowGap
+      }
+    : {
+        x: centerX + (body.x - boundsCenterX) * scale,
+        y: centerY + (body.y - boundsCenterY) * scale
+      };
 
   canvas.dataset.zoom = String(memoryGraphZoom);
   canvas.dataset.panX = String(Math.round(memoryGraphPan.x));
   canvas.dataset.panY = String(Math.round(memoryGraphPan.y));
+  canvas.dataset.layoutAspect = (boundsWidth / boundsHeight).toFixed(3);
 
   const now = performance.now();
+  const reducedMotion = document.body?.dataset?.motion === "off";
   const isDarkTheme = document.body?.dataset?.theme === "dark";
   const theme = graphThemeColors(isDarkTheme);
   const selection = memoryGraphSelection;
+  const hoveredNode = memoryGraphHover?.type === "node" ? memoryGraphHover.key : null;
   const selectionNeighbors = selection ? model.neighborhood.get(selection) || new Set() : null;
   const nodeVisible = (nodeId) => !selection || nodeId === selection || selectionNeighbors.has(nodeId);
 
@@ -799,6 +941,44 @@ function drawMemoryGraphCanvas() {
     ctx.stroke();
   }
 
+  if (stateMode) {
+    const timelineBodies = bodies
+      .filter((body) => !body.contradiction)
+      .sort((left, right) => (left.row || 0) - (right.row || 0));
+    if (timelineBodies.length > 0) {
+      const first = project(timelineBodies[0]);
+      const last = project(timelineBodies[timelineBodies.length - 1]);
+      const spineX = first.x - stateCardWidth / 2 - 26;
+      ctx.beginPath();
+      ctx.strokeStyle = isDarkTheme ? "rgba(121, 201, 164, 0.32)" : "rgba(40, 116, 90, 0.24)";
+      ctx.lineWidth = 1.5;
+      ctx.moveTo(spineX, first.y);
+      ctx.lineTo(spineX, last.y);
+      ctx.stroke();
+      for (const body of timelineBodies) {
+        const point = project(body);
+        const historical = body.node.status === "superseded";
+        ctx.beginPath();
+        ctx.strokeStyle = historical
+          ? (isDarkTheme ? "rgba(160, 177, 168, 0.45)" : "rgba(80, 105, 94, 0.34)")
+          : `rgba(${theme.core}, 0.72)`;
+        ctx.lineWidth = historical ? 1.2 : 1.8;
+        ctx.moveTo(spineX + 6, point.y);
+        ctx.lineTo(point.x - stateCardWidth / 2 - 8, point.y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.fillStyle = historical ? (isDarkTheme ? "#171d1a" : "#fbfcf9") : `rgb(${theme.core})`;
+        ctx.strokeStyle = historical
+          ? (isDarkTheme ? "rgba(160, 177, 168, 0.72)" : "rgba(80, 105, 94, 0.58)")
+          : `rgb(${theme.core})`;
+        ctx.lineWidth = 1.5;
+        ctx.arc(spineX, point.y, historical ? 4 : 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+  }
+
   const hitEdges = [];
   const hitNodes = [];
   const hoveredEdge = memoryGraphHover?.type === "edge" ? memoryGraphHover.key : null;
@@ -812,6 +992,7 @@ function drawMemoryGraphCanvas() {
     let pb = project(b);
     const link = isLinkEdge(edge);
     const kind = link ? linkKindOf(edge) : edge.kind;
+    if (stateMode && kind === "supersedes") continue;
     if (stateMode && kind === "supersedes") {
       [pa, pb] = [pb, pa];
     }
@@ -819,7 +1000,10 @@ function drawMemoryGraphCanvas() {
       const dx = pb.x - pa.x;
       const dy = pb.y - pa.y;
       const distance = Math.max(1, Math.hypot(dx, dy));
-      const inset = Math.min(52, distance * 0.32);
+      const inset = Math.min(
+        distance * 0.42,
+        Math.abs(dx) > Math.abs(dy) ? stateCardWidth / 2 + 10 : stateCardHeight / 2 + 10
+      );
       const ux = dx / distance;
       const uy = dy / distance;
       pa = { x: pa.x + ux * inset, y: pa.y + uy * inset };
@@ -833,8 +1017,8 @@ function drawMemoryGraphCanvas() {
     let arrow = false;
     if (link) {
       color = theme.linkKinds[kind] || theme.memory;
-      alpha = stateMode ? 0.78 : 0.38 + strength * 0.4;
-      width = stateMode ? 2.2 : 1 + strength * 2.1;
+      alpha = stateMode ? 0.78 : networkMode ? 0.3 + strength * 0.3 : 0.38 + strength * 0.4;
+      width = stateMode ? 2.2 : networkMode ? 0.8 + strength * 1.2 : 1 + strength * 2.1;
       dashed = kind === "contradicts";
       arrow = kind === "causes" || kind === "evolved-from" || kind === "part-of" || kind === "supersedes";
     } else if (edge.kind === "uses") {
@@ -857,17 +1041,23 @@ function drawMemoryGraphCanvas() {
     ctx.lineTo(pb.x, pb.y);
     ctx.stroke();
     ctx.setLineDash([]);
-    if (arrow && incident !== false) {
-      const t = 0.62;
-      const ax = pa.x + (pb.x - pa.x) * t;
-      const ay = pa.y + (pb.y - pa.y) * t;
-      const angle = Math.atan2(pb.y - pa.y, pb.x - pa.x);
-      const size = 4.5 + width;
+    if (arrow && incident) {
+      const dx = pb.x - pa.x;
+      const dy = pb.y - pa.y;
+      const distance = Math.max(1, Math.hypot(dx, dy));
+      const ux = dx / distance;
+      const uy = dy / distance;
+      const targetInset = stateMode ? 0 : Math.min(14, distance * 0.18);
+      const tipX = pb.x - ux * targetInset;
+      const tipY = pb.y - uy * targetInset;
+      const size = networkMode ? 2.8 + width : 4 + width;
+      const baseX = tipX - ux * size * 1.8;
+      const baseY = tipY - uy * size * 1.8;
       ctx.beginPath();
       ctx.fillStyle = `rgba(${color}, ${alpha})`;
-      ctx.moveTo(ax + Math.cos(angle) * size, ay + Math.sin(angle) * size);
-      ctx.lineTo(ax + Math.cos(angle + 2.5) * size, ay + Math.sin(angle + 2.5) * size);
-      ctx.lineTo(ax + Math.cos(angle - 2.5) * size, ay + Math.sin(angle - 2.5) * size);
+      ctx.moveTo(tipX, tipY);
+      ctx.lineTo(baseX - uy * size * 0.62, baseY + ux * size * 0.62);
+      ctx.lineTo(baseX + uy * size * 0.62, baseY - ux * size * 0.62);
       ctx.closePath();
       ctx.fill();
     }
@@ -880,6 +1070,8 @@ function drawMemoryGraphCanvas() {
     if (node.kind === "label") return `rgb(${theme.label})`;
     if (node.kind === "shared_line") return `rgb(${theme.core})`;
     if (node.sensitivity === "restricted") return `rgb(${theme.restricted})`;
+    const agentColor = model.effectiveMode === "all" ? graphAgentColor(node.agentId, isDarkTheme) : "";
+    if (agentColor) return `rgb(${agentColor})`;
     return `rgb(${theme.memory})`;
   };
 
@@ -892,8 +1084,8 @@ function drawMemoryGraphCanvas() {
     const node = body.node;
     const p = project(body);
     if (stateMode) {
-      const cardWidth = 110;
-      const cardHeight = 62;
+      const cardWidth = stateCardWidth;
+      const cardHeight = stateCardHeight;
       const x = p.x - cardWidth / 2;
       const y = p.y - cardHeight / 2;
       const historical = node.status === "superseded";
@@ -921,27 +1113,40 @@ function drawMemoryGraphCanvas() {
       ctx.fillText(role.toUpperCase(), x + 12, y + 17);
       ctx.font = "650 12px Inter, ui-sans-serif, system-ui, sans-serif";
       ctx.fillStyle = theme.pillText;
-      const title = String(node.label || node.id || "");
-      const clippedTitle = title.length > 14 ? `${title.slice(0, 14)}…` : title;
+      const title = stateNodeDisplayLabel(node).replace(/(?:\.{3}|…)+$/u, "").trim();
+      let clippedTitle = title;
+      while (clippedTitle.length > 1 && ctx.measureText(`${clippedTitle}…`).width > cardWidth - 24) {
+        clippedTitle = clippedTitle.slice(0, -1);
+      }
+      if (clippedTitle !== title) clippedTitle = `${clippedTitle.trimEnd()}…`;
       ctx.fillText(clippedTitle, x + 12, y + 40);
       hitNodes.push({ id: node.id, x, y, w: cardWidth, h: cardHeight });
       continue;
     }
-    const phase = ((now / 1000) + (graphHash(node.id) % 900) / 1000) * Math.PI * 2 / 2.8;
-    const pulse = reducedMotion ? 1 : 1 + Math.sin(phase) * 0.045;
     const hasLinks = (model.linkDegree.get(node.id) || 0) > 0;
-    const radius = Math.max(2.2, body.size * pulse * (hasLinks ? 1.25 : 0.85)) * Math.min(1.5, Math.max(0.75, scale / fitScale));
+    const emphasis = node.id === selection || node.id === hoveredNode;
+    const sizeFactor = mapMode && node.kind === "memory" ? 0.66 : hasLinks ? 1.08 : 0.82;
+    const phaseOffset = ((graphHash(node.id) % 1000) / 1000) * Math.PI * 0.72;
+    const phase = (now / 1000) * Math.PI * 2 / 4.6 + phaseOffset;
+    const breathWave = mapMode && !reducedMotion ? (Math.sin(phase) + 1) / 2 : 0.5;
+    const pulseAmplitude = node.kind === "memory" ? 0.04 : 0.065;
+    const pulse = mapMode && !reducedMotion ? 1 + Math.sin(phase) * pulseAmplitude : 1;
+    const radius = Math.max(2, body.size * sizeFactor * pulse) * Math.min(1.28, Math.max(0.74, scale / fitScale));
     const visible = nodeVisible(node.id);
-    const baseAlpha = node.kind === "memory" ? (hasLinks ? 0.92 : 0.5) : 0.85;
-    const alpha = visible ? baseAlpha : 0.1;
-    if ((hasLinks || node.kind !== "memory") && visible) {
+    const baseAlpha = node.kind === "memory" ? (mapMode ? 0.68 : 0.82) : 0.9;
+    const breathingAlpha = mapMode && !reducedMotion
+      ? baseAlpha * (node.kind === "memory" ? 0.9 + breathWave * 0.1 : 0.84 + breathWave * 0.16)
+      : baseAlpha;
+    const alpha = visible ? breathingAlpha : 0.1;
+    if ((node.kind !== "memory" || emphasis) && visible) {
       ctx.beginPath();
       ctx.fillStyle = node.kind === "label"
-        ? `rgba(${theme.label}, 0.12)`
+        ? `rgba(${theme.label}, ${0.08 + breathWave * 0.11})`
         : node.kind === "shared_line"
-          ? `rgba(${theme.core}, 0.14)`
-          : `rgba(${theme.memory}, 0.12)`;
-      ctx.arc(p.x, p.y, radius + 4, 0, Math.PI * 2);
+          ? `rgba(${theme.core}, ${0.09 + breathWave * 0.12})`
+          : `rgba(${mapMode ? graphAgentColor(node.agentId, isDarkTheme) || theme.memory : theme.memory}, 0.12)`;
+      const haloExpansion = mapMode && !reducedMotion ? 3 + breathWave * 5 : 4;
+      ctx.arc(p.x, p.y, radius + haloExpansion, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.beginPath();
@@ -992,57 +1197,91 @@ function drawMemoryGraphCanvas() {
     ctx.closePath();
   };
 
-  const pillCandidates = [];
-  const hoveredNode = memoryGraphHover?.type === "node" ? memoryGraphHover.key : null;
+  const focusCandidates = [];
+  const structureCandidates = [];
+  const memoryCandidates = [];
   for (const body of bodies) {
     const node = body.node;
     if (!nodeVisible(node.id)) continue;
     const linkCount = model.linkDegree.get(node.id) || 0;
-    const isFocus = node.id === selection || node.id === hoveredNode || (selection && selectionNeighbors.has(node.id));
-    const isHub = node.kind !== "memory" ? (model.degree.get(node.id) || 0) > 2 : linkCount > 0;
-    if (!isFocus && !isHub) continue;
-    pillCandidates.push({ body, node, rank: (isFocus ? 100 : 0) + linkCount + (model.degree.get(node.id) || 0) / 10 });
+    const degree = model.degree.get(node.id) || 0;
+    const isFocus = node.id === selection
+      || node.id === hoveredNode
+      || (selection && !networkMode && selectionNeighbors.has(node.id));
+    const candidate = { body, node, rank: (isFocus ? 1000 : 0) + linkCount * 10 + degree };
+    if (isFocus) {
+      focusCandidates.push(candidate);
+    } else if (model.effectiveMode === "all" && node.kind !== "memory" && degree > 2) {
+      structureCandidates.push(candidate);
+    } else if (model.effectiveMode === "all" && node.kind === "memory" && degree >= 2) {
+      memoryCandidates.push(candidate);
+    } else if (model.effectiveMode !== "all" && linkCount > 0) {
+      memoryCandidates.push(candidate);
+    }
   }
-  pillCandidates.sort((left, right) => right.rank - left.rank);
+  const byRank = (left, right) => right.rank - left.rank || graphHash(left.node.id) - graphHash(right.node.id);
+  focusCandidates.sort(byRank);
+  structureCandidates.sort(byRank);
+  memoryCandidates.sort(byRank);
+  const pillCandidates = model.effectiveMode === "all"
+    ? [...focusCandidates, ...structureCandidates.slice(0, 11), ...memoryCandidates.slice(0, 14)]
+    : [...focusCandidates, ...memoryCandidates.slice(0, networkMode ? 10 : 18)];
   const placedPills = [];
   let pillsDrawn = 0;
   for (const { body, node } of pillCandidates) {
-    if (pillsDrawn >= 22) break;
+    if (pillsDrawn >= (model.effectiveMode === "all" ? 25 : networkMode ? 12 : 18)) break;
     const p = project(body);
     if (p.x < -40 || p.y < -20 || p.x > rect.width + 40 || p.y > rect.height + 20) continue;
     const text = truncateCanvasText(labelForNode(node), 118);
     const textWidth = ctx.measureText(text).width;
     const pillWidth = Math.min(140, textWidth + 18);
     const pillHeight = 20;
-    let x = Math.min(rect.width - pillWidth - 8, Math.max(8, p.x + 12));
-    let y = Math.min(rect.height - pillHeight - 8, Math.max(8, p.y - pillHeight - 8));
-    let overlaps = false;
-    for (let attempt = 0; attempt < 8; attempt += 1) {
-      overlaps = placedPills.some((box) =>
+    const positions = [
+      [p.x + 11, p.y - pillHeight - 7],
+      [p.x + 11, p.y + 7],
+      [p.x - pillWidth - 11, p.y - pillHeight - 7],
+      [p.x - pillWidth - 11, p.y + 7],
+      [p.x + 11, p.y - pillHeight / 2],
+      [p.x - pillWidth - 11, p.y - pillHeight / 2]
+    ];
+    let placement = null;
+    for (const [candidateX, candidateY] of positions) {
+      const x = Math.min(rect.width - pillWidth - 8, Math.max(8, candidateX));
+      const y = Math.min(rect.height - pillHeight - 8, Math.max(8, candidateY));
+      const overlaps = placedPills.some((box) =>
         x < box.x + box.w + 6 && x + pillWidth + 6 > box.x && y < box.y + box.h + 5 && y + pillHeight + 5 > box.y
       );
-      if (!overlaps) break;
-      y = Math.min(rect.height - pillHeight - 8, Math.max(8, y + pillHeight + 6));
+      if (!overlaps) {
+        placement = { x, y };
+        break;
+      }
     }
-    if (overlaps) continue;
+    if (!placement) continue;
+    const { x, y } = placement;
     placedPills.push({ x, y, w: pillWidth, h: pillHeight });
     pillsDrawn += 1;
     roundRect(x, y, pillWidth, pillHeight, 10);
     ctx.globalAlpha = 0.86;
     ctx.fillStyle = theme.pillFill;
     ctx.fill();
-    ctx.strokeStyle = node.kind === "label" ? theme.labelPillStroke : theme.sharedLinePillStroke;
+    const pillAgentColor = model.effectiveMode === "all" && node.kind === "memory"
+      ? graphAgentColor(node.agentId, isDarkTheme)
+      : "";
+    ctx.strokeStyle = node.kind === "label"
+      ? theme.labelPillStroke
+      : pillAgentColor ? `rgba(${pillAgentColor}, 0.34)` : theme.sharedLinePillStroke;
     ctx.lineWidth = 0.85;
     ctx.stroke();
     ctx.globalAlpha = 1;
     ctx.fillStyle = theme.pillText;
     ctx.fillText(text, x + 9, y + pillHeight / 2);
   }
+  canvas.dataset.visibleLabelCount = String(pillsDrawn);
 
   memoryGraphState.hitEdges = hitEdges;
   memoryGraphState.hitNodes = hitNodes;
 
-  if (!sim.isSettled() || !reducedMotion) {
+  if (!sim.isSettled() || (model.effectiveMode === "all" && !reducedMotion)) {
     memoryGraphAnimation = requestAnimationFrame(drawMemoryGraphCanvas);
   }
 }
@@ -1122,8 +1361,24 @@ function graphNodeById(nodeId) {
   return memoryGraphState.model.nodes.find((node) => node.id === nodeId) || null;
 }
 
+function stateNodeDisplayLabel(node) {
+  const label = String(node?.label || node?.id || "").trim();
+  const looksLikeStorageId = /^(?:old_)?memoria_memory_[a-z0-9_-]+$/i.test(label)
+    || /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(label);
+  if (!looksLikeStorageId) return label;
+  const excerpt = String(node?.excerpt || "").trim().split(/\r?\n/)[0];
+  return excerpt || label;
+}
+
 function linkKindLabel(kind) {
   const key = `memory.graph.link.${kind}`;
+  const text = t(key);
+  return text === key ? kind : text;
+}
+
+function graphEdgeKindLabel(kind) {
+  if (String(kind).startsWith("link:")) return linkKindLabel(linkKindOf({ kind }));
+  const key = `memory.graph.edge.${kind}`;
   const text = t(key);
   return text === key ? kind : text;
 }
@@ -1132,24 +1387,13 @@ function renderGraphSidePanel() {
   const panel = document.querySelector("#memoryGraphPanel");
   if (!panel || !memoryGraphState) return;
   const { model } = memoryGraphState;
-  const selection = memoryGraphSelection ? graphNodeById(memoryGraphSelection) : null;
+  let selection = memoryGraphSelection ? graphNodeById(memoryGraphSelection) : null;
+  const isDarkTheme = document.body?.dataset?.theme === "dark";
   if (model.effectiveMode === "state") {
+    const activeChain = model.stateChains.find((chain) => chain.id === model.activeStateChainId) || model.stateChains[0];
+    if (!selection) selection = graphNodeById(activeChain?.id);
     const supersedes = model.edges.filter((edge) => linkKindOf(edge) === "supersedes");
     const contradictions = model.edges.filter((edge) => linkKindOf(edge) === "contradicts");
-    if (!selection) {
-      panel.innerHTML = `
-        <div class="graph-panel-kicker">${escapeHtml(t("memory.graph.statePanel.kicker"))}</div>
-        <div class="graph-panel-title">${escapeHtml(t("memory.graph.statePanel.title"))}</div>
-        <div class="graph-panel-hint">${escapeHtml(t("memory.graph.statePanel.empty"))}</div>
-        <div class="state-legend">
-          <div><span class="state-symbol current"></span><span>${escapeHtml(t("memory.graph.role.current"))}</span></div>
-          <div><span class="state-symbol historical"></span><span>${escapeHtml(t("memory.graph.role.historical"))}</span></div>
-          <div><span class="state-symbol contradiction"></span><span>${escapeHtml(t("memory.graph.role.contradiction"))}</span></div>
-        </div>
-        <div class="state-panel-count">${escapeHtml(t("memory.graph.statePanel.count", { count: supersedes.length }))}</div>
-      `;
-      return;
-    }
     const chainIds = new Set([selection.id]);
     let changed = true;
     while (changed) {
@@ -1179,13 +1423,19 @@ function renderGraphSidePanel() {
     const ordered = [...chainIds]
       .map((id) => graphNodeById(id))
       .filter(Boolean)
-      .sort((left, right) => depthFor(left.id) - depthFor(right.id));
+      .sort((left, right) =>
+        depthFor(right.id) - depthFor(left.id)
+          || (left.status === "superseded" ? 1 : 0) - (right.status === "superseded" ? 1 : 0)
+          || String(left.label || left.id).localeCompare(String(right.label || right.id))
+      );
+    const currentNode = ordered.find((node) => node.status !== "superseded") || ordered[0];
+    const previousNode = ordered.find((node) => node.status === "superseded");
     const timeline = ordered.map((node) => `
       <button class="state-timeline-item ${node.id === selection.id ? "selected" : ""} ${node.status === "superseded" ? "historical" : "current"}" data-graph-select="${escapeHtml(node.id)}">
         <span class="state-timeline-marker"></span>
         <span>
           <small>${escapeHtml(node.status === "superseded" ? t("memory.graph.role.historical") : t("memory.graph.role.current"))}</small>
-          <strong>${escapeHtml(node.label || node.id)}</strong>
+          <strong>${escapeHtml(stateNodeDisplayLabel(node))}</strong>
         </span>
       </button>
     `).join("");
@@ -1195,15 +1445,25 @@ function renderGraphSidePanel() {
       .map((edge) => {
         const otherId = edge.from === selection.id ? edge.to : edge.from;
         const other = graphNodeById(otherId);
-        return `<button class="state-conflict" data-graph-select="${escapeHtml(otherId)}"><span></span><strong>${escapeHtml(other?.label || otherId)}</strong></button>`;
+        return `<button class="state-conflict" data-graph-select="${escapeHtml(otherId)}"><span></span><strong>${escapeHtml(stateNodeDisplayLabel(other) || otherId)}</strong></button>`;
       })
       .join("");
     panel.innerHTML = `
+      <button class="state-overview-back" data-graph-select="">← ${escapeHtml(t("memory.graph.statePanel.backToOverview"))}</button>
       <div class="graph-panel-kicker">${escapeHtml(t("memory.graph.statePanel.kicker"))}</div>
-      <div class="graph-panel-title">${escapeHtml(selection.label || selection.id)}</div>
-      ${selection.excerpt ? `<div class="state-panel-excerpt">${escapeHtml(selection.excerpt)}</div>` : ""}
+      <div class="graph-panel-title">${escapeHtml(t("memory.graph.statePanel.title"))}</div>
+      <div class="graph-panel-hint">${escapeHtml(t("memory.graph.statePanel.explainer"))}</div>
+      <div class="state-transition-summary">
+        <small>${escapeHtml(t("memory.graph.role.current"))}</small>
+        <strong>${escapeHtml(stateNodeDisplayLabel(currentNode))}</strong>
+        ${previousNode ? `<span>${escapeHtml(t("memory.graph.statePanel.replaced"))}</span><p>${escapeHtml(stateNodeDisplayLabel(previousNode))}</p>` : ""}
+      </div>
       <div class="state-panel-section-label">${escapeHtml(t("memory.graph.statePanel.timeline"))}</div>
       <div class="state-timeline">${timeline}</div>
+      ${memoryGraphSelection && selection.excerpt ? `
+        <div class="state-panel-section-label">${escapeHtml(t("memory.graph.statePanel.selectedContent"))}</div>
+        <div class="state-panel-excerpt">${escapeHtml(selection.excerpt)}</div>
+      ` : ""}
       ${replacement?.note ? `
         <div class="state-reason">
           <small>${escapeHtml(t("memory.graph.statePanel.reason"))}</small>
@@ -1217,7 +1477,38 @@ function renderGraphSidePanel() {
     `;
     return;
   }
+  const networkClusterChooser = model.effectiveMode === "network" ? `
+    <div class="graph-panel-kicker">${escapeHtml(t("memory.graph.networkPanel.kicker"))}</div>
+    <div class="network-cluster-list">
+      ${model.networkClusters.map((cluster) => `
+        <button class="network-cluster-choice ${cluster.id === model.activeNetworkClusterId ? "selected" : ""}" data-graph-select="${escapeHtml(cluster.id)}">
+          <span class="network-cluster-mark"></span>
+          <span>
+            <strong>${escapeHtml(cluster.label)}</strong>
+            <small>${escapeHtml(t("memory.graph.networkPanel.items", { nodes: cluster.nodeCount, edges: cluster.edgeCount }))}</small>
+          </span>
+        </button>
+      `).join("")}
+    </div>
+  ` : "";
   if (!selection) {
+    const agentCounts = new Map();
+    if (model.effectiveMode === "all") {
+      for (const node of model.nodes) {
+        if (node.kind !== "memory" || !node.agentId) continue;
+        agentCounts.set(node.agentId, (agentCounts.get(node.agentId) || 0) + 1);
+      }
+    }
+    const agentLegendRows = [...agentCounts.entries()]
+      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+      .map(([agentId, count]) => `
+        <div class="graph-legend-row">
+          <span class="graph-legend-swatch agent" style="--agent-color: rgb(${graphAgentColor(agentId, isDarkTheme)})"></span>
+          <span>${escapeHtml(agentId)}</span>
+          <strong>${count}</strong>
+        </div>
+      `)
+      .join("");
     const kindCounts = new Map();
     for (const edge of model.edges) {
       if (!isLinkEdge(edge)) continue;
@@ -1237,27 +1528,29 @@ function renderGraphSidePanel() {
       )
       .join("");
     panel.innerHTML = `
-      <div class="graph-panel-hint">${escapeHtml(t("memory.graph.panel.empty"))}</div>
+      <div class="graph-panel-hint">${escapeHtml(t(model.effectiveMode === "all" ? "memory.graph.panel.mapHint" : "memory.graph.panel.empty"))}</div>
+      ${agentLegendRows ? `<div class="graph-panel-kicker">${escapeHtml(t("memory.graph.agentLegend"))}</div><div class="graph-legend agent-legend">${agentLegendRows}</div>` : ""}
+      ${networkClusterChooser}
       ${legendRows ? `<div class="graph-legend">${legendRows}</div>` : ""}
-      ${model.effectiveMode === "all" ? `<div class="graph-panel-hint subtle">${escapeHtml(t("memory.graph.networkEmpty"))}</div>` : ""}
     `;
     return;
   }
-  const incident = model.edges.filter(
-    (edge) => isLinkEdge(edge) && (edge.from === selection.id || edge.to === selection.id)
+  const mapMode = model.effectiveMode === "all";
+  const incident = model.edges.filter((edge) =>
+    (mapMode ? !isLinkEdge(edge) : isLinkEdge(edge))
+      && (edge.from === selection.id || edge.to === selection.id)
   );
-  const rows = incident
+  const rows = incident.slice(0, 20)
     .map((edge) => {
       const otherId = edge.from === selection.id ? edge.to : edge.from;
       const other = graphNodeById(otherId);
-      const strength = Math.max(0.05, Math.min(1, Number(edge.strength) || 0.5));
-      const kind = linkKindOf(edge);
+      const kind = isLinkEdge(edge) ? linkKindOf(edge) : edge.kind;
       return `
         <button class="graph-panel-link" data-graph-select="${escapeHtml(otherId)}">
           <span class="graph-panel-link-head">
             <span class="graph-legend-swatch kind-${escapeHtml(kind)}"></span>
-            <span class="graph-panel-kind">${escapeHtml(linkKindLabel(kind))}</span>
-            <span class="graph-panel-strength" style="--link-strength: ${Math.round(strength * 100)}%"></span>
+            <span class="graph-panel-kind">${escapeHtml(graphEdgeKindLabel(edge.kind))}</span>
+            ${isLinkEdge(edge) ? `<span class="graph-panel-strength" style="--link-strength: ${Math.round(Math.max(0.05, Math.min(1, Number(edge.strength) || 0.5)) * 100)}%"></span>` : ""}
           </span>
           <strong>${escapeHtml(other?.label || otherId)}</strong>
           ${edge.note ? `<em>${escapeHtml(edge.note)}</em>` : ""}
@@ -1265,10 +1558,17 @@ function renderGraphSidePanel() {
       `;
     })
     .join("");
+  const detail = selection.excerpt || selection.summary || "";
+  const kindKey = `memory.graph.kind.${selection.kind}`;
+  const selectionAgentColor = mapMode && selection.kind === "memory" ? graphAgentColor(selection.agentId, isDarkTheme) : "";
   panel.innerHTML = `
+    <div class="graph-panel-kicker">${escapeHtml(t(kindKey))}</div>
     <div class="graph-panel-title">${escapeHtml(selection.label || selection.id)}</div>
-    <div class="graph-panel-subtitle">${escapeHtml(t("memory.graph.panel.title"))} · ${incident.length}</div>
-    ${rows || `<div class="graph-panel-hint subtle">${escapeHtml(t("memory.graph.panel.noLinks"))}</div>`}
+    ${selectionAgentColor ? `<div class="graph-agent-chip"><span style="--agent-color: rgb(${selectionAgentColor})"></span>${escapeHtml(selection.agentId)}</div>` : ""}
+    ${detail ? `<div class="graph-panel-excerpt">${escapeHtml(detail)}</div>` : ""}
+    <div class="graph-panel-subtitle">${escapeHtml(t(mapMode ? "memory.graph.panel.structure" : "memory.graph.panel.title"))} · ${incident.length}</div>
+    ${rows || `<div class="graph-panel-hint subtle">${escapeHtml(t(mapMode ? "memory.graph.panel.noStructure" : "memory.graph.panel.noLinks"))}</div>`}
+    ${networkClusterChooser}
   `;
 }
 
@@ -1365,16 +1665,17 @@ function renderMemoryGraph() {
     memoryGraph.innerHTML = `<div class="endpoint-empty">${t("memory.graph.empty")}</div>`;
     return;
   }
-  const model = buildGraphModel(graph, memoryGraphMode);
-  memoryGraphSummary.textContent = t("memory.graph.summary", {
-    nodes: model.nodes.length,
-    edges: model.edges.length
-  });
+  const model = buildGraphModel(graph, memoryGraphMode, memoryGraphSelection);
+  memoryGraphSummary.textContent = t("memory.graph.summary", { nodes: allNodes.length, edges: allEdges.length });
   if (memoryGraphSelection && !model.nodes.some((node) => node.id === memoryGraphSelection)) {
     memoryGraphSelection = null;
   }
   stopMemoryGraphAnimation();
   const stateEmpty = model.effectiveMode === "state" && model.nodes.length === 0;
+  const stateMode = model.effectiveMode === "state";
+  const stateOverview = stateMode && !stateEmpty && !memoryGraphSelection;
+  const stateViewportHeight = 444;
+  const stateCanvasHeight = stateMode ? Math.max(stateViewportHeight, model.nodes.length * 86 + 72) : 520;
   memoryGraph.innerHTML = `
     <div class="graph-toolbar">
       <div class="graph-view-switch" aria-label="${escapeHtml(t("memory.graph.viewLabel"))}">
@@ -1386,12 +1687,16 @@ function renderMemoryGraph() {
         <button class="graph-layer ${activeMemoryGraphLayer === "primary" ? "active" : ""}" data-graph-layer="primary">${escapeHtml(t("memory.graph.primaryLayer"))}</button>
         <button class="graph-layer ${activeMemoryGraphLayer === "restricted" ? "active restricted" : ""}" data-graph-layer="restricted">${escapeHtml(t("memory.graph.restrictedLayer"))}</button>
       </div>
-      <div class="graph-zoom-controls">
-        <button class="secondary" data-graph-zoom="out" aria-label="${escapeHtml(t("memory.graph.zoomOut"))}">−</button>
-        <button class="secondary" data-graph-zoom="fit">${escapeHtml(t("memory.graph.fit"))}</button>
-        <button class="secondary" data-graph-zoom="in" aria-label="${escapeHtml(t("memory.graph.zoomIn"))}">+</button>
-      </div>
-      <strong class="graph-toolbar-summary">${escapeHtml(t("memory.graph.summary", { nodes: model.nodes.length, edges: model.edges.length }))}</strong>
+      ${stateMode ? `<div class="state-direction">${escapeHtml(t(stateOverview ? "memory.graph.statePanel.chooseChain" : "memory.graph.statePanel.direction"))}</div>` : `
+        <div class="graph-zoom-controls">
+          <button class="secondary" data-graph-zoom="out" aria-label="${escapeHtml(t("memory.graph.zoomOut"))}">−</button>
+          <button class="secondary" data-graph-zoom="fit">${escapeHtml(t("memory.graph.fit"))}</button>
+          <button class="secondary" data-graph-zoom="in" aria-label="${escapeHtml(t("memory.graph.zoomIn"))}">+</button>
+        </div>
+      `}
+      <strong class="graph-toolbar-summary">${escapeHtml(stateOverview
+        ? t("memory.graph.statePanel.overviewSummary", { chains: model.stateChains.length, changes: model.stateEdgeCount })
+        : t("memory.graph.summary", { nodes: model.nodes.length, edges: model.edges.length }))}</strong>
     </div>
     <div class="graph-body">
       ${stateEmpty ? `
@@ -1400,13 +1705,39 @@ function renderMemoryGraph() {
           <strong>${escapeHtml(t("memory.graph.stateEmpty.title"))}</strong>
           <p>${escapeHtml(t("memory.graph.stateEmpty.body"))}</p>
         </div>
+      ` : stateOverview ? `
+        <section class="state-chain-overview">
+          <div class="state-chain-overview-head">
+            <div class="graph-panel-kicker">${escapeHtml(t("memory.graph.statePanel.kicker"))}</div>
+            <h3>${escapeHtml(t("memory.graph.statePanel.overviewTitle"))}</h3>
+            <p>${escapeHtml(t("memory.graph.statePanel.overviewBody"))}</p>
+          </div>
+          <div class="state-chain-overview-grid">
+            ${model.stateChains.map((chain) => `
+              <button class="state-chain-overview-card" data-graph-select="${escapeHtml(chain.id)}">
+                <span>${escapeHtml(t("memory.graph.role.current"))}</span>
+                <strong>${escapeHtml(chain.label)}</strong>
+                <small>${escapeHtml(t("memory.graph.statePanel.items", { count: chain.nodeCount }))}</small>
+                <em>→</em>
+              </button>
+            `).join("")}
+          </div>
+        </section>
       ` : `
-        <div class="graph-canvas">
-          <canvas id="memoryGraphCanvas" data-mode="${escapeHtml(model.effectiveMode)}" data-node-count="${model.nodes.length}" data-edge-count="${model.edges.length}" data-label-count="${model.nodes.filter((node) => node.kind === "label").length}" data-link-count="${model.linkEdgeCount}" data-state-edge-count="${model.stateEdgeCount}" data-restricted-count="${model.nodes.filter((node) => node.sensitivity === "restricted").length}" aria-label="${escapeHtml(t("memory.graph.title"))}"></canvas>
-          <div id="memoryGraphTooltip" class="graph-tooltip"></div>
+        <div class="graph-stage ${stateMode ? "state-stage" : ""}">
+          ${stateMode ? `
+            <div class="state-chain-explainer">
+              <strong>${escapeHtml(t("memory.graph.statePanel.readingTitle"))}</strong>
+              <span>${escapeHtml(t("memory.graph.statePanel.readingBody"))}</span>
+            </div>
+          ` : ""}
+          <div class="graph-canvas ${stateMode ? "state-scroll" : ""}" ${stateMode ? `style="height: ${stateViewportHeight}px; min-height: ${stateViewportHeight}px"` : ""}>
+            <canvas id="memoryGraphCanvas" style="height: ${stateCanvasHeight}px" data-mode="${escapeHtml(model.effectiveMode)}" data-state-layout="${stateMode ? "timeline" : ""}" data-state-title-clipping="${stateMode ? "pixel" : ""}" data-active-state-chain="${escapeHtml(model.activeStateChainId || "")}" data-node-count="${model.nodes.length}" data-edge-count="${model.edges.length}" data-label-count="${model.nodes.filter((node) => node.kind === "label").length}" data-agent-count="${new Set(model.nodes.filter((node) => node.kind === "memory").map((node) => node.agentId).filter(Boolean)).size}" data-link-count="${model.linkEdgeCount}" data-network-cluster-count="${model.networkClusters.length}" data-active-network-cluster="${escapeHtml(model.activeNetworkClusterId || "")}" data-state-edge-count="${model.stateEdgeCount}" data-restricted-count="${model.nodes.filter((node) => node.sensitivity === "restricted").length}" aria-label="${escapeHtml(t("memory.graph.title"))}"></canvas>
+            <div id="memoryGraphTooltip" class="graph-tooltip"></div>
+          </div>
         </div>
       `}
-      <aside id="memoryGraphPanel" class="graph-side-panel"></aside>
+      ${stateOverview ? "" : `<aside id="memoryGraphPanel" class="graph-side-panel"></aside>`}
     </div>
   `;
   const canvas = document.querySelector("#memoryGraphCanvas");
@@ -1471,7 +1802,12 @@ function renderMemoryGraph() {
   function getActiveTab() { return activeMemoryTab; }
   function setActiveAgentFilter(value) { activeMemoryAgentFilter = value || ""; }
   function setActiveTab(tabName) { activeMemoryTab = tabName || "search"; }
-  function setSearchActive(value) { searchActive = Boolean(value); }
+  function setSearchActive(value) {
+    searchActive = Boolean(value);
+    if (memoryRecentTitle) {
+      memoryRecentTitle.textContent = t(searchActive ? "memory.search.resultsTitle" : "memory.recent");
+    }
+  }
 
   function searchMemoryLabel(label) {
     memorySearchInput.value = String(label || "").trim();
@@ -1481,6 +1817,7 @@ function renderMemoryGraph() {
 
   function beginGraphDrag(event) {
     if (!event.target.closest(".graph-canvas")) return;
+    if (event.target.closest("#memoryGraphCanvas")?.dataset.mode === "state") return;
     memoryGraphDrag = { x: event.clientX, y: event.clientY, startPan: { ...memoryGraphPan } };
     memoryGraphDragMoved = false;
     memoryGraph.classList.add("dragging");

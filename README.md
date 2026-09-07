@@ -42,7 +42,11 @@ Read these before adding new features:
   pagination, resource ownership, memory telemetry, and long-run checks.
 - [macOS Packaging](docs/mac-packaging.md): current local packaging and packaged
   Gateway validation notes.
-- [v0.6.12 release notes](docs/RELEASE_NOTES_V0.6.12.md): current macOS Apple
+- [v0.6.14 release notes](docs/RELEASE_NOTES_V0.6.14.md): current source checkpoint
+  for recovery safety, complete semantic retrieval, and source CI.
+- [v0.6.13 release notes](docs/RELEASE_NOTES_V0.6.13.md): previous local trial
+  checkpoint for reliable memory search and readable Memoria graph modes.
+- [v0.6.12 release notes](docs/RELEASE_NOTES_V0.6.12.md): current public macOS Apple
   Silicon and Windows x64 Full/Lite release, including the Shared Line refresh
   fix, InnerLife share integrity, and installed-app login startup.
 - [v0.6.11 release notes](docs/RELEASE_NOTES_V0.6.11.md): previous unpublished
@@ -72,8 +76,8 @@ Read these before adding new features:
 
 ## Current Status
 
-The current development checkpoint and public stable release are `0.6.12`.
-The public release contains Developer ID signed and
+The current local source checkpoint is `0.6.14`; the public stable release
+remains `0.6.12`. The public release contains Developer ID signed and
 notarized macOS Apple Silicon Full/Lite builds plus Windows x64 Full/Lite
 installers. Intel macOS and Mac App Store packages are outside that release. It
 is a working desktop shell with a product-owned local data store,
@@ -86,6 +90,13 @@ remain stored as UTC, while structured records preserve their event time zone.
 Included:
 
 - Electron desktop app
+- Memoria search ranks explicit keyword matches first, admits semantic matches
+  only above a relevance floor, returns at most 10 semantic candidates, and
+  reports when no result is reliable instead of filling a 50-item page.
+- Memoria graph reading is split into three distinct views: the memory map
+  shows overall memory/label structure with Agent colors, the relationship
+  network focuses explicit-link clusters, and state chains open with an
+  all-chain overview before showing one current-to-history replacement path.
 - InnerLife session afterthoughts remain unavailable while their generated
   content is still drafting, preventing placeholder previews from entering
   Agent share decisions.

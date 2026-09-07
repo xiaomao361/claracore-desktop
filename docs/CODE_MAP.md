@@ -186,7 +186,9 @@ Repository ownership:
 - `core/db/repositories/memoria/records.js`: Memoria structured record create,
   get, list, stats, and summary persistence.
 - `core/db/repositories/memoria/embeddings.js`: Memoria embedding creation,
-  vector candidates, hybrid search, and pending embedding processing.
+  vector candidates, hybrid search, and pending embedding processing. Semantic
+  ranking scans model-compatible candidates in bounded keyset pages; settings
+  changes invalidate eligible active vectors through this owner.
 - `core/db/repositories/memoria/maintenance.js`: Memoria archive suggestions,
   maintenance reports and repair, audit reports, merge suggestions, and merge
   persistence.
@@ -318,6 +320,21 @@ Start here:
 Use this path for memory create/update/delete/archive/restore/restrict,
 records, labels, graph, search, and embedding maintenance.
 
+For the human-facing search and graph behavior introduced at the `0.6.13`
+trial checkpoint, inspect these focused paths:
+
+- `core/db/repositories/memoria.js` and
+  `core/db/repositories/memoria/embeddings.js`: keyword-first hybrid ranking,
+  semantic threshold, and result cap;
+- `app/views/memoria.js`: memory-map, relationship-cluster, and state-chain
+  models plus the overview/detail reading flow;
+- `app/memoria-actions.js`: graph mode, selection, wheel, pan, and zoom events;
+- `styles/views/memoria-detail-graph.css`: fixed state-chain viewport and the
+  three graph-mode visual grammars;
+- `core/tests/memory-search-quality-smoke.js` and
+  `core/tests/phase2-memory-ui-smoke.js`: retrieval-quality and rendered
+  interaction contracts.
+
 For MCP `memoria_update`, inspect the handler before the repository: the
 handler preserves omitted `title`, `labels`, and `sensitivity`, while the
 repository remains a full-record update primitive.
@@ -404,7 +421,9 @@ Start here:
 
 Use this path for verified SQLite backups, restore preview, restore safety
 backup, full product JSON import/export, archive import/export, and import
-source preview.
+source preview. Safety-backup verification gates database replacement; restore
+preview counts compare all active memories in bounded pages. Boundary regressions
+live in `core/tests/backup-boundaries-smoke.js`.
 
 ### Logs And Trace Inspection
 
@@ -490,3 +509,7 @@ Choose the smallest validation that matches the changed surface.
 
 Do not default to the broadest gate when a targeted gate proves the changed
 path.
+
+`npm run test:core` is the non-UI source CI gate. The Source Checks workflow
+runs it on pull requests and main pushes and exercises new backup/search
+boundaries with the SQLite CLI fallback. Remote CI success requires a real run.

@@ -521,6 +521,13 @@ function installMemoriaRepository(ProductDatabase, helpers) {
         seenEdges.add(key);
         edges.push(edge);
       };
+      const memoryAgentId = (memory) => {
+        const labels = Array.isArray(memory?.labels) ? memory.labels : [];
+        const explicit = labels.find((label) => String(label || "").startsWith("agent-id:"));
+        if (explicit) return String(explicit).slice("agent-id:".length);
+        const fallback = labels.find((label) => String(label || "").startsWith("agent:"));
+        return fallback ? String(fallback).slice("agent:".length) : "";
+      };
     
       for (const memory of memories) {
         const memoryNodeId = `memory:${memory.id}`;
@@ -531,6 +538,7 @@ function installMemoriaRepository(ProductDatabase, helpers) {
           sensitivity: memory.sensitivity || "normal",
           label: memory.title || memory.body.slice(0, 48) || memory.id,
           excerpt: memory.body || "",
+          agentId: memoryAgentId(memory),
           refId: memory.id
         });
         for (const label of memory.labels || []) {

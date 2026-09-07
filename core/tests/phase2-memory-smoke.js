@@ -104,7 +104,7 @@ async function main() {
     throw new Error("Memory label alias delete did not remove the alias.");
   }
   const graphAfterAlias = await runtime.getProductMemoryGraph(app, { limit: 20 });
-  if (!graphAfterAlias.nodes.some((node) => node.kind === "memory" && node.refId === aliasMemory.id)) {
+  if (!graphAfterAlias.nodes.some((node) => node.kind === "memory" && node.refId === aliasMemory.id && node.agentId === "codex")) {
     throw new Error(`Memory graph did not include Memory node: ${JSON.stringify(graphAfterAlias)}`);
   }
   if (!graphAfterAlias.nodes.some((node) => node.kind === "label" && node.refId === "agent")) {

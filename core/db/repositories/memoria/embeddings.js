@@ -4,6 +4,8 @@ const { HAS_BUILT_IN_EMBEDDING } = require("../../../build-flavor");
 
 const BUILT_IN_EMBEDDING_PROVIDER = "claracore-built-in";
 const BUILT_IN_EMBEDDING_MODEL = "Xenova/bge-small-zh-v1.5";
+const MIN_VECTOR_SEARCH_SCORE = 0.55;
+const MAX_VECTOR_SEARCH_RESULTS = 10;
 
 let builtInExtractorPromise = null;
 let builtInExtractorLoadStarted = false;
@@ -140,6 +142,13 @@ function createMemoriaEmbeddingRepository(helpers) {
       const safeLimit = Math.max(1, Math.min(500, Number.parseInt(String(limit), 10) || 200));
       const agentClause = options.agentId || options.agent_id ? agentLabelClause(options.agentId || options.agent_id) : "";
       const statusClause = memoryStatusClause(options.timeView, "m");
+      const cursorClause = options.afterId ? `AND m.id > ${sqlString(options.afterId)}` : "";
+      const embedding = options.embedding;
+      const modelClause = embedding ? `
+        AND e.provider = ${sqlString(embedding.provider)}
+        AND e.model = ${sqlString(embedding.model)}
+        AND e.dimension = ${embedding.vector.length}
+      ` : "";
       const rows = await this.query(`
         SELECT
           m.id,
@@ -165,8 +174,10 @@ function createMemoriaEmbeddingRepository(helpers) {
           AND e.status = 'ready'
           AND e.vector_json IS NOT NULL
           ${agentClause}
+          ${cursorClause}
+          ${modelClause}
         GROUP BY m.id
-        ORDER BY e.embedded_at DESC
+        ORDER BY m.id ASC
         LIMIT ${safeLimit};
       `);
       return normalizeSearchRows(rows).map((row) => ({
@@ -215,20 +226,32 @@ function createMemoriaEmbeddingRepository(helpers) {
       );
 
       try {
-        const { vector: queryVector } = await this.createEmbedding(text);
-        const candidates = await this.vectorMemoryCandidates(200, {
-          agentId: options.agentId || options.agent_id || "",
-          timeView
-        });
-        const vectorResults = candidates
-          .map(({ vector, vector_json: _vectorJson, ...memory }) => ({
-            ...memory,
-            search_source: "vector",
-            search_score: cosineSimilarity(queryVector, vector)
-          }))
-          .filter((memory) => memory.search_score > 0)
-          .sort((left, right) => right.search_score - left.search_score)
-          .slice(0, safeLimit);
+        const embedding = await this.createEmbedding(text);
+        const vectorLimit = Math.min(safeLimit, MAX_VECTOR_SEARCH_RESULTS);
+        let vectorResults = [];
+        let afterId = "";
+        // Scan every eligible vector with bounded pages and retain only top K.
+        // Output limits must never become an age-based retrieval horizon.
+        while (true) {
+          const candidates = await this.vectorMemoryCandidates(200, {
+            agentId: options.agentId || options.agent_id || "",
+            timeView,
+            embedding,
+            afterId
+          });
+          const scored = candidates
+            .map(({ vector, vector_json: _vectorJson, ...memory }) => ({
+              ...memory,
+              search_source: "vector",
+              search_score: cosineSimilarity(embedding.vector, vector)
+            }))
+            .filter((memory) => memory.search_score >= MIN_VECTOR_SEARCH_SCORE);
+          vectorResults = [...vectorResults, ...scored]
+            .sort((left, right) => right.search_score - left.search_score || left.id.localeCompare(right.id))
+            .slice(0, vectorLimit);
+          if (candidates.length < 200) break;
+          afterId = candidates[candidates.length - 1].id;
+        }
 
         for (const memory of vectorResults) {
           const existing = merged.get(memory.id);
@@ -245,8 +268,8 @@ function createMemoriaEmbeddingRepository(helpers) {
 
         const results = [...merged.values()]
           .sort((left, right) => {
-            const leftBoost = left.search_source === "keyword+vector" ? 2 : left.search_source === "vector" ? 1 : 0;
-            const rightBoost = right.search_source === "keyword+vector" ? 2 : right.search_source === "vector" ? 1 : 0;
+            const leftBoost = left.search_source === "keyword+vector" ? 2 : left.search_source === "keyword" ? 1 : 0;
+            const rightBoost = right.search_source === "keyword+vector" ? 2 : right.search_source === "keyword" ? 1 : 0;
             if (rightBoost !== leftBoost) return rightBoost - leftBoost;
             if ((right.search_score || 0) !== (left.search_score || 0)) {
               return (right.search_score || 0) - (left.search_score || 0);
@@ -279,6 +302,16 @@ function createMemoriaEmbeddingRepository(helpers) {
           error: error.message
         };
       }
+    },
+
+    async invalidateMemoryEmbeddings() {
+      await this.exec(`
+        UPDATE memory_embeddings
+        SET status = 'pending', vector_json = NULL, vector_ref = NULL, error = NULL
+        WHERE memory_id IN (
+          SELECT id FROM memories WHERE status = 'active' AND sensitivity != 'restricted'
+        );
+      `);
     },
 
     async markMemoryEmbeddingPending(memoryId) {
@@ -316,12 +349,19 @@ function createMemoriaEmbeddingRepository(helpers) {
       const settings = await this.getSettings();
       const provider = settings["memory.embedding.provider"] || BUILT_IN_EMBEDDING_PROVIDER;
       const model = settings["memory.embedding.model"] ?? (provider === BUILT_IN_EMBEDDING_PROVIDER ? BUILT_IN_EMBEDDING_MODEL : "");
+      // A response from a previous configuration must not overwrite the pending
+      // rebuild state after the user switches models while embedding is running.
+      const embeddingSettingsClause = ["provider", "model", "base_url", "dimension", "max_chars"]
+        .map((key) => {
+          const setting = `memory.embedding.${key}`;
+          return `(SELECT value_json FROM app_settings WHERE key = ${sqlString(setting)}) = ${jsonSql(settings[setting])}`;
+        }).join(" AND ");
       try {
         const text = `${memory.title || ""}\n${memory.body || ""}`.trim();
         const embedding = await this.createEmbedding(text);
         await this.exec(`
           INSERT INTO memory_embeddings (memory_id, provider, model, dimension, status, vector_json, vector_ref, error, embedded_at)
-          VALUES (
+          SELECT
             ${sqlString(memoryId)},
             ${sqlString(embedding.provider)},
             ${sqlString(embedding.model)},
@@ -331,7 +371,7 @@ function createMemoriaEmbeddingRepository(helpers) {
             NULL,
             NULL,
             CURRENT_TIMESTAMP
-          )
+          WHERE ${embeddingSettingsClause}
           ON CONFLICT(memory_id) DO UPDATE SET
             provider = excluded.provider,
             model = excluded.model,
@@ -345,7 +385,7 @@ function createMemoriaEmbeddingRepository(helpers) {
       } catch (error) {
         await this.exec(`
           INSERT INTO memory_embeddings (memory_id, provider, model, dimension, status, vector_json, vector_ref, error, embedded_at)
-          VALUES (
+          SELECT
             ${sqlString(memoryId)},
             ${sqlString(provider)},
             ${sqlString(model)},
@@ -355,7 +395,7 @@ function createMemoriaEmbeddingRepository(helpers) {
             NULL,
             ${sqlString(error.message)},
             CURRENT_TIMESTAMP
-          )
+          WHERE ${embeddingSettingsClause}
           ON CONFLICT(memory_id) DO UPDATE SET
             provider = excluded.provider,
             model = excluded.model,

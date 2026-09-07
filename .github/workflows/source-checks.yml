@@ -1,0 +1,38 @@
+name: Source Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: source-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install SQLite CLI fallback
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sqlite3
+      - name: Source and isolated core regression
+        run: npm run test:core
+      - name: SQLite CLI fallback boundaries
+        env:
+          CLARACORE_DESKTOP_DISABLE_NODE_SQLITE: "1"
+        run: |
+          node core/tests/memory-search-boundaries-smoke.js
+          node core/tests/backup-boundaries-smoke.js

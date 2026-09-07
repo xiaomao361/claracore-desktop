@@ -1,6 +1,6 @@
 {
   "name": "claracore-desktop",
-  "version": "0.6.12",
+  "version": "0.6.14",
   "buildFlavor": "full",
   "private": true,
   "description": "ClaraCore desktop manager for the local personal cognitive core",
@@ -40,7 +40,7 @@
     "test:lite:ollama": "node core/tests/lite-ollama-smoke.js",
     "test:package:lite": "node scripts/verify-lite-package.js",
     "test:package:win:lite": "node scripts/verify-lite-package.js --platform win32",
-    "test:phase2": "node core/tests/phase2-memory-smoke.js && node core/tests/phase2-gateway-smoke.js && npm run test:phase2:ui",
+    "test:phase2": "npm run test:memoria:search && node core/tests/phase2-memory-smoke.js && node core/tests/phase2-gateway-smoke.js && npm run test:phase2:ui",
     "test:phase2:ui": "node core/tests/run-ui-smoke.js core/tests/phase2-memory-ui-smoke.js",
     "test:continuity:boundaries": "node --check core/db/repositories/continuity/agents.js && node --check core/db/repositories/continuity/lines.js && node --check core/tests/continuity-repository-boundary-smoke.js && node core/tests/continuity-repository-boundary-smoke.js",
     "test:phase3": "npm run test:continuity:boundaries && node core/tests/shared-line-hydration-smoke.js && node core/tests/phase3-shared-line-smoke.js && node core/tests/phase3-gateway-smoke.js && npm run test:phase3:ui",
@@ -57,7 +57,7 @@
     "test:phase5": "node core/tests/innerlife-repository-boundary-smoke.js && node core/tests/innerlife-afterthought-drafting-migration-smoke.js && node core/tests/phase5-innerlife-smoke.js && node core/tests/persisted-background-jobs-smoke.js && node core/tests/innerlife-share-quality-smoke.js && node core/tests/innerlife-retention-smoke.js && node core/tests/innerlife-compact-snapshot-performance-smoke.js && node core/tests/innerlife-source-ingest-smoke.js && npm run test:phase5:ui && npm run test:phase5:scheduler-ui",
     "test:phase5:ui": "node core/tests/run-ui-smoke.js core/tests/phase5-innerlife-ui-smoke.js",
     "test:phase5:scheduler-ui": "node core/tests/run-ui-smoke.js core/tests/phase5-innerlife-scheduler-ui-smoke.js",
-    "test:backup": "node core/tests/backup-restore-smoke.js",
+    "test:backup": "node core/tests/backup-boundaries-smoke.js && node core/tests/backup-restore-smoke.js",
     "test:backup:ui": "node core/tests/run-ui-smoke.js core/tests/backup-restore-ui-smoke.js",
     "test:data-backup-list:ui": "node core/tests/run-ui-smoke.js core/tests/data-backup-list-ui-smoke.js",
     "test:responsive-layout:ui": "node core/tests/run-ui-smoke.js core/tests/responsive-layout-ui-smoke.js",
@@ -83,7 +83,9 @@
     "pack:win:lite": "electron-builder --win --x64 --dir --config scripts/lite-builder-config.js",
     "dist:win": "electron-builder --win --x64 --publish never",
     "dist:win:lite": "electron-builder --win --x64 --config scripts/lite-builder-config.js --publish never",
-    "test:embedding:lazy": "node core/tests/builtin-embedding-lazy-smoke.js"
+    "test:embedding:lazy": "node core/tests/builtin-embedding-lazy-smoke.js",
+    "test:memoria:search": "node core/tests/memory-search-quality-smoke.js && node core/tests/memory-search-boundaries-smoke.js",
+    "test:core": "npm run check && npm run test:memoria:search && npm run test:backup && npm run test:memory-controller && node core/tests/phase2-memory-smoke.js && node core/tests/phase2-gateway-smoke.js"
   },
   "build": {
     "appId": "com.claracore.desktop",

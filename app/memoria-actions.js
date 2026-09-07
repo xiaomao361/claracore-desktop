@@ -10,23 +10,47 @@ function createClaraCoreMemoriaActions({
   renderMemoryTabs,
   loadMemoryTabData
 }) {
+  let searchPending = false;
+
   async function search() {
+    if (searchPending) return;
+    searchPending = true;
+    if (dom.searchMemory) {
+      dom.searchMemory.disabled = true;
+      dom.searchMemory.textContent = t("memory.search.loading");
+    }
+    dom.memorySearchInput?.setAttribute("aria-busy", "true");
     const selectedAgentId = dom.memoryAgentFilter?.value || state.activeMemoryAgentFilter || "";
     state.activeMemoryAgentFilter = selectedAgentId;
     memoriaView.setActiveAgentFilter(selectedAgentId);
     const query = String(dom.memorySearchInput.value || "").trim();
     memoriaView.setSearchActive(Boolean(query));
-    if (!query) {
-      await loadMemoryTabData("search", { force: true });
-      return;
+    try {
+      if (!query) {
+        await loadMemoryTabData("search", { force: true });
+        return;
+      }
+      const response = await desktop.searchMemories({
+        query,
+        agentId: selectedAgentId
+      });
+      const results = Array.isArray(response) ? response : response?.results || [];
+      renderMemoryResults(results, dom.memoryList, {
+        emptyMessage: t("memory.search.noReliable", { query })
+      });
+      if (response?.error) showCopyNotice(t("memory.search.fallback"));
+    } catch (error) {
+      memoriaView.setSearchActive(false);
+      showCopyNotice(t("memory.search.failed"));
+      throw error;
+    } finally {
+      searchPending = false;
+      dom.memorySearchInput?.removeAttribute("aria-busy");
+      if (dom.searchMemory) {
+        dom.searchMemory.disabled = false;
+        dom.searchMemory.textContent = t("actions.search");
+      }
     }
-    const response = await desktop.searchMemories({
-      query,
-      agentId: selectedAgentId
-    });
-    const results = Array.isArray(response) ? response : response?.results || [];
-    renderMemoryResults(results);
-    if (response?.error) showCopyNotice(t("memory.search.fallback"));
   }
 
   async function changeAgentFilter() {
@@ -86,6 +110,7 @@ function createClaraCoreMemoriaActions({
     });
     dom.memoryGraph?.addEventListener("wheel", (event) => {
       if (!event.target.closest(".graph-canvas")) return;
+      if (event.target.closest("#memoryGraphCanvas")?.dataset.mode === "state") return;
       event.preventDefault();
       memoriaView.setMemoryGraphZoom(event.deltaY < 0 ? "in" : "out");
     });

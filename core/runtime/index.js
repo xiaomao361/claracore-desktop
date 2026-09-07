@@ -130,7 +130,15 @@ const {
 
 async function saveProductSettings(app, updates) {
   const { paths, database } = await ensureProductCore(app);
-  await database.updateSettings(updates);
+  const previous = await database.getSettings();
+  const settings = await database.updateSettings(updates);
+  const embeddingKeys = ["provider", "model", "base_url", "dimension", "max_chars"];
+  if (settings["memory.embedding.provider"] !== "disabled" && embeddingKeys.some((key) => {
+    const setting = `memory.embedding.${key}`;
+    return JSON.stringify(previous[setting]) !== JSON.stringify(settings[setting]);
+  })) {
+    await database.invalidateMemoryEmbeddings();
+  }
   const configuration = await database.getConfiguration(paths);
   return {
     configuration,

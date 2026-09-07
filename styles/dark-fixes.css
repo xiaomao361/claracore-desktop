@@ -398,6 +398,23 @@ body[data-theme="dark"] .graph-side-panel {
   background: rgba(34, 40, 36, 0.96);
 }
 
+body[data-theme="dark"] .state-stage,
+body[data-theme="dark"] .state-chain-overview {
+  background: var(--surface);
+}
+
+body[data-theme="dark"] .state-chain-explainer,
+body[data-theme="dark"] .state-chain-overview-card {
+  border-color: var(--border);
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+body[data-theme="dark"] .state-chain-overview-card:hover {
+  border-color: var(--green);
+  background: var(--green-bg);
+}
+
 body[data-theme="dark"] .state-timeline-marker,
 body[data-theme="dark"] .state-empty-line::before {
   background: var(--control-bg-soft);

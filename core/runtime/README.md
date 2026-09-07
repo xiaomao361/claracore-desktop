@@ -58,3 +58,13 @@ Decay audit is diagnostic only. It may suggest that state needs review, but it
 must not archive Memory, approve or discard InnerLife shares, rewrite Shared
 Line positions, or recover daemon state by itself. Those mutations belong to
 explicit user or agent actions.
+
+## Recovery Safety
+
+Restore and full product JSON import require a verified safety backup before
+invalidating the current core or replacing its database. Failed verification
+leaves the current database available and records the failed backup for diagnosis.
+Restore preview compares all active memories in bounded keyset pages; counts
+cover the full comparison, while each change category exposes at most eight
+examples without full bodies. Counts retain the existing title/body/update-time
+comparison semantics; they are not a diff of every product table.

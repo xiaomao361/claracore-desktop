@@ -18,6 +18,10 @@ async function main() {
       },
       isPackaged: false
     };
+    await runtime.saveProductSettings(runtimeApp, {
+      "memory.embedding.provider": "disabled",
+      "memory.embedding.model": ""
+    });
     const historicalResidence = await runtime.createProductMemory(runtimeApp, {
       title: "Residence before the move",
       body: "The user lived in Shanghai before July 2026.",
@@ -26,6 +30,16 @@ async function main() {
     const currentResidence = await runtime.createProductMemory(runtimeApp, {
       title: "Current residence",
       body: "The user lives in Hangzhou from July 2026.",
+      labels: "state-chain"
+    });
+    const historicalPreference = await runtime.createProductMemory(runtimeApp, {
+      title: "Historical editor preference",
+      body: "The user previously preferred the light editor theme.",
+      labels: "state-chain"
+    });
+    const currentPreference = await runtime.createProductMemory(runtimeApp, {
+      title: "Current editor preference",
+      body: "The user now prefers the system editor theme.",
       labels: "state-chain"
     });
     const restrictedMemory = await runtime.createProductMemory(runtimeApp, {
@@ -39,6 +53,11 @@ async function main() {
       currentMemoryId: currentResidence.id,
       historicalMemoryId: historicalResidence.id,
       note: "The confirmed residence changed in July 2026."
+    });
+    await database.supersedeMemory({
+      currentMemoryId: currentPreference.id,
+      historicalMemoryId: historicalPreference.id,
+      note: "The confirmed editor preference changed."
     });
     await database.createMemoryLink({
       fromMemoryId: currentResidence.id,
@@ -253,8 +272,39 @@ async function main() {
     await page.waitForFunction(() => document.querySelector("#memoryList")?.textContent.includes("UI Memoria visible fact"), null, {
       timeout: 15000
     });
+    const searchFeedback = await page.evaluate(() => ({
+      title: document.querySelector("#memoryRecentTitle")?.textContent || "",
+      status: document.querySelector("#memoryAllHint")?.textContent || "",
+      buttonText: document.querySelector("#searchMemory")?.textContent || "",
+      buttonDisabled: document.querySelector("#searchMemory")?.disabled ?? null,
+      inputBusy: document.querySelector("#memorySearchInput")?.getAttribute("aria-busy")
+    }));
+    if (
+      searchFeedback.title !== "搜索结果" ||
+      !searchFeedback.status.includes("找到") ||
+      searchFeedback.buttonText !== "搜索" ||
+      searchFeedback.buttonDisabled ||
+      searchFeedback.inputBusy !== null
+    ) {
+      throw new Error(`Memoria search did not expose a complete visible result state: ${JSON.stringify(searchFeedback)}`);
+    }
     if ((await page.textContent("#memoryList")).includes("UI Memoria restricted fact")) {
       throw new Error("Memoria UI normal search showed restricted memory.");
+    }
+
+    await page.fill("#memorySearchInput", "no reliable memory fixture");
+    await page.click("#searchMemory");
+    await page.waitForFunction(
+      () => (document.querySelector("#memoryList")?.textContent || "").includes("没有找到与“no reliable memory fixture”可靠相关的记忆"),
+      null,
+      { timeout: 15000 }
+    );
+    const emptySearchFeedback = await page.evaluate(() => ({
+      list: document.querySelector("#memoryList")?.textContent || "",
+      status: document.querySelector("#memoryAllHint")?.textContent || ""
+    }));
+    if (!emptySearchFeedback.status.includes("没有找到与“no reliable memory fixture”可靠相关的记忆")) {
+      throw new Error(`Memoria search did not expose a reliable-result empty state: ${JSON.stringify(emptySearchFeedback)}`);
     }
 
     await page.selectOption("#memoryAgentFilter", "claude-code:clara");
@@ -273,6 +323,9 @@ async function main() {
       throw new Error("Memoria UI agent search included another agent.");
     }
     await page.selectOption("#memoryAgentFilter", "");
+    await page.fill("#memorySearchInput", "");
+    await page.click("#searchMemory");
+    await page.waitForFunction(() => document.querySelector("#memoryRecentTitle")?.textContent === "最近形成");
 
     await page.click('[data-memory-open="labels"]');
     await page.waitForFunction(() => document.querySelector("#memoryDetailDialog")?.open, null, { timeout: 15000 });
@@ -320,9 +373,44 @@ async function main() {
       initialNodeCount: Number(document.querySelector("#memoryGraphCanvas")?.dataset.nodeCount || 0),
       initialEdgeCount: Number(document.querySelector("#memoryGraphCanvas")?.dataset.edgeCount || 0),
       initialLabelCount: Number(document.querySelector("#memoryGraphCanvas")?.dataset.labelCount || 0),
+      agentCount: Number(document.querySelector("#memoryGraphCanvas")?.dataset.agentCount || 0),
+      agentLegendRows: document.querySelectorAll("#memoryGraphPanel .agent-legend .graph-legend-row").length,
+      agentLegendText: document.querySelector("#memoryGraphPanel .agent-legend")?.textContent || "",
+      agentSwatches: [...document.querySelectorAll("#memoryGraphPanel .graph-legend-swatch.agent")].map((swatch) => {
+        const style = getComputedStyle(swatch);
+        return { width: style.width, height: style.height, color: style.backgroundColor };
+      }),
+      layoutAspect: Number(document.querySelector("#memoryGraphCanvas")?.dataset.layoutAspect || 0),
       memoryMapLabel: document.querySelector("#memoryGraph [data-graph-mode='all']")?.textContent.trim(),
       stateModeLabel: document.querySelector("#memoryGraph [data-graph-mode='state']")?.textContent.trim()
     }));
+    await page.waitForFunction(() => Number(document.querySelector("#memoryGraphCanvas")?.dataset.visibleLabelCount || 0) > 0);
+    const mapPanel = await page.evaluate(() => {
+      const canvas = document.querySelector("#memoryGraphCanvas");
+      const rect = canvas.getBoundingClientRect();
+      for (let y = 20; y < rect.height - 20; y += 12) {
+        for (let x = 20; x < rect.width - 20; x += 12) {
+          canvas.dispatchEvent(new MouseEvent("click", {
+            bubbles: true,
+            clientX: rect.left + x,
+            clientY: rect.top + y
+          }));
+          const excerpt = document.querySelector("#memoryGraphPanel .graph-panel-excerpt")?.textContent || "";
+          const subtitle = document.querySelector("#memoryGraphPanel .graph-panel-subtitle")?.textContent || "";
+          if (excerpt && !/·\s*0\s*$/.test(subtitle)) {
+            return {
+              title: document.querySelector("#memoryGraphPanel .graph-panel-title")?.textContent || "",
+              excerpt,
+              subtitle
+            };
+          }
+        }
+      }
+      return null;
+    });
+    if (!mapPanel?.title || !mapPanel.excerpt || /·\s*0\s*$/.test(mapPanel.subtitle)) {
+      throw new Error(`Memoria memory-map selection did not expose memory content and structure: ${JSON.stringify(mapPanel)}`);
+    }
     await page.click("#memoryGraph [data-graph-zoom='in']");
     await page.waitForFunction(() => document.querySelector("#memoryGraphCanvas")?.dataset.zoom !== "1", null, { timeout: 15000 });
     const zoomedValue = await page.locator("#memoryGraphCanvas").getAttribute("data-zoom");
@@ -347,6 +435,14 @@ async function main() {
       !graphControls.sidePanel ||
       graphControls.graphMode !== "all" ||
       graphControls.initialLabelCount < 1 ||
+      graphControls.agentCount < 3 ||
+      graphControls.agentLegendRows < 3 ||
+      !graphControls.agentLegendText.includes("claude-code:clara") ||
+      !graphControls.agentLegendText.includes("hermes:lara") ||
+      new Set(graphControls.agentSwatches.map((swatch) => swatch.color)).size < 3 ||
+      graphControls.agentSwatches.some((swatch) => swatch.width !== swatch.height) ||
+      graphControls.layoutAspect < 0.72 ||
+      graphControls.layoutAspect > 1.38 ||
       !graphControls.memoryMapLabel ||
       !graphControls.stateModeLabel ||
       graphControls.initialNodeCount < 1 ||
@@ -359,7 +455,90 @@ async function main() {
     }
     await page.click("#memoryGraph [data-graph-mode='network']");
     await page.waitForFunction(() => document.querySelector("#memoryGraphCanvas")?.dataset.mode === "network", null, { timeout: 15000 });
+    const networkGraph = await page.evaluate(() => ({
+      edgeCount: Number(document.querySelector("#memoryGraphCanvas")?.dataset.edgeCount || 0),
+      linkCount: Number(document.querySelector("#memoryGraphCanvas")?.dataset.linkCount || 0),
+      labelCount: Number(document.querySelector("#memoryGraphCanvas")?.dataset.labelCount || 0),
+      clusterCount: Number(document.querySelector("#memoryGraphCanvas")?.dataset.networkClusterCount || 0),
+      activeCluster: document.querySelector("#memoryGraphCanvas")?.dataset.activeNetworkCluster || "",
+      clusterChoices: document.querySelectorAll("#memoryGraphPanel .network-cluster-choice").length,
+      selectedClusters: document.querySelectorAll("#memoryGraphPanel .network-cluster-choice.selected").length
+    }));
+    if (
+      networkGraph.labelCount !== 0
+      || networkGraph.edgeCount < 1
+      || networkGraph.edgeCount >= networkGraph.linkCount
+      || networkGraph.clusterCount < 2
+      || networkGraph.clusterChoices !== networkGraph.clusterCount
+      || networkGraph.selectedClusters !== 1
+      || !networkGraph.activeCluster
+    ) {
+      throw new Error(`Memoria relationship network should focus one explicit-link cluster: ${JSON.stringify(networkGraph)}`);
+    }
     await page.click("#memoryGraph [data-graph-mode='state']");
+    await page.waitForSelector("#memoryGraph .state-chain-overview", { timeout: 15000 });
+    const stateOverview = await page.evaluate(() => ({
+      cards: document.querySelectorAll("#memoryGraph .state-chain-overview-card").length,
+      hasCanvas: Boolean(document.querySelector("#memoryGraphCanvas")),
+      hasPanel: Boolean(document.querySelector("#memoryGraphPanel")),
+      activeMode: document.querySelector("#memoryGraph [data-graph-mode='state']")?.classList.contains("active"),
+      text: document.querySelector("#memoryGraph .state-chain-overview")?.textContent || ""
+    }));
+    if (
+      stateOverview.cards !== 2
+      || stateOverview.hasCanvas
+      || stateOverview.hasPanel
+      || !stateOverview.activeMode
+      || !stateOverview.text.includes("所有状态链")
+    ) {
+      throw new Error(`Memoria state-chain overview failed: ${JSON.stringify(stateOverview)}`);
+    }
+    await page.evaluate(() => { document.body.dataset.theme = "dark"; });
+    await page.waitForTimeout(180);
+    const darkStateOverview = await page.evaluate(() => {
+      const parseRgb = (value) => (value.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+      const luminance = (value) => {
+        const channels = parseRgb(value).map((channel) => {
+          const normalized = channel / 255;
+          return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+      };
+      const contrast = (foreground, background) => {
+        const lighter = Math.max(luminance(foreground), luminance(background));
+        const darker = Math.min(luminance(foreground), luminance(background));
+        return (lighter + 0.05) / (darker + 0.05);
+      };
+      const overview = document.querySelector("#memoryGraph .state-chain-overview");
+      const card = overview?.querySelector(".state-chain-overview-card");
+      const title = overview?.querySelector("h3");
+      const body = overview?.querySelector("p");
+      const cardTitle = card?.querySelector("strong");
+      const overviewStyle = getComputedStyle(overview);
+      const cardStyle = getComputedStyle(card);
+      const titleStyle = getComputedStyle(title);
+      const bodyStyle = getComputedStyle(body);
+      const cardTitleStyle = getComputedStyle(cardTitle);
+      return {
+        overviewBackground: overviewStyle.backgroundColor,
+        cardBackground: cardStyle.backgroundColor,
+        bodySurfaceSoft: getComputedStyle(document.body).getPropertyValue("--surface-soft").trim(),
+        cardSurfaceSoft: cardStyle.getPropertyValue("--surface-soft").trim(),
+        titleContrast: contrast(titleStyle.color, overviewStyle.backgroundColor),
+        bodyContrast: contrast(bodyStyle.color, overviewStyle.backgroundColor),
+        cardTitleContrast: contrast(cardTitleStyle.color, cardStyle.backgroundColor)
+      };
+    });
+    if (
+      darkStateOverview.overviewBackground !== "rgb(35, 40, 37)"
+      || darkStateOverview.cardBackground !== "rgb(43, 48, 45)"
+      || darkStateOverview.titleContrast < 4.5
+      || darkStateOverview.bodyContrast < 4.5
+      || darkStateOverview.cardTitleContrast < 4.5
+    ) {
+      throw new Error(`Memoria dark state-chain overview contrast failed: ${JSON.stringify(darkStateOverview)}`);
+    }
+    await page.evaluate(() => document.querySelector("#memoryGraph .state-chain-overview-card")?.click());
     await page.waitForFunction(
       () => document.querySelector("#memoryGraphCanvas")?.dataset.mode === "state"
         && Number(document.querySelector("#memoryGraphCanvas")?.dataset.stateEdgeCount || 0) > 0,
@@ -368,26 +547,74 @@ async function main() {
     );
     const stateGraph = await page.evaluate(() => ({
       mode: document.querySelector("#memoryGraphCanvas")?.dataset.mode,
+      layout: document.querySelector("#memoryGraphCanvas")?.dataset.stateLayout,
       stateEdgeCount: Number(document.querySelector("#memoryGraphCanvas")?.dataset.stateEdgeCount || 0),
       nodeCount: Number(document.querySelector("#memoryGraphCanvas")?.dataset.nodeCount || 0),
       panelText: document.querySelector("#memoryGraphPanel")?.textContent || "",
       panelKicker: Boolean(document.querySelector("#memoryGraphPanel .graph-panel-kicker")),
       legendEntries: document.querySelectorAll("#memoryGraphPanel .state-legend > div").length,
-      activeMode: document.querySelector("#memoryGraph [data-graph-mode='state']")?.classList.contains("active")
+      chainChoices: document.querySelectorAll("#memoryGraphPanel .state-chain-choice").length,
+      zoomControls: document.querySelectorAll("#memoryGraph [data-graph-zoom]").length,
+      naturalScroll: document.querySelector("#memoryGraphCanvas")?.parentElement?.classList.contains("state-scroll"),
+      hasReadingGuide: Boolean(document.querySelector("#memoryGraph .state-chain-explainer")),
+      hasOverviewBack: Boolean(document.querySelector("#memoryGraphPanel .state-overview-back")),
+      excerptOverflow: getComputedStyle(document.querySelector("#memoryGraphPanel .state-panel-excerpt")).overflowY,
+      titleClipping: document.querySelector("#memoryGraphCanvas")?.dataset.stateTitleClipping,
+      activeMode: document.querySelector("#memoryGraph [data-graph-mode='state']")?.classList.contains("active"),
+      explainerBackground: getComputedStyle(document.querySelector("#memoryGraph .state-chain-explainer")).backgroundColor
     }));
     if (
       stateGraph.mode !== "state" ||
+      stateGraph.layout !== "timeline" ||
       stateGraph.stateEdgeCount < 1 ||
       stateGraph.nodeCount < 2 ||
       !stateGraph.activeMode ||
       !stateGraph.panelKicker ||
-      stateGraph.legendEntries !== 3 ||
+      stateGraph.legendEntries !== 0 ||
+      stateGraph.chainChoices !== 0 ||
+      stateGraph.zoomControls !== 0 ||
+      !stateGraph.naturalScroll ||
+      !stateGraph.hasReadingGuide ||
+      !stateGraph.hasOverviewBack ||
+      stateGraph.excerptOverflow !== "hidden" ||
+      stateGraph.titleClipping !== "pixel" ||
+      stateGraph.explainerBackground !== "rgb(43, 48, 45)" ||
+      stateGraph.nodeCount !== 2 ||
       !stateGraph.panelText.trim()
     ) {
       throw new Error(`Memoria UI state-chain mode failed: ${JSON.stringify(stateGraph)}`);
     }
+    await page.evaluate(() => {
+      const canvas = document.querySelector("#memoryGraphCanvas");
+      if (canvas) canvas.style.height = "800px";
+    });
+    await page.locator("#memoryGraphCanvas").hover();
+    await page.mouse.wheel(0, 180);
+    await page.waitForFunction(() => (document.querySelector("#memoryGraphCanvas")?.parentElement?.scrollTop || 0) > 0, null, {
+      timeout: 15000
+    });
+    const firstStateChain = await page.locator("#memoryGraphCanvas").getAttribute("data-active-state-chain");
+    const dialogScrollBeforeOverview = await page.evaluate(() => {
+      const dialog = document.querySelector("#memoryDetailDialog");
+      dialog.scrollTop = Math.min(120, Math.max(0, dialog.scrollHeight - dialog.clientHeight));
+      return dialog.scrollTop;
+    });
+    await page.evaluate(() => document.querySelector("#memoryGraphPanel .state-overview-back")?.click());
+    await page.waitForSelector("#memoryGraph .state-chain-overview", { timeout: 15000 });
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const dialogScrollAfterOverview = await page.locator("#memoryDetailDialog").evaluate((dialog) => dialog.scrollTop);
+    if (Math.abs(dialogScrollAfterOverview - dialogScrollBeforeOverview) > 1) {
+      throw new Error(`Memoria state overview reset dialog scroll: ${JSON.stringify({ dialogScrollBeforeOverview, dialogScrollAfterOverview })}`);
+    }
+    await page.evaluate(() => document.querySelectorAll("#memoryGraph .state-chain-overview-card")[1]?.click());
+    await page.waitForFunction(
+      (previous) => document.querySelector("#memoryGraphCanvas")?.dataset.activeStateChain !== previous,
+      firstStateChain,
+      { timeout: 15000 }
+    );
     await page.click("#memoryGraph [data-graph-mode='all']");
     await page.waitForFunction(() => document.querySelector("#memoryGraphCanvas")?.dataset.mode === "all", null, { timeout: 15000 });
+    await page.evaluate(() => { document.body.dataset.theme = "light"; });
     await page.click("#memoryDetailClose");
     await page.click('[data-memory-open="graph"]');
     await page.waitForSelector("#memoryGraphCanvas", { timeout: 15000 });
@@ -418,7 +645,7 @@ async function main() {
     if (!result.databasePath.startsWith(dataRoot)) {
       throw new Error(`Memoria UI wrote outside product data root: ${result.databasePath}`);
     }
-    if (result.activeCount !== 5 + PAGING_FIXTURE_COUNT || result.deletedCount !== 0 || result.restrictedCount !== 1) {
+    if (result.activeCount !== 6 + PAGING_FIXTURE_COUNT || result.deletedCount !== 0 || result.restrictedCount !== 1) {
       throw new Error(`Memoria UI counts mismatch: ${JSON.stringify(result)}`);
     }
     if (!result.labels.some((item) => item.label === "inspect" && item.count === 2)) {

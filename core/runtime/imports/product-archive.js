@@ -3,6 +3,7 @@ const fs = require("fs/promises");
 const { quoteIdentifier } = require("../../import-preview");
 const {
   assertSqliteQuickCheck,
+  assertVerifiedSafetyBackup,
   recoverSqliteDatabaseFromBackup,
   replaceSqliteDatabase
 } = require("../backup");
@@ -121,6 +122,7 @@ function createProductArchiveRuntime({
       tempDatabase.close();
       return await withExclusiveProductCore(app, async ({ paths: exclusivePaths, ensure, invalidate }) => {
         const safetyBackup = await createProductBackupFromCore(await ensure());
+        assertVerifiedSafetyBackup(safetyBackup);
         try {
           await invalidate();
           await replaceSqliteDatabase(tempPath, exclusivePaths.databasePath);

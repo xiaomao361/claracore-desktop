@@ -4,8 +4,8 @@ const { BUILD_FLAVOR, HAS_BUILT_IN_EMBEDDING } = require("../build-flavor");
 // version bump must explicitly confirm that the Agent Guide still describes
 // the shipped product; context-budget-smoke enforces parity.
 const DOCS_RELEASE = Object.freeze({
-  version: "0.6.12",
-  updatedAt: "2026-08-25"
+  version: "0.6.14",
+  updatedAt: "2026-09-07"
 });
 
 const DOCS_SECTIONS = Object.freeze([
