@@ -5,13 +5,13 @@
 - `main` is the working Desktop line.
 - `package.json` is the product-version source through `core/version.js`.
 - Current development version: `0.6.14`.
-- Current public release: `0.6.12`.
-- Tag `v0.6.12` is the current stable GitHub Release.
+- Current public release: `0.6.14`.
+- Tag `v0.6.14` is the current stable GitHub Release.
 
-`0.6.14` is the local source checkpoint for verified safety-backup gates,
+`0.6.14` is the public Full/Lite release for verified safety-backup gates,
 full-catalog semantic retrieval with model isolation, accurate restore-preview
-counts, and routine source CI. An unsigned macOS Apple Silicon Lite trial DMG
-was built and package-verified on 2026-09-07; no tag or publication is implied.
+counts, and routine source CI. macOS Apple Silicon DMGs are signed and notarized;
+Windows x64 installers are CI/package-verified and unsigned.
 See [v0.6.14 Release Notes](RELEASE_NOTES_V0.6.14.md).
 
 `0.6.13` is a previous local trial checkpoint for Memoria search quality and graph
@@ -21,7 +21,7 @@ relationship clusters, and turns state chains into an overview-first vertical
 replacement history. See
 [v0.6.13 Release Notes](RELEASE_NOTES_V0.6.13.md).
 
-`0.6.12` is the current public release. It preserves hydrated Shared Line
+`0.6.12` was the previous public release. It preserves hydrated Shared Line
 catalogs across unrelated scoped refreshes, keeps session afterthoughts out of
 the shareable queue until generated content is complete, preserves retry and
 terminal-failure audit behavior, and includes the installed-app-only
@@ -96,12 +96,12 @@ through to the daily-use Application Support directory.
 
 Current packaging commands and artifact checks live in
 [macOS Packaging](mac-packaging.md). Current public-release details live in
-[v0.6.12 Release Notes](RELEASE_NOTES_V0.6.12.md).
+[v0.6.14 Release Notes](RELEASE_NOTES_V0.6.14.md).
 
 ## Current Release
 
-`0.6.14` is the current local source and unsigned Lite trial checkpoint. It is
-not tagged or published. `0.6.13` remains the previous local Lite trial artifact. `0.6.12` remains the public release, tagged `v0.6.12`.
+`0.6.14` is the current public release, tagged `v0.6.14` at `db03c42`.
+`0.6.13` remains an unpublished local Lite trial checkpoint.
 Its macOS Apple Silicon Full/Lite DMGs are Developer ID signed,
 Apple-notarized, stapled, and Gatekeeper accepted. Its Windows x64 Full/Lite
 installers are built and package-verified on `windows-latest`. All four assets
@@ -124,8 +124,9 @@ are published with portable per-platform SHA-256 manifests.
 - 2026-08-28: Local `0.6.13` trial checkpoint tightens memory search quality and
   separates the memory map, relationship-network, and state-chain reading
   models.
-- 2026-09-07: Local `0.6.14` source checkpoint repairs recovery safety,
-  semantic retrieval boundaries, and restore-preview counts, and adds source CI.
+- 2026-09-07: `v0.6.14` publishes the Full/Lite macOS and Windows matrix with
+  recovery safety, semantic retrieval, restore-preview fixes, and source CI.
+  All six assets were downloaded and checksum-verified after upload.
 - See [v0.6.14 Release Notes](RELEASE_NOTES_V0.6.14.md).
 - See [v0.6.13 Release Notes](RELEASE_NOTES_V0.6.13.md).
 - See [v0.6.12 Release Notes](RELEASE_NOTES_V0.6.12.md).

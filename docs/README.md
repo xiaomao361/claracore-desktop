@@ -31,11 +31,11 @@ instructions.
 
 ## Build And Release
 
-- [v0.6.14 Release Notes](RELEASE_NOTES_V0.6.14.md): current source checkpoint
+- [v0.6.14 Release Notes](RELEASE_NOTES_V0.6.14.md): current public Full/Lite release
   for recovery safety, complete semantic retrieval, and source CI.
 - [v0.6.13 Release Notes](RELEASE_NOTES_V0.6.13.md): previous local macOS Lite
   trial checkpoint for memory search and Memoria graph readability.
-- [v0.6.12 Release Notes](RELEASE_NOTES_V0.6.12.md): current public macOS Apple
+- [v0.6.12 Release Notes](RELEASE_NOTES_V0.6.12.md): previous public macOS Apple
   Silicon and Windows x64 Full/Lite release, including the Shared Line refresh
   fix, InnerLife share integrity, and installed-app login startup.
 - [v0.6.11 Release Notes](RELEASE_NOTES_V0.6.11.md): previous unpublished

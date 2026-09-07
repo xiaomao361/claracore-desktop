@@ -2,8 +2,7 @@
 
 ## Current Release Boundary
 
-The current local development checkpoint is `0.6.14`; the public stable
-release remains `0.6.12`, tagged `v0.6.12`. Treat
+The current public stable release is `0.6.14`, tagged `v0.6.14`. Treat
 [Version Branching](VERSION_BRANCHING.md) and the versioned release notes as
 the release truth.
 
@@ -105,7 +104,7 @@ Run `npm run test:update` for mocked release and Settings UI coverage before
 performing a live published-Release check.
 
 Earlier release assets and checksums remain documented in their versioned
-release notes. The `v0.6.12` release publishes macOS Apple Silicon and Windows
+release notes. The `v0.6.14` release publishes macOS Apple Silicon and Windows
 x64 Full/Lite artifacts plus portable per-platform checksum files.
 
 ## Gateway In Packaged Mode
