@@ -1,11 +1,11 @@
 const path = require("path");
+const { operationalStatus } = require("./operational-status");
 const fs = require("fs/promises");
 const { previewImportSources } = require("../import-preview");
 const { PRODUCT_VERSION } = require("../version");
 const { buildFlavorInfo } = require("../build-flavor");
 const { buildDecayAudit } = require("./decay");
 const { readDesktopSettings } = require("./paths");
-const { DEFAULT_PROFILE: DEFAULT_TOOL_PROFILE } = require("../gateway/tool-profiles");
 const { DOCS_RELEASE } = require("../gateway/docs");
 
 function productModules(input = {}) {
@@ -48,75 +48,16 @@ function productModules(input = {}) {
   ];
 }
 
-function gatewayLaunchConfig(app, paths) {
-  const gatewayScript = path.join(paths.appRoot, "core", "gateway", "mcp-server.js");
-  if (app?.isPackaged) {
-    // ELECTRON_RUN_AS_NODE keeps the Gateway a single Node process instead of
-    // a full Electron instance with GPU and network helper processes.
-    return {
-      command: process.execPath,
-      args: [gatewayScript],
-      env: { ELECTRON_RUN_AS_NODE: "1" },
-      displayCommand: `ELECTRON_RUN_AS_NODE=1 "${process.execPath}" "${gatewayScript}"`,
-      source: "packaged app"
-    };
-  }
+function productAgentSetup() {
   return {
-    command: "node",
-    args: [gatewayScript],
-    env: {},
-    displayCommand: `node ${gatewayScript}`,
-    source: "development checkout"
-  };
-}
-
-function productAgentSetup(app, paths) {
-  const launch = gatewayLaunchConfig(app, paths);
-  const agentIdentityExamples = ["lara", "clara", "codex"];
-  return {
-    gatewayStatus: "available",
-    agentGuide: {
-      toolName: "gateway_docs",
-      version: DOCS_RELEASE.version,
-      updatedAt: DOCS_RELEASE.updatedAt,
-      supportsSearch: true
-    },
+    gatewayStatus: "starting",
+    agentGuide: { toolName: "gateway_docs", version: DOCS_RELEASE.version,
+      updatedAt: DOCS_RELEASE.updatedAt, supportsSearch: true },
     mcpServerName: "claracore-desktop",
-    mcpCommand: launch.displayCommand,
-    agentIdentity: {
-      envKey: "CLARACORE_AGENT_ID",
-      required: true,
-      owner: "calling agent",
-      examples: agentIdentityExamples,
-      note: "Each connected agent must set its own stable id. Do not reuse another agent id."
-    },
-    mcpConfig: JSON.stringify(
-      {
-        mcpServers: {
-          "claracore-desktop": {
-            type: "stdio",
-            command: launch.command,
-            args: launch.args,
-            env: {
-              ...launch.env,
-              CLARACORE_AGENT_ID: "<agent-stable-id>",
-              CLARACORE_CLIENT_ID: "<codex-app|claude-code|hermes>",
-              CLARACORE_CONVERSATION_ID: "<optional-host-conversation-id>",
-              // First-party setup states the profile explicitly instead of
-              // relying on the default, so the generated config is the contract.
-              CLARACORE_TOOL_PROFILE: DEFAULT_TOOL_PROFILE,
-              CLARACORE_DESKTOP_DATA_DIR: paths.dataRoot
-            }
-          }
-        }
-      },
-      null,
-      2
-    ),
-    httpEndpoints: [],
-    python: "not required for Desktop Gateway",
-    pythonSource: "Node/Electron runtime",
-    gatewayEnvPath: "not used in product core reset"
+    agentIdentity: { header: "X-ClaraCore-Agent-ID", required: true,
+      owner: "calling agent", examples: ["lara", "clara", "codex"],
+      note: "Each connected agent must set its own stable id." },
+    httpEndpoints: []
   };
 }
 
@@ -149,12 +90,6 @@ function buildHealthChecks(app, paths, configuration, databaseSummary, canWriteR
       level: databaseSummary?.initialized ? "ok" : "warn",
       labelKey: "health.database",
       detail: paths.databasePath
-    },
-    {
-      id: "gateway",
-      level: "ok",
-      labelKey: "health.gateway",
-      detail: app?.isPackaged ? "packaged stdio gateway" : "development stdio gateway"
     },
     {
       id: "embedding",
@@ -363,7 +298,7 @@ function createSnapshotRuntime({ ensureProductCore }) {
       case "logs":
         return { decayAudit: await buildDecayAudit(database) };
       case "settings":
-        return { backups: await database.listBackups(5) };
+        return { backups: await database.listBackups(5), operationalStatus: await operationalStatus(database) };
       default:
         return {};
     }
@@ -445,6 +380,7 @@ function createSnapshotRuntime({ ensureProductCore }) {
       gatewayTraces,
       agentActivitySummary,
       runtimeEvents,
+      operationalStatus: await operationalStatus(database),
       importPreview,
       backups,
       modules: productModules({ innerLife }),

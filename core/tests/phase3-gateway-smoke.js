@@ -22,7 +22,7 @@ async function main() {
       throw new Error("Gateway initialize did not return ClaraCore Desktop server info.");
     }
 
-    // v0.6.6: stdio defaults to the core tool profile. Core carries the normal
+    // v0.6.6: HTTP defaults to the core tool profile. Core carries the normal
     // continuation surface; the maintenance surface stays available under the
     // explicit full profile.
     const tools = await client.request("tools/list");
@@ -380,6 +380,38 @@ async function main() {
     if (crossAgentFull.currentPosition.metadata?.writerAgentId !== "writer-agent") {
       throw new Error(`Cross-agent write did not preserve writer provenance: ${JSON.stringify(crossAgentFull.currentPosition.metadata)}`);
     }
+
+    // Next steps must survive write acknowledgements and every read projection.
+    const nextLine = parseTextResult(await client.callTool("shared_line_create", {
+      title: "Next-step round trip", makeActive: false
+    })).line;
+    const nextStep = "核对下一轮的失败记录，再决定是否调整规则。";
+    const nextWrite = parseTextResult(await client.callTool("shared_line_update", {
+      lineId: nextLine.id, summary: "Round-trip baseline", nextStep
+    }));
+    if (nextWrite.nextStep !== nextStep) throw new Error("Write acknowledgement lost nextStep.");
+    await client.callTool("shared_line_update", {
+      lineId: nextLine.id, summary: "Round-trip follow-up"
+    });
+    for (const detail of ["resume", "context", "full"]) {
+      const packet = parseTextResult(await client.callTool("shared_line_get", { lineId: nextLine.id, detail }));
+      if (packet.nextStep !== nextStep) throw new Error(`${detail} lost the saved nextStep.`);
+      if (detail === "full" && !packet.history.some((item) => item.summary === "Round-trip baseline")) {
+        throw new Error("Next-step update lost position history.");
+      }
+    }
+    const nextContext = parseTextResult(await client.callTool("gateway_context", { lineId: nextLine.id }));
+    if (nextContext.sharedLine.nextStep !== nextStep) throw new Error("Gateway context lost nextStep.");
+    await client.callTool("shared_line_update", {
+      lineId: nextLine.id, summary: "Round-trip cleared", nextStep: ""
+    });
+    const cleared = parseTextResult(await client.callTool("shared_line_get", { lineId: nextLine.id }));
+    if (cleared.nextStep !== "") throw new Error("Explicit clear manufactured a next step.");
+    const emptyLine = parseTextResult(await client.callTool("shared_line_create", {
+      title: "No saved next step", makeActive: false
+    })).line;
+    const empty = parseTextResult(await client.callTool("shared_line_get", { lineId: emptyLine.id }));
+    if (empty.nextStep !== "") throw new Error("Missing nextStep manufactured an instruction.");
 
     const statusResponse = await client.callTool("claracore_status");
     const status = parseTextResult(statusResponse);

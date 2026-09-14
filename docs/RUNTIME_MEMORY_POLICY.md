@@ -75,7 +75,6 @@ Every long-lived resource needs one owner and an explicit release path.
 | Resource | Owner | Dispose path |
 | --- | --- | --- |
 | Product SQLite connection | `core/runtime/product-core-owner.js` | generation-safe `resetCachedDatabase()` on quit, restore, and import; path switches close the replaced connection |
-| Gateway SQLite connection | `core/gateway/mcp-server.js` | stdin close, process exit, SIGINT, SIGTERM |
 | HTTP Agent Gateway server | `electron/http-agent-gateway.js` | `httpAgentGateway.stop()` from `electron/main.js` quit path |
 | HTTP sockets | `electron/http-agent-gateway.js` | destroyed in `httpAgentGateway.stop()` |
 | HTTP tool queue | `electron/http-agent-gateway.js` | queued calls resolve busy during `httpAgentGateway.stop()` |
@@ -83,7 +82,6 @@ Every long-lived resource needs one owner and an explicit release path.
 | Persisted embedding scheduler | `electron/schedulers.js` | `schedulers.stop()` from `electron/main.js` quit path |
 | Session-afterthought jobs | `innerlife_inbox` + `core/innerlife/services/session-lifecycle.js` | atomically claimed with an owner token; failures use persisted 60s-to-1h exponential backoff, stale claims recover after five minutes without allowing the expired worker to overwrite the replacement result, and attempt eight becomes a visible protected terminal failure; the authenticated owner must explicitly retry or acknowledge that terminal record |
 | Memory maintenance scheduler | `electron/schedulers.js` | `schedulers.stop()` or `schedulers.rescheduleMemoryMaintenance()` |
-| Packaged sibling Gateway process | `electron/main.js` | best-effort `stopSiblingGatewayProcesses()` |
 | Renderer runtime change listener | `electron/preload.js` consumer | unsubscribe function from `onRuntimeChanged()` |
 | Renderer resource refresh loop | `app/resource-refresh.js` | visibility pause plus `stop()` on `beforeunload` |
 | Memory graph canvas animation | `app/views/memoria.js` | cancel before scheduling the next frame or when replacing graph state; stop continuous frames when motion is disabled |
@@ -92,12 +90,9 @@ Every long-lived resource needs one owner and an explicit release path.
 Adding a new long-lived resource without a dispose path is a bug.
 
 Streamable HTTP Gateway resources live inside the Desktop main process and must
-be released with the HTTP server during quit. Packaged stdio Gateway processes
-can still outlive the Desktop UI if an agent client keeps them open. The UI
-quit path should release HTTP resources and best-effort stop sibling packaged
-`--gateway` processes so the app bundle can be replaced during development.
-The stdio Gateway itself must also close its cached database connection when
-stdin closes, because stdio transport lifetime is the agent connection lifetime.
+be released with the HTTP server during quit. HTTP runs in the main process and shares the product-core owner; it has no
+separate process RSS or connection lifecycle. Do not double-count main-process
+memory as Gateway memory.
 
 HTTP `tools/call` admission is bounded to eight active and 64 queued calls by
 default. A queued call waits at most two seconds. Overflow and expired waits
@@ -138,18 +133,15 @@ these scratch copies as supported restore points.
 - system memory and disk usage,
 - main process RSS and heap,
 - renderer RSS when Electron exposes it,
-- Gateway RSS when discoverable,
+- Gateway reports `shared-main-process`; its memory is already included in main RSS,
 - total process RSS trend over 1 minute and 10 minutes.
 
 The renderer samples once on startup and then at a 30-second visible-window
 cadence. Requests are single-flight, polling pauses while the document is
 hidden, and a stale window samples immediately when it becomes visible again.
-The main process also coalesces concurrent snapshot requests. On macOS,
-external Gateway discovery through `/bin/ps` is diagnostic-only: healthy
-samples defer it, while system-memory or disk warnings collect it. Warning-mode
-process discovery is single-flight and cached for five minutes. A deferred
-sample therefore reports the known main plus renderer RSS rather than claiming
-an external-Gateway-inclusive total.
+The main process also coalesces concurrent snapshot requests. It no longer scans
+external MCP processes. The known process total is main plus renderer RSS;
+HTTP memory is included once in the main-process measurement.
 System-memory pressure uses Electron's system-memory snapshot when available.
 On macOS, file-backed and purgeable pages are counted as reclaimable before the
 85% warning threshold, avoiding the permanently high signal produced by raw

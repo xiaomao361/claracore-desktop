@@ -1,15 +1,10 @@
 # Product Gateway
 
-ClaraCore Desktop owns two MCP transports for agents:
-
-- Streamable HTTP at the Desktop localhost `/mcp` endpoint.
-- Stdio through `core/gateway/mcp-server.js` for clients that do not support
-  Streamable HTTP yet.
-
-MCP is the primary agent contract for this app. Agent clients should prefer the
-Streamable HTTP endpoint shown in Agent Access when supported, and use the
-generated stdio config as a compatibility fallback. CLI commands remain a
-fallback when MCP is unavailable.
+ClaraCore Desktop exposes one MCP transport: Streamable HTTP at localhost `/mcp`.
+Both 2026-07-28 and 2025-06-18 protocols are supported. Stdio MCP has been retired.
+Desktop owns the listener and shared product core. Keep Desktop running.
+CLI is reserved for authorized internal maintenance, not client fallback.
+See [migration](../../docs/HTTP_MCP_MIGRATION.md).
 
 ## Boundary
 
@@ -27,36 +22,7 @@ fallback when MCP is unavailable.
   `Authorization: Bearer <token>`, `X-ClaraCore-Agent-ID`, and optionally
   `X-ClaraCore-Client-ID` and `X-ClaraCore-Conversation-ID` with each request.
   `X-ClaraCore-Session-ID` remains a compatible conversation-header alias.
-- Each stdio agent client normally launches Gateway as its own helper process.
-- The process keeps one cached product database connection and closes it on
-  stdin close, process exit, `SIGINT`, and `SIGTERM`.
-- Packaged Gateway mode runs the app executable with `ELECTRON_RUN_AS_NODE=1`
-  plus the `app.asar` path of `mcp-server.js`, so each agent connection is a
-  single Node process (the legacy `--gateway` flag still works); development
-  mode is `node core/gateway/mcp-server.js`.
-- Agents must use stable ids such as `lara`, `clara`, or `codex`. Do not share
-  one id across multiple agents.
-- HTTP agent identity is request-scoped through `X-ClaraCore-Agent-ID`.
-- `CLARACORE_AGENT_ID` is the authoritative stdio Gateway process identity.
-  Gateway rewrites tool-call metadata to the transport identity. Body-supplied
-  `agentId` or `agent_id` values cannot override the caller identity.
-- Generated stdio configs also include `CLARACORE_CLIENT_ID` and an optional
-  `CLARACORE_CONVERSATION_ID` placeholder. Replace the client placeholder before
-  use. Remove the conversation entry when a long-lived stdio process spans
-  multiple host conversations, because its environment is process-scoped.
-- Changing an agent's configured identity does not update an already-running
-  stdio Gateway process. Restart the agent client, or stop stale packaged
-  `--gateway` processes, before trusting new traces.
-- Use `agent_identity_merge` to consolidate data after renaming an agent id.
-  Its result reports each singleton action. If both ids own differing profile,
-  daemon, or Continuity state, it fails with table/field conflict details and
-  leaves every record, including the source Agent, unchanged.
-- First connection order is `claracore_connection_test` -> `gateway_context`.
-  Omitted `detail` defaults to `brief`. Start without `lineId`; if multiple
-  Agent-owned lines make the read ambiguous, choose a returned candidate and
-  retry explicitly. `gateway_docs` is an on-demand guide, not a startup dump.
-  After reading context, the agent proactively explains ClaraCore's useful
-  capabilities and the actual resumable context to the user.
+
 
 ## Streamable HTTP
 
@@ -104,98 +70,20 @@ one-object get tools provide explicit expansion, and both transports enforce a
 `GATEWAY_RESPONSE_TOO_LARGE` with a narrowing instruction rather than silently
 truncating JSON.
 
-`initialize` includes short server instructions: read Memoria and Shared Line
-only when prior context matters, review pending InnerLife selectively, and write
-Memoria only for explicit durable decisions or an explicit request to remember.
+HTTP now accepts modern `2026-07-28` requests (discovery, tools/list, tools/call,
+per-request metadata and mirrored-header validation), alongside legacy
+`2025-06-18`. Legacy HTTP initialize always offers
+the implemented version instead of echoing an unsupported request.
 
-`memory_context` is the Memory Controller entry point. It requires an identified
-transport caller. The operator mode defaults to `off`, which returns
-`controller_disabled` without retrieval or a ledger write. `observe` records a
-bounded decision for that caller and returns an empty `context` even when Stage
-B recommends a candidate. The optional trusted canary uses the persisted
-`memory.controller.canary_agent_ids` allowlist. It defaults to `["*"]`, which
-means every identified authenticated Agent, and returns context only for an
-allowed caller using the current time view. Each call remains scoped to that
-caller's own Memory. Explicit Agent ids may replace the wildcard for a narrower
-rollout. Non-allowlisted and historical/all callers remain observe-only.
-Malformed modes or allowlists fail closed without a ledger write.
-Explicit `memoria_search` and mutation tools remain separate operations.
+Modern requests reuse the existing HTTP identity, tool profile, result budget,
+Trace and backpressure implementation. `clientInfo` is not an identity source.
+Tool catalogs are deterministic and use `cacheScope: private`, `ttlMs: 0` and
+HTTP `no-store`: no client cache reuse is promised across changing Agent/profile
+contexts. Unknown methods and malformed protocol requests are protocol errors;
+tool execution failures return `isError: true` with the existing recovery data.
+Writes are not automatically retried or made idempotent by modern MCP: after a
+lost response, inspect the operation result before repeating a write.
 
-`gateway_auto_context` is the host-owned automatic Memory entry point. A normal
-user prompt omits `turnKind` or sends `turnKind=user` and follows the existing
-Memory Controller path. A persistent host may send
-`turnKind=goal_continuation` only when it is continuing a goal without a new
-human message; the Gateway then returns `non_user_goal_continuation` with
-`collectionSkipped=true` before collection. Prompt wording is never used to
-infer this fast path, and the outer MCP call still occurs.
-
-Hermes/Lara must keep `agentId=lara` and `clientId=hermes`. It should call
-`memory_context` once for each non-empty user prompt only when Hermes owns a
-verified per-prompt lifecycle hook. Without such a hook, Hermes can still use
-`memory_context` explicitly as a pull operation and continue to use
-`memoria_search` when broader recall is requested; it must not claim automatic
-per-prompt routing. See
-`docs/archive/HERMES_V0.6.2_UPDATE.md` for the historical reconnect and
-verification receipt.
-
-HTTP `tools/call` overload returns HTTP `429`, JSON-RPC code `-32001`, and
-`Retry-After: 1`. Clients should wait, retry a bounded number of times, and
-must not turn this signal into parallel retry amplification.
-
-Server-initiated event streams are not used in this local checkpoint.
-
-## Claude Desktop Clients
-
-Claude Desktop updates can move the MCP setup UI between Developer and
-Extensions settings, but the ClaraCore contract remains MCP-first. Use
-Streamable HTTP when the client supports it; otherwise use the generated stdio
-fallback config from Agent Access.
-
-- Use the current Agent Access instructions as the source of truth.
-- Keep `type: "stdio"` for fallback config; ClaraCore Desktop does not
-  currently ship a `.mcpb` Desktop Extension package.
-- Set `CLARACORE_AGENT_ID` to a stable Claude-owned id such as `claude` or
-  `clara`; do not reuse another connected agent's id.
-- Set `CLARACORE_CLIENT_ID=claude-code`. Only set
-  `CLARACORE_CONVERSATION_ID` when Claude keeps the stdio process aligned with
-  the current conversation.
-- Fully quit and restart Claude Desktop after config or identity changes so the
-  stdio Gateway process is relaunched.
-- Verify with `claracore_connection_test`, then call `gateway_context` without
-  `detail` or `lineId` (the default is `brief`). Read `gateway_docs` only when
-  usage guidance is needed. Retry with a
-  returned candidate only when the read reports `SHARED_LINE_ID_REQUIRED`.
-
-## Shared Line Rules
-
-- `lineId` values are real `continuity_lines.id` values. Agents should get them
-  from `SHARED_LINE_ID_REQUIRED` candidates or `shared_line_list`; names such
-  as `lara_love` are not implicit aliases.
-- `shared_line_update` writes the requested `lineId` when provided. Without
-  `lineId`, it writes the caller agent's own active line using the transport
-  identity (`X-ClaraCore-Agent-ID` for Streamable HTTP, `CLARACORE_AGENT_ID` for
-  stdio), creating that line when needed. Without either `lineId` or agent
-  identity, it falls back to the global active line.
-- The tool response is loaded from the line that was actually written, so
-  agents can trust the returned resume packet.
-- Existing `current_positions` rows are updated by `line_id`. There is one
-  current position per line; history and snapshots are append-only records.
-
-## Validation
-
-When changing MCP behavior, validate both schema-level and real tool-call
-paths:
-
-- `npm run check`
-- targeted Gateway smoke tests such as `node core/tests/phase3-gateway-smoke.js`
-- a temporary-data all-tools MCP pass when changing broad Gateway/database
-  behavior. Temporary data roots must be deleted after the run.
-
-## Development Rules
-
-- Keep tool schemas stable and explicit.
-- A new list or write acknowledgement is incomplete until its default
-  projection, expansion path, pagination truth, and byte budget are tested.
-- Add new agent operations here only after the product domain facade exists.
-- Keep validation in smoke tests when adding or changing tools.
-- Prefer small tool groups if `mcp-server.js` grows further.
+`npm run test:mcp:protocol` uses the pinned official client SDK 2.0.0 and modern
+backpressure tests. It verifies real modern requests, not an initialize fallback.
+Claude/Hermes integration remains a separate user-operated acceptance step.

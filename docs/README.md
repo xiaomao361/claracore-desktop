@@ -31,6 +31,8 @@ instructions.
 
 ## Build And Release
 
+- [v0.7.0 Development Plan](V0.7.0_DEVELOPMENT_PLAN.md): planned sqlite-vec
+  migration and MCP 2026-07-28 integration, with staged acceptance and session handoff.
 - [v0.6.14 Release Notes](RELEASE_NOTES_V0.6.14.md): current public Full/Lite release
   for recovery safety, complete semantic retrieval, and source CI.
 - [v0.6.13 Release Notes](RELEASE_NOTES_V0.6.13.md): previous local macOS Lite
@@ -67,3 +69,13 @@ available for traceability but are not active implementation instructions.
 See [archive/README.md](archive/README.md) for completed handoffs, superseded
 plans, old release notes, and research that is not part of the current product
 direction.
+
+- [HTTP MCP 迁移](HTTP_MCP_MIGRATION.md)：0.7.2 接入收敛与内部 CLI 边界。
+- [0.7.2 说明](RELEASE_NOTES_V0.7.2.md)：代码、文档及验证范围。
+- [0.7.3 数据维护](RELEASE_NOTES_V0.7.3.md)：向量覆盖、每日备份、InnerLife 候选范围和本机维护证据。
+- [0.7.4 可配置备份](RELEASE_NOTES_V0.7.4.md)：可选额外目录、七天自动备份保留和清理边界。
+
+- [0.7.5：运行状态与恢复验证](RELEASE_NOTES_V0.7.5.md)
+
+- [0.7.7：InnerLife 旧念头重复与事实边界](RELEASE_NOTES_V0.7.7.md)
+- [0.7.6：紧凑运行状态](RELEASE_NOTES_V0.7.6.md)

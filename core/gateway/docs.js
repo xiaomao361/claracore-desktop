@@ -4,8 +4,8 @@ const { BUILD_FLAVOR, HAS_BUILT_IN_EMBEDDING } = require("../build-flavor");
 // version bump must explicitly confirm that the Agent Guide still describes
 // the shipped product; context-budget-smoke enforces parity.
 const DOCS_RELEASE = Object.freeze({
-  version: "0.6.14",
-  updatedAt: "2026-09-07"
+  version: "0.7.7",
+  updatedAt: "2026-09-14"
 });
 
 const DOCS_SECTIONS = Object.freeze([
@@ -117,7 +117,7 @@ function defaultDocs({ toolProfile }) {
     "- memory: Memoria write/search/link/supersede rules and automatic recall",
     "- shared-line: line selection, ambiguity recovery, update and handoff rules",
     "- innerlife: sessions, share timing, delivery evidence",
-    "- diagnostics: health, traces, CLI fallback",
+    "- diagnostics: health, traces, internal CLI maintenance",
     "- full: every section at once",
     "- query: search maintained passages across all sections",
     "",
@@ -125,7 +125,7 @@ function defaultDocs({ toolProfile }) {
   ].join("\n");
 }
 
-function startSection({ launch, paths, toolProfile }) {
+function startSection({ launch, toolProfile }) {
   return [
     "## First Connection",
     "",
@@ -138,7 +138,6 @@ function startSection({ launch, paths, toolProfile }) {
     "",
     "Use a stable persona id per agent. Preferred ids: lara, clara, codex.",
     "Streamable HTTP: X-ClaraCore-Agent-ID, X-ClaraCore-Client-ID, X-ClaraCore-Conversation-ID, and optional X-ClaraCore-Tool-Profile.",
-    "Stdio: CLARACORE_AGENT_ID, optional CLARACORE_CLIENT_ID, CLARACORE_CONVERSATION_ID, and CLARACORE_TOOL_PROFILE.",
     `Tool profile values are core or full; an unknown or missing value resolves to core. Current profile: ${toolProfile}.`,
     "Caller conversation ids never replace domain ids such as InnerLife sessionId.",
     "To consolidate an old tool-prefixed id, use agent_identity_merge instead of editing SQLite.",
@@ -152,32 +151,10 @@ function startSection({ launch, paths, toolProfile }) {
     "",
     "## MCP Config",
     "",
-    "Prefer the Streamable HTTP endpoint shown in Agent Access. Use this stdio config only as a compatibility fallback.",
-    "",
-    "```json",
-    JSON.stringify(
-      {
-        mcpServers: {
-          "claracore-desktop": {
-            type: "stdio",
-            command: launch.command,
-            args: launch.args,
-            env: {
-              ...launch.env,
-              CLARACORE_AGENT_ID: "<agent-stable-id>",
-              CLARACORE_CLIENT_ID: "<codex-app|claude-code|hermes>",
-              CLARACORE_TOOL_PROFILE: "core",
-              CLARACORE_DESKTOP_DATA_DIR: paths.dataRoot
-            }
-          }
-        }
-      },
-      null,
-      2
-    ),
-    "```",
-    "",
-    "Replace the placeholders before use. Add CLARACORE_CONVERSATION_ID only when the client relaunches the MCP process per host conversation; otherwise a stale id is traced across unrelated conversations."
+    "Use the Streamable HTTP endpoint and Bearer token shown in Agent Access. Keep Desktop running.",
+    `Endpoint: ${launch.displayCommand}`,
+    "HTTP supports MCP 2026-07-28 and 2025-06-18. Stdio was retired; clients must support Streamable HTTP.",
+    "Send X-ClaraCore-Agent-ID and a truthful X-ClaraCore-Client-ID. Send X-ClaraCore-Conversation-ID only when it identifies the current conversation."
   ].join("\n");
 }
 
@@ -287,6 +264,7 @@ function innerLifeSection() {
     "- Reading candidates never marks delivery. Pending content stays pending until an explicit action.",
     "- innerlife_submit_inbox, innerlife_submit_fact, and innerlife_submit_continuity are for material to digest later, not immediate factual recall.",
     "- Shared Line context is optional. Pass lineId when one line matters; when several are active and lineId is omitted, briefing, digest, daemon tick, and share checks continue with sharedLineContext.status=ambiguous.",
+    "- New process/explore/converge shares require evidence and novelty review. Failed reviews do not publish; process inputs retry. Legacy shares remain unchanged. An AI thought is not evidence of a user fact.",
     "- innerlife_doctor when InnerLife seems idle, paused, or misconfigured.",
     "- InnerLife may only open a topic inside a live session. It never authorizes out-of-session notifications."
   ].join("\n");
@@ -303,11 +281,11 @@ function diagnosticsSection({ launch, paths }) {
     "- Keep tool calls bounded. Never mutate SQLite directly.",
     "- Do not read local source files as the normal workflow; packaged Desktop runs from app.asar.",
     "",
-    "## CLI Fallback",
+    "## Internal CLI Maintenance",
     "",
-    "Use only when MCP is unavailable and the operator has granted local shell access:",
+    "CLI is an operator maintenance tool, not an Agent connection fallback. With explicit local shell authorization, use core/cli.js for diagnostics, maintenance, import or export. Set CLARACORE_DESKTOP_USER_DATA_DIR to the intended Desktop user-data directory.",
     "",
-    launch.displayCommand,
+    "Do not edit SQLite directly or guess the target data directory.",
     "",
     `Source: ${launch.source}`,
     `Data root: ${paths.dataRoot}`,

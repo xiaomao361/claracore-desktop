@@ -303,13 +303,16 @@ function createSystemRepository(helpers) {
         },
         gateway: {
           enabled: Boolean(settings["gateway.enabled"]),
-          transport: settings["gateway.transport"] || "stdio",
+          transport: "streamable-http",
           localOnly: Boolean(settings["gateway.local_only"]),
           agentId: settings["agent.default_id"] || DEFAULT_AGENT_ID
         },
         backup: {
           enabled: Boolean(settings["backup.enabled"]),
-          schedule: settings["backup.schedule"] || "manual"
+          schedule: settings["backup.schedule"] || "manual",
+          retentionDays: settings["backup.retention_days"] ?? 7,
+          mirrorDir: settings["backup.mirror_dir"] || "",
+          hour: resolveMaintenanceHour(settings["memory.maintenance.hour"])
         }
       };
     },

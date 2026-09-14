@@ -9,14 +9,9 @@ controllable; the primary operational path should be friendly to connected
 agents. Agent Access is therefore a first-class product surface, not a
 secondary settings page.
 
-Agent Access exposes the current Streamable HTTP MCP endpoint, a stdio MCP
-fallback config, and token-protected localhost helper URLs while the desktop
-app is running. The setup note should not show a LAN URL by default. The
-localhost HTTP surface uses stable default port `50668` and a persisted bearer token
-stored in a local `0600` token file, so long-lived MCP clients do not need
-manual reconfiguration after every app restart. LAN binding is intentionally
-off and should only become available through an explicit product mode with
-clear bind address, bearer token, token regeneration, and disable controls.
+Agent Access exposes Streamable HTTP MCP with modern `2026-07-28` and legacy
+`2025-06-18` protocols. Desktop must be running. Stdio MCP is retired; the local
+CLI remains an internal operator maintenance tool.
 
 ClaraCore Desktop is the local desktop manager for the first ClaraCore core package:
 
@@ -42,6 +37,8 @@ Read these before adding new features:
   pagination, resource ownership, memory telemetry, and long-run checks.
 - [macOS Packaging](docs/mac-packaging.md): current local packaging and packaged
   Gateway validation notes.
+- [v0.7.7 release notes](docs/RELEASE_NOTES_V0.7.7.md): release candidate covering vector
+  retrieval, HTTP migration, verified backups and InnerLife grounding.
 - [v0.6.14 release notes](docs/RELEASE_NOTES_V0.6.14.md): current public Full/Lite release
   for recovery safety, complete semantic retrieval, and source CI.
 - [v0.6.13 release notes](docs/RELEASE_NOTES_V0.6.13.md): previous local trial
@@ -115,9 +112,9 @@ Included:
 - Agent Access page with connected-agent/recent-activity evidence and one
   primary `复制给智能体` / `Copy for agent` action. The copied brief carries
   the current Streamable HTTP endpoint, bearer authorization, setup order, and
-  stdio fallback without duplicating a technical manual in the human UI.
+  caller headers without duplicating a technical manual in the human UI.
 - Streamable HTTP MCP uses stable localhost port `50668` by default and persisted local token file; port/token edits, random token generation, and copyable agent config live in Settings > General > Agent Gateway
-- Desktop-owned Gateway Streamable HTTP endpoint for Gateway context, Memory Controller, Memoria, Shared Line, and InnerLife MCP tools; stdio remains available for clients that do not support HTTP MCP yet
+- Desktop-owned Gateway Streamable HTTP endpoint for Gateway context, Memory Controller, Memoria, Shared Line, and InnerLife MCP tools
 - Gateway tool profiles keep everyday Agent workflows in the bounded `core`
   surface and expose maintenance, import/export, retention, archive, and other
   advanced operations through the explicit `full` profile.
@@ -156,7 +153,7 @@ Included:
   stale workers cannot overwrite a replacement lease, and terminal failures
   require an explicit authenticated retry or acknowledged closure.
 - Fresh installs enable InnerLife by default with the bundled DeepSeek-compatible model/key settings
-- Agent-managed InnerLife access through Gateway MCP and CLI fallback; the Desktop UI is primarily for inspection and runtime control
+- Agent-managed InnerLife access through HTTP MCP; CLI is reserved for operator maintenance; the Desktop UI is primarily for inspection and runtime control
 - InnerLife share timing checks connect against the current Shared Line context
   by default and record explicit/context/line overlap metadata before an agent
   chooses whether to use or defer a share
@@ -175,7 +172,7 @@ Included:
   remain collapsed by default.
 - Verified SQLite product backups with restore preview and safety-backup restore
 - Full product JSON export/import for portable ClaraCore Desktop data
-- Agent identity is stable per calling agent: Streamable HTTP uses `X-ClaraCore-Agent-ID`, stdio fallback uses `CLARACORE_AGENT_ID`; preferred stable ids are `lara`, `clara`, and `codex`, while legacy tool-prefixed ids can be consolidated with `agent_identity_merge`
+- Agent identity is stable per calling agent: Streamable HTTP uses `X-ClaraCore-Agent-ID`; preferred stable ids are `lara`, `clara`, and `codex`, while legacy tool-prefixed ids can be consolidated with `agent_identity_merge`
 - Gateway caller context separates the stable persona (`agentId`), client host (`clientId`), and host conversation (`conversationId`) from domain ids such as `inner_session_*` and `line_*`; caller metadata is traced without overwriting tool arguments
 - Shared Line `agent_id` is the stable owner. An explicit cross-agent update records `writerAgentId` provenance and never transfers ownership implicitly
 - Agent-facing InnerLife status, pending shares, and share actions are scoped to the calling agent; Desktop UI snapshots may still request the all-agent view
@@ -288,13 +285,10 @@ Start the desktop app:
 npm run start
 ```
 
-Start the Desktop-owned MCP Gateway directly:
+Desktop starts its HTTP MCP Gateway as part of the application. There is no
+separate MCP process command. See [HTTP migration](docs/HTTP_MCP_MIGRATION.md).
 
-```bash
-npm run gateway
-```
-
-Use the CLI fallback:
+For authorized local maintenance, use the CLI (set the intended Desktop user-data directory first):
 
 ```bash
 node core/cli.js --help
@@ -334,32 +328,20 @@ The app has no renderer build step. `index.html` loads classic scripts.
 - `core/memoria/`: Desktop Memoria domain facade
 - `core/continuity/`: Shared Line domain facade
 - `core/innerlife/`: InnerLife domain facade
-- `core/gateway/`: MCP tool definitions, handlers, and stdio fallback server
+- `core/gateway/`: MCP protocol definitions, tool schemas, handlers, and response budgets
 - `core/tests/`: smoke and UI smoke coverage
 
 ## Current Gateway Direction
 
-The Desktop-owned Gateway is the primary agent contract. Streamable HTTP MCP at
-the Desktop localhost `/mcp` endpoint is the preferred connection mode for
-clients that support it, because one Desktop Gateway can serve multiple agents
-and sessions through request-level identity. Stdio MCP remains as a compatibility
-path for clients that still require a local process.
-The default localhost endpoint is `http://127.0.0.1:50668/mcp`; Settings >
-General > Agent Gateway is the source of truth if the user changes it.
+The Desktop-owned HTTP Gateway is the only Agent connection. It serves multiple
+agents using per-request identity and supports both MCP 2026-07-28 and 2025-06-18.
+The default endpoint is `http://127.0.0.1:50668/mcp`; Settings > General > Agent
+Gateway supplies the current endpoint and Bearer token. Keep Desktop running.
 
-The generated stdio fallback is multi-agent aware: replace its stable persona
-and host-client placeholders before use. Keep its optional conversation
-environment value only when the client refreshes the stdio process per host
-conversation; otherwise remove that entry to avoid stale trace attribution.
-
-Claude Desktop version or model changes do not change ClaraCore's Gateway
-contract by themselves. If a client supports Streamable HTTP MCP, use the
-current endpoint and bearer header from Agent Access or Settings > General >
-Agent Gateway. If it only supports local stdio MCP, use the generated fallback
-config, fully quit and restart the client, then run
-`claracore_connection_test` followed by `gateway_context`. Omitting `detail`
-now selects the bounded `brief` contract; `detail=full` must be explicit and
-still remains subject to the Gateway response ceiling.
+Clients must support Streamable HTTP. Remove old process command/args/env
+entries, configure HTTP, reconnect, and run `claracore_connection_test` followed
+by `gateway_context(detail=brief)`. Unsupported clients must be upgraded;
+there is no automatic transport fallback. See [migration](docs/HTTP_MCP_MIGRATION.md).
 
 The old ClaraCore Gateway web console remains a reference for useful overview
 ideas, but its service Web UI launcher/supervisor model is not the Desktop
@@ -375,3 +357,14 @@ and repeatable operations should be exposed through the Desktop-owned Gateway.
 - Old Python services are reference implementations and import sources, not
   the normal Desktop runtime.
 - Before pushing architecture or runtime changes, run `npm run test:smoke`.
+
+Automatic backups can be configured in Settings → App and data → Data and recovery.
+The default is manual backup with no additional directory. Daily backups can keep
+1–365 calendar days (default 7, including today) and optionally copy to a chosen
+directory. Retention only removes backups created by the managed automatic policy;
+manual and older unmarked backups are preserved. No external drive is required.
+
+- [0.7.5：运行状态与恢复验证](docs/RELEASE_NOTES_V0.7.5.md)
+
+- [0.7.7：InnerLife 旧念头重复与事实边界](docs/RELEASE_NOTES_V0.7.7.md)
+- [0.7.6：紧凑运行状态](docs/RELEASE_NOTES_V0.7.6.md)

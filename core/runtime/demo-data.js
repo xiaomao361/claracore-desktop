@@ -321,7 +321,7 @@ async function seedDemoFixture(database, { dataRoot = "" } = {}) {
       toolName: "gateway_context",
       durationMs: 118,
       request: { include: "resume_packet" },
-      responseSummary: JSON.stringify({ ok: true, transport: "stdio", modules: { memoria: "ready", continuity: "ready", innerlife: "pending" }, database: { initialized: true } }),
+      responseSummary: JSON.stringify({ ok: true, transport: "streamable-http", modules: { memoria: "ready", continuity: "ready", innerlife: "pending" }, database: { initialized: true } }),
       minutesAgo: 4
     })}
 

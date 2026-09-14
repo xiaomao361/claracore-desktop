@@ -15,6 +15,7 @@ async function reservePort() {
 }
 
 async function main() {
+  const modern = process.argv.includes("--modern");
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "claracore-http-backpressure-"));
   const databasePath = path.join(root, "claracore.db");
   const database = await initializeProductDatabase(databasePath);
@@ -56,7 +57,7 @@ async function main() {
       database,
       summary: await database.getSummary()
     }),
-    getRuntimeSnapshot: async () => ({ connections: { mcpServerName: "claracore-desktop", mcpCommand: "", mcpConfig: "{}" } }),
+    getRuntimeSnapshot: async () => ({ connections: { mcpServerName: "claracore-desktop" } }),
     getProductGatewayContext: async () => ({ ok: true }),
     port
   });
@@ -68,7 +69,8 @@ async function main() {
     const calls = Array.from({ length: 12 }, (_, index) => fetch(endpoint.url, {
       method: "POST",
       headers: {
-        Accept: "application/json",
+        Accept: modern ? "application/json, text/event-stream" : "application/json",
+        ...(modern ? { "MCP-Protocol-Version": "2026-07-28", "Mcp-Method": "tools/call", "Mcp-Name": "memoria_list" } : {}),
         "Content-Type": "application/json",
         Authorization: authorization,
         "X-ClaraCore-Agent-ID": index < 6 ? "noisy-agent" : `backpressure-agent-${index}`
@@ -77,7 +79,9 @@ async function main() {
         jsonrpc: "2.0",
         id: index,
         method: "tools/call",
-        params: { name: "memoria_list", arguments: { limit: 1 } }
+        params: { name: "memoria_list", arguments: { limit: 1 }, ...(modern ? { _meta: {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28", "io.modelcontextprotocol/clientCapabilities": {}
+        } } : {}) }
       })
     }));
     await new Promise((resolve) => setTimeout(resolve, 40));

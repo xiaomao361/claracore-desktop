@@ -4,8 +4,8 @@ This guide is for external agents connected to ClaraCore Desktop through the
 Gateway MCP endpoint. Agents should use MCP tools as the product contract
 instead of reading packaged app source files.
 
-Prefer the Streamable HTTP MCP endpoint shown in Agent Access when the client
-supports it. Use the generated stdio MCP config only as a compatibility fallback.
+Use the Streamable HTTP MCP endpoint shown in Agent Access. Keep Desktop running.
+HTTP supports MCP 2026-07-28 and 2025-06-18; stdio is retired.
 Streamable HTTP callers should send `Authorization: Bearer <token>`,
 `X-ClaraCore-Agent-ID`, `X-ClaraCore-Client-ID`, and optionally
 `X-ClaraCore-Conversation-ID`. `X-ClaraCore-Session-ID` remains a legacy
@@ -18,18 +18,9 @@ config from Settings > General > Agent Gateway.
 For the complete Codex, Claude, and Hermes caller checklist, see
 [Multi-Agent Clients](MULTI_AGENT_CLIENTS.md).
 
-The generated stdio fallback config includes three caller fields:
-
-```text
-CLARACORE_AGENT_ID=<stable-persona-id>
-CLARACORE_CLIENT_ID=<codex-app|claude-code|hermes>
-CLARACORE_CONVERSATION_ID=<optional-host-conversation-id>
-```
-
-Replace the agent and client placeholders before use. Keep the conversation
-entry only when the host refreshes or relaunches its stdio MCP process for each
-conversation; otherwise remove it so a stale id is not traced across unrelated
-work. A caller conversation id never replaces an `inner_session_*` id.
+Use request-scoped caller headers and keep the current conversation id accurate.
+A caller conversation id never replaces an `inner_session_*` id.
+See [HTTP migration](HTTP_MCP_MIGRATION.md) when replacing old process configs.
 
 ## Tool Profiles (v0.6.10)
 
@@ -38,7 +29,7 @@ work. A caller conversation id never replaces an `inner_session_*` id.
 | Profile | Contents | Selection |
 | --- | --- | --- |
 | `core` (default) | 31 tools: connection/context, Memory recall/write/supersede/link/structured-record detail, Shared Line continuation, InnerLife session and sharing | nothing to set |
-| `full` | every tool, including maintenance, import/export, graph, retention, identity, daemon, archive, and advanced editing | `X-ClaraCore-Tool-Profile: full` (HTTP) or `CLARACORE_TOOL_PROFILE=full` (stdio) |
+| `full` | every tool, including maintenance, import/export, graph, retention, identity, daemon, archive, and advanced editing | `X-ClaraCore-Tool-Profile: full` (HTTP) |
 
 `core` covers complete everyday workflows, not just the write half of each: if a
 tool is in `core`, its natural counterpart is too — `memoria_create` with
@@ -320,9 +311,9 @@ form on both transports.
    `gateway_trace_get(id)` for one request record.
 3. Do not mutate SQLite directly.
 
-## CLI Fallback
+## Internal Maintenance CLI
 
-Use CLI commands only when MCP is unavailable and the operator has granted local
-shell access. CLI writes should follow the same rules as MCP writes: search
+CLI is an internal maintenance interface, not a normal Agent connection. Use it
+only with operator-authorized local shell access and an explicit target data root. CLI writes should follow the same rules as MCP writes: search
 first, keep facts focused, label agent-scoped records, and update the Shared
 Line only after meaningful progress.

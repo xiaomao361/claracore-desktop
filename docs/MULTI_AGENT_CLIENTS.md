@@ -46,26 +46,9 @@ cannot be confused with an InnerLife `sessionId` tool argument.
 `X-ClaraCore-Tool-Profile` is optional. It selects which
 manifest `tools/list` returns. Omitting it, or sending an unknown value, gives
 the smaller `core` manifest; only an explicit `full` broadens the surface.
-The stdio equivalent is `CLARACORE_TOOL_PROFILE`. Every tool still executes
-when called by name under either profile — the profile changes what is
-advertised, not what is authorized. Clients that depend on the full manifest
-being advertised must select `full` during the compatibility window.
-
-For stdio fallback, set:
-
-```text
-CLARACORE_AGENT_ID=<stable-persona-id>
-CLARACORE_CLIENT_ID=<host-client-id>
-CLARACORE_CONVERSATION_ID=<current-host-conversation-id>
-```
-
-Only `CLARACORE_AGENT_ID` is required. Do not set a static conversation id when
-the stdio process is reused across unrelated host conversations.
-
-Desktop's generated stdio JSON includes placeholders for all three values so
-the copied config is self-describing. Replace the agent and client placeholders
-before use. Replace the conversation placeholder only when the host keeps it
-current; otherwise remove `CLARACORE_CONVERSATION_ID` from the copied config.
+Every tool still executes when called by name under either profile. Profiles
+control advertisement, not authorization. Select `full` only when needed.
+Stdio is retired; all clients use HTTP headers. See [migration](HTTP_MCP_MIGRATION.md).
 
 ## InnerLife Session Contract
 
@@ -186,7 +169,6 @@ it must change to keep its previous behavior.
 | **Codex** (HTTP MCP) | `core` (31 tools) | minimum-sufficient defaults | Use returned `detailRef` or one-object get tools when content is needed. Send `X-ClaraCore-Tool-Profile: full` only for advanced tools. |
 | **Claude Code** (HTTP MCP) | `core` (31 tools) | minimum-sufficient defaults | No change for ordinary recall/continuation; do not assume list rows contain bodies. |
 | **Hermes / Lara** (HTTP MCP) | `core` (31 tools) | minimum-sufficient defaults | Stop treating `shared_line_list` as resume content; select a line, then call `shared_line_get`. |
-| **Any stdio client** | `core` (31 tools) | minimum-sufficient defaults | Set `CLARACORE_TOOL_PROFILE=full` only to advertise advanced tools; payload bounds still apply. |
 | **HTTP `/agent/setup`** | reports `toolProfiles` and `contextStates` | `firstCalls` no longer requires `gateway_docs` | No. |
 | **HTTP `/gateway/context`** | unchanged endpoint | bounded ambiguity body with `candidateCount`, `totalCount`, `detailRef` | No, unless it assumed an unbounded `candidates` array. |
 | **Desktop UI / CLI** | not applicable | **unchanged — full records** | No. Shaping is a Gateway-boundary concern only. |
@@ -382,13 +364,10 @@ prompt shorter than the bound is still recorded in full.
 2. Send `X-ClaraCore-Client-ID: codex-app` for HTTP MCP.
 3. Send the current Codex conversation id through
    `X-ClaraCore-Conversation-ID` when the host exposes it.
-4. For stdio, set `CLARACORE_CLIENT_ID=codex-app`.
-5. Omit `CLARACORE_CONVERSATION_ID` when one long-lived stdio process spans
-   multiple Codex conversations.
-6. After changing caller configuration, reconnect and run
+4. After changing caller configuration, reconnect and run
    `claracore_connection_test` then `gateway_context(detail=brief)`.
    `gateway_docs` is now an on-demand read, not a startup step.
-7. Codex maintenance workflows that need the import/export, graph, or retention
+5. Codex maintenance workflows that need the import/export, graph, or retention
    tools advertised must send `X-ClaraCore-Tool-Profile: full`.
 
 ## Claude Migration Checklist
@@ -403,10 +382,7 @@ prompt shorter than the bound is still recorded in full.
    SessionEnd hook transcript (`"[SessionEnd hook..."`) already gets this
    behavior automatically as a legacy fallback, but pass the flag explicitly
    for any new hook call.
-7. Fully restart Claude and its MCP connection after changing stdio identity
-   environment variables.
-8. For stdio, set `CLARACORE_CLIENT_ID=claude-code`; omit the conversation
-   variable when one long-lived MCP process spans multiple Claude conversations.
+7. Reconnect Claude after changing HTTP caller headers.
 
 ## Hermes Migration Checklist
 
@@ -423,17 +399,15 @@ prompt shorter than the bound is still recorded in full.
    explicit or a missing session throws.
 8. Do not implement client-side `autoEndPrevious`; v0.5.0 intentionally does
    not use that lifecycle rule.
-9. For stdio, set `CLARACORE_CLIENT_ID=hermes`; omit the conversation variable
-   when Hermes cannot refresh the MCP process per session.
-10. After upgrading Desktop, restart the Hermes MCP connection, run
+9. After upgrading Desktop, restart the Hermes MCP connection, run
     `claracore_connection_test`, and read the live `tools/list`. Read
     `gateway_docs` only when the usage guide is actually needed; it now returns
     a bounded summary and takes a `section` argument.
-11. Treat `memory_context` as observe-only. Call it per non-empty prompt only
+10. Treat `memory_context` as observe-only. Call it per non-empty prompt only
     when Hermes has a verified per-prompt hook; never inject its empty context.
-12. Without that hook, keep explicit `memoria_search` for real recall requests
+11. Without that hook, keep explicit `memoria_search` for real recall requests
     and report automatic Controller routing as unavailable instead of implied.
-13. On HTTP `429` / JSON-RPC `-32001`, honor `Retry-After`, use bounded retries,
+12. On HTTP `429` / JSON-RPC `-32001`, honor `Retry-After`, use bounded retries,
     and do not fan out more concurrent calls.
 
 The current copy-ready Hermes upgrade message and verification receipt live in

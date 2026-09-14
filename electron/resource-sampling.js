@@ -29,25 +29,9 @@ function isResourceWarning({ diskPercent, memoryPercent }) {
   );
 }
 
-function shouldCollectGatewayProcessSample({ diskPercent, isGatewayMode, memoryPercent }) {
-  if (isGatewayMode) return true;
-  return isResourceWarning({ diskPercent, memoryPercent });
-}
-
-function deferredGatewayProcessSample() {
-  return {
-    rssBytes: 0,
-    rssText: "-",
-    processCount: 0,
-    source: "deferred-until-warning"
-  };
-}
-
 module.exports = {
   RESOURCE_WARN_DISK_PERCENT,
   RESOURCE_WARN_MEMORY_PERCENT,
-  deferredGatewayProcessSample,
   isResourceWarning,
-  systemMemorySnapshot,
-  shouldCollectGatewayProcessSample
+  systemMemorySnapshot
 };

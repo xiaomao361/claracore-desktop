@@ -1,10 +1,8 @@
 const assert = require("assert");
 const { createClaraCoreResourceRefreshLoop } = require("../../app/resource-refresh");
 const {
-  deferredGatewayProcessSample,
   isResourceWarning,
-  systemMemorySnapshot,
-  shouldCollectGatewayProcessSample
+  systemMemorySnapshot
 } = require("../../electron/resource-sampling");
 
 class FakeDocument {
@@ -129,34 +127,8 @@ async function main() {
   assert.strictEqual(documentRef.listeners.get("visibilitychange")?.size || 0, 0);
   assert.strictEqual(loop.state().active, false);
 
-  assert.strictEqual(shouldCollectGatewayProcessSample({
-    diskPercent: 89,
-    isGatewayMode: false,
-    memoryPercent: 84
-  }), false);
-  assert.strictEqual(shouldCollectGatewayProcessSample({
-    diskPercent: 89,
-    isGatewayMode: false,
-    memoryPercent: 85
-  }), true);
   assert.strictEqual(isResourceWarning({ diskPercent: 89, memoryPercent: 84 }), false);
   assert.strictEqual(isResourceWarning({ diskPercent: 90, memoryPercent: 84 }), true);
-  assert.strictEqual(shouldCollectGatewayProcessSample({
-    diskPercent: 90,
-    isGatewayMode: false,
-    memoryPercent: 84
-  }), true);
-  assert.strictEqual(shouldCollectGatewayProcessSample({
-    diskPercent: 0,
-    isGatewayMode: true,
-    memoryPercent: 0
-  }), true);
-  assert.deepStrictEqual(deferredGatewayProcessSample(), {
-    rssBytes: 0,
-    rssText: "-",
-    processCount: 0,
-    source: "deferred-until-warning"
-  });
   assert.deepStrictEqual(
     systemMemorySnapshot({
       total: 16,

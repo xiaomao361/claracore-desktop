@@ -29,6 +29,18 @@ the internal/domain name and old-service import lineage.
 
 ## Desktop UI
 
+### Next-step read/write contract
+
+`shared_line_update.nextStep` is stored in current-position metadata and returned
+by write acknowledgements, resume/context/full reads, and Gateway context (within
+each response's existing text budget). Omitting it preserves the saved value;
+an explicit empty string clears it. Missing or cleared values return an empty
+string, never a generated instruction to ask for permission. This projection
+does not rewrite stored positions or history.
+
+Regression: `node core/tests/phase3-gateway-smoke.js` exercises the actual
+Gateway round trip in an isolated data root, including history preservation.
+
 The Shared Line view supports:
 
 - active line status and module counts,

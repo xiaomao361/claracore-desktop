@@ -1,9 +1,13 @@
 function createClaraCoreResourceRefreshLoop({
   documentRef,
+  windowRef = null,
+  canRefresh = () => true,
+  refreshOnResume = false,
   fetchSnapshot,
   renderSnapshot,
   handleError = () => {},
   intervalMs = 30_000,
+  requestTimeoutMs = 0,
   now = () => Date.now(),
   setTimer = (callback, delay) => setTimeout(callback, delay),
   clearTimer = (timer) => clearTimeout(timer)
@@ -38,13 +42,17 @@ function createClaraCoreResourceRefreshLoop({
   }
 
   function refresh() {
-    if (!active || documentRef.hidden) return Promise.resolve(null);
+    if (!active || documentRef.hidden || !canRefresh()) return Promise.resolve(null);
     if (inFlight) return inFlight;
     const requestGeneration = generation;
     lastAttemptAt = now();
     runCount += 1;
-    const request = Promise.resolve()
-      .then(() => fetchSnapshot())
+    let timeout = null;
+    const fetch = Promise.resolve().then(() => fetchSnapshot());
+    const bounded = requestTimeoutMs > 0 ? Promise.race([fetch, new Promise((_, reject) => {
+      timeout = setTimer(() => reject(new Error("Runtime refresh timed out")), requestTimeoutMs);
+    })]) : fetch;
+    const request = bounded
       .then((snapshot) => {
         if (active && requestGeneration === generation) renderSnapshot(snapshot);
         return snapshot;
@@ -54,6 +62,7 @@ function createClaraCoreResourceRefreshLoop({
         return null;
       })
       .finally(() => {
+        if (timeout !== null) clearTimer(timeout);
         if (inFlight === request) inFlight = null;
       });
     inFlight = request;
@@ -72,6 +81,7 @@ function createClaraCoreResourceRefreshLoop({
       clearScheduled();
       return;
     }
+    if (refreshOnResume) { refreshNow(); return; }
     const elapsed = lastAttemptAt ? Math.max(0, now() - lastAttemptAt) : cadenceMs;
     schedule(Math.max(0, cadenceMs - elapsed));
   }
@@ -81,6 +91,7 @@ function createClaraCoreResourceRefreshLoop({
     active = true;
     generation += 1;
     documentRef.addEventListener("visibilitychange", handleVisibilityChange);
+    windowRef?.addEventListener("focus", handleVisibilityChange);
     return cycle();
   }
 
@@ -90,6 +101,7 @@ function createClaraCoreResourceRefreshLoop({
     generation += 1;
     clearScheduled();
     documentRef.removeEventListener("visibilitychange", handleVisibilityChange);
+    windowRef?.removeEventListener("focus", handleVisibilityChange);
   }
 
   function refreshNow() {

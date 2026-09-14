@@ -46,6 +46,14 @@ async function main() {
     throw new Error(`Empty session created an afterthought share: ${JSON.stringify(emptySessionEnd)}`);
   }
 
+  const core = await runtime.ensureProductCore(app);
+  core.database.innerLifeGenerate = async ({ system, prompt }) => {
+    if (system === require("../innerlife/grounding").REVIEW_SYSTEM) {
+      return JSON.stringify({ decision: "allow", reason: "new general observation", personalClaims: [] });
+    }
+    const sourcesText = prompt.split("Sources (record dates are not event dates):\n")[1]?.split("\n\nOperator prompt:")[0];
+    return JSON.parse(sourcesText).find((item) => item.kind === "inbox").text;
+  };
   const distinctBody = "A clean pipeline can still be wrong when expected business fields are absent.";
   await runtime.submitProductInnerLifeInbox(app, {
     agentId: "quality-agent",
@@ -81,7 +89,6 @@ async function main() {
     throw new Error(`A genuinely different observation was suppressed: ${JSON.stringify(second.shareDecision)}`);
   }
 
-  const core = await runtime.ensureProductCore(app);
   const quietSession = await runtime.startProductInnerLifeSession(app, {
     agentId: "quality-agent",
     host: "quality-smoke",

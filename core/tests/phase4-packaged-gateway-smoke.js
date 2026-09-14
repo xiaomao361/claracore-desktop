@@ -26,19 +26,12 @@ async function main() {
   )).trim());
   await fs.access(executablePath);
 
-  const gatewayScript = path.join(
-    path.dirname(path.dirname(executablePath)),
-    "Resources",
-    "app.asar",
-    "core",
-    "gateway",
-    "mcp-server.js"
-  );
+  const runtimeRoot = path.join(path.dirname(path.dirname(executablePath)), "Resources", "app.asar");
   const client = createGatewayClient(dataRoot, {
     command: executablePath,
-    args: [gatewayScript],
     env: {
       ELECTRON_RUN_AS_NODE: "1",
+      CLARACORE_TEST_ASAR: runtimeRoot,
       CLARACORE_AGENT_ID: "codex",
       CLARACORE_CLIENT_ID: "packaged-gateway-smoke",
       CLARACORE_CONVERSATION_ID: "packaged-controller"
@@ -64,20 +57,14 @@ async function main() {
       throw new Error(`Packaged default docs are ${Buffer.byteLength(docsText, "utf8")} bytes, over the 4 KB ceiling.`);
     }
     if (docsText.includes("[truncated")) throw new Error("Packaged default docs were truncated.");
-    if (!docsText.includes("packaged app")) throw new Error("Packaged Gateway docs do not report packaged app source.");
+    if (!docsText.includes(packageJson.version)) throw new Error("Packaged guide version differs from the package version.");
 
     const startDocs = (await client.callTool("gateway_docs", { section: "start" })).result?.content?.[0]?.text || "";
-    if (!startDocs.includes("ELECTRON_RUN_AS_NODE")) {
-      throw new Error("Packaged Gateway start section does not include run-as-node launch.");
+    if (!startDocs.includes("X-ClaraCore-Client-ID") || !startDocs.includes("X-ClaraCore-Conversation-ID")) {
+      throw new Error("Packaged HTTP guide is missing caller headers.");
     }
-    if (!startDocs.includes("CLARACORE_CLIENT_ID") || !startDocs.includes("CLARACORE_CONVERSATION_ID")) {
-      throw new Error("Packaged Gateway start section does not include complete stdio caller context.");
-    }
-    if (!startDocs.includes("CLARACORE_TOOL_PROFILE")) {
+    if (!startDocs.includes("X-ClaraCore-Tool-Profile")) {
       throw new Error("Packaged Gateway start section does not document the tool profile setting.");
-    }
-    if (!startDocs.includes(dataRoot)) {
-      throw new Error("Packaged Gateway start section does not include the active data root.");
     }
     const diagnosticsDocs = (await client.callTool("gateway_docs", { section: "diagnostics" })).result?.content?.[0]?.text || "";
     if (!diagnosticsDocs.includes(dataRoot)) {
@@ -246,7 +233,7 @@ async function main() {
 
     const sharedLine = parseTextResult(
       await client.callTool("shared_line_update", {
-        summary: "Packaged Gateway can update Shared Line from --gateway mode.",
+        summary: "Packaged Gateway can update Shared Line from HTTP.",
         interpretationStatus: "confirmed",
         factsUsed: [created.id]
       })
@@ -293,7 +280,7 @@ async function main() {
     );
     if (
       context.detail !== "brief" ||
-      context.sharedLine?.summary !== "Packaged Gateway can update Shared Line from --gateway mode." ||
+      context.sharedLine?.summary !== "Packaged Gateway can update Shared Line from HTTP." ||
       !context.memories?.some((memory) => memory.id === created.id)
     ) {
       throw new Error(`Packaged Gateway context did not assemble Memory and Shared Line: ${JSON.stringify(context)}`);
@@ -316,7 +303,7 @@ async function main() {
     if (
       status.connection?.agentId !== "codex" ||
       status.connection?.clientId !== "packaged-gateway-smoke" ||
-      status.connection?.transport !== "stdio"
+      status.connection?.transport !== "streamable-http"
     ) {
       throw new Error(`Packaged Gateway status did not report its actual caller: ${JSON.stringify(status.connection)}`);
     }

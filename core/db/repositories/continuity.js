@@ -428,9 +428,9 @@ function installContinuityRepository(ProductDatabase, helpers) {
         affectiveTraceTotal: truncatedTrace.total,
         affectiveTraceTruncated: truncatedTrace.truncated
       };
-      const nextStep = currentPosition.summary
-        ? "Resume from the current shared position and ask before overwriting it."
-        : "No shared position has been saved yet.";
+      // Preserve the saved continuation action, including an explicit clear.
+      // Missing data is not authority to manufacture a workflow instruction.
+      const nextStep = String(metadata.nextStep ?? "");
       const historyText = history.length
         ? history.map((item, index) => `${index + 1}. ${item.summary} (${item.interpretationStatus}, ${item.createdAt})`).join("\n")
         : "(none)";

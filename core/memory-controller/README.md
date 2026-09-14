@@ -75,8 +75,7 @@ discarding trusted evidence.
 
 ## Gateway modes
 
-The `memory_context` MCP operation exposes this controller over stdio and
-Streamable HTTP. It accepts the prompt, time view, and context budget only;
+The `memory_context` MCP operation exposes this controller over Streamable HTTP. It accepts the prompt, time view, and context budget only;
 Agent, client, and conversation identity come from the Gateway transport.
 Unidentified callers receive a context-free refusal, and body-supplied Agent
 ids cannot override the transport caller. Persisted `off` and `observe`

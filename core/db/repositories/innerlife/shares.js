@@ -61,9 +61,10 @@ function createInnerLifeShareRepository(helpers, dependencies = {}) {
       const safeAgentId = String(agentId || "").trim();
       const candidate = String(body || "").trim();
       if (!safeAgentId || !candidate) return null;
-      const threshold = Math.max(0.1, Math.min(1, Number(input.threshold) || 0.42));
+      const threshold = Math.max(0.1, Math.min(1, Number(input.threshold) || (input.compareOutput === true ? 0.82 : 0.42)));
       const limit = Math.max(1, Math.min(300, Number.parseInt(String(input.limit || 200), 10) || 200));
       const excludeId = String(input.excludeId || input.exclude_id || "").trim();
+      const compareOutput = input.compareOutput === true;
       const rows = await this.query(`
         SELECT
           s.id,
@@ -85,7 +86,7 @@ function createInnerLifeShareRepository(helpers, dependencies = {}) {
       `);
       let best = null;
       for (const row of rows) {
-        const score = innerLifeShareSimilarity(candidate, row.novelty_text || row.body);
+        const score = innerLifeShareSimilarity(candidate, compareOutput ? row.body : row.novelty_text || row.body);
         if (score < threshold || (best && best.similarity >= score)) continue;
         best = {
           id: row.id,

@@ -39,7 +39,12 @@ async function main() {
     };
     const result = await database.searchMemories("semantic query without lexical match", 50, { agentId: "codex" });
     assert.deepEqual(result.results.map((row) => row.id), ["search_0600"], "Retrieve the oldest match and exclude wrong model, provider, dimension, status, sensitivity and agent.");
-    assert.deepEqual(pages, [200, 200, 200, 0], "Exact page multiples terminate without truncating retrieval.");
+    if (database.vectorEngine === "sqlite-vec") {
+      assert.deepEqual(pages, [], "Native projection must not deserialize paginated source vectors into JS.");
+      assert.equal(result.vectorSearch.status, "ready");
+    } else {
+      assert.deepEqual(pages, [200, 200, 200, 0], "Exact page multiples terminate without truncating retrieval.");
+    }
     const history = await database.searchMemories("semantic query without lexical match", 50, { agentId: "codex", timeView: "historical" });
     assert.deepEqual(history.results.map((row) => row.id), ["search_0605"]);
     await runtime.saveProductSettings(app, settings);

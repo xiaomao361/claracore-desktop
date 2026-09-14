@@ -41,14 +41,10 @@ SQLite database.
 - `core/runtime/product-core-owner.js`: per-process single-flight database
   owner, warm zero-I/O cache, path-switch disposal, and reset generation guard.
 - `electron/http-agent-gateway.js`: localhost HTTP helper and Streamable HTTP MCP endpoint.
-- `electron/resource-sampling.js`: resource warning thresholds and the policy
-  that defers external Gateway `/bin/ps` discovery until diagnostics are
-  needed.
-- `core/gateway/mcp-server.js`: stdio MCP fallback process used by agents; reads
-  process-scoped agent, client, and optional conversation identity.
+- `electron/resource-sampling.js`: resource warning thresholds and system memory accounting.
 - `core/runtime/snapshot.js`: bounded Overview, focused view snapshots, full
   compatibility snapshot, and copyable Agent connection configuration.
-- `core/cli.js`: local CLI fallback for product operations.
+- `core/cli.js`: internal maintenance CLI for product operations.
 
 ## Read Paths By Task
 
@@ -61,7 +57,7 @@ Start here:
 3. `electron/http-agent-gateway.js`
 4. `electron/schedulers.js`
 
-Use this path for Dock/tray behavior, close/quit rules, packaged `--gateway`
+Use this path for Dock/tray behavior, close/quit rules, packaged HTTP Gateway
 behavior, BrowserWindow security policy, HTTP Agent Gateway lifecycle, and
 background timers. The daily maintenance timer also owns Memory Controller
 ledger retention and its bounded runtime receipt, independently of optional
@@ -388,7 +384,7 @@ fallbacks, and Doctor guidance.
 Start here:
 
 1. `electron/http-agent-gateway.js`
-2. `core/gateway/mcp-server.js`
+2. `electron/http-agent-gateway.js`
 3. `core/gateway/tool-definitions.js`
 4. `core/gateway/tool-definitions/*`
 5. `core/gateway/tools.js`
@@ -432,7 +428,7 @@ Start here:
 1. `core/db/database.js`
 2. `core/runtime/snapshot.js`
 3. `core/runtime/decay.js`
-4. `core/gateway/mcp-server.js`
+4. `electron/http-agent-gateway.js`
 5. `app/views/logs.js`
 6. `app/views/home.js`
 7. `app/views/agent-setup.js`

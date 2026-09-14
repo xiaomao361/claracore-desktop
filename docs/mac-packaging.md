@@ -109,41 +109,20 @@ x64 Full/Lite artifacts plus portable per-platform checksum files.
 
 ## Gateway In Packaged Mode
 
-The running packaged app exposes the preferred Streamable HTTP MCP endpoint at
-the configured localhost port. Agent Access shows the current URL, bearer-token
-source, and v0.5 caller identity headers.
+The running app exposes Streamable HTTP MCP at the configured localhost port.
+It supports MCP 2026-07-28 and 2025-06-18. Agent Access supplies the URL, Bearer
+token, and caller headers. Stdio and the old process launch configuration are
+retired; `--gateway` exits with a migration error before opening windows or data.
 
-The packaged app also supports a stdio compatibility Gateway. The generated
-Agent Access config launches the bundled Node entry with `ELECTRON_RUN_AS_NODE`:
+The internal maintenance CLI remains packaged at `app.asar/core/cli.js`. Run it
+with the bundled executable in `ELECTRON_RUN_AS_NODE=1` mode, and explicitly set
+`CLARACORE_DESKTOP_USER_DATA_DIR` to the intended user-data directory. It is not
+an Agent transport or a reason to stop the running Desktop.
 
-```bash
-ELECTRON_RUN_AS_NODE=1 \
-  "/path/to/ClaraCore Desktop.app/Contents/MacOS/ClaraCore Desktop" \
-  "/path/to/ClaraCore Desktop.app/Contents/Resources/app.asar/core/gateway/mcp-server.js"
-```
-
-The older `--gateway` app mode remains a compatibility path, not the preferred
-new-client setup.
-
-Stdio agent setup should include:
-
-- command: the packaged app executable
-- args: the packaged `app.asar/core/gateway/mcp-server.js` path
-- env: `ELECTRON_RUN_AS_NODE=1`, stable `CLARACORE_AGENT_ID`, optional
-  `CLARACORE_CLIENT_ID` / `CLARACORE_CONVERSATION_ID`, and
-  `CLARACORE_DESKTOP_DATA_DIR` only for a custom data directory
-
-By default, packaged Desktop data is created under:
-
-```text
-~/Library/Application Support/claracore-desktop/data
-```
-
-Development mode still uses:
-
-```bash
-node core/gateway/mcp-server.js
-```
+Default macOS data: `~/Library/Application Support/claracore-desktop/data`.
+The HTTP packaged smoke runs an isolated, no-window test host using the actual
+ASAR Gateway code. Old release evidence below describes its original version,
+not current transport support.
 
 ## Validation Status
 

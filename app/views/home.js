@@ -41,8 +41,6 @@ function createClaraCoreHomeView(context) {
     homeRuntimeDetails,
     healthSummary,
     healthList,
-    mcpCommand,
-    mcpConfig,
     agentIdentityList,
     gatewayHandshakeList,
     gatewayTraceList,
@@ -219,7 +217,7 @@ function createClaraCoreHomeView(context) {
       const traces = snapshot?.gatewayTraces || [];
       const errors = actionableGatewayErrors(traces).length;
       return [
-        [t("home.cognitive.surface"), "stdio MCP"],
+        [t("home.cognitive.surface"), "HTTP MCP"],
         [t("home.gateway.calls"), String(traces.length)],
         [t("home.gateway.errors"), String(errors)]
       ];
@@ -846,8 +844,6 @@ function createClaraCoreHomeView(context) {
   function renderConnections() {
     const snapshot = getSnapshot();
     if (!snapshot?.connections) return;
-    if (mcpCommand) mcpCommand.textContent = snapshot.connections.mcpCommand;
-    if (mcpConfig) mcpConfig.textContent = snapshot.connections.mcpConfig;
     const traces = snapshot.gatewayTraces || [];
     const agents = summarizeAgentsFromTraces(traces);
     if (gatewayHandshakeList) {

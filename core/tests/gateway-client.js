@@ -1,5 +1,5 @@
-const { spawn } = require("child_process");
-const path = require("path");
+const { spawn } = require('child_process');
+const path = require('path');
 
 function parseTextResult(response) {
   const text = response?.result?.content?.[0]?.text;
@@ -8,84 +8,47 @@ function parseTextResult(response) {
 }
 
 function createGatewayClient(dataRoot, options = {}) {
-  const command = options.command || process.execPath;
-  const args = options.args || [path.join(__dirname, "..", "gateway", "mcp-server.js")];
-  const child = spawn(command, args, {
-    cwd: path.resolve(__dirname, "..", ".."),
-    env: {
-      ...process.env,
-      ...(options.env || {}),
-      CLARACORE_DESKTOP_DATA_DIR: dataRoot
-    },
-    stdio: ["pipe", "pipe", "pipe"]
+  const env = options.env || {};
+  const child = spawn(options.command || process.execPath, [path.join(__dirname, 'http-gateway-worker.js')], {
+    cwd: path.resolve(__dirname, '../..'),
+    env: { ...process.env, ...env, CLARACORE_DESKTOP_DATA_DIR: dataRoot,
+      CLARACORE_DESKTOP_USER_DATA_DIR: dataRoot, CLARACORE_DESKTOP_TEST_INSTANCE: '1' },
+    stdio: ['pipe', 'pipe', 'pipe', 'ipc']
   });
-  let nextId = 1;
-  let buffer = "";
-  const pending = new Map();
-  let stderr = "";
-
-  child.stdout.setEncoding("utf8");
-  child.stderr.setEncoding("utf8");
-  child.stdout.on("data", (chunk) => {
-    buffer += chunk;
-    const lines = buffer.split(/\r?\n/);
-    buffer = lines.pop() || "";
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      const message = JSON.parse(line);
-      const request = pending.get(message.id);
-      if (!request) continue;
-      pending.delete(message.id);
-      if (message.error) {
-        request.reject(new Error(message.error.message));
-      } else {
-        request.resolve(message);
-      }
-    }
+  let stderr = '', nextId = 1;
+  child.stderr.on('data', chunk => { stderr += chunk; });
+  child.stdout.resume();
+  const ready = new Promise((resolve, reject) => {
+    const timer = setTimeout(() => { child.kill(); reject(new Error('HTTP test host startup timed out')); }, 15000);
+    child.once('message', endpoint => { clearTimeout(timer); resolve(endpoint); });
+    child.once('error', error => { clearTimeout(timer); reject(error); });
+    child.once('exit', code => { clearTimeout(timer); reject(new Error(`HTTP test host exited ${code}: ${stderr}`)); });
   });
-  child.stderr.on("data", (chunk) => {
-    stderr += chunk;
-  });
-  child.on("exit", (code) => {
-    for (const request of pending.values()) {
-      request.reject(new Error(`Gateway exited with ${code}: ${stderr}`));
-    }
-    pending.clear();
-  });
-
-  function request(method, params = {}) {
-    const id = nextId;
-    nextId += 1;
-    const payload = {
-      jsonrpc: "2.0",
-      id,
-      method,
-      params
-    };
-    return new Promise((resolve, reject) => {
-      pending.set(id, { resolve, reject });
-      child.stdin.write(`${JSON.stringify(payload)}\n`);
-    });
+  ready.catch(() => {});
+  async function request(method, params = {}) {
+    const endpoint = await ready;
+    const response = await fetch(endpoint.url, { method: 'POST', signal: AbortSignal.timeout(30000),
+      headers: { Authorization: endpoint.authorization, 'Content-Type': 'application/json',
+        Accept: 'application/json, text/event-stream', 'MCP-Protocol-Version': '2025-06-18',
+        'X-ClaraCore-Agent-ID': env.CLARACORE_AGENT_ID || 'http-agent',
+        'X-ClaraCore-Client-ID': env.CLARACORE_CLIENT_ID || 'test-client',
+        'X-ClaraCore-Conversation-ID': env.CLARACORE_CONVERSATION_ID || '',
+        'X-ClaraCore-Tool-Profile': env.CLARACORE_TOOL_PROFILE || 'core' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: nextId++, method, params }) });
+    const message = await response.json();
+    if (message.error) throw new Error(message.error.message);
+    return message;
   }
-
-  return {
-    child,
-    childPid: child.pid,
-    request,
-    callTool(name, args = {}) {
-      return request("tools/call", {
-        name,
-        arguments: args
-      });
-    },
+  return { child, childPid: child.pid, request,
+    callTool: (name, args = {}) => request('tools/call', { name, arguments: args }),
     async close() {
-      child.stdin.end();
-      child.kill();
+      if (child.exitCode !== null) return;
+      await new Promise(resolve => {
+        const timer = setTimeout(() => child.kill('SIGKILL'), 3000);
+        child.once('exit', () => { clearTimeout(timer); resolve(); });
+        child.stdin.end();
+      });
     }
   };
 }
-
-module.exports = {
-  createGatewayClient,
-  parseTextResult
-};
+module.exports = { createGatewayClient, parseTextResult };

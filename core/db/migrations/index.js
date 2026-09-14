@@ -7,6 +7,10 @@ const memoryControllerWatermark = require("./005_memory_controller_watermark");
 const innerLifeHourlyDefault = require("./006_innerlife_hourly_default");
 const innerLifeSingleModel = require("./007_innerlife_single_model");
 const innerLifeAfterthoughtDrafting = require("./008_innerlife_afterthought_drafting");
+const memoryVectorRevision = require("./009_memory_vector_revision");
+const memoryEmbeddingSpaceIndex = require("./010_memory_embedding_space_index");
+
+const memoryVectorChanges = require("./011_memory_vector_changes");
 
 const MIGRATIONS = [
   gatewayTraceCompatibility,
@@ -16,7 +20,10 @@ const MIGRATIONS = [
   memoryControllerWatermark,
   innerLifeHourlyDefault,
   innerLifeSingleModel,
-  innerLifeAfterthoughtDrafting
+  innerLifeAfterthoughtDrafting,
+  memoryVectorRevision,
+  memoryEmbeddingSpaceIndex,
+  memoryVectorChanges
 ];
 
 async function ensureMigrationTable(database) {

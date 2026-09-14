@@ -24,7 +24,7 @@ function shapeAgentConfiguration(configuration = {}) {
     },
     gateway: {
       enabled: Boolean(gateway.enabled),
-      configuredTransport: gateway.transport || "stdio",
+      configuredTransport: "streamable-http",
       localOnly: Boolean(gateway.localOnly),
       defaultAgentId: gateway.agentId || ""
     }

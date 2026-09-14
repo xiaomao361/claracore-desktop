@@ -30,8 +30,14 @@ async function main() {
     if (initialized.result?.serverInfo?.name !== "claracore-desktop") {
       throw new Error("Gateway initialize did not return ClaraCore Desktop server info.");
     }
+    for (const requestedVersion of [undefined, "2025-11-25", "2026-07-28", "2099-01-01"]) {
+      const negotiated = await client.request("initialize", { protocolVersion: requestedVersion, capabilities: {} });
+      if (negotiated.result?.protocolVersion !== "2025-06-18") {
+        throw new Error(`HTTP falsely negotiated unsupported version ${requestedVersion}`);
+      }
+    }
 
-    // v0.6.6: stdio defaults to the core tool profile. Core carries the normal
+    // v0.6.6: HTTP defaults to the core tool profile. Core carries the normal
     // recall and write surface; the maintenance surface stays available under
     // the explicit full profile, and every tool still executes when called.
     const tools = await client.request("tools/list");
@@ -130,7 +136,7 @@ async function main() {
       throw new Error(`Gateway memory_context is not observe-only: ${JSON.stringify(controllerPacket)}`);
     }
     if (!controllerPacket.candidates.some((candidate) => candidate.id === created.id)) {
-      throw new Error(`Gateway memory_context did not use the stdio process identity: ${JSON.stringify(controllerPacket)}`);
+      throw new Error(`Gateway memory_context did not use the HTTP process identity: ${JSON.stringify(controllerPacket)}`);
     }
     const fetched = parseTextResult(await client.callTool("memoria_get", { id: created.id })).memory;
     if (fetched?.id !== created.id || !fetched.labels.includes("gateway")) {

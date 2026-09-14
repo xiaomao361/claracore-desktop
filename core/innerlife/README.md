@@ -5,7 +5,7 @@ database, not in the old standalone service database.
 
 Existing `services/innerlife` code is a reference and import source. Normal
 Desktop product use should go through this app's SQLite-backed product core,
-Gateway MCP tools, or CLI fallback.
+HTTP MCP tools, or an operator-authorized internal maintenance CLI.
 
 ## Current Surface
 
@@ -69,7 +69,7 @@ ran). For actual share candidates, a token-based novelty check suppresses close
 matches against active shares and shares delivered during the previous 30 days.
 
 The Desktop InnerLife page is intentionally inspect-oriented. Agents create and
-update InnerLife state through Gateway MCP or CLI fallback. Humans can inspect
+update InnerLife state through HTTP MCP; CLI is reserved for operator maintenance. Humans can inspect
 state and operate daemon controls from the InnerLife runtime panel, but the page
 should not become a manual workflow surface for writing thoughts, reviewing
 shares, or applying InnerLife output into other modules.
@@ -204,7 +204,7 @@ the newest 200 rows for that agent. Use the paginated digest tools or
 `innerlife_status` with `detail: true` for inspection, not the default status
 call.
 
-CLI fallback:
+Internal maintenance CLI:
 
 ```bash
 node core/cli.js innerlife status
@@ -215,3 +215,20 @@ node core/cli.js innerlife digest --mode light
 node core/cli.js innerlife pending
 node core/cli.js innerlife share-check --context "current conversation context"
 ```
+
+Session start, briefing, and convergence filter pending shares by Agent before
+applying catalog limits. Another Agent's newer candidates cannot hide the caller's
+older candidates. Pending shares and active sessions are not deleted or ended just
+because they are old; lifecycle completion requires a confirmed host end.
+
+## 0.7.7 generation evidence boundary
+
+Generation projects only recent, relevant, individually dated open questions;
+legacy undated state is retained in storage but omitted from generation. A
+profile edit does not refresh its loops. The process/explore/converge share
+paths require model output plus an independent evidence/temporal/novelty review.
+Unavailable or malformed review is not permission to publish. Process retains
+inbox inputs for retry and the daemon exposes the retry failure. Original
+sources and actual bounded prompts are recorded with the event; prior AI
+thoughts are not factual evidence. See `docs/V0.7.7_INNERLIFE_PLAN.md` and
+`docs/RELEASE_NOTES_V0.7.7.md` for limits, checks and legacy-queue behavior.

@@ -66,6 +66,18 @@ const SAFE_IDENTIFIERS = new Set([
 // reviewed together. Keeping these exact prevents another repository from
 // gaining a same-named blanket escape hatch.
 const FILE_SAFE_EXPRESSIONS = new Map([
+  ["database.js", new Set([
+    // Internal projection SQL only; attachSql quotes a generated private path.
+    "setupSql", "attachSql"
+  ])],
+  ["vector-projection.js", new Set([
+    // Provider/model/vector literals use sqlString; table is a SHA-256 hex ID.
+    // These predicates are composed only from constants, escaped literals and
+    // the reviewed status/agent fragments in memoria/embeddings.js.
+    "spaceClause", "changedClause", "eligibilityClause", "querySql", "Number(minimumScore)", "sourceRevision",
+    // Finite numbers computed from the validated query vector and bounded limit.
+    "queryNorm", "scoreMargin", "safeLimit - 1", "safeCandidateLimit", "nativeSourceSql"
+  ])],
   ["repositories/memoria/embeddings.js", new Set([
     // Cursor/provider/model values use sqlString; dimension is array length.
     "cursorClause",

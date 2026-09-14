@@ -61,10 +61,12 @@ async function restore(core, lineId, makeActive = false, options = {}) {
 }
 
 async function createHandoff(core, input, options = {}) {
-  const handoff = await core.database.createContinuityHandoff(input);
+  // Resolve the caller's line before writing, using the same ambiguity rule as reads.
+  const target = await core.database.getResumePacket({ lineId: input?.lineId, agentId: input?.agentId, lite: true });
+  const handoff = await core.database.createContinuityHandoff({ ...input, lineId: target.lineId });
   return {
     handoff,
-    sharedLine: await core.database.getResumePacket({ lineId: input?.lineId, lite: options.lite === true })
+    sharedLine: await core.database.getResumePacket({ lineId: handoff.lineId, lite: options.lite === true })
   };
 }
 

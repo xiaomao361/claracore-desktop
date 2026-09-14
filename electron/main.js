@@ -1,8 +1,8 @@
-const { app, BrowserWindow, Menu, Tray, clipboard, dialog, ipcMain, nativeImage, shell } = require("electron");
+const { app, powerMonitor, BrowserWindow, Menu, Tray, clipboard, dialog, ipcMain, nativeImage, shell } = require("electron");
 const path = require("path");
 const fs = require("fs/promises");
 const os = require("os");
-const { execFile, spawnSync } = require("child_process");
+const { execFile } = require("child_process");
 const { promisify } = require("util");
 const { PRODUCT_VERSION } = require("../core/version");
 const { resolveListedModelName } = require("../core/model-provider-utils");
@@ -17,10 +17,8 @@ const {
   shouldStartHiddenAtLogin
 } = require("./login-item-settings");
 const {
-  deferredGatewayProcessSample,
   isResourceWarning,
-  systemMemorySnapshot,
-  shouldCollectGatewayProcessSample
+  systemMemorySnapshot
 } = require("./resource-sampling");
 const {
   buildProductOverviewSnapshot,
@@ -29,6 +27,7 @@ const {
   getProductGatewayContext,
   resetCachedDatabase,
   runProductMemoryMaintenance,
+  runProductScheduledBackup,
   saveProductSettings,
   tickProductInnerLifeDaemon,
   desktopSettingsPath,
@@ -58,8 +57,12 @@ function applyCliEnvArgs(argv = process.argv) {
 
 applyCliEnvArgs();
 
-const isGatewayMode = process.argv.includes("--gateway");
-if (!isGatewayMode && process.env.CLARACORE_DESKTOP_TEST_INSTANCE === "1") {
+// Reject obsolete launch configs before creating any window or opening data.
+if (process.argv.includes("--gateway")) {
+  console.error("STDIO_MCP_REMOVED: Use the HTTP MCP connection from Desktop Agent Access.");
+  process.exit(1);
+}
+if (process.env.CLARACORE_DESKTOP_TEST_INSTANCE === "1") {
   const isolatedUserDataDir = String(process.env.CLARACORE_DESKTOP_USER_DATA_DIR || "").trim();
   if (!isolatedUserDataDir) {
     throw new Error(
@@ -77,13 +80,10 @@ let lastCpuSample = null;
 let schedulers = null;
 const appStartedAt = Date.now();
 const RESOURCE_SAMPLE_MAX_AGE_MS = 10 * 60 * 1000;
-const GATEWAY_PROCESS_SAMPLE_TTL_MS = 5 * 60 * 1000;
 let httpAgentGateway = null;
 let forceQuitTimer = null;
 const resourceMemorySamples = [];
 let resourceSnapshotInFlight = null;
-let gatewayProcessSampleCache = null;
-let gatewayProcessSampleInFlight = null;
 let uiPreferencesSaveQueue = Promise.resolve();
 
 function reportMainProcessError(label, error) {
@@ -98,18 +98,6 @@ process.on("unhandledRejection", (reason) => {
 process.on("uncaughtException", (error) => {
   reportMainProcessError("Uncaught exception", error);
 });
-
-function hideGatewayFromDock() {
-  if (!isGatewayMode || process.platform !== "darwin") return;
-  if (typeof app.setActivationPolicy === "function") {
-    app.setActivationPolicy("accessory");
-  }
-  app.whenReady().then(() => {
-    if (app.dock && typeof app.dock.hide === "function") {
-      app.dock.hide();
-    }
-  });
-}
 
 function defaultDataRoot() {
   return path.join(app.getPath("userData"), "data");
@@ -204,22 +192,11 @@ async function saveUiPreferences(updates = {}) {
   return nextSave;
 }
 
-if (isGatewayMode) {
-  hideGatewayFromDock();
-  app.on("open-file", (event) => {
-    event.preventDefault();
-  });
-  app.on("open-url", (event) => {
-    event.preventDefault();
-  });
-  require("../core/gateway/mcp-server").start();
-}
-
 const isTestInstance = process.env.CLARACORE_DESKTOP_TEST_INSTANCE === "1";
-const hasSingleInstanceLock = isGatewayMode || isTestInstance || app.requestSingleInstanceLock();
+const hasSingleInstanceLock = isTestInstance || app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) {
   app.quit();
-} else if (!isGatewayMode && !isTestInstance) {
+} else if (!isTestInstance) {
   app.on("second-instance", () => {
     if (isQuitting) return;
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -321,81 +298,6 @@ async function getRendererMemorySnapshot() {
   }
 }
 
-async function getGatewayMemorySnapshot() {
-  if (isGatewayMode) {
-    const rssBytes = process.memoryUsage().rss;
-    return {
-      rssBytes,
-      rssText: formatBytes(rssBytes),
-      processCount: 1,
-      source: "current"
-    };
-  }
-  if (process.platform !== "darwin") {
-    return {
-      rssBytes: 0,
-      rssText: "-",
-      processCount: 0,
-      source: "unsupported"
-    };
-  }
-  const sampledAt = Date.now();
-  if (
-    gatewayProcessSampleCache &&
-    sampledAt - gatewayProcessSampleCache.sampledAt < GATEWAY_PROCESS_SAMPLE_TTL_MS
-  ) {
-    return {
-      ...gatewayProcessSampleCache.value,
-      source: gatewayProcessSampleCache.value.source === "ps" ? "ps-cache" : gatewayProcessSampleCache.value.source,
-      sampledAt: gatewayProcessSampleCache.sampledAt
-    };
-  }
-  if (gatewayProcessSampleInFlight) return gatewayProcessSampleInFlight;
-  const request = (async () => {
-    try {
-      const { stdout } = await execFileAsync("/bin/ps", ["-axo", "rss=,command="], {
-        maxBuffer: 1024 * 1024
-      });
-      const rows = String(stdout || "")
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter((line) => line.includes("--gateway") || line.includes("core/gateway/mcp-server.js"));
-      const rssBytes = rows.reduce((sum, line) => {
-        const rssKb = Number.parseInt(line.split(/\s+/)[0], 10) || 0;
-        return sum + rssKb * 1024;
-      }, 0);
-      return {
-        rssBytes,
-        rssText: rssBytes > 0 ? formatBytes(rssBytes) : "-",
-        processCount: rows.length,
-        source: "ps"
-      };
-    } catch (_error) {
-      return {
-        rssBytes: 0,
-        rssText: "-",
-        processCount: 0,
-        source: "unavailable"
-      };
-    }
-  })()
-    .then((value) => {
-      gatewayProcessSampleCache = {
-        sampledAt,
-        value
-      };
-      return {
-        ...value,
-        sampledAt
-      };
-    })
-    .finally(() => {
-      if (gatewayProcessSampleInFlight === request) gatewayProcessSampleInFlight = null;
-    });
-  gatewayProcessSampleInFlight = request;
-  return request;
-}
-
 function rememberResourceMemorySample(sample) {
   resourceMemorySamples.push(sample);
   const cutoff = sample.at - RESOURCE_SAMPLE_MAX_AGE_MS;
@@ -471,18 +373,12 @@ async function buildResourceSnapshot() {
     getDiskSnapshot(dataRoot),
     getRendererMemorySnapshot()
   ]);
-  const collectGatewayProcessSample = shouldCollectGatewayProcessSample({
-    diskPercent: disk.percent,
-    isGatewayMode,
-    memoryPercent
-  });
   const warning = isResourceWarning({
     diskPercent: disk.percent,
     memoryPercent
   });
-  const gatewayMemory = collectGatewayProcessSample
-    ? await getGatewayMemorySnapshot()
-    : deferredGatewayProcessSample();
+  // HTTP runs in the main process; do not double-count its RSS.
+  const gatewayMemory = { rssBytes: 0, rssText: "-", processCount: 0, source: "shared-main-process" };
   const totalProcessRssBytes =
     mainMemory.rss +
     Number(rendererMemory?.rssBytes || 0) +
@@ -540,7 +436,8 @@ async function getRuntimeSnapshot() {
   const connections = {
     ...snapshot.connections,
     httpEndpoints: httpAgentGateway ? httpAgentGateway.buildEndpoints() : [],
-    httpGateway: httpAgentGateway ? httpAgentGateway.status() : null
+    httpGateway: httpAgentGateway ? httpAgentGateway.status() : null,
+    gatewayStatus: httpAgentGateway?.status().ok ? "available" : "unavailable"
   };
   return {
     ...snapshot,
@@ -687,38 +584,6 @@ async function testConfiguredModel(input = {}) {
   };
 }
 
-function stopSiblingGatewayProcesses() {
-  if (isGatewayMode) return;
-  if (process.platform !== "darwin") return;
-  try {
-    const output = spawnSync("/bin/ps", ["-axo", "pid=,command="], {
-      encoding: "utf8",
-      maxBuffer: 1024 * 1024
-    }).stdout || "";
-    const executableName = path.basename(process.execPath);
-    for (const line of output.split(/\r?\n/)) {
-      const trimmed = line.trim();
-      const isLegacyGatewayLine = trimmed.includes("--gateway");
-      const isRunAsNodeGatewayLine = trimmed.includes(".asar/core/gateway/mcp-server.js");
-      if (!trimmed || (!isLegacyGatewayLine && !isRunAsNodeGatewayLine)) continue;
-      const [pidText, ...commandParts] = trimmed.split(/\s+/);
-      const pid = Number.parseInt(pidText, 10);
-      if (!pid || pid === process.pid) continue;
-      const command = commandParts.join(" ");
-      const isPackagedGateway =
-        command.includes(`${executableName}.app/Contents/MacOS/${executableName}`) ||
-        (command.includes(process.execPath) && (isLegacyGatewayLine || isRunAsNodeGatewayLine));
-      if (!isPackagedGateway) continue;
-      try {
-        process.kill(pid, "SIGTERM");
-      } catch (_error) {
-        // The helper may have already exited after stdio closed.
-      }
-    }
-  } catch (_error) {
-    // Best effort: quitting the UI should release packaged Gateway helpers.
-  }
-}
 
 function forceExitIfQuitStalls() {
   if (forceQuitTimer) return;
@@ -866,6 +731,7 @@ function runtimeChangeScopes(reason) {
   if (reason.startsWith("innerlife-") || reason === "old-innerlife-import") return ["snapshot", "innerlife"];
   if (reason === "old-continuity-import") return ["snapshot", "shared-line"];
   if (reason === "logs-clear") return ["snapshot", "logs"];
+  if (reason === "runtime-resume") return ["snapshot", "memory", "shared-line", "innerlife", "trace", "data"];
   if (reason.startsWith("backup-")) return ["snapshot", "data"];
   if (reason.startsWith("agent-gateway-")) return ["snapshot", "agent-setup", "logs"];
   return ["snapshot"];
@@ -880,7 +746,7 @@ function notifyRuntimeChanged(reason, payload = {}) {
   });
 }
 
-if (!isGatewayMode && hasSingleInstanceLock) {
+if (hasSingleInstanceLock) {
   registerIpcHandlers({
     app,
     clipboard,
@@ -952,16 +818,14 @@ if (!isGatewayMode && hasSingleInstanceLock) {
       createWindow({ show: !startHidden });
       createTray();
       if (startHidden) hideMainWindowToTray();
-      schedulers = createSchedulers({
-        app,
-        ensureProductCore,
-        isQuitting: () => isQuitting,
-        notifyRuntimeChanged,
-        runProductMemoryMaintenance,
-        saveProductSettings,
-        tickProductInnerLifeDaemon
-      });
-      schedulers.start();
+      // Leave the owner absent so settings changes cannot restart trial jobs.
+      if (!(isTestInstance && process.env.CLARACORE_DESKTOP_DISABLE_SCHEDULERS === "1")) {
+        schedulers = createSchedulers({
+          app, powerMonitor, ensureProductCore, isQuitting: () => isQuitting, notifyRuntimeChanged,
+          runProductMemoryMaintenance, runProductScheduledBackup, saveProductSettings, tickProductInnerLifeDaemon
+        });
+        schedulers.start();
+      }
 
       app.on("activate", () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -982,7 +846,6 @@ if (!isGatewayMode && hasSingleInstanceLock) {
     isQuitting = true;
     forceExitIfQuitStalls();
     if (httpAgentGateway) httpAgentGateway.stop();
-    stopSiblingGatewayProcesses();
     if (schedulers) schedulers.stop();
     resetCachedDatabase().catch((error) => {
       console.error("Failed to close Product Core:", error);

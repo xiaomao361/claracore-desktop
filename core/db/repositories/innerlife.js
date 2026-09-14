@@ -49,7 +49,7 @@ function installInnerLifeRepository(ProductDatabase, helpers) {
     generateAfterthought: (database, input) => generateOrTemplate(database, input),
     getBriefing: (database, input) => database.getInnerLifeBriefing(input),
     getShare: (database, id) => database.getInnerLifeShare(id),
-    listShares: (database, status, limit) => database.listInnerLifeShares(status, limit),
+    listShares: (database, status, limit, agentId) => database.listInnerLifeShares(status, limit, agentId),
     newId: helpers.newId,
     resolveAgentIdentity: helpers.resolveAgentIdentity,
     retryAfterthought: sessionStore.retryAfterthought

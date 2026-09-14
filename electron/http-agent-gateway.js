@@ -1,3 +1,8 @@
+const {
+  PROTOCOL_ERAS, detectProtocolEra, validateModernRequest,
+  validateModernProtocolHeader, validateModernMethodHeaders, createDiscoverResult,
+  createToolsListResult, completeResult, methodNotFound, toJsonRpcError, invalidParams
+} = require("../core/gateway/mcp-protocol");
 const crypto = require("crypto");
 const { spawnSync } = require("child_process");
 const fs = require("fs/promises");
@@ -126,6 +131,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
     tokenRotatedAt: "",
     codexTokenSync: { ok: false, skipped: true },
     lastError: null,
+    lastProtocolRequest: null,
     activeToolCalls: 0,
     activeToolCallsByAgent: new Map(),
     toolWaiters: []
@@ -275,6 +281,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
         queued: state.toolWaiters.length,
         ...toolConcurrency
       },
+      lastProtocolRequest: state.lastProtocolRequest,
       error: state.lastError
     };
   }
@@ -646,10 +653,39 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
       response.end();
       return;
     }
+    const headerVersion = String(request.headers["mcp-protocol-version"] || "");
+    const modern = message.method !== "initialize" && (
+      message.method === "server/discover" ||
+      (headerVersion && headerVersion !== PROTOCOL_VERSION) ||
+      detectProtocolEra(message) === PROTOCOL_ERAS.MODERN
+    );
+    const finish = (result) => modern ? completeResult(result, { serverInfo: SERVER_INFO }) : result;
     try {
+      if (modern) {
+        const types = accept.split(",").map(value => value.split(";")[0].trim());
+        if (!types.includes("application/json") || !types.includes("text/event-stream")) {
+          sendJson(response, 406, { error: "not_acceptable" });
+          return;
+        }
+        validateModernProtocolHeader(request, message);
+        validateModernRequest(message);
+        validateModernMethodHeaders(request, message);
+        if (message.method === "tools/call" && message.params.arguments !== undefined &&
+          (!message.params.arguments || typeof message.params.arguments !== "object" || Array.isArray(message.params.arguments))) {
+          throw invalidParams("Tool arguments must be an object.");
+        }
+        if (message.method === "server/discover") {
+          sendJson(response, 200, jsonRpcResult(message.id, createDiscoverResult({
+            serverInfo: SERVER_INFO, capabilities: { tools: {} }, instructions: MCP_SERVER_INSTRUCTIONS
+          })));
+          return;
+        }
+      }
       if (message.method === "initialize") {
         sendJson(response, 200, jsonRpcResult(message.id, {
-          protocolVersion: message.params?.protocolVersion || PROTOCOL_VERSION,
+          // Legacy negotiation must offer a version we implement, even when
+          // the client requests a newer version. It may then disconnect.
+          protocolVersion: PROTOCOL_VERSION,
           capabilities: { tools: {} },
           serverInfo: SERVER_INFO,
           instructions: MCP_SERVER_INSTRUCTIONS
@@ -665,12 +701,21 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
           textResult,
           toolProfile: () => currentHttpToolProfile(request, requestUrl)
         });
-        sendJson(response, 200, jsonRpcResult(message.id, { tools: toolDefinitions() }));
+        sendJson(response, 200, jsonRpcResult(message.id, modern ? createToolsListResult(toolDefinitions(), { serverInfo: SERVER_INFO }) : { tools: toolDefinitions() }));
         return;
       }
       if (message.method === "tools/call") {
         const name = message.params?.name;
         if (!name || typeof name !== "string") throw new Error("Tool name is required.");
+        if (modern) {
+          const catalog = createGatewayTools({
+            serverInfo: SERVER_INFO, currentMcpAgentId: () => currentHttpAgentId(request, requestUrl),
+            gatewayLaunchConfig, runtimeAppForGateway: () => app, textResult,
+            // Profiles bound discovery; existing handlers still own invocation authority.
+            toolProfile: () => "full"
+          }).toolDefinitions();
+          if (!catalog.some(tool => tool.name === name)) throw invalidParams(`Unknown tool: ${name}`);
+        }
         const concurrencyAgentId = currentHttpAgentId(request, requestUrl);
         const release = await acquireToolCall(concurrencyAgentId);
         if (!release) {
@@ -683,24 +728,37 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
           return;
         }
         try {
+          state.lastProtocolRequest = { version: modern ? "2026-07-28" : PROTOCOL_VERSION,
+            agentId: concurrencyAgentId, at: new Date().toISOString() };
           const result = await callMcpTool({
             request,
             requestUrl,
             name,
             args: message.params?.arguments || {}
           });
-          sendJson(response, 200, jsonRpcResult(message.id, result));
+          sendJson(response, 200, jsonRpcResult(message.id, finish(result)));
+        } catch (error) {
+          if (!modern) throw error;
+          sendJson(response, 200, jsonRpcResult(message.id, finish({
+            ...textResult({ error: error.message || String(error), ...recoveryData(error) }), isError: true
+          })));
         } finally {
           release();
         }
         return;
       }
       if (message.method === "ping") {
-        sendJson(response, 200, jsonRpcResult(message.id, {}));
+        sendJson(response, 200, jsonRpcResult(message.id, finish({})));
         return;
       }
+      if (modern) throw methodNotFound(message.method);
       sendJson(response, 200, jsonRpcError(message.id, -32601, `Unsupported method: ${message.method}`));
     } catch (error) {
+      if (modern) {
+        const failure = toJsonRpcError(message.id, error);
+        sendJson(response, failure.httpStatus, failure.response);
+        return;
+      }
       sendJson(response, 200, jsonRpcError(message.id, -32000, error.message || String(error), recoveryData(error)));
     }
   }
@@ -746,7 +804,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
         product: "ClaraCore Desktop",
         principle: "Agent-first: software is built for agents to operate and for humans to inspect.",
         connectionMode: {
-          current: "streamable-http-and-stdio",
+          current: "streamable-http",
           bind: state.host,
           port: state.port,
           portPolicy: state.configuredPort === 0 ? "test-random" : "stable-localhost",
@@ -779,9 +837,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
               "X-ClaraCore-Conversation-ID": "<host-conversation-id>"
             }
           },
-          serverName: snapshot.connections.mcpServerName,
-          command: snapshot.connections.mcpCommand,
-          config: JSON.parse(snapshot.connections.mcpConfig)
+          serverName: snapshot.connections.mcpServerName
         },
         firstCalls: [
           "Call claracore_connection_test after installing or changing the MCP connection.",
@@ -792,7 +848,6 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
           default: "core",
           available: ["core", "full"],
           httpHeader: "X-ClaraCore-Tool-Profile",
-          stdioEnv: "CLARACORE_TOOL_PROFILE",
           note: "core carries the normal connection, recall, continuation, and sharing surface. An unknown or missing value resolves to core."
         },
         contextStates: {

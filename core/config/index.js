@@ -36,11 +36,13 @@ const DEFAULT_SETTINGS = {
   "innerlife.model": "deepseek-v4-flash",
   "innerlife.loop_seconds": 3600,
   "gateway.enabled": true,
-  "gateway.transport": "stdio",
+  "gateway.transport": "streamable-http",
   "gateway.local_only": true,
   "continuity.active_line_id": "line_default",
   "backup.enabled": true,
   "backup.schedule": "manual",
+  "backup.retention_days": 7,
+  "backup.mirror_dir": "",
   "agent.default_id": DEFAULT_AGENT_ID
 };
 
@@ -53,6 +55,13 @@ const WRITABLE_SETTINGS = new Set([
   "memory.maintenance.enabled",
   "memory.maintenance.hour",
   "memory.maintenance.last_run_date",
+  "backup.enabled",
+  "backup.schedule",
+  "backup.mirror_dir",
+  "backup.retention_days",
+  "backup.last_local_date",
+  "backup.last_local_id",
+  "backup.last_run_date",
   "memory.controller.mode",
   "memory.controller.canary_agent_ids",
   "innerlife.enabled",
@@ -69,6 +78,25 @@ function resolveMaintenanceHour(value) {
 }
 
 function normalizeSettingValue(key, value) {
+  if (key === "backup.retention_days") {
+    const days = Number(value);
+    if (!Number.isInteger(days) || days < 1 || days > 365) throw new Error("Backup retention must be between 1 and 365 days.");
+    return days;
+  }
+  if (key === "backup.mirror_dir") {
+    if (typeof value !== "string") throw new Error("Backup directory must be a path.");
+    const directory = value.trim();
+    if (directory && !require("path").isAbsolute(directory)) throw new Error("Choose an absolute backup directory.");
+    return directory;
+  }
+  if (key === "backup.schedule") {
+    if (!["manual", "daily"].includes(value)) throw new Error("Backup schedule must be manual or daily.");
+    return value;
+  }
+  if (key === "backup.enabled") {
+    if (typeof value !== "boolean") throw new Error("Backup enabled must be a boolean.");
+    return value;
+  }
   if (key === "memory.embedding.provider") {
     const provider = String(value || "").trim().toLowerCase();
     if (!MEMORY_EMBEDDING_PROVIDERS.includes(provider)) {

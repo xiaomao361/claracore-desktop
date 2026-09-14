@@ -1,12 +1,113 @@
 function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, formatLocalDateTime, getSnapshot, refresh, showCopyNotice }) {
   let pendingRestoreBackupId = null;
   let showAllBackups = false;
+  let backupPolicyDirty = false;
+  let operationalParts = null;
+
+  function renderBackupPolicy() {
+    if (!dom.backupPolicyForm || backupPolicyDirty) return;
+    const policy = getSnapshot()?.configuration?.backup || {};
+    dom.backupSchedule.value = policy.enabled === false ? "manual" : policy.schedule || "manual";
+    dom.backupHour.value = policy.hour ?? 3;
+    dom.backupRetention.value = policy.retentionDays ?? 7;
+    dom.backupMirror.value = policy.mirrorDir || "";
+  }
+
+  async function saveBackupPolicy(event) {
+    event.preventDefault();
+    if (!dom.backupPolicyForm.reportValidity()) return;
+    dom.saveBackupPolicy.disabled = true;
+    let saved = false;
+    try {
+      const result = await window.ClaraCoreDesktop.saveSettings({
+        "backup.enabled": true,
+        "backup.schedule": dom.backupSchedule.value,
+        "backup.retention_days": Number(dom.backupRetention.value),
+        "backup.mirror_dir": dom.backupMirror.value,
+        "memory.maintenance.hour": Number(dom.backupHour.value)
+      });
+      if (!result?.configuration) throw new Error(t("data.backupPolicyFailed"));
+      saved = true;
+      backupPolicyDirty = false;
+      await refresh();
+      dom.backupPolicyNotice.textContent = t("data.backupPolicySaved");
+    } catch (error) {
+      console.error(error);
+      dom.backupPolicyNotice.textContent = t(saved ? "data.backupPolicyRefreshFailed" : "data.backupPolicyFailed");
+    } finally {
+      dom.saveBackupPolicy.disabled = false;
+    }
+  }
 
   function fileNameFromPath(value) {
     return String(value || "").split(/[\\/]/).filter(Boolean).pop() || "";
   }
 
+  function renderOperationalStatus() {
+    if (!dom.operationalStatus) return;
+    const snapshot = getSnapshot();
+    const status = snapshot?.operationalStatus;
+    if (!status) { dom.operationalStatus.textContent = t("data.statusLoading"); operationalParts = null; return; }
+    const event = status.backup.event;
+    const policy = snapshot.configuration?.backup || {};
+    const vectors = status.vectors;
+    const protocol = snapshot.connections?.httpGateway?.lastProtocolRequest;
+    const rows = [
+      [t("data.lastVerified"), status.backup.lastVerifiedAt ? formatLocalDateTime(status.backup.lastVerifiedAt) : t("data.noVerified")],
+      [t("data.lastDaily"), status.backup.lastCompletedDay || t("data.noVerified")],
+      [t("data.backupOutcome"), !event ? t("data.noBackupOutcome") :
+        event.level === "error" ? t(`data.backupFailure.${event.stage || "local"}`) :
+        event.pending ? t("data.cleanupPending") : t("data.backupComplete")],
+      [t("data.mirrorOutcome"), !policy.mirrorDir ? t("data.localOnly") :
+        event?.mirrorPath && event.level !== "error" && event.mirrorPath.replace(/[\\/][^\\/]+$/, "") === policy.mirrorDir.replace(/[\\/]+$/, "")
+          ? t("data.mirrorVerified") : t("data.mirrorUnverified")],
+      [t("data.vectorCoverage"), vectors.enabled ? `${vectors.ready} / ${vectors.total}` : t("data.vectorDisabled")],
+      [t("data.vectorSearch"), !vectors.lastSearch ? t("data.noSearch") : vectors.lastSearch.status === "failed" ? t("data.searchFailed") : t("data.searchReady")],
+      [t("data.protocolObserved"), protocol ? `${protocol.agentId} · ${protocol.version} · ${formatLocalDateTime(protocol.at)}` : t("data.noProtocol")]
+    ];
+    if (vectors.enabled && vectors.ready < vectors.total) rows.push([t("data.vectorAction"), t("data.vectorActionBody")]);
+    if (event) rows.push([t("data.backupCheckedAt"), formatLocalDateTime(event.at)]);
+    const mirrorVerified = Boolean(policy.mirrorDir && event?.mirrorPath && event.level !== "error"
+      && event.mirrorPath.replace(/[\\/][^\\/]+$/, "") === policy.mirrorDir.replace(/[\\/]+$/, ""));
+    const backupTone = event?.level === "error" ? "error" : event?.pending ? "warn" : event ? "ok" : "neutral";
+    const searchFailed = vectors.enabled && vectors.lastSearch?.status === "failed";
+    const vectorTone = !vectors.enabled || !vectors.total ? "neutral" : searchFailed ? "error" : vectors.ready < vectors.total ? "warn" : "ok";
+    const card = (label, tone, badge, value, note, extra = "") =>
+      `<article class="runtime-status-card"><header><h4>${escapeHtml(label)}</h4><span class="runtime-status-badge is-${tone}">${escapeHtml(badge)}</span></header><strong class="runtime-status-value">${escapeHtml(String(value))}</strong><p class="runtime-status-note">${escapeHtml(note)}</p>${extra}</article>`;
+    const cards = [
+      card(t("data.compact.backup"), backupTone, t(`data.compact.${backupTone === "error" ? "failed" : backupTone === "warn" ? "pendingCleanup" : backupTone === "ok" ? "completed" : "unrecorded"}`),
+        status.backup.lastVerifiedAt ? formatLocalDateTime(status.backup.lastVerifiedAt) : t("data.noVerified"),
+        t(`data.compact.${!policy.mirrorDir ? "localOnly" : mirrorVerified ? "mirrorVerified" : "mirrorPending"}`)),
+      card(t("data.compact.vectors"), vectorTone, t(`data.compact.${!vectors.enabled ? "disabled" : searchFailed ? "searchFailed" : !vectors.total ? "unrecorded" : vectors.ready < vectors.total ? "incomplete" : "covered"}`),
+        vectors.enabled ? `${vectors.ready} / ${vectors.total}` : "—",
+        t(`data.compact.${!vectors.enabled ? "keywordOnly" : !vectors.lastSearch ? "noSearch" : searchFailed ? "keywordFallback" : "searchReady"}`),
+        vectors.enabled && vectors.total > 0 ? `<meter class="runtime-status-meter" min="0" max="${Number(vectors.total)}" value="${Number(vectors.ready)}" aria-label="${escapeHtml(t("data.vectorCoverage"))}"></meter>` : ""),
+      card("MCP", "neutral", t("data.compact.recentRequest"), protocol?.version || "—",
+        protocol ? `${protocol.agentId} · ${formatLocalDateTime(protocol.at)}` : t("data.noProtocol"))
+    ].join("");
+    const alerts = [];
+    if (event?.level === "error") alerts.push(t(`data.backupFailure.${event.stage || "local"}`));
+    else if (event?.pending) alerts.push(t("data.cleanupPending"));
+    if (searchFailed) alerts.push(t("data.searchFailed"));
+    if (vectors.enabled && vectors.ready < vectors.total) alerts.push(t("data.vectorActionBody"));
+    const details = rows.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(String(value))}</dd></div>`).join("");
+    // Keep the native disclosure node stable across polling, including focus and open state.
+    if (!operationalParts) {
+      dom.operationalStatus.innerHTML = `<h3 class="section-title" data-status-title></h3><div class="runtime-status-grid" data-status-cards></div><div class="runtime-status-alerts" data-status-alerts role="status"></div><details class="runtime-status-details"><summary data-status-summary></summary><dl data-status-details></dl></details>`;
+      operationalParts = Object.fromEntries(["title", "cards", "alerts", "summary", "details"].map(name => [name, dom.operationalStatus.querySelector(`[data-status-${name}]`)]));
+    }
+    operationalParts.title.textContent = t("data.runtimeStatus");
+    operationalParts.summary.textContent = t("data.compact.details");
+    const update = (node, html) => { if (node.innerHTML !== html) node.innerHTML = html; };
+    update(operationalParts.cards, cards);
+    update(operationalParts.alerts, alerts.map(message => `<p>${escapeHtml(message)}</p>`).join(""));
+    operationalParts.alerts.hidden = alerts.length === 0;
+    update(operationalParts.details, details);
+  }
+
   function renderBackups() {
+    renderOperationalStatus();
+    renderBackupPolicy();
     const backups = getSnapshot()?.backups || [];
     const visibleBackups = showAllBackups ? backups : backups.slice(0, 3);
     dom.backupList.classList.toggle("expanded", showAllBackups && backups.length > 3);
@@ -251,6 +352,25 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, formatLocalD
   }
 
   function bindEvents() {
+    dom.backupPolicyForm?.addEventListener("input", () => { backupPolicyDirty = true; });
+    dom.backupPolicyForm?.addEventListener("change", () => { backupPolicyDirty = true; });
+    dom.backupPolicyForm?.addEventListener("submit", saveBackupPolicy);
+    dom.chooseBackupMirror?.addEventListener("click", async () => {
+      try {
+        const result = await window.ClaraCoreDesktop.chooseBackupDirectory();
+        if (!result.canceled) {
+          dom.backupMirror.value = result.path;
+          backupPolicyDirty = true;
+        }
+      } catch (error) {
+        console.error(error);
+        dom.backupPolicyNotice.textContent = t("data.backupPolicyFailed");
+      }
+    });
+    dom.clearBackupMirror?.addEventListener("click", () => {
+      dom.backupMirror.value = "";
+      backupPolicyDirty = true;
+    });
     dom.exportBackup.addEventListener("click", () => exportBackup());
     dom.exportProductJson.addEventListener("click", () => exportProductJson());
     dom.importProductJson.addEventListener("click", () => importProductJson());

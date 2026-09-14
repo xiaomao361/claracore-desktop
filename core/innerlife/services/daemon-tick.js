@@ -134,6 +134,11 @@ function createInnerLifeDaemonTickService(inputPorts = {}) {
           lineId: input.lineId || input.line_id || "",
           prompt: "Daemon tick: digest pending inbox and create only one shareable thought for the next fitting moment."
         });
+        if (result.shareDecision?.retryable) {
+          const error = new Error(`InnerLife ${result.shareDecision.reason}; input retained for retry (event ${result.eventId}).`);
+          error.code = "INNERLIFE_REVIEW_RETRY";
+          throw error;
+        }
         await ports.completeSuccess(database, {
           agentId,
           pendingInboxCount: pendingInbox.length,

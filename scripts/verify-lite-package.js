@@ -58,6 +58,10 @@ for (const marker of forbidden) {
 
 const metadata = packagedMetadata(liteApp);
 assert.equal(metadata.buildFlavor, "lite");
+assert.equal(metadata.version, require("../package.json").version, "Lite package version differs from release source.");
+if (hasFullPackage) {
+  assert.equal(packagedMetadata(fullApp).version, metadata.version, "Full/Lite comparison requires the same release version.");
+}
 
 const fullKb = hasFullPackage ? installedKilobytes(fullApp) : null;
 const liteKb = installedKilobytes(liteApp);

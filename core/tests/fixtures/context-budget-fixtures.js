@@ -13,9 +13,9 @@ const pathsFixture = Object.freeze({
 
 const gatewayLaunchFixture = Object.freeze({
   command: "/Applications/ClaraCore Desktop.app/Contents/MacOS/ClaraCore Desktop",
-  args: ["--mcp-stdio"],
+  args: ["http://127.0.0.1:50668/mcp"],
   env: { CLARACORE_DESKTOP_HEADLESS: "1" },
-  displayCommand: "node core/cli.js --help",
+  displayCommand: "http://127.0.0.1:50668/mcp",
   source: "development checkout"
 });
 

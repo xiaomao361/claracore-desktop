@@ -66,8 +66,8 @@ function createInnerLifeSessionLifecycleService(inputPorts = {}) {
 
   async function buildStartPacket(database, profile, session, briefing, options = {}) {
     const [pendingShares, approvedShares] = await Promise.all([
-      ports.listShares(database, "pending", 20),
-      ports.listShares(database, "approved", 20)
+      ports.listShares(database, "pending", 20, profile.agent_id),
+      ports.listShares(database, "approved", 20, profile.agent_id)
     ]);
     const selected = pendingShares.find((share) => share.agent_id === profile.agent_id)
       || approvedShares.find((share) => share.agent_id === profile.agent_id)

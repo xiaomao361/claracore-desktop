@@ -3,14 +3,13 @@ function createClaraCoreAgentSetupView({ dom, t, getSnapshot, copyValue }) {
 
   function currentConnectionMaterial() {
     const snapshot = getSnapshot();
-    if (!snapshot?.connections) return null;
+    if (!snapshot?.connections?.httpGateway?.ok) return null;
     const httpEndpoints = snapshot.connections.httpEndpoints || [];
     const streamableEndpoint = httpEndpoints.find((endpoint) => endpoint.id === "streamable-http-mcp");
-    if (!streamableEndpoint?.url || !streamableEndpoint?.authHeader || !snapshot.connections.mcpConfig) return null;
+    if (!streamableEndpoint?.url || !streamableEndpoint?.authHeader) return null;
     return {
       httpEndpoint: streamableEndpoint.url,
-      httpAuthorization: streamableEndpoint.authHeader,
-      stdioConfig: snapshot.connections.mcpConfig
+      httpAuthorization: streamableEndpoint.authHeader
     };
   }
 
@@ -19,9 +18,9 @@ function createClaraCoreAgentSetupView({ dom, t, getSnapshot, copyValue }) {
     if (!material) return "";
     return `# Connect to ClaraCore Desktop
 
-You are being invited to connect to ClaraCore Desktop. Prefer the current Streamable HTTP MCP setup below when your client supports it. If it does not, use the generated stdio fallback. Decide the transport yourself; do not ask the human to choose.
+You are being invited to connect to ClaraCore Desktop. Use the Streamable HTTP MCP setup below. Keep Desktop running. If your client does not support Streamable HTTP, report that incompatibility and request a client upgrade.
 
-## Preferred: Streamable HTTP MCP
+## Streamable HTTP MCP
 
 - Endpoint: \`${material.httpEndpoint}\`
 - Authorization: \`${material.httpAuthorization}\`
@@ -29,17 +28,11 @@ You are being invited to connect to ClaraCore Desktop. Prefer the current Stream
 - Send \`X-ClaraCore-Client-ID\` with a truthful client id.
 - Send \`X-ClaraCore-Conversation-ID\` when your host provides a stable conversation id.
 
-## Fallback: stdio MCP
-
-\`\`\`json
-${material.stdioConfig}
-\`\`\`
-
-Replace the identity placeholders with your own stable persona id and truthful client id. Never reuse another agent's id.
+Use your own stable persona id and truthful client id. Never reuse another agent's id.
 
 If you can update and reload your own MCP configuration, do so now. If you cannot, tell the human the exact client settings screen or file to open and give them the single exact config block to paste. Do not answer only "please configure MCP".
 
-Tools are advertised through a profile. \`core\` is the default and carries the normal connection, recall, continuation, and sharing surface. Send \`X-ClaraCore-Tool-Profile: full\` (or set \`CLARACORE_TOOL_PROFILE=full\` on stdio) only if you need the maintenance, import/export, graph, or retention surface. An unknown value resolves to \`core\`.
+Tools are advertised through a profile. \`core\` is the default and carries the normal connection, recall, continuation, and sharing surface. Send \`X-ClaraCore-Tool-Profile: full\` only if you need the maintenance, import/export, graph, or retention surface. An unknown value resolves to \`core\`.
 
 After tools appear, follow this sequence exactly:
 
@@ -84,11 +77,6 @@ Do not claim connection success before the test succeeds. Connecting or reading 
       dom.agentHttpStatus,
       material?.httpEndpoint ? "is-ready" : "is-pending",
       material?.httpEndpoint ? "agentSetup.state.ready" : "agentSetup.state.starting"
-    );
-    setState(
-      dom.agentStdioStatus,
-      connections.mcpConfig ? "is-ready" : "is-pending",
-      connections.mcpConfig ? "agentSetup.state.available" : "agentSetup.state.starting"
     );
     setState(
       dom.agentGuideStatus,

@@ -93,7 +93,7 @@ function checkSecretSafeStatusShape() {
   assert.ok(!JSON.stringify(shaped).includes(inlineSecret), "MCP status leaked an inline secret.");
   assert.deepStrictEqual(shaped.gateway, {
     enabled: true,
-    configuredTransport: "stdio",
+    configuredTransport: "streamable-http",
     localOnly: true,
     defaultAgentId: "codex"
   });

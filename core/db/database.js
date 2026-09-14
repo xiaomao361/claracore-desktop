@@ -1,6 +1,9 @@
 const { spawn } = require("child_process");
 const fs = require("fs/promises");
 const path = require("path");
+const fsSync = require("fs");
+const os = require("os");
+const { sqliteVecExtensionPath, SQLITE_VEC_VERSION } = require("../sqlite-vec-extension");
 const {
   DEFAULT_AGENT_ID,
   DEFAULT_INNERLIFE_API_KEY,
@@ -59,8 +62,11 @@ function tryBuiltinSqlite() {
   }
 }
 
-async function runSqliteCli(dbPath, sql, json = false) {
-  const args = ["-bail", "-cmd", `.timeout ${SQLITE_BUSY_TIMEOUT_MS}`, ...(json ? ["-json"] : []), dbPath];
+async function runSqliteCli(dbPath, sql, json = false, extensionPath = "") {
+  const extensionArgs = extensionPath
+    ? ["-cmd", `.load "${extensionPath.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`]
+    : [];
+  const args = ["-bail", "-cmd", `.timeout ${SQLITE_BUSY_TIMEOUT_MS}`, ...extensionArgs, ...(json ? ["-json"] : []), dbPath];
   const output = await new Promise((resolve, reject) => {
     const child = spawn(sqliteCommand(), args, { stdio: ["pipe", "pipe", "pipe"] });
     let stdout = "";
@@ -114,6 +120,8 @@ class ProductDatabase {
     this.schemaPath = path.join(__dirname, "schema.sql");
     this.sqlite = tryBuiltinSqlite();
     this.connection = null;
+    // Opt-in until the product and packaged performance gates are complete.
+    this.vectorEngine = process.env.CLARACORE_DESKTOP_VECTOR_ENGINE || "sqlite-vec";
   }
 
   async initialize() {
@@ -134,7 +142,7 @@ class ProductDatabase {
     // busy_timeout makes a contended writer wait instead of failing
     // immediately with SQLITE_BUSY. Both are required for a long-running
     // Gateway serving multiple agents against one product database.
-    // Set the wait policy before journal_mode. Multiple stdio Agents can open
+    // Set the wait policy before journal_mode. Independent maintenance processes can open
     // the same database at once, and switching/confirming WAL itself may need
     // a write lock during their first connection.
     db.exec(`PRAGMA busy_timeout = ${SQLITE_BUSY_TIMEOUT_MS}; PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;`);
@@ -143,9 +151,62 @@ class ProductDatabase {
   }
 
   close() {
-    if (!this.connection) return;
-    this.connection.close();
+    this.connection?.close();
     this.connection = null;
+    this.vectorConnection?.close();
+    this.vectorConnection = null;
+    if (this.vectorCacheRoot) fsSync.rmSync(this.vectorCacheRoot, { recursive: true, force: true });
+    this.vectorCacheRoot = null;
+    this.vectorIdOrders?.clear();
+  }
+
+  async queryVectorProjection(setupSql, selectSql) {
+    return withDatabaseLock(this.dbPath, async () => {
+      const extensionPath = sqliteVecExtensionPath();
+      if (!this.vectorCacheRoot) this.vectorCacheRoot = fsSync.mkdtempSync(path.join(os.tmpdir(), "claracore-vector-cache-"));
+      const cachePath = path.join(this.vectorCacheRoot, "projection.db");
+      // Main is only read in this transaction. BEGIN IMMEDIATE prevents a
+      // concurrent embedding writer from changing the source between rebuild
+      // and query. The cache is disposable; cross-database crash atomicity is
+      // not relied on. A new ProductDatabase instance always gets a fresh cache.
+      const attachSql = `ATTACH DATABASE ${sqlString(cachePath)} AS vector_cache;`;
+      const beforeSql = `BEGIN IMMEDIATE; ${setupSql}`;
+      if (!this.sqlite?.DatabaseSync) {
+        try {
+          return await runSqliteCli(this.dbPath, `${attachSql} ${beforeSql} ${selectSql} COMMIT;`, true, extensionPath);
+        } catch (error) {
+          fsSync.rmSync(this.vectorCacheRoot, { recursive: true, force: true });
+          this.vectorCacheRoot = null;
+          throw error;
+        }
+      }
+      if (!this.vectorConnection) {
+        const connection = new this.sqlite.DatabaseSync(this.dbPath, { allowExtension: true });
+        try {
+          connection.loadExtension(extensionPath);
+          connection.enableLoadExtension(false);
+          const version = connection.prepare("SELECT vec_version() AS version").get().version;
+          if (version !== `v${SQLITE_VEC_VERSION}`) throw new Error(`Unexpected sqlite-vec version: ${version}`);
+          connection.exec(`PRAGMA busy_timeout = ${SQLITE_BUSY_TIMEOUT_MS}; ${attachSql}`);
+          this.vectorConnection = connection;
+        } catch (error) { connection.close(); throw error; }
+      }
+      const connection = this.vectorConnection;
+      try {
+        connection.exec(beforeSql);
+        const rows = connection.prepare(selectSql).all();
+        connection.exec("COMMIT;");
+        return rows;
+      } catch (error) {
+        try { connection.exec("ROLLBACK;"); } catch (_rollbackError) { /* The original error owns this failed request. */ }
+        // Never reuse a connection/cache after an uncertain failed transaction.
+        connection.close();
+        this.vectorConnection = null;
+        fsSync.rmSync(this.vectorCacheRoot, { recursive: true, force: true });
+        this.vectorCacheRoot = null;
+        throw error;
+      }
+    });
   }
 
   async exec(sql) {

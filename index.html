@@ -601,7 +601,6 @@
             <div class="agent-access-status-grid">
               <article><span data-i18n="agentSetup.status.gateway">Local Gateway</span><strong id="agentGatewayStatus">-</strong></article>
               <article><span data-i18n="agentSetup.status.http">Streamable HTTP MCP</span><strong id="agentHttpStatus">-</strong></article>
-              <article><span data-i18n="agentSetup.status.stdio">stdio fallback</span><strong id="agentStdioStatus">-</strong></article>
               <article><span data-i18n="agentSetup.status.guide">ClaraCore Docs</span><strong id="agentGuideStatus">-</strong></article>
             </div>
           </section>
@@ -761,6 +760,19 @@
                     </div>
                     <span id="productJsonNotice" class="quiet" aria-live="polite"></span>
                     <span id="backupNotice" class="quiet" aria-live="polite"></span>
+                    <div id="operationalStatus" class="data-backup-section"></div>
+                    <form id="backupPolicyForm" class="data-backup-section">
+                      <h3 class="section-title" data-i18n="data.backupPolicy">Automatic backups</h3>
+                      <div class="settings-grid">
+                        <label class="field"><span data-i18n="data.backupSchedule">Schedule</span><select id="backupSchedule"><option value="manual" data-i18n="data.backupManual">Manual only</option><option value="daily" data-i18n="data.backupDaily">Daily</option></select></label>
+                        <label class="field"><span data-i18n="data.backupHour">Backup and maintenance hour</span><input id="backupHour" type="number" min="0" max="23" step="1" required /></label>
+                        <label class="field"><span data-i18n="data.backupRetention">Days to retain automatic backups</span><input id="backupRetention" type="number" min="1" max="365" step="1" required aria-describedby="backupPolicyHint" /></label>
+                        <label class="field wide-field"><span data-i18n="data.backupMirror">Additional backup directory (optional)</span><input id="backupMirror" readonly aria-describedby="backupPolicyHint" /></label>
+                      </div>
+                      <div class="settings-actions compact-actions"><button id="chooseBackupMirror" type="button" class="secondary" data-i18n="data.chooseBackupMirror">Choose directory</button><button id="clearBackupMirror" type="button" class="secondary" data-i18n="data.clearBackupMirror">Use local backups only</button><button id="saveBackupPolicy" type="submit" class="primary" data-i18n="data.saveBackupPolicy">Save backup settings</button></div>
+                      <p id="backupPolicyHint" class="quiet" data-i18n="data.backupPolicyHint">Local backups always stay in the data directory. An additional directory is optional. The retention window includes today and applies only to automatic backups; manual backups are kept. Runs while Desktop is open, with catch-up after a missed hour.</p>
+                      <span id="backupPolicyNotice" class="quiet" role="status" aria-live="polite"></span>
+                    </form>
                     <div class="data-backup-section">
                       <div class="data-backup-heading">
                         <h3 class="section-title" data-i18n="data.recentBackups">Recent backups</h3>

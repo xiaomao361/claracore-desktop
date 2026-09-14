@@ -9,6 +9,7 @@ const {
 } = require("./paths");
 const { createProductCoreOwner } = require("./product-core-owner");
 const { createBackupRuntime } = require("./backup");
+const { runScheduledBackup } = require("./scheduled-backup");
 const { createImportRuntime } = require("./imports");
 const { createSnapshotRuntime } = require("./snapshot");
 const { createMemoryRuntime } = require("./memoria");
@@ -318,6 +319,12 @@ async function createProductBackup(app) {
   return backupRuntime.createProductBackup(app);
 }
 
+async function runProductScheduledBackup(app, today) {
+  const core = await ensureProductCore(app);
+  return runScheduledBackup({ database: core.database, today, backupsDir: core.paths.backupsDir,
+    createBackup: () => backupRuntime.createProductBackupFromCore(core) });
+}
+
 async function deleteProductBackup(app, backupId) {
   return backupRuntime.deleteProductBackup(app, backupId);
 }
@@ -342,6 +349,7 @@ module.exports = {
   archiveProductSharedLine,
   clearProductLogs,
   createProductBackup,
+  runProductScheduledBackup,
   createProductMemoryLabelAlias,
   createProductSharedLine,
   createProductSharedLineHandoff,

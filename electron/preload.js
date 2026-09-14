@@ -245,6 +245,9 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   chooseDataRoot() {
     return ipcRenderer.invoke(ipcChannel("chooseDataRoot"));
   },
+  chooseBackupDirectory() {
+    return ipcRenderer.invoke(ipcChannel("chooseBackupDirectory"));
+  },
   saveDataRootPreference(dataRoot) {
     return ipcRenderer.invoke(ipcChannel("saveDataRootPreference"), dataRoot);
   },

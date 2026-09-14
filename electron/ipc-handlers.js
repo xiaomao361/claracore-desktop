@@ -132,7 +132,7 @@ function registerIpcHandlers({
   ipcMain.handle(ipcChannel("saveSettings"), async (_event, updates) => {
     if (!isPlainObject(updates)) return false;
     const result = await saveProductSettings(app, updates);
-    if (Object.keys(updates).some((key) => key.startsWith("memory.maintenance."))) {
+    if (Object.keys(updates).some((key) => key.startsWith("memory.maintenance.") || key.startsWith("backup."))) {
       rescheduleMemoryMaintenance();
     }
     return result;
@@ -490,6 +490,10 @@ function registerIpcHandlers({
     return previewProductRestore(app, backupId);
   });
   ipcMain.handle(ipcChannel("getDataRootPreference"), async () => currentDataRootPreference());
+  ipcMain.handle(ipcChannel("chooseBackupDirectory"), async () => {
+    const result = await dialog.showOpenDialog(getMainWindow(), { properties: ["openDirectory", "createDirectory"] });
+    return { canceled: result.canceled || !result.filePaths?.[0], path: result.filePaths?.[0] || "" };
+  });
   ipcMain.handle(ipcChannel("chooseDataRoot"), async () => {
     const preference = currentDataRootPreference();
     const result = await dialog.showOpenDialog(getMainWindow(), {

@@ -25,3 +25,4 @@ data/
 *.tmp
 *.swp
 recovery/
+resources/sqlite-vec/

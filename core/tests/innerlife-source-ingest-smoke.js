@@ -130,8 +130,12 @@ async function main() {
       throw new Error(`Source ingest should dedupe repeated feed items: ${JSON.stringify(duplicate)}`);
     }
     const explore = await database.exploreInnerLife({ agentId: "my-agent", ingestSources: true });
-    if (!explore.share?.body.includes("Desktop InnerLife source ingest")) {
-      throw new Error("Explore did not include source-ingested inbox material.");
+    const exploreEvent = JSON.parse((await database.query(`SELECT metadata_json FROM innerlife_events WHERE id = '${explore.eventId}';`))[0].metadata_json);
+    if (!exploreEvent.grounding?.audit?.sources.some((source) => source.kind === "inbox" && source.text.includes("Desktop InnerLife source ingest"))) {
+      throw new Error("Explore did not receive source-ingested inbox material.");
+    }
+    if (explore.share || exploreEvent.shareDecision.reason !== "generation_unavailable") {
+      throw new Error("Disabled provider must preserve source input without publishing a template.");
     }
 
     process.env.HTTP_PROXY = `http://127.0.0.1:${proxyPort}`;

@@ -197,7 +197,7 @@ const viewOwnedSnapshotFields = {
   innerlife: ["innerLife"],
   trace: ["trace", "memoryController"],
   logs: ["decayAudit", "runtimeEvents"],
-  settings: ["backups"]
+  settings: ["backups", "operationalStatus"]
 };
 const runtimeScopeInvalidations = {
   memory: ["memory", "home", "trace", "logs"],
@@ -662,7 +662,10 @@ function setView(viewName) {
   homeView.setActive(nextView === "home");
   if (enteringLogs) logsView.closeAdvancedDiagnostics();
   syncLogRefreshTimer();
-  if (snapshot) hydrateView(nextView).catch(console.error);
+  if (snapshot) {
+    hydrateView(nextView).catch(console.error);
+    dataRefreshLoop.refreshNow();
+  }
 }
 
 function allViewNames() {
@@ -834,7 +837,8 @@ async function refresh() {
 
 async function refreshRuntimeSnapshotOnly(
   scopes = [],
-  invalidatedViews = invalidatedViewsForRuntimeScopes(scopes)
+  invalidatedViews = invalidatedViewsForRuntimeScopes(scopes),
+  { visibleOnly = false } = {}
 ) {
   const refreshRevision = ++runtimeRefreshRevision;
   snapshotGeneration += 1;
@@ -844,11 +848,16 @@ async function refreshRuntimeSnapshotOnly(
     window.ClaraCoreDesktop.getDataRootPreference()
   ]);
   if (refreshRevision !== runtimeRefreshRevision) return;
+  if (visibleOnly && !canRefreshVisibleData()) return;
   invalidatedViews.forEach((viewName) => hydratedViews.delete(viewName));
   snapshot = mergeHydratedViewState(nextSnapshot, snapshot, invalidatedViews);
   rendererState.dataRootPreference = dataRootPreference;
   sharedLineActions.syncSelectedLineCatalog(snapshot.sharedLine);
-  renderSnapshot();
+  if (visibleOnly) {
+    renderTopbarStatus();
+    if (activeView === "memory") renderMemoryOverview();
+    if (activeView === "home") renderHomeDashboard();
+  } else renderSnapshot();
   if (activeView === "home") hydrateView(activeView).catch(console.error);
   else await hydrateView(activeView);
   runtimeRefreshCompletedRevision = refreshRevision;
@@ -867,10 +876,10 @@ async function refreshLogsSnapshot() {
   return logsSnapshot;
 }
 
-async function refreshForRuntimeScopes(scopes = []) {
+async function refreshForRuntimeScopes(scopes = [], options = {}) {
   const invalidatedViews = invalidatedViewsForRuntimeScopes(scopes);
   if (invalidatedViews.has("memory")) memoriaView.resetLoadedTabs();
-  await refreshRuntimeSnapshotOnly(scopes, invalidatedViews);
+  await refreshRuntimeSnapshotOnly(scopes, invalidatedViews, options);
   if (invalidatedViews.has("logs") && activeView === "logs") {
     await refreshLogsSnapshot();
   }
@@ -887,6 +896,31 @@ const resourceRefreshLoop = window.createClaraCoreResourceRefreshLoop({
   handleError: (error) => {
     console.error(error);
     if (resourceMonitor) resourceMonitor.hidden = true;
+  }
+});
+
+// IPC notifications cannot cover writes from standalone maintenance processes.
+// Bound visible-page staleness without polling hidden windows or resetting edits.
+function canRefreshVisibleData() {
+  return Boolean(snapshot) && !document.hidden && ["home", "memory", "shared-line", "innerlife", "trace", "settings"].includes(activeView)
+    && !document.querySelector("dialog[open]")
+    && !document.activeElement?.matches("input, textarea, select, [contenteditable=true]")
+    && !(activeView === "memory" && String(memorySearchInput?.value || "").trim());
+}
+
+const dataRefreshLoop = window.createClaraCoreResourceRefreshLoop({
+  documentRef: document,
+  windowRef: window,
+  refreshOnResume: true,
+  intervalMs: 30_000,
+  requestTimeoutMs: 15_000,
+  canRefresh: canRefreshVisibleData,
+  fetchSnapshot: () => refreshForRuntimeScopes(["memory", "shared-line", "innerlife", "trace", "data"], { visibleOnly: true }),
+  renderSnapshot: () => {},
+  handleError: (error) => {
+    runtimeRefreshRevision += 1;
+    snapshotGeneration += 1;
+    console.error("Visible data refresh failed:", error);
   }
 });
 
@@ -1292,7 +1326,8 @@ homeView.renderLoading();
 refresh().catch(handleHomeRefreshError);
 
 resourceRefreshLoop.start();
-window.addEventListener("beforeunload", () => resourceRefreshLoop.stop(), { once: true });
+dataRefreshLoop.start();
+window.addEventListener("beforeunload", () => { resourceRefreshLoop.stop(); dataRefreshLoop.stop(); }, { once: true });
 
 applyStaticTranslations();
 appearance.initialize();

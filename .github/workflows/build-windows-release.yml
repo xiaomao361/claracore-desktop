@@ -54,6 +54,7 @@ jobs:
         run: |
           npm run check
           npm run test:builtin-embedding
+          npm run test:sqlite-vec:projection
 
       - name: Build Windows Full installer
         run: npm run dist:win
@@ -66,6 +67,11 @@ jobs:
 
       - name: Verify Full and Lite package boundaries
         run: npm run test:package:win:lite
+
+      - name: Verify packaged SQLite vector runtime without UI
+        run: |
+          node scripts/verify-sqlite-vec-package.js "${{ github.workspace }}/dist/win-unpacked"
+          node scripts/verify-sqlite-vec-package.js "${{ github.workspace }}/dist-lite/win-unpacked"
 
       - name: Write checksums
         shell: pwsh

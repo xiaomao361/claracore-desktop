@@ -92,8 +92,6 @@ async function main() {
     getRuntimeSnapshot: async () => ({
       connections: {
         mcpServerName: "claracore-desktop",
-        mcpCommand: "node core/gateway/mcp-server.js",
-        mcpConfig: JSON.stringify({ mcpServers: {} })
       }
     }),
     getProductGatewayContext: async (_app, input) => {
@@ -168,7 +166,9 @@ async function main() {
     assert.strictEqual(setup.toolProfiles?.default, "core", "Agent setup should document the core default profile.");
     assert.deepStrictEqual(setup.toolProfiles?.available, ["core", "full"]);
     assert.strictEqual(setup.toolProfiles?.httpHeader, "X-ClaraCore-Tool-Profile");
-    assert.strictEqual(setup.toolProfiles?.stdioEnv, "CLARACORE_TOOL_PROFILE");
+    assert.strictEqual(setup.toolProfiles?.stdioEnv, undefined);
+    assert.strictEqual(setup.connectionMode.current, "streamable-http");
+    assert.strictEqual(setup.mcp.command, undefined);
     // Connected, context read, automatic injection, and actual use stay distinct.
     assert.deepStrictEqual(
       Object.keys(setup.contextStates || {}),
@@ -223,6 +223,14 @@ async function main() {
     assert.strictEqual(httpContextInputs.at(-1).lineId, "line_b", "The selected lineId must reach the context provider");
     const initialized = await postMcp({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} });
     assert.strictEqual(initialized.result.serverInfo.name, "claracore-desktop");
+    assert.strictEqual(initialized.result.protocolVersion, "2025-06-18");
+    for (const requestedVersion of ["2025-06-18", "2025-11-25", "2026-07-28", "2099-01-01"]) {
+      const negotiated = await postMcp({
+        jsonrpc: "2.0", id: `version-${requestedVersion}`, method: "initialize",
+        params: { protocolVersion: requestedVersion, capabilities: {}, clientInfo: { name: "version-test", version: "1" } }
+      });
+      assert.strictEqual(negotiated.result.protocolVersion, "2025-06-18", "HTTP must only negotiate an implemented legacy version");
+    }
     assert(initialized.result.instructions.includes("Search Memoria and Shared Line"), "initialize should describe selective context reads");
     assert(initialized.result.instructions.includes("Write Memoria only"), "initialize should describe restrained Memory writes");
     const tools = await postMcp({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} });
@@ -300,7 +308,7 @@ async function main() {
       transport: "streamable-http",
       toolProfile: "core"
     });
-    assert.strictEqual(statusPacket.configuration.gateway.configuredTransport, "stdio");
+    assert.strictEqual(statusPacket.configuration.gateway.configuredTransport, "streamable-http");
     assert.strictEqual(statusPacket.configuration.gateway.defaultAgentId, "codex");
     assert.strictEqual(statusPacket.configuration.innerlife.apiKeyRef, "inline");
     assert(!JSON.stringify(statusPacket).includes("HTTP_INLINE_SECRET_MUST_NOT_ESCAPE"));
@@ -407,8 +415,6 @@ async function main() {
       getRuntimeSnapshot: async () => ({
         connections: {
           mcpServerName: "claracore-desktop",
-          mcpCommand: "node core/gateway/mcp-server.js",
-          mcpConfig: JSON.stringify({ mcpServers: {} })
         }
       }),
       getProductGatewayContext: async () => ({ ok: true }),
@@ -436,8 +442,6 @@ async function main() {
       getRuntimeSnapshot: async () => ({
         connections: {
           mcpServerName: "claracore-desktop",
-          mcpCommand: "node core/gateway/mcp-server.js",
-          mcpConfig: JSON.stringify({ mcpServers: {} })
         }
       }),
       getProductGatewayContext: async () => ({ ok: true })
@@ -458,8 +462,6 @@ async function main() {
         getRuntimeSnapshot: async () => ({
           connections: {
             mcpServerName: "claracore-desktop",
-            mcpCommand: "node core/gateway/mcp-server.js",
-            mcpConfig: JSON.stringify({ mcpServers: {} })
           }
         }),
         getProductGatewayContext: async () => ({ ok: true }),

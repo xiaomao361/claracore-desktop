@@ -529,7 +529,7 @@ function createInnerLifeReadModelRepository(helpers) {
       const profile = await this.getInnerLifeProfileReadOnly(agentId);
       const { resumePacket, sharedLineContext } = await this.getOptionalInnerLifeResumePacket(options, profile.agent_id);
       const memories = await this.listMemories(5);
-      const pendingShares = (await this.listInnerLifeShares("pending", 20)).filter((share) => share.agent_id === profile.agent_id).slice(0, 5);
+      const pendingShares = (await this.listInnerLifeShares("pending", 20, profile.agent_id)).slice(0, 5);
       const pendingInbox = await this.listInnerLifeInboxForAgent(profile.agent_id, "pending", 5, {
         excludeSources: ["session_end_afterthought"]
       });

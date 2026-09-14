@@ -1,6 +1,6 @@
 {
   "name": "claracore-desktop",
-  "version": "0.6.14",
+  "version": "0.7.7",
   "buildFlavor": "full",
   "private": true,
   "description": "ClaraCore desktop manager for the local personal cognitive core",
@@ -11,11 +11,10 @@
     "start:next": "node scripts/start-next-dev.js",
     "seed:ux": "node scripts/seed-ux-test-data.js",
     "seed:ux:clear": "node scripts/seed-ux-test-data.js --clear",
-    "gateway": "node core/gateway/mcp-server.js",
     "memoria": "node core/cli.js",
     "check:syntax": "node scripts/check-js-syntax.js",
-    "check": "npm run check:syntax && npm run test:sql-lint && node core/tests/ipc-contract-lint.js && npm run test:login-item && npm run test:architecture && npm run test:context-budget && npm run test:turn-context",
-    "test:architecture": "node core/tests/product-core-owner-smoke.js && node core/tests/resource-refresh-loop-smoke.js && node core/tests/memory-hydration-smoke.js && node core/tests/repository-composition-smoke.js && node core/tests/innerlife-repository-boundary-smoke.js && node core/tests/innerlife-service-boundary-smoke.js && node core/tests/innerlife-session-service-boundary-smoke.js && node core/tests/innerlife-workflow-service-boundary-smoke.js && node core/tests/system-repository-boundary-smoke.js && node core/tests/continuity-repository-boundary-smoke.js && node core/tests/gateway-context-service-smoke.js",
+    "check": "npm run check:syntax && npm run test:sql-lint && node core/tests/ipc-contract-lint.js && npm run test:login-item && npm run test:architecture && npm run test:context-budget && npm run test:turn-context && npm run test:innerlife:grounding",
+    "test:architecture": "node core/tests/product-core-owner-smoke.js && node core/tests/resource-refresh-loop-smoke.js && node core/tests/visible-data-refresh-smoke.js && node core/tests/agent-setup-contract-smoke.js && node core/tests/memory-hydration-smoke.js && node core/tests/repository-composition-smoke.js && node core/tests/innerlife-repository-boundary-smoke.js && node core/tests/innerlife-service-boundary-smoke.js && node core/tests/innerlife-session-service-boundary-smoke.js && node core/tests/innerlife-workflow-service-boundary-smoke.js && node core/tests/system-repository-boundary-smoke.js && node core/tests/continuity-repository-boundary-smoke.js && node core/tests/gateway-context-service-smoke.js",
     "test:shell": "node core/tests/run-ui-smoke.js core/tests/shell-window-smoke.js",
     "test:login-item": "node core/tests/login-item-settings-smoke.js",
     "test:ux:polish": "node core/tests/run-ui-smoke.js core/tests/ux-polish-ui-smoke.js",
@@ -48,6 +47,7 @@
     "test:system:boundaries": "node --check core/db/agent-identity-references.js && node --check core/db/repositories/system/agent-activity.js && node --check core/db/repositories/system/agent-identity.js && node --check core/db/repositories/system/gateway-traces.js && node --check core/tests/system-repository-boundary-smoke.js && node --check core/tests/agent-identity-merge-smoke.js && node core/tests/system-repository-boundary-smoke.js && npm run test:agent-identity",
     "test:agent-identity": "node core/tests/agent-identity-merge-smoke.js && CLARACORE_DESKTOP_DISABLE_NODE_SQLITE=1 node core/tests/agent-identity-merge-smoke.js",
     "test:phase4": "npm run test:system:boundaries && TZ=Asia/Shanghai node core/tests/agent-activity-performance-smoke.js && node core/tests/phase4-gateway-contract-smoke.js && node core/tests/gateway-trace-compatibility-smoke.js && node core/tests/gateway-trace-retention-smoke.js && node core/tests/memory-controller-retention-scheduler-smoke.js && node core/tests/logs-snapshot-performance-smoke.js && npm run test:phase4:trace-ui",
+    "test:mcp:protocol": "node core/tests/modern-mcp-http-smoke.js && node core/tests/http-gateway-backpressure-smoke.js --modern",
     "test:gateway:http": "node core/tests/streamable-http-gateway-smoke.js && node core/tests/http-gateway-backpressure-smoke.js",
     "test:context-budget": "node core/tests/context-budget-smoke.js",
     "test:turn-context": "node core/tests/turn-context-smoke.js",
@@ -64,6 +64,10 @@
     "test:import-preview": "node core/tests/import-preview-smoke.js",
     "test:import-preview:ui": "node core/tests/run-ui-smoke.js core/tests/import-preview-ui-smoke.js",
     "test:sqlite-binary": "node core/tests/sqlite-binary-smoke.js",
+    "test:sqlite-vec:feasibility": "node scripts/sqlite-vec-feasibility.js",
+    "test:sqlite-vec:projection": "node scripts/check-vector-projection.js",
+    "baseline:sqlite-vec": "node scripts/sqlite-vec-baseline.js",
+    "profile:sqlite-vec": "node scripts/sqlite-vec-profile.js",
     "test:sqlite-concurrency": "node core/tests/sqlite-multi-agent-startup-smoke.js",
     "test:sql-lint": "node core/tests/sql-interpolation-lint-smoke.js && node core/tests/sql-interpolation-lint.js",
     "test:timezone": "TZ=Asia/Shanghai node core/tests/timezone-display-smoke.js",
@@ -85,9 +89,14 @@
     "dist:win:lite": "electron-builder --win --x64 --config scripts/lite-builder-config.js --publish never",
     "test:embedding:lazy": "node core/tests/builtin-embedding-lazy-smoke.js",
     "test:memoria:search": "node core/tests/memory-search-quality-smoke.js && node core/tests/memory-search-boundaries-smoke.js",
-    "test:core": "npm run check && npm run test:memoria:search && npm run test:backup && npm run test:memory-controller && node core/tests/phase2-memory-smoke.js && node core/tests/phase2-gateway-smoke.js"
+    "test:core": "npm run check && npm run test:memoria:search && npm run test:backup && npm run test:memory-controller && node core/tests/phase2-memory-smoke.js && node core/tests/phase2-gateway-smoke.js",
+    "test:gateway": "node core/tests/phase2-gateway-smoke.js && node core/tests/phase3-gateway-smoke.js && node core/tests/phase4-gateway-contract-smoke.js && node core/tests/http-handoff-routing-smoke.js && npm run test:gateway:http && npm run test:mcp:protocol",
+    "test:data-maintenance": "node core/tests/embedding-coverage-repair-smoke.js && node core/tests/scheduled-backup-smoke.js && node core/tests/scheduled-backup-order-smoke.js && node core/tests/innerlife-agent-candidate-smoke.js && node core/tests/backup-retention-smoke.js && node core/tests/backup-policy-form-smoke.js",
+    "test:runtime-recovery": "node core/tests/runtime-recovery-smoke.js && node core/tests/memory-controller-retention-scheduler-smoke.js && node core/tests/visible-data-refresh-smoke.js",
+    "test:innerlife:grounding": "node core/tests/innerlife-grounding-smoke.js"
   },
   "build": {
+    "beforePack": "scripts/stage-sqlite-vec.js",
     "appId": "com.claracore.desktop",
     "productName": "ClaraCore Desktop",
     "directories": {
@@ -105,6 +114,13 @@
       "package.json"
     ],
     "extraResources": [
+      {
+        "from": "resources/sqlite-vec",
+        "to": "sqlite-vec",
+        "filter": [
+          "**/*"
+        ]
+      },
       {
         "from": "resources/sqlite",
         "to": "sqlite",
@@ -144,9 +160,11 @@
     }
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "2.0.0",
     "electron": "^43.0.0",
     "electron-builder": "^26.15.3",
-    "playwright": "^1.61.0"
+    "playwright": "^1.61.0",
+    "sqlite-vec": "0.1.9"
   },
   "dependencies": {
     "@xenova/transformers": "^2.17.2"

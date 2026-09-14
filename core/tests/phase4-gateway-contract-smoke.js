@@ -1,4 +1,5 @@
 const fs = require("fs/promises");
+const assert = require("assert/strict");
 const os = require("os");
 const path = require("path");
 const runtime = require("../runtime");
@@ -83,36 +84,11 @@ async function main() {
   });
 
   const snapshot = await runtime.buildProductSnapshot(app);
-  const config = JSON.parse(snapshot.connections.mcpConfig);
-  const server = config.mcpServers?.["claracore-desktop"];
-  if (server?.type !== "stdio") throw new Error("Agent setup MCP server must be stdio.");
-  if (server?.command !== "node") throw new Error(`Development Gateway command should be node, got ${server?.command}`);
-  if (!server?.args?.[0]?.endsWith(path.join("core", "gateway", "mcp-server.js"))) {
-    throw new Error(`Development Gateway args do not point at core/gateway/mcp-server.js: ${server?.args}`);
+  if ("mcpConfig" in snapshot.connections || "mcpCommand" in snapshot.connections) {
+    throw new Error("Agent setup must not generate retired process launch config.");
   }
-  if (server?.env?.CLARACORE_DESKTOP_DATA_DIR !== dataRoot) {
-    throw new Error("Agent setup does not pass the active product data root.");
-  }
-  if (server?.env?.CLARACORE_AGENT_ID !== "<agent-stable-id>") {
-    throw new Error("Agent setup does not include the stable agent id placeholder.");
-  }
-  if (server?.env?.CLARACORE_CLIENT_ID !== "<codex-app|claude-code|hermes>") {
-    throw new Error("Agent setup does not include the host client id placeholder.");
-  }
-  if (server?.env?.CLARACORE_CONVERSATION_ID !== "<optional-host-conversation-id>") {
-    throw new Error("Agent setup does not include the optional conversation id placeholder.");
-  }
-  // v0.6.6 A1: first-party setup generates the core profile explicitly.
-  if (server?.env?.CLARACORE_TOOL_PROFILE !== "core") {
-    throw new Error(
-      `Agent setup must generate the first-party core tool profile, got ${server?.env?.CLARACORE_TOOL_PROFILE}.`
-    );
-  }
-  if (snapshot.connections.gatewayEnvPath !== "not used in product core reset") {
-    throw new Error("Agent setup should not reference old Gateway env files.");
-  }
-  if (snapshot.connections.mcpConfig.includes(`${path.sep}.claracore${path.sep}gateway`)) {
-    throw new Error("Agent setup references old Gateway data.");
+  if (snapshot.connections.agentIdentity.header !== "X-ClaraCore-Agent-ID") {
+    throw new Error("Agent setup must describe HTTP caller identity.");
   }
 
   // This is the full-contract compatibility smoke: it asserts every canonical
@@ -199,14 +175,14 @@ async function main() {
     if (!docsText.includes("Shared Line context is optional")) {
       throw new Error("Gateway docs do not explain InnerLife Shared Line ambiguity handling.");
     }
-    if (!docsText.includes("CLARACORE_CLIENT_ID") || !docsText.includes("CLARACORE_CONVERSATION_ID")) {
-      throw new Error("Gateway docs do not include the complete stdio caller context config.");
+    if (!docsText.includes("X-ClaraCore-Client-ID") || !docsText.includes("X-ClaraCore-Conversation-ID")) {
+      throw new Error("Gateway docs do not include the HTTP caller headers.");
     }
-    if (!docsText.includes("CLARACORE_TOOL_PROFILE")) {
-      throw new Error("Gateway docs do not document the stdio tool-profile setting.");
+    if (!docsText.includes("X-ClaraCore-Tool-Profile")) {
+      throw new Error("Gateway docs do not document the HTTP tool-profile header.");
     }
-    if (!docsText.includes("stale id")) {
-      throw new Error("Gateway docs do not explain the process-scoped stdio conversation limitation.");
+    if (!docsText.includes("current conversation")) {
+      throw new Error("Gateway docs do not explain the current conversation identity.");
     }
     const firstConnectionIndex = docsText.indexOf("## First Connection");
     const identityIndex = docsText.indexOf("## Identity");
@@ -224,11 +200,11 @@ async function main() {
     const status = parseTextResult(await client.callTool("claracore_status"));
     if (status.dataRoot !== dataRoot) throw new Error(`Gateway status data root mismatch: ${status.dataRoot}`);
     if (!status.database?.initialized) throw new Error("Gateway status did not initialize the product database.");
-    if (status.connection?.transport !== "stdio" || status.connection?.agentId !== "my-agent") {
+    if (status.connection?.transport !== "streamable-http" || status.connection?.agentId !== "my-agent") {
       throw new Error(`Gateway status did not expose the actual caller connection: ${JSON.stringify(status.connection)}`);
     }
     if (
-      status.configuration?.gateway?.configuredTransport !== "stdio" ||
+      status.configuration?.gateway?.configuredTransport !== "streamable-http" ||
       status.configuration?.gateway?.defaultAgentId !== "codex"
     ) {
       throw new Error(`Gateway status did not distinguish configured Gateway defaults: ${JSON.stringify(status.configuration?.gateway)}`);
@@ -702,15 +678,17 @@ async function main() {
       })
     );
     if (!daemonInbox.inbox?.id) throw new Error("Gateway daemon ambiguity setup did not create inbox material.");
-    const daemonTick = parseTextResult(await client.callTool("innerlife_daemon_tick", { agentId: "my-agent", force: true }));
-    if (
-      daemonTick.ran !== true ||
-      daemonTick.reason !== "processed" ||
-      daemonTick.daemon?.tickCount !== 1 ||
-      daemonTick.result?.sharedLineContext?.status !== "ambiguous"
-    ) {
-      throw new Error(`Gateway innerlife_daemon_tick did not process inbox with ambiguous Shared Lines: ${JSON.stringify(daemonTick)}`);
-    }
+    // A disabled provider is an observable retry, never a template share.
+    await assert.rejects(client.callTool("innerlife_daemon_tick", { agentId: "my-agent", force: true }), /generation_unavailable/);
+    assert.equal((await database.getInnerLifeInboxItem(daemonInbox.inbox.id)).status, "pending");
+    const failedDaemon = await database.ensureInnerLifeDaemonState("my-agent");
+    assert.equal(failedDaemon.metadata.failureCount, 1);
+    const failedEvents = await database.query(`SELECT metadata_json FROM innerlife_events
+      WHERE agent_id = 'my-agent' AND kind = 'manual_process_once' ORDER BY rowid DESC LIMIT 1;`);
+    const failedEvent = JSON.parse(failedEvents[0].metadata_json);
+    assert.equal(failedEvent.sharedLineStatus, "ambiguous");
+    assert.equal(failedEvent.shareDecision.create, false);
+    assert.equal(failedEvent.shareDecision.retryable, true);
     const daemonPaused = parseTextResult(await client.callTool("innerlife_daemon_set", { agentId: "my-agent", action: "pause" }));
     if (daemonPaused.enabled || daemonPaused.status !== "paused") {
       throw new Error(`Gateway innerlife_daemon_set did not pause daemon: ${JSON.stringify(daemonPaused)}`);
@@ -785,9 +763,9 @@ async function main() {
         {
           ok: true,
           dataRoot,
-          command: server.command,
+          transport: "streamable-http",
           tools: EXPECTED_TOOLS.length,
-          source: snapshot.connections.pythonSource
+          source: "HTTP test host"
         },
         null,
         2

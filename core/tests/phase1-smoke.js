@@ -68,7 +68,7 @@ async function main() {
     "innerlife.model": "deepseek-v4-flash",
     "innerlife.loop_seconds": 3600,
     "gateway.enabled": true,
-    "gateway.transport": "stdio",
+    "gateway.transport": "streamable-http",
     "gateway.local_only": true,
     "backup.enabled": true,
     "backup.schedule": "manual"

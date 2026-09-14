@@ -30,9 +30,16 @@ jobs:
           sudo apt-get install -y sqlite3
       - name: Source and isolated core regression
         run: npm run test:core
+      - name: Gateway, InnerLife and maintenance regression
+        run: |
+          npm run test:gateway
+          npm run test:data-maintenance
+          npm run test:runtime-recovery
+          node core/tests/innerlife-source-ingest-smoke.js
       - name: SQLite CLI fallback boundaries
         env:
           CLARACORE_DESKTOP_DISABLE_NODE_SQLITE: "1"
         run: |
           node core/tests/memory-search-boundaries-smoke.js
           node core/tests/backup-boundaries-smoke.js
+          node core/tests/innerlife-grounding-smoke.js

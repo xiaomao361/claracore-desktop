@@ -1,5 +1,6 @@
 const path = require("path");
 const fs = require("fs");
+const { searchVectorProjection } = require("../../vector-projection");
 const { HAS_BUILT_IN_EMBEDDING } = require("../../../build-flavor");
 
 const BUILT_IN_EMBEDDING_PROVIDER = "claracore-built-in";
@@ -229,28 +230,43 @@ function createMemoriaEmbeddingRepository(helpers) {
         const embedding = await this.createEmbedding(text);
         const vectorLimit = Math.min(safeLimit, MAX_VECTOR_SEARCH_RESULTS);
         let vectorResults = [];
+        let vectorSearch = { engine: "legacy", status: "ready" };
         let afterId = "";
-        // Scan every eligible vector with bounded pages and retain only top K.
-        // Output limits must never become an age-based retrieval horizon.
-        while (true) {
-          const candidates = await this.vectorMemoryCandidates(200, {
-            agentId: options.agentId || options.agent_id || "",
-            timeView,
+        if (this.vectorEngine === "sqlite-vec") {
+          const projected = await searchVectorProjection(this, {
             embedding,
-            afterId
+            agentClause: options.agentId || options.agent_id ? agentLabelClause(options.agentId || options.agent_id) : "",
+            statusClause: memoryStatusClause(timeView, "m"),
+            limit: vectorLimit,
+            minimumScore: MIN_VECTOR_SEARCH_SCORE
           });
-          const scored = candidates
-            .map(({ vector, vector_json: _vectorJson, ...memory }) => ({
-              ...memory,
-              search_source: "vector",
-              search_score: cosineSimilarity(embedding.vector, vector)
-            }))
-            .filter((memory) => memory.search_score >= MIN_VECTOR_SEARCH_SCORE);
-          vectorResults = [...vectorResults, ...scored]
-            .sort((left, right) => right.search_score - left.search_score || left.id.localeCompare(right.id))
-            .slice(0, vectorLimit);
-          if (candidates.length < 200) break;
-          afterId = candidates[candidates.length - 1].id;
+          vectorResults = projected.results;
+          vectorSearch = projected.status;
+        } else if (this.vectorEngine !== "legacy") {
+          throw new Error(`Unsupported vector engine: ${this.vectorEngine}`);
+        } else {
+          // Scan every eligible vector with bounded pages and retain only top K.
+          // Output limits must never become an age-based retrieval horizon.
+          while (true) {
+            const candidates = await this.vectorMemoryCandidates(200, {
+              agentId: options.agentId || options.agent_id || "",
+              timeView,
+              embedding,
+              afterId
+            });
+            const scored = candidates
+              .map(({ vector, vector_json: _vectorJson, ...memory }) => ({
+                ...memory,
+                search_source: "vector",
+                search_score: cosineSimilarity(embedding.vector, vector)
+              }))
+              .filter((memory) => memory.search_score >= MIN_VECTOR_SEARCH_SCORE);
+            vectorResults = [...vectorResults, ...scored]
+              .sort((left, right) => right.search_score - left.search_score || left.id.localeCompare(right.id))
+              .slice(0, vectorLimit);
+            if (candidates.length < 200) break;
+            afterId = candidates[candidates.length - 1].id;
+          }
         }
 
         for (const memory of vectorResults) {
@@ -278,6 +294,7 @@ function createMemoriaEmbeddingRepository(helpers) {
           })
           .slice(0, safeLimit);
 
+        this.lastVectorSearch = { ...vectorSearch, at: new Date().toISOString() };
         const annotatedResults = await this.annotateMemoryStates(results);
         return {
           mode: vectorResults.length > 0 ? "hybrid" : "keyword",
@@ -285,9 +302,11 @@ function createMemoriaEmbeddingRepository(helpers) {
           timeView,
           results: annotatedResults,
           related: await this.getMemoryNeighbors(results.map((memory) => memory.id)),
+          vectorSearch,
           error: null
         };
       } catch (error) {
+        this.lastVectorSearch = { engine: this.vectorEngine, status: "failed", code: error.code || "VECTOR_SEARCH_FAILED", at: new Date().toISOString() };
         const annotatedResults = await this.annotateMemoryStates(keywordResults.map((memory) => ({
           ...memory,
           search_source: "keyword",
@@ -299,6 +318,7 @@ function createMemoriaEmbeddingRepository(helpers) {
           timeView,
           results: annotatedResults,
           related: await this.getMemoryNeighbors(keywordResults.map((memory) => memory.id)),
+          vectorSearch: { engine: this.vectorEngine, status: "failed", code: error.code || "VECTOR_SEARCH_FAILED", ...(error.issues ? { issues: error.issues } : {}) },
           error: error.message
         };
       }
@@ -412,12 +432,22 @@ function createMemoriaEmbeddingRepository(helpers) {
 
     async pendingEmbeddingMemoryIds(limit = 5) {
       const safeLimit = Math.max(1, Math.min(20, Number.parseInt(String(limit), 10) || 5));
+      const settings = await this.getSettings();
+      const provider = settings["memory.embedding.provider"];
+      const model = settings["memory.embedding.model"];
+      if (provider === "disabled") return [];
       const rows = await this.query(`
         SELECT m.id
         FROM memories m
         LEFT JOIN memory_embeddings e ON e.memory_id = m.id
         WHERE m.status = 'active'
-          AND COALESCE(e.status, 'pending') = 'pending'
+          AND m.sensitivity != 'restricted'
+          AND (
+            COALESCE(e.status, 'pending') = 'pending'
+            OR (e.status = 'ready' AND (
+              e.provider != ${sqlString(provider)} OR e.model != ${sqlString(model)}
+            ))
+          )
         ORDER BY COALESCE(e.embedded_at, m.created_at) ASC
         LIMIT ${safeLimit};
       `);

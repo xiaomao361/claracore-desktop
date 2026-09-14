@@ -18,7 +18,9 @@ function nextMemoryMaintenanceDelayMs(settings, now = new Date()) {
   const nextRun = new Date(now);
   nextRun.setMinutes(0, 0, 0);
   nextRun.setHours(hour);
-  if (String(settings?.["memory.maintenance.last_run_date"] || "") === today) {
+  const backupPending = settings?.["backup.enabled"] !== false && settings?.["backup.schedule"] === "daily"
+    && settings?.["backup.last_run_date"] !== today;
+  if (String(settings?.["memory.maintenance.last_run_date"] || "") === today && !backupPending) {
     nextRun.setDate(nextRun.getDate() + 1);
   }
   return Math.max(0, nextRun.getTime() - now.getTime());
@@ -34,10 +36,12 @@ function memoryMaintenanceRetryDelayMs(failureCount) {
 
 function createSchedulers({
   app,
+  powerMonitor = null,
   ensureProductCore,
   isQuitting,
   notifyRuntimeChanged,
   runProductMemoryMaintenance,
+  runProductScheduledBackup,
   saveProductSettings,
   tickProductInnerLifeDaemon,
   now = () => new Date(),
@@ -195,6 +199,13 @@ function createSchedulers({
       const { database } = await ensureProductCore(app);
       const settings = await database.getSettings();
       const today = localDateKey(now());
+      if (settings["backup.enabled"] !== false && settings["backup.schedule"] === "daily") {
+        await runProductScheduledBackup(app, today);
+      }
+      if (settings["memory.maintenance.last_run_date"] === today) {
+        notifyRuntimeChanged("backup-nightly");
+        return { ok: true, skipped: "maintenance_already_completed" };
+      }
       const memoriaMaintenanceEnabled = settings["memory.maintenance.enabled"] !== false;
       const result = memoriaMaintenanceEnabled
         ? await runProductMemoryMaintenance(app, { scheduled: true })
@@ -363,13 +374,23 @@ function createSchedulers({
     return startMemoryMaintenance();
   }
 
+  function resume() {
+    if (isQuitting()) return;
+    notifyRuntimeChanged("runtime-resume");
+    if (memoryMaintenanceActive) rescheduleMemoryMaintenance();
+    if (embeddingScheduler) runEmbeddingScheduledTick().catch(console.error);
+  }
+
   function start() {
+    powerMonitor?.removeListener("resume", resume);
+    powerMonitor?.on("resume", resume);
     startInnerLife();
     startEmbeddings();
     startMemoryMaintenance();
   }
 
   function stop() {
+    powerMonitor?.removeListener("resume", resume);
     stopInnerLife();
     stopEmbeddings();
     stopMemoryMaintenance();

@@ -49,7 +49,6 @@ async function main() {
         status: document.querySelector("#agentSetupStatus")?.textContent || "",
         gatewayStatus: document.querySelector("#agentGatewayStatus")?.textContent || "",
         httpStatus: document.querySelector("#agentHttpStatus")?.textContent || "",
-        stdioStatus: document.querySelector("#agentStdioStatus")?.textContent || "",
         guideStatus: document.querySelector("#agentGuideStatus")?.textContent || "",
         guideVersion: document.querySelector("#agentGuideVersion")?.textContent || "",
         guideLayout: (() => {
@@ -77,7 +76,6 @@ async function main() {
       !hierarchy.status ||
       !hierarchy.gatewayStatus ||
       !hierarchy.httpStatus ||
-      !hierarchy.stdioStatus ||
       !hierarchy.guideStatus ||
       !hierarchy.guideVersion.includes(`v${PRODUCT_VERSION}`) ||
       hierarchy.guideLayout.versionTop < hierarchy.guideLayout.copyBottom ||
@@ -97,7 +95,6 @@ async function main() {
     const required = [
       "Streamable HTTP MCP",
       "Authorization: Bearer",
-      "stdio MCP",
       "claracore_connection_test",
       "gateway_context",
       "gateway_docs",

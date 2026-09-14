@@ -1,7 +1,7 @@
 const CHANNEL_NAMES = Object.freeze([
   "activateSharedLine", "applyInnerLifeShareToMemory", "applyInnerLifeShareToSharedLine",
   "archiveDormantMemories", "archiveMemory", "archiveSharedLine", "checkForUpdates", "checkInnerLifeShareTiming",
-  "chooseDataRoot", "clearDemoData", "clearLogs", "copyText", "createBackup", "createMemory",
+  "chooseDataRoot", "chooseBackupDirectory", "clearDemoData", "clearLogs", "copyText", "createBackup", "createMemory",
   "createMemoryLabelAlias", "createMemoryRecord", "createSharedLine", "createSharedLineHandoff",
   "deleteBackup", "deleteMemory", "deleteMemoryLabelAlias", "embedMemory", "endInnerLifeSession",
   "exportMemoryArchive", "exportProductJson", "getArchivedMemories", "getDataRootPreference",

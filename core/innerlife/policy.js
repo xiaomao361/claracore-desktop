@@ -1,3 +1,5 @@
+const FACT_BOUNDARY = " Concrete facts about the user must be supported by the supplied source material. Inner state questions and previous AI thoughts are not evidence that an event happened. Distinguish speculation from facts, preserve event dates, and never turn an old or undated event into something recent. General ideas may be explored freely, but do not invent personal behavior, motives or experiences. A source excerpt is not the full article; do not claim to have read material that was not supplied.";
+
 const IL_SYSTEM = {
   digest:
     "You are the inner digestion layer of an AI agent. Quietly digest the material below into a short, honest internal understanding. Do not make decisions for the user and do not share automatically. Write in the agent's own first-person voice.",
@@ -10,6 +12,8 @@ const IL_SYSTEM = {
   session:
     "You are the inner afterthought layer of an AI agent. Based on the session summary below, write a short shareable afterthought worth revisiting later. Prefer a distinct judgment, question, synthesis, or personal perspective over a status recap. If there is no such thought, return exactly [NO_SHARE]. Write in the agent's own first-person voice."
 };
+
+for (const key of Object.keys(IL_SYSTEM)) IL_SYSTEM[key] += FACT_BOUNDARY;
 
 const NO_SHARE_SENTINEL = "[NO_SHARE]";
 const CONTEXT_ONLY_INBOX_SOURCES = new Set(["continuity"]);
@@ -78,7 +82,7 @@ const DEFAULT_SHARE_POLICY = {
   stale_after_days: 7
 };
 
-function summarizeInnerLifeProfile(profile) {
+function buildInnerLifeProfileContext(profile, options = {}) {
   const profileJson = profile?.profile || {};
   const stateJson = profile?.state || {};
   const pickProfile = {
@@ -89,17 +93,44 @@ function summarizeInnerLifeProfile(profile) {
     convergence: profileJson.convergence || null,
     autonomous_sources: Array.isArray(profileJson.autonomous_sources) ? profileJson.autonomous_sources.slice(0, 5) : undefined
   };
-  const pickState = {
-    current_interests: Array.isArray(stateJson.current_interests) ? stateJson.current_interests : [],
-    open_loops: Array.isArray(stateJson.open_loops) ? stateJson.open_loops.filter((loop) => !loop?.status || loop.status === "open").slice(0, 8) : [],
-    recent_mood: stateJson.recent_mood || null,
-    recent_focus: stateJson.recent_focus || null
-  };
-  return [
+  const now = options.now ?? Date.now();
+  const triggerTokens = innerLifeShareTokens(options.triggerText || "");
+  const decisions = [];
+  const selected = [];
+  for (const loop of Array.isArray(stateJson.open_loops) ? stateJson.open_loops : []) {
+    // A profile edit must never refresh all legacy loops. Only loop-level review
+    // timestamps establish freshness; they do not establish when an event occurred.
+    const reviewedAt = loop?.lastReviewedAt || loop?.last_reviewed_at || loop?.updatedAt || loop?.updated_at || "";
+    const timestamp = parseInnerLifeDate(reviewedAt);
+    const content = String(loop?.content || "");
+    const tokens = innerLifeShareTokens(content);
+    const overlap = [...tokens].filter((token) => triggerTokens.has(token)).length;
+    const reason = loop?.status && loop.status !== "open" ? "closed"
+      : !Number.isFinite(timestamp) ? "undated"
+        : timestamp > now ? "future_review"
+          : now - timestamp > 30 * 86400000 ? "stale"
+            : overlap < 2 ? "unrelated"
+              : selected.length >= 8 ? "limit" : "selected";
+    decisions.push({ id: loop?.id || "", reviewedAt, reason });
+    if (reason === "selected") selected.push({ id: loop?.id || "", content, reviewedAt });
+  }
+  const text = [
     `Agent profile: ${profile?.display_name || profile?.agent_id || ""}`,
     `Profile JSON: ${JSON.stringify(pickProfile)}`,
-    `Current inner state: ${JSON.stringify(pickState)}`
+    "Internal questions (not facts; reviewedAt is NOT an event date):",
+    JSON.stringify(selected)
   ].join("\n");
+  return { text, decisions, policyVersion: "innerlife-grounding-v1" };
+}
+
+function parseInnerLifeDate(value) {
+  if (typeof value !== "string" || !value.trim()) return NaN;
+  const text = value.trim();
+  return Date.parse(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(text) ? `${text.replace(" ", "T")}Z` : text);
+}
+
+function summarizeInnerLifeProfile(profile, options = {}) {
+  return buildInnerLifeProfileContext(profile, options).text;
 }
 
 function compactSession(session) {
@@ -150,6 +181,7 @@ async function generateOrTemplate(self, { tier, system, prompt, template }) {
 }
 
 module.exports = {
+  buildInnerLifeProfileContext,
   CONTEXT_ONLY_INBOX_SOURCES,
   DEFAULT_SHARE_POLICY,
   IL_SYSTEM,

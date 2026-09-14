@@ -42,7 +42,7 @@ The Desktop runtime is Node/Electron.
   - `core/gateway/auto-context.js`: the one-winner automatic-context arbiter.
 - Context shaping (0.6.6): `core/continuity/resume-detail.js` and
   `core/innerlife/selective.js`
-- CLI fallback: `core/cli.js`
+- Internal maintenance CLI: `core/cli.js`
 
 ## Context Budget Boundary (0.6.6)
 
@@ -70,7 +70,7 @@ state and separates it from the packet an Agent needs for one decision.
   bounded delivery slot through `core/gateway/auto-context.js` rather than
   stacking independently. Selection is not delivery and not use.
 
-Agents should use Gateway MCP first, then CLI fallback when MCP is unavailable.
+Agents use HTTP MCP. CLI is reserved for operator maintenance.
 When the Desktop app is running, Agent Access may also expose a
 token-protected localhost HTTP Agent Gateway for setup JSON and the first
 Gateway context packet. This HTTP surface binds to `127.0.0.1` by default and
@@ -424,7 +424,7 @@ fall back to the `sqlite3` CLI. Both paths must set WAL mode and a non-zero busy
 timeout; otherwise short write contention between Desktop and multiple Gateway
 processes can surface as immediate `database is locked` failures. The Node
 connection sets `busy_timeout` before confirming WAL mode because WAL setup can
-itself contend when several stdio Agent processes open together.
+itself contend when independent maintenance processes open together.
 
 Multi-statement writes that must be atomic must wrap their SQL in an explicit
 `BEGIN; ... COMMIT;` block. The `exec()` helper runs multiple statements in
@@ -459,9 +459,8 @@ unescaped external input.
 
 The Desktop-owned Gateway is the agent-facing MCP surface. Streamable HTTP MCP
 is served by `electron/http-agent-gateway.js` at the current localhost `/mcp`
-endpoint. `core/gateway/mcp-server.js` remains the stdio fallback process for
-clients that do not support HTTP MCP yet. Both paths use the same tool
-definitions and handlers.
+endpoint. HTTP supports MCP 2026-07-28 and 2025-06-18 through shared tool
+definitions and handlers. Stdio is retired.
 
 Gateway behavior is split by responsibility:
 
@@ -489,9 +488,8 @@ before the domain update, while explicitly supplied fields retain replacement
 semantics. This prevents a body-only refinement from clearing metadata without
 changing the lower-level full-record update used by Desktop UI and CLI paths.
 
-Agent Setup shows both the current Streamable HTTP endpoint and the generated
-stdio fallback config. Gateway is part of the product runtime, while the Logs
-view and Gateway trace tables are inspection surfaces for what agents are doing.
+Agent Setup shows the current HTTP endpoint and request identity headers.
+Gateway trace tables remain the inspection surface for Agent activity.
 
 Claude Desktop is a client of this MCP contract, not a special Gateway mode. If
 Claude Desktop moves local MCP setup between Developer and Extensions settings,
@@ -499,12 +497,10 @@ the product architecture does not change: Agent Setup remains the source for
 the current endpoint/config, agent identity rules, active data root, and
 first-call order.
 
-Streamable HTTP keeps one Desktop Gateway service alive and records per-request
-agent/client/conversation identity. Stdio clients may still own sibling Gateway processes;
-database writes must therefore remain correct under SQLite's cross-process WAL
-and busy-timeout rules. The Desktop UI's quit path best-effort stops packaged
-sibling Gateway processes so replacing `/Applications/ClaraCore Desktop.app` is
-not blocked by a stale `--gateway` process.
+Streamable HTTP uses the Desktop main process and the product-core owner.
+CLI maintenance can still open SQLite independently, so WAL and busy-timeout
+behavior remains required. Quit stops HTTP and releases the product core;
+there are no sibling MCP helper processes to discover or terminate.
 
 Streamable HTTP tool execution has a fair bounded admission queue. The default
 contract allows eight active tool calls and 64 queued calls with a two-second
@@ -519,9 +515,8 @@ well so `agent-gateway.json` cannot fall through to the daily-use Application
 Support directory. `npm run start:next` supplies both isolated roots.
 
 Agent identity belongs to the caller. Streamable HTTP treats
-`X-ClaraCore-Agent-ID` as authoritative for the request. Stdio fallback treats
-`CLARACORE_AGENT_ID` as authoritative for the process and uses it before any
-request-level `agentId` or `agent_id`. After an identity rename,
+`X-ClaraCore-Agent-ID` as authoritative for the request; body-supplied
+`agentId` or `agent_id` cannot override it. After an identity rename,
 `agent_identity_merge` is the supported repair path; it updates agent-owned
 tables and stored Gateway trace request JSON.
 
@@ -532,11 +527,9 @@ context and trace records; it is never merged into domain tool arguments. In
 particular, `X-ClaraCore-Session-ID` is a legacy conversation-header alias and
 must not overwrite `innerlife_session_end.sessionId`.
 
-Generated stdio configs expose all three caller environment fields. Agent and
-client ids must be replaced before use. Conversation identity is process-scoped
-under stdio, so clients that reuse one MCP process across conversations must
-remove `CLARACORE_CONVERSATION_ID` rather than leave a stale value. Packaged
-stdio configs also preserve `ELECTRON_RUN_AS_NODE=1`.
+HTTP caller identity comes from `X-ClaraCore-Agent-ID`, `X-ClaraCore-Client-ID`,
+and `X-ClaraCore-Conversation-ID`. Historical stdio trace records keep their
+original meaning; removing the transport does not rewrite stored evidence.
 
 Shared Line `continuity_lines.agent_id` is its stable owner. A caller may update
 another agent's line by naming the exact `lineId`; the write records

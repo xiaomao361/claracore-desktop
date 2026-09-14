@@ -120,15 +120,25 @@ async function main() {
   });
   if (!inboxItem?.id) throw new Error("InnerLife inbox submit did not create an inbox item.");
 
+  let processPrompt = "";
+  core.database.innerLifeGenerate = async ({ system, prompt }) => {
+    if (system === require("../innerlife/grounding").REVIEW_SYSTEM) {
+      return JSON.stringify({ decision: "allow", reason: "fixture observation", personalClaims: [] });
+    }
+    if (system !== require("../innerlife/policy").IL_SYSTEM.process) return null;
+    processPrompt = prompt;
+    const sources = JSON.parse(prompt.split("Sources (record dates are not event dates):\n")[1].split("\n\nOperator prompt:")[0]);
+    return sources.find((item) => item.kind === "inbox")?.text || prompt.split("Operator prompt: ")[1];
+  };
   const firstRun = await runtime.processProductInnerLifeOnce(app, {
     agentId: "my-agent",
     prompt: "Create a reviewable share candidate for this current state."
   });
   if (!firstRun.share?.id) throw new Error("InnerLife process once did not create a pending share.");
-  if (!firstRun.share.body.includes("Phase 5 position")) {
+  if (!processPrompt.includes("Phase 5 position")) {
     throw new Error("InnerLife share did not include Shared Line context.");
   }
-  if (!firstRun.share.body.includes("InnerLife smoke Memory")) {
+  if (!processPrompt.includes("InnerLife smoke Memory")) {
     throw new Error("InnerLife share did not include recent Memory context.");
   }
   if (!firstRun.share.body.includes("Inbox material should be consumed")) {
@@ -203,12 +213,12 @@ async function main() {
   }
   const appliedMemory = await runtime.applyProductInnerLifeShareToMemory(app, approved.id);
   if (!appliedMemory.memory?.id) throw new Error("Approved InnerLife share did not apply to Memory.");
-  const memorySearch = await runtime.searchProductMemories(app, "Manual InnerLife review");
+  const memorySearch = await runtime.searchProductMemories(app, "Inbox material should be consumed");
   if (!memorySearch.results.some((memoryRecord) => memoryRecord.id === appliedMemory.memory.id)) {
     throw new Error("Applied InnerLife Memory was not searchable.");
   }
   const appliedSharedLine = await runtime.applyProductInnerLifeShareToSharedLine(app, approved.id);
-  if (!appliedSharedLine.sharedLine.currentPosition.summary.includes("Manual InnerLife review")) {
+  if (!appliedSharedLine.sharedLine.currentPosition.summary.includes("Inbox material should be consumed")) {
     throw new Error("Approved InnerLife share did not apply to Shared Line.");
   }
   if (!appliedSharedLine.sharedLine.currentPosition.factsUsed.includes(approved.id)) {
@@ -351,7 +361,7 @@ async function main() {
 
   const secondRun = await runtime.processProductInnerLifeOnce(app, {
     agentId: "my-agent",
-    prompt: "Create a distinct review candidate for Shared Line timing validation."
+    prompt: "Can inbox material strengthen source attribution without delaying a distinct review?"
   });
   if (!secondRun.share?.id) throw new Error("Second InnerLife process once did not create a pending share.");
   const implicitLineCheck = await runtime.checkProductInnerLifeShareTiming(app, {
