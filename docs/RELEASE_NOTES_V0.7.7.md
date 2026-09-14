@@ -1,6 +1,6 @@
 # 0.7.7 — 检索、HTTP 接入、可靠维护与 InnerLife 事实边界
 
-2026-09-14；正式发行候选。发布状态与最终文件校验值以 GitHub Release 为准。
+2026-09-14；已正式发布为 Latest。最终文件校验值见 GitHub Release 附件。
 
 本次汇总公开版 0.6.14 之后的 0.7.0–0.7.7 更新。
 
@@ -84,10 +84,10 @@
 
 ## 发行范围和验证
 
-计划提供 macOS Apple Silicon Full/Lite DMG 和 Windows x64 Full/Lite 安装器。
+已提供 macOS Apple Silicon Full/Lite DMG 和 Windows x64 Full/Lite 安装器。
 Full 内置 embedding 模型；Lite 不含内置模型，可配置外部模型服务。
-Windows 安装器未做 Windows 代码签名；macOS 正式包须完成 Developer ID 签名、
-Apple 公证及附票。最终文件、SHA-256 和完成证据见本版 GitHub Release。
+Windows 安装器未做 Windows 代码签名；macOS 正式包已完成 Developer ID 签名、
+Apple 公证及附票，并通过 Gatekeeper。最终文件、SHA-256 和完成证据见本版 GitHub Release。
 
 源码回归已通过：test:core、test:gateway、test:data-maintenance、test:runtime-recovery、
 SQLite 向量两后端、InnerLife 事实审核两后端、会话/后台任务/保留/来源抓取及更新检查。
@@ -98,6 +98,23 @@ HCT-2026-09-08-02：来源快照与 AI 正文分开，记录时间原样传递�
 安装和多日休眠仍依赖实际使用验收。大库（例如 50k）的首次向量索引构建可能较慢；
 不承诺该规模的延迟。可用 CLARACORE_DESKTOP_VECTOR_ENGINE=legacy 明确选择旧检索引擎。
 
-09-14 早先交付的同版本 Lite 测试 DMG 未完成公证；正式发行文件将替换该候选。
+09-14 早先交付的同版本 Lite 测试 DMG 未完成公证；本次正式发行文件已替换该候选。
 已安装早先测试包的用户应重新下载本次 Release 安装包，不能仅凭版本号确认包含
 超限输入保留和收敛来源传递修复。旧测试包安装正常不作为新包验收。
+
+## 发布完成记录
+
+- 标签 `v0.7.7` 固定到 `745addcdf896ead192a0ba6df25837ecd4257904`；发布后记录为文档提交。
+- Linux 源码 CI `34816511183` 和 Windows 构建/包验证 `34816656613` 均成功。
+- Mac Full/Lite 各 311 个打包文件与发行提交逐字一致；向量扩展 Node/CLI、HTTP Gateway、
+  grounding 包内回归通过。Full 内置 embedding 实际生成 512 维向量。
+- 两个 App 及 DMG 签名、公证、附票、Gatekeeper 和镜像验证通过。
+- 四个安装包和两份 SHA-256 清单上传完成，GitHub asset digest 与本地六个文件逐一相符。
+- [正式下载](https://github.com/xiaomao361/claracore-desktop/releases/tag/v0.7.7)
+
+| 文件 | SHA-256 |
+| --- | --- |
+| Mac Full | `9fef1abe79dedbe7847d8b0d61574e0c159c673b7b737355f0bf19c142e47d18` |
+| Mac Lite | `bcaf35a8e33bc4febb17ac7202772f50123903e8ce48c17e3bcfcc76b77ab73d` |
+| Windows Full | `ea80842080a9940ab8f095a9a14d068c8e12f905ff934b1cb2141a7f30f75578` |
+| Windows Lite | `4aeced34d43080a13c8140259a384456b104333833cf6cf4c044adf96f5247ac` |

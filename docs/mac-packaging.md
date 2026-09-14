@@ -2,9 +2,30 @@
 
 ## Current Release Boundary
 
-The current public stable release is `0.6.14`, tagged `v0.6.14`. Treat
+The current public stable release is `0.7.7`, tagged `v0.7.7`. Treat
 [Version Branching](VERSION_BRANCHING.md) and the versioned release notes as
 the release truth.
+
+## 0.7.7 public release
+
+Full and Lite macOS Apple Silicon DMGs are Developer ID signed, notarized,
+stapled and Gatekeeper accepted. Both DMGs pass `hdiutil verify`; GitHub asset
+SHA-256 values match local files and the published manifest. Full/Lite sizes
+are approximately 532.9/293.2 MiB unpacked. Both contain the frozen source at
+`745addc`; packaged Node/CLI vector, HTTP Gateway and grounding checks pass,
+and Full produces real 512-dimensional built-in embeddings.
+
+Notarization IDs:
+
+- Full App: `ab062448-f165-43c2-94c8-9d905a844d65`
+- Full DMG: `f9d2fa9f-91eb-438f-9f6d-a12fab1bdfe5`
+- Lite App: `3040770b-6133-459f-8320-31d244430227`
+- Lite DMG: `cd278c3c-f92b-4604-9800-17618275c22d`
+
+All four are Accepted. Windows x64 Full/Lite are built and package-verified in
+Actions run `34816656613`; installers remain unsigned. The public release is
+https://github.com/xiaomao361/claracore-desktop/releases/tag/v0.7.7.
+Real installation and long-running user experience remain separate acceptance.
 
 ## Historical Pre-Release Checkpoint
 

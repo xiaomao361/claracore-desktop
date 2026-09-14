@@ -10,13 +10,13 @@
   checks; actual Host acceptance is pending. `0.7.0-preview.2` is a local unsigned
   Lite trial artifact, not the public release.
 - `package.json` is the product-version source through `core/version.js`.
-- Current development version: `0.7.7` (authorized release candidate; publication verification pending).
+- Current development version: `0.7.7` (public Full/Lite release).
 - 0.7.2 retires stdio, keeps both HTTP protocol versions, and reserves CLI for internal maintenance. See [migration](HTTP_MCP_MIGRATION.md).
 - 0.7.7 adds bounded InnerLife state selection, output novelty and evidence review. See [plan](V0.7.7_INNERLIFE_PLAN.md) and [notes](RELEASE_NOTES_V0.7.7.md).
-- Current public release: `0.6.14`.
-- Tag `v0.6.14` is the current stable GitHub Release.
+- Current public release: `0.7.7`.
+- Tag `v0.7.7` is the current stable GitHub Release at `745addc`.
 
-`0.6.14` is the public Full/Lite release for verified safety-backup gates,
+`0.6.14` was the previous public Full/Lite release for verified safety-backup gates,
 full-catalog semantic retrieval with model isolation, accurate restore-preview
 counts, and routine source CI. macOS Apple Silicon DMGs are signed and notarized;
 Windows x64 installers are CI/package-verified and unsigned.
@@ -104,11 +104,14 @@ through to the daily-use Application Support directory.
 
 Current packaging commands and artifact checks live in
 [macOS Packaging](mac-packaging.md). Current public-release details live in
-[v0.6.14 Release Notes](RELEASE_NOTES_V0.6.14.md).
+[v0.7.7 Release Notes](RELEASE_NOTES_V0.7.7.md).
 
 ## Current Release
 
-`0.6.14` is the current public release, tagged `v0.6.14` at `db03c42`.
+`0.7.7` is the current public release, tagged `v0.7.7` at `745addc`.
+Published 2026-09-14 with all four installers and two verified checksum manifests.
+Linux source CI: `34816511183`; Windows build/package CI: `34816656613`.
+`0.6.14` is the previous public release at `db03c42`.
 `0.6.13` remains an unpublished local Lite trial checkpoint.
 Its macOS Apple Silicon Full/Lite DMGs are Developer ID signed,
 Apple-notarized, stapled, and Gatekeeper accepted. Its Windows x64 Full/Lite
