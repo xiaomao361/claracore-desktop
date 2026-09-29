@@ -1,6 +1,6 @@
 # 0.8.1 — 知识搜索与收录体验
 
-2026-09-29。0.8.1 发布候选；用户完成本地 Lite 试用并反馈无明显问题，授权发布 GitHub Release。正式资产验证在发布流程中记录。
+2026-09-29。0.8.1 已正式发布，源码标签为 `v0.8.1`，指向 `c343e6616590e361fe1991c55f45ea29f8289d5f`。用户完成本地 Lite 试用并反馈无明显问题。
 
 ## 相对 0.7.7 的新增能力
 
@@ -35,7 +35,7 @@ HCT-2026-09-08-01：结构刷新失败仍可观察；暂停与失败不导致旧
 
 当前 Codex 宿主仍要求 Memory-only，0.8.1 没有改变宿主指令；服务端知识投递协议和认证临时 HTTP MCP 回归通过，实际对话注入与采用仍需宿主接入。Jev 保持 query-only shadow。
 
-本轮未修改真实知识正文或运行中应用的索引；现有应用不会因源码与打包完成而自动更新。用户已反馈 0.8.1 本地 Lite 试用无明显问题；未逐项声明窄窗口、暗色和所有平台交互验收。当前正按仓库正式发布流程完成源码与安装包发布。
+本轮未修改真实知识正文或运行中应用的索引；现有应用不会因源码与打包完成而自动更新。用户已反馈 0.8.1 本地 Lite 试用无明显问题；未逐项声明窄窗口、暗色和所有平台交互验收。正式 Full/Lite 资产已发布；跨平台实际安装与长期运行仍是独立验收。
 
 ## 历史本地试用包（不作为正式发布资产）
 
@@ -43,3 +43,23 @@ HCT-2026-09-08-01：结构刷新失败仍可观察；暂停与失败不导致旧
 - 大小：127615153 字节
 - SHA-256：`03b03161404944318c200a1cd6354c14513e77d1ccc3ff66e305a04ef8d72ca8`
 - Lite 包资源检查、DMG 完整性校验通过；包内版本 0.8.1、buildFlavor=lite，7 个相关实现文件与当前源码逐字节相同。包未签名、未公证。
+
+## 正式发布验证
+
+[GitHub Release v0.8.1](https://github.com/xiaomao361/claracore-desktop/releases/tag/v0.8.1)，发布时间 2026-09-29 17:20:05 Asia/Shanghai，Latest、非预发布。
+
+- macOS arm64 Full/Lite：Developer ID 签名，应用与 DMG 均经 Apple 公证、staple、Gatekeeper；DMG 完整性校验通过。
+- 每个 macOS 包 334 个实现文件与标签源码逐字节一致；未包含本地真实语料案例。
+- Full 内置 512 维模型及知识语义排序通过；两版包内 SQLite Node/CLI 路径、Lite 本地知识检索及资源边界通过。
+- [Linux 源码 CI 36545676475](https://github.com/xiaomao361/claracore-desktop/actions/runs/36545676475) 通过。首轮暴露旧 Gateway 测试仍写死 12 KB；已改为引用既有完整指南 14 KB 统一契约，未放宽默认读取预算。
+- [Windows CI 36545686722](https://github.com/xiaomao361/claracore-desktop/actions/runs/36545686722) 构建 Full/Lite 并完成内置模型、包边界及 SQLite 检查；安装程序未签名。
+- 四个安装包均从 GitHub 下载并与两份平台 SHA-256 清单核对通过。
+
+| 资产 | 字节数 | SHA-256 |
+| --- | ---: | --- |
+| `ClaraCore-Desktop-0.8.1-arm64.dmg` | 208053336 | `4fb3ac240f951f5d511638e7f9da865f10f27135302eeb8558405ec122fc5e70` |
+| `ClaraCore-Desktop-0.8.1-lite-arm64.dmg` | 127012515 | `29392797e287fe988bfcbb8c318af845662e00ffbdd2d0fb6b4406f7ab441db4` |
+| `ClaraCore-Desktop-0.8.1-lite-x64-Setup.exe` | 108960402 | `959aec5304e3bca72bb8eaac799d129dacc45f9d387dc05ace4ef8dd72f14789` |
+| `ClaraCore-Desktop-0.8.1-x64-Setup.exe` | 178966363 | `f9945cacd236cea9d5c738217b9c3d86ad6658b07e6db5d608635476282909e6` |
+| `SHA256SUMS-macos.txt` | 205 | `bff48ec14dacc52676b023431a10d2c64022c084205f1382deb899933aafc47c` |
+| `SHA256SUMS-windows.txt` | 213 | `334794d85fe66b5a053862aea974a682b8108ba0a34a8b910bb5b742f0188a0b` |

@@ -33,13 +33,13 @@ instructions.
 
 ## Build And Release
 
-- [v0.8.1 Local Release Notes](RELEASE_NOTES_V0.8.1.md): Knowledge search, recovery, metadata and real-corpus evaluation.
+- [v0.8.1 Release Notes](RELEASE_NOTES_V0.8.1.md): Knowledge search, recovery, metadata and real-corpus evaluation.
 
 - [v0.8.0 Local Knowledge Plan](V0.8.0_LOCAL_KNOWLEDGE_PLAN.md): staged
-  acceptance for the new Knowledge domain; continued in the local 0.8.1 version.
+  acceptance for the new Knowledge domain; shipped in 0.8.1.
 - [v0.7.0 Development Plan](V0.7.0_DEVELOPMENT_PLAN.md): planned sqlite-vec
   migration and MCP 2026-07-28 integration, with staged acceptance and session handoff.
-- [v0.7.7 Release Notes](RELEASE_NOTES_V0.7.7.md): current public Full/Lite release
+- [v0.7.7 Release Notes](RELEASE_NOTES_V0.7.7.md): previous public Full/Lite release
   for vector retrieval, HTTP migration, verified maintenance and InnerLife grounding.
 - [v0.6.14 Release Notes](RELEASE_NOTES_V0.6.14.md): previous public Full/Lite release
   for recovery safety, complete semantic retrieval, and source CI.

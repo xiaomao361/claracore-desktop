@@ -2,11 +2,20 @@
 
 ## Current Release Boundary
 
-The current public stable release is `0.7.7`, tagged `v0.7.7`. Treat
+The current public stable release is `0.8.1`, tagged `v0.8.1`. Treat
 [Version Branching](VERSION_BRANCHING.md) and the versioned release notes as
 the release truth.
 
-## 0.7.7 public release
+## 0.8.1 public release
+
+Full and Lite macOS Apple Silicon DMGs are Developer ID signed, notarized,
+stapled and Gatekeeper accepted. Both pass DMG integrity checks and downloaded
+SHA-256 comparison. Each package contains 334 implementation files identical
+to tag `v0.8.1` at `c343e66`. Packaged Full built-in knowledge embeddings and
+both SQLite Node/CLI paths passed. See [release notes](RELEASE_NOTES_V0.8.1.md)
+for the four-platform-variant asset list, checksums and CI evidence.
+
+## Previous 0.7.7 public release
 
 Full and Lite macOS Apple Silicon DMGs are Developer ID signed, notarized,
 stapled and Gatekeeper accepted. Both DMGs pass `hdiutil verify`; GitHub asset

@@ -5,7 +5,7 @@
 - `main` is the working Desktop line.
 - `codex/v0.8.0-local-knowledge` is the current local development branch for
   the Knowledge collection, reading, retrieval, and recall work. See the
-  [v0.8.0 plan](V0.8.0_LOCAL_KNOWLEDGE_PLAN.md). The development version is 0.8.1; this is not a public release.
+  [v0.8.0 plan](V0.8.0_LOCAL_KNOWLEDGE_PLAN.md). This work shipped as 0.8.1; see [release notes](RELEASE_NOTES_V0.8.1.md).
 - `codex/v0.7.0` was the development branch for the sqlite-vec
   feasibility and MCP compatibility work. See [the implementation plan](V0.7.0_DEVELOPMENT_PLAN.md).
   It corrects legacy version negotiation and adds a gated SQLite vector
@@ -13,11 +13,11 @@
   checks; actual Host acceptance is pending. `0.7.0-preview.2` is a local unsigned
   Lite trial artifact, not the public release.
 - `package.json` is the product-version source through `core/version.js`.
-- Current development version: `0.8.1` (local Knowledge testing).
+- Current source version: `0.8.1` (released local Knowledge support).
 - 0.7.2 retires stdio, keeps both HTTP protocol versions, and reserves CLI for internal maintenance. See [migration](HTTP_MCP_MIGRATION.md).
 - 0.7.7 adds bounded InnerLife state selection, output novelty and evidence review. See [plan](V0.7.7_INNERLIFE_PLAN.md) and [notes](RELEASE_NOTES_V0.7.7.md).
-- Current public release: `0.7.7`.
-- Tag `v0.7.7` is the current stable GitHub Release at `745addc`.
+- Current public release: `0.8.1`.
+- Tag `v0.8.1` is the current stable GitHub Release at `c343e66`.
 
 `0.6.14` was the previous public Full/Lite release for verified safety-backup gates,
 full-catalog semantic retrieval with model isolation, accurate restore-preview
@@ -107,11 +107,20 @@ through to the daily-use Application Support directory.
 
 Current packaging commands and artifact checks live in
 [macOS Packaging](mac-packaging.md). Current public-release details live in
-[v0.7.7 Release Notes](RELEASE_NOTES_V0.7.7.md).
+[v0.8.1 Release Notes](RELEASE_NOTES_V0.8.1.md).
 
 ## Current Release
 
-`0.7.7` is the current public release, tagged `v0.7.7` at `745addc`.
+`0.8.1` is the current public release, tagged `v0.8.1` at `c343e66`.
+Published 2026-09-29 with macOS arm64 and Windows x64 Full/Lite installers
+and two platform SHA-256 manifests. macOS applications and DMGs are signed,
+notarized, stapled and Gatekeeper accepted; Windows installers remain unsigned.
+All four downloaded assets match their manifests. Linux source CI `36545676475`
+and Windows build/package CI `36545686722` passed. See [release notes](RELEASE_NOTES_V0.8.1.md).
+
+### Previous 0.7.7 Release
+
+`0.7.7` was the previous public release, tagged `v0.7.7` at `745addc`.
 Published 2026-09-14 with all four installers and two verified checksum manifests.
 Linux source CI: `34816511183`; Windows build/package CI: `34816656613`.
 `0.6.14` is the previous public release at `db03c42`.
