@@ -212,9 +212,89 @@
   min-width: 0;
 }
 
+.knowledge-root-field {
+  position: relative;
+  min-width: 0;
+}
+
+.knowledge-root-field input {
+  padding-inline-end: 48px;
+}
+
+.knowledge-root-field button {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: 4px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.knowledge-root-field button[hidden] {
+  display: none;
+}
+
+.knowledge-root-field button:hover,
+.knowledge-root-field button:focus-visible {
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.knowledge-root-field button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.knowledge-root-field svg {
+  width: 18px;
+  height: 18px;
+}
+
 .model-config-card .settings-grid {
   gap: 10px 12px;
   align-items: start;
+}
+
+.jev-settings-grid {
+  row-gap: 12px;
+}
+
+.jev-settings-grid .jev-observation-toggle {
+  grid-column: 1 / -1;
+  min-height: 36px;
+  margin: 0;
+}
+
+.jev-key-group {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-width: 0;
+}
+
+.jev-key-group .field,
+.jev-key-group .toggle-row {
+  margin: 0;
+}
+
+.jev-key-group .toggle-row {
+  min-height: 24px;
+}
+
+.jev-advanced {
+  margin-top: 14px;
+}
+
+.jev-advanced-field {
+  max-width: 320px;
 }
 
 .model-config-card .settings-grid .field {

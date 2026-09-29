@@ -76,6 +76,7 @@ function createTurnContextService(inputPorts = {}) {
 
   async function collectMemory(core, { prompt, agentId }) {
     const packet = await ports.runMemoryController(core, { prompt, agentId });
+    if (packet?.resultStatus === "error") { const error = new Error(packet.reason || "memory_failed"); error.code = packet.reason || "memory_failed"; throw error; }
     const context = typeof packet?.context === "string" ? packet.context : "";
     // Forward the Controller's real similarity score. Hardcoding 1 here made
     // any injected Memory outrank every share permanently: a 0.4 Memory beat a
@@ -116,17 +117,25 @@ function createTurnContextService(inputPorts = {}) {
         };
       }
 
-      const [memorySettled] = await Promise.allSettled([
-        withTimeout(() => collectMemory(core, { prompt, agentId }), MEMORY_TIMEOUT_MS, "memory")
+      const domain = input.domain || "both";
+      if (!["none", "memory", "knowledge", "both"].includes(domain)) throw new Error("invalid_recall_domain");
+      const includeMemory = ["memory", "both"].includes(domain);
+      const includeKnowledge = ["knowledge", "both"].includes(domain) && typeof ports.searchKnowledge === "function";
+      const [memorySettled, knowledgeSettled] = await Promise.allSettled([
+        includeMemory ? withTimeout(() => collectMemory(core, { prompt, agentId }), MEMORY_TIMEOUT_MS, "memory") : Promise.resolve([]),
+        includeKnowledge ? withTimeout(() => ports.searchKnowledge(core, { query: input.query || prompt, mode: input.mode || "semantic", limit: 3 }), MEMORY_TIMEOUT_MS, "knowledge") : Promise.resolve(null)
       ]);
       const memory = domainOutcome(memorySettled, "memory");
+      const knowledge = domainOutcome(knowledgeSettled, "knowledge");
 
       return {
+        knowledgeSearch: knowledge.value,
+        knowledgeFailure: knowledge.reason || null,
         memoryCandidates: memory.value || [],
         shareCandidates: [],
         // "not_collected" is not "nothing was waiting": InnerLife is reached
         // through innerlife_share_check, not through automatic delivery.
-        domainStatus: { memory: memory.status, innerlife: "not_collected" },
+        domainStatus: { memory: includeMemory ? memory.status : "skipped", ...(ports.searchKnowledge ? { knowledge: includeKnowledge ? knowledge.value?.status || knowledge.status : "skipped" } : {}), innerlife: "not_collected" },
         latencyMs: Date.now() - startedAt
       };
     }

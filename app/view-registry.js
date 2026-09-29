@@ -9,6 +9,11 @@ window.ClaraCoreViews = {
     subtitleKey: "view.memory.subtitle",
     panel: document.querySelector("#memoryView")
   },
+  knowledge: {
+    titleKey: "view.knowledge.title",
+    subtitleKey: "view.knowledge.subtitle",
+    panel: document.querySelector("#knowledgeView")
+  },
   "shared-line": {
     titleKey: "view.sharedLine.title",
     subtitleKey: "view.sharedLine.subtitle",

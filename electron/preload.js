@@ -20,6 +20,54 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   getImportPreview() {
     return ipcRenderer.invoke(ipcChannel("getImportPreview"));
   },
+  getJevSettings() { return ipcRenderer.invoke(ipcChannel("getJevSettings")); },
+  saveJevSettings(input) { return ipcRenderer.invoke(ipcChannel("saveJevSettings"), input); },
+  listJevModels() { return ipcRenderer.invoke(ipcChannel("listJevModels")); },
+  testJevConnection() { return ipcRenderer.invoke(ipcChannel("testJevConnection")); },
+  searchKnowledge(input) { return ipcRenderer.invoke(ipcChannel("searchKnowledge"), input); },
+  rebuildKnowledgeSearchIndex(input) { return ipcRenderer.invoke(ipcChannel("rebuildKnowledgeSearchIndex"), input); },
+  listKnowledgeActivity(input) {
+    return ipcRenderer.invoke(ipcChannel("listKnowledgeActivity"), input);
+  },
+  readKnowledgeActivity(id) {
+    return ipcRenderer.invoke(ipcChannel("readKnowledgeActivity"), id);
+  },
+  rebuildKnowledgeIndex() {
+    return ipcRenderer.invoke(ipcChannel("rebuildKnowledgeIndex"));
+  },
+  openKnowledgeSource(url) {
+    return ipcRenderer.invoke(ipcChannel("openKnowledgeSource"), url);
+  },
+  previewKnowledgeIntake(input) {
+    return ipcRenderer.invoke(ipcChannel("previewKnowledgeIntake"), input);
+  },
+  commitKnowledgeIntake(token) {
+    return ipcRenderer.invoke(ipcChannel("commitKnowledgeIntake"), token);
+  },
+  getKnowledgeIndexStatus() {
+    return ipcRenderer.invoke(ipcChannel("getKnowledgeIndexStatus"));
+  },
+  getKnowledgeRootPreference() {
+    return ipcRenderer.invoke(ipcChannel("getKnowledgeRootPreference"));
+  },
+  chooseKnowledgeRoot() {
+    return ipcRenderer.invoke(ipcChannel("chooseKnowledgeRoot"));
+  },
+  saveKnowledgeRootPreference(root) {
+    return ipcRenderer.invoke(ipcChannel("saveKnowledgeRootPreference"), root);
+  },
+  listKnowledgeDocuments(input) {
+    return ipcRenderer.invoke(ipcChannel("listKnowledgeDocuments"), input);
+  },
+  readKnowledgeDocument(reference) {
+    return ipcRenderer.invoke(ipcChannel("readKnowledgeDocument"), reference);
+  },
+  readKnowledgeSection(reference) {
+    return ipcRenderer.invoke(ipcChannel("readKnowledgeSection"), reference);
+  },
+  getKnowledgeLinks(reference, options) {
+    return ipcRenderer.invoke(ipcChannel("getKnowledgeLinks"), reference, options);
+  },
   clearLogs() {
     return ipcRenderer.invoke(ipcChannel("clearLogs"));
   },

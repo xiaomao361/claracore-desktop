@@ -1,5 +1,17 @@
+const { getJevSettings, saveJevSettings, listJevModels, evaluateJev } = require("../core/jev/service");
+const { searchKnowledge, rebuildKnowledgeSearchIndex } = require("../core/knowledge/search");
+const { ensureProductCore } = require("../core/runtime");
+const { previewKnowledgeIntake, commitKnowledgeIntake, knowledgeIndexStatus, rebuildKnowledgeIndex, listKnowledgeActivity, readKnowledgeActivity } = require("../core/knowledge/intake");
 const path = require("path");
 const { ipcChannel } = require("./ipc-contracts");
+const {
+  KnowledgeLibraryError,
+  getKnowledgeLinks,
+  listKnowledgeDocuments,
+  readKnowledgeDocument,
+  readKnowledgeSection
+} = require("../core/knowledge/library");
+const { getKnowledgeRootPreference, saveKnowledgeRootPreference } = require("../core/knowledge/preferences");
 const {
   applyProductInnerLifeShareToMemory,
   applyProductInnerLifeShareToSharedLine,
@@ -114,6 +126,65 @@ function registerIpcHandlers({
   });
   ipcMain.handle(ipcChannel("getResourceSnapshot"), () => getResourceSnapshot());
   ipcMain.handle(ipcChannel("getImportPreview"), () => getProductImportPreview(app));
+  ipcMain.handle(ipcChannel("getJevSettings"), () => getJevSettings(app));
+  ipcMain.handle(ipcChannel("saveJevSettings"), (_event, input) => saveJevSettings(app, input));
+  ipcMain.handle(ipcChannel("listJevModels"), () => listJevModels(app));
+  ipcMain.handle(ipcChannel("testJevConnection"), () => evaluateJev(app, "Connection test", { test: true }));
+  async function selectedKnowledgeRoot() {
+    const preference = await getKnowledgeRootPreference(app);
+    if (preference.status !== "ok" && preference.status !== "empty_corpus") {
+      throw new KnowledgeLibraryError(preference.status, preference.message || "Knowledge directory is not ready.");
+    }
+    return preference.root;
+  }
+  async function knowledgeSearchCall(input, rebuild = false) {
+    try {
+      const settings = rebuild || (input?.mode && input.mode !== "exact") ? await (await ensureProductCore(app)).database.getSettings() : {};
+      return await (rebuild ? rebuildKnowledgeSearchIndex(app, settings, input) : searchKnowledge(app, { ...input, textMatch: "folded" }, settings));
+    } catch (error) { return { status: "failed", code: error.code || "knowledge_failed", message: error.message }; }
+  }
+  ipcMain.handle(ipcChannel("searchKnowledge"), (_event, input) => knowledgeSearchCall(input));
+  ipcMain.handle(ipcChannel("rebuildKnowledgeSearchIndex"), (_event, input) => knowledgeSearchCall(input, true));
+  ipcMain.handle(ipcChannel("listKnowledgeActivity"), (_event, input) => listKnowledgeActivity(app, input));
+  ipcMain.handle(ipcChannel("readKnowledgeActivity"), (_event, id) => readKnowledgeActivity(app, id));
+  ipcMain.handle(ipcChannel("rebuildKnowledgeIndex"), () => rebuildKnowledgeIndex(app));
+  ipcMain.handle(ipcChannel("openKnowledgeSource"), async (_event, url) => {
+    if (typeof url !== "string") return false;
+    let parsed;
+    try { parsed = new URL(url); } catch { return false; }
+    if (!["https:", "http:"].includes(parsed.protocol) || parsed.username || parsed.password) return false;
+    await shell.openExternal(parsed.href);
+    return true;
+  });
+  ipcMain.handle(ipcChannel("previewKnowledgeIntake"), (_event, input) => previewKnowledgeIntake(app, input));
+  ipcMain.handle(ipcChannel("commitKnowledgeIntake"), (_event, token) => commitKnowledgeIntake(app, token));
+  ipcMain.handle(ipcChannel("getKnowledgeIndexStatus"), () => knowledgeIndexStatus(app));
+  ipcMain.handle(ipcChannel("getKnowledgeRootPreference"), () => getKnowledgeRootPreference(app));
+  ipcMain.handle(ipcChannel("chooseKnowledgeRoot"), async () => {
+    let defaultPath = "";
+    try {
+      defaultPath = (await getKnowledgeRootPreference(app)).root;
+    } catch (error) {
+      if (!(error instanceof KnowledgeLibraryError) || error.code !== "config_corrupt") throw error;
+    }
+    const result = await dialog.showOpenDialog(getMainWindow(), {
+      title: "Choose knowledge directory",
+      ...(defaultPath ? { defaultPath } : {}),
+      properties: ["openDirectory"]
+    });
+    return { canceled: result.canceled || !result.filePaths?.[0], path: result.filePaths?.[0] || "" };
+  });
+  ipcMain.handle(ipcChannel("saveKnowledgeRootPreference"), (_event, root) => saveKnowledgeRootPreference(app, root));
+  ipcMain.handle(ipcChannel("listKnowledgeDocuments"), async (_event, input) => {
+    if (input !== undefined && !isPlainObject(input)) throw new KnowledgeLibraryError("invalid_page", "Knowledge page options are invalid.");
+    return listKnowledgeDocuments(await selectedKnowledgeRoot(), input);
+  });
+  ipcMain.handle(ipcChannel("readKnowledgeDocument"), async (_event, reference) => readKnowledgeDocument(await selectedKnowledgeRoot(), reference));
+  ipcMain.handle(ipcChannel("readKnowledgeSection"), async (_event, reference) => readKnowledgeSection(await selectedKnowledgeRoot(), reference));
+  ipcMain.handle(ipcChannel("getKnowledgeLinks"), async (_event, reference, options) => {
+    if (options !== undefined && !isPlainObject(options)) throw new KnowledgeLibraryError("invalid_page", "Knowledge link options are invalid.");
+    return getKnowledgeLinks(await selectedKnowledgeRoot(), reference, options);
+  });
   ipcMain.handle(ipcChannel("clearLogs"), async () => {
     const result = await clearProductLogs(app);
     notifyRuntimeChanged("logs-clear");

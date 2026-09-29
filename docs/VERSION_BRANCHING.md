@@ -3,14 +3,17 @@
 ## Current Truth
 
 - `main` is the working Desktop line.
-- `codex/v0.7.0` is the active local development branch for the sqlite-vec
+- `codex/v0.8.0-local-knowledge` is the current local development branch for
+  the Knowledge collection, reading, retrieval, and recall work. See the
+  [v0.8.0 plan](V0.8.0_LOCAL_KNOWLEDGE_PLAN.md). The development version is 0.8.1; this is not a public release.
+- `codex/v0.7.0` was the development branch for the sqlite-vec
   feasibility and MCP compatibility work. See [the implementation plan](V0.7.0_DEVELOPMENT_PLAN.md).
   It corrects legacy version negotiation and adds a gated SQLite vector
   projection with native-resource packaging. The personal 0.7.0 Lite package defaults to sqlite-vec. Modern HTTP MCP now passes official SDK 2.0.0 and isolated package
   checks; actual Host acceptance is pending. `0.7.0-preview.2` is a local unsigned
   Lite trial artifact, not the public release.
 - `package.json` is the product-version source through `core/version.js`.
-- Current development version: `0.7.7` (public Full/Lite release).
+- Current development version: `0.8.1` (local Knowledge testing).
 - 0.7.2 retires stdio, keeps both HTTP protocol versions, and reserves CLI for internal maintenance. See [migration](HTTP_MCP_MIGRATION.md).
 - 0.7.7 adds bounded InnerLife state selection, output novelty and evidence review. See [plan](V0.7.7_INNERLIFE_PLAN.md) and [notes](RELEASE_NOTES_V0.7.7.md).
 - Current public release: `0.7.7`.

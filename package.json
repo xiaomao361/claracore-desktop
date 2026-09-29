@@ -1,6 +1,6 @@
 {
   "name": "claracore-desktop",
-  "version": "0.7.7",
+  "version": "0.8.1",
   "buildFlavor": "full",
   "private": true,
   "description": "ClaraCore desktop manager for the local personal cognitive core",
@@ -13,10 +13,11 @@
     "seed:ux:clear": "node scripts/seed-ux-test-data.js --clear",
     "memoria": "node core/cli.js",
     "check:syntax": "node scripts/check-js-syntax.js",
-    "check": "npm run check:syntax && npm run test:sql-lint && node core/tests/ipc-contract-lint.js && npm run test:login-item && npm run test:architecture && npm run test:context-budget && npm run test:turn-context && npm run test:innerlife:grounding",
+    "check": "npm run check:syntax && npm run test:sql-lint && node core/tests/ipc-contract-lint.js && npm run test:login-item && npm run test:architecture && npm run test:context-budget && npm run test:turn-context && npm run test:innerlife:grounding && npm run test:knowledge && npm run test:jev",
     "test:architecture": "node core/tests/product-core-owner-smoke.js && node core/tests/resource-refresh-loop-smoke.js && node core/tests/visible-data-refresh-smoke.js && node core/tests/agent-setup-contract-smoke.js && node core/tests/memory-hydration-smoke.js && node core/tests/repository-composition-smoke.js && node core/tests/innerlife-repository-boundary-smoke.js && node core/tests/innerlife-service-boundary-smoke.js && node core/tests/innerlife-session-service-boundary-smoke.js && node core/tests/innerlife-workflow-service-boundary-smoke.js && node core/tests/system-repository-boundary-smoke.js && node core/tests/continuity-repository-boundary-smoke.js && node core/tests/gateway-context-service-smoke.js",
     "test:shell": "node core/tests/run-ui-smoke.js core/tests/shell-window-smoke.js",
     "test:login-item": "node core/tests/login-item-settings-smoke.js",
+    "test:knowledge": "node core/tests/knowledge-library-smoke.js && node core/tests/knowledge-preferences-smoke.js && node core/tests/knowledge-intake-smoke.js && node core/tests/knowledge-gateway-http-smoke.js && node core/tests/knowledge-page-smoke.js && node core/tests/knowledge-search-smoke.js && node core/tests/knowledge-context-smoke.js",
     "test:ux:polish": "node core/tests/run-ui-smoke.js core/tests/ux-polish-ui-smoke.js",
     "test:onboarding": "node core/tests/run-ui-smoke.js core/tests/onboarding-ui-smoke.js",
     "test:home": "node core/tests/run-ui-smoke.js core/tests/home-presence-ui-smoke.js",
@@ -93,7 +94,9 @@
     "test:gateway": "node core/tests/phase2-gateway-smoke.js && node core/tests/phase3-gateway-smoke.js && node core/tests/phase4-gateway-contract-smoke.js && node core/tests/http-handoff-routing-smoke.js && npm run test:gateway:http && npm run test:mcp:protocol",
     "test:data-maintenance": "node core/tests/embedding-coverage-repair-smoke.js && node core/tests/scheduled-backup-smoke.js && node core/tests/scheduled-backup-order-smoke.js && node core/tests/innerlife-agent-candidate-smoke.js && node core/tests/backup-retention-smoke.js && node core/tests/backup-policy-form-smoke.js",
     "test:runtime-recovery": "node core/tests/runtime-recovery-smoke.js && node core/tests/memory-controller-retention-scheduler-smoke.js && node core/tests/visible-data-refresh-smoke.js",
-    "test:innerlife:grounding": "node core/tests/innerlife-grounding-smoke.js"
+    "test:innerlife:grounding": "node core/tests/innerlife-grounding-smoke.js",
+    "test:knowledge:semantic": "node core/tests/knowledge-search-smoke.js --builtin",
+    "test:jev": "node core/tests/jev-recall-smoke.js"
   },
   "build": {
     "beforePack": "scripts/stage-sqlite-vec.js",
@@ -111,6 +114,7 @@
       "electron/**/*",
       "assets/**/*",
       "core/**/*",
+      "!core/tests/fixtures/knowledge-quality-cases.json",
       "package.json"
     ],
     "extraResources": [
@@ -163,6 +167,7 @@
     "@modelcontextprotocol/client": "2.0.0",
     "electron": "^43.0.0",
     "electron-builder": "^26.15.3",
+    "linkedom": "^0.18.13",
     "playwright": "^1.61.0",
     "sqlite-vec": "0.1.9"
   },

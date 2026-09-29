@@ -33,15 +33,21 @@ matters is not the nodes but the connections between them — connections that
 can strengthen, weaken, re-attach, and grow. Recalling one memory should light
 up its neighborhood, not return an isolated row.
 
-The three modules are three maintenance duties over one network:
+The four domains have different maintenance duties over the shared world:
 
 | Module | Maintains |
 |--------|-----------|
-| Memoria | the stable nodes: facts, preferences, formed knowledge |
+| Memoria | confirmed facts, preferences, and decisions about the user and shared history |
 | Continuity | the currently active region: the shared position, what is live between agent and user |
 | InnerLife | the offline evolution: new connections that form even without new input |
+| Knowledge | sourced material and interpretations that can be read, questioned, and linked again |
 
-They are not three features. They are one world, maintained at three layers.
+The same topic can have different references in these domains. Knowledge keeps
+the sourced explanation; Memoria records an explicitly adopted decision;
+Continuity records the current work; InnerLife keeps its unverified thought as
+a thought. Linking these roles does not require copying the same article into
+each one. The planned Desktop integration and acceptance steps are recorded in
+[v0.8.0 local knowledge](./V0.8.0_LOCAL_KNOWLEDGE_PLAN.md).
 
 ## Design filter
 
@@ -57,7 +63,7 @@ not here. Prefer deepening connections over adding surfaces.
 ## Context delivery is part of maintaining the world
 
 ClaraCore keeps the shared world richer than any one conversation should
-receive. Preserving a complete Memory, Shared Line, or InnerLife history does
+receive. Preserving a complete Memory, Shared Line, InnerLife, or Knowledge history does
 not mean transmitting it by default.
 
 The delivery principle is:

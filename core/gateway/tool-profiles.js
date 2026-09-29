@@ -17,6 +17,10 @@ const PROFILE_NAMES = Object.freeze(["core", "full"]);
 //   propertyDescriptions  short descriptions to keep; every other nested
 //                         `description` in the schema is stripped
 const CORE_TOOL_SHAPES = Object.freeze({
+  knowledge_read: {},
+  knowledge_intake_preview: {},
+  knowledge_intake_commit: {},
+  knowledge_index_rebuild: {},
   claracore_status: {
     description: "Read product status, this caller connection, and secret-safe configuration. Inline API keys are never returned."
   },
@@ -36,8 +40,8 @@ const CORE_TOOL_SHAPES = Object.freeze({
     // compatibility/test path and stay in the full profile, which also keeps
     // this tool smaller in core than it was before prompt existed.
     description:
-      "Return one bounded Memory block or abstain. Set turnKind=goal_continuation only when the host continues a persistent goal without a new human message; collection is skipped. InnerLife stays with innerlife_share_check. Read-only.",
-    properties: ["prompt", "turnKind", "sessionId", "agentId"]
+      "Default: bounded Memory block or abstain. Knowledge-aware hosts opt into deliveryContract=memory-knowledge-v1 for deliver_context/blocks. Set turnKind=goal_continuation only when the host continues a persistent goal without a new human message; collection is skipped. InnerLife stays with innerlife_share_check. Read-only.",
+    properties: ["prompt", "turnKind", "sessionId", "agentId", "domain", "mode", "query", "deliveryContract"]
   },
   memory_context: {
     description:

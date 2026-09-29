@@ -24,6 +24,7 @@
       <nav aria-label="Primary">
         <button class="nav-item active" data-view="home"><span class="nav-icon nav-icon-home"></span><span data-i18n="nav.home">Home</span></button>
         <button class="nav-item" data-view="memory"><span class="nav-icon nav-icon-memory"></span><span data-i18n="nav.memory">Memoria</span></button>
+        <button class="nav-item" data-view="knowledge"><span class="nav-icon nav-icon-knowledge" aria-hidden="true"></span><span data-i18n="nav.knowledge">Knowledge</span></button>
         <button class="nav-item" data-view="shared-line"><span class="nav-icon nav-icon-shared-line"></span><span data-i18n="nav.sharedLine">Shared Line</span></button>
         <button class="nav-item" data-view="innerlife"><span class="nav-icon nav-icon-innerlife"></span><span data-i18n="nav.innerLife">InnerLife</span></button>
         <button class="nav-item" data-view="trace"><span class="nav-icon nav-icon-trace"></span><span data-i18n="nav.trace">Trace</span></button>
@@ -169,6 +170,110 @@
               </div>
             </div>
           </dialog>
+        </div>
+      </section>
+
+      <section id="knowledgeView" class="view">
+        <div class="knowledge-page">
+          <header class="knowledge-toolbar">
+            <button id="knowledgeToggleCatalog" type="button" class="secondary" aria-expanded="true" aria-controls="knowledgeCatalog" data-i18n="knowledge.reader.directory">Directory</button>
+            <div class="knowledge-actions">
+              <button id="knowledgeToggleSearch" type="button" class="secondary" aria-expanded="false" aria-controls="knowledgeSearchPanel" data-i18n="knowledge.search.title">Search knowledge</button>
+              <button id="knowledgeToggleTools" type="button" class="secondary" aria-expanded="false" aria-controls="knowledgeTools" data-i18n="knowledge.reader.tools">More</button>
+            </div>
+          </header>
+          <p id="knowledgePageStatus" role="status" aria-live="polite"></p>
+          <section id="knowledgeSearchPanel" hidden class="panel knowledge-search" aria-labelledby="knowledgeSearchTitle">
+            <h2 id="knowledgeSearchTitle" data-i18n="knowledge.search.title">Search knowledge</h2>
+            <form id="knowledgeSearchForm">
+              <label class="knowledge-search-query" for="knowledgeSearchQuery"><span data-i18n="knowledge.search.query">Query</span><input id="knowledgeSearchQuery" required maxlength="500" type="search"></label>
+              <label class="knowledge-search-mode" for="knowledgeSearchMode"><span data-i18n="knowledge.search.mode">Mode</span><select id="knowledgeSearchMode"><option value="exact" data-i18n="knowledge.search.exact">Exact</option><option value="semantic" data-i18n="knowledge.search.semantic">Semantic</option><option value="hybrid" data-i18n="knowledge.search.hybrid">Hybrid</option></select></label>
+              <button id="knowledgeSearchSubmit" type="submit" data-i18n="knowledge.search.submit">Search</button>
+            </form>
+            <p id="knowledgeSearchModeHint" class="knowledge-search-mode-hint"></p>
+            <div id="knowledgeSemanticOptions" class="knowledge-search-assist" hidden>
+              <div class="knowledge-semantic-summary">
+                <div><h3 id="knowledgeSemanticHeading"></h3><p id="knowledgeSemanticHint"></p></div>
+                <div class="knowledge-search-assist-actions">
+                  <button id="knowledgeSemanticBuild" type="button" class="secondary"></button>
+                  <button id="knowledgeSemanticPause" type="button" class="secondary" hidden disabled data-i18n="knowledge.search.pause">Pause</button>
+                  <button id="knowledgeSemanticSettings" type="button" class="secondary" data-view-target="settings" hidden data-i18n="knowledge.search.modelSettings">Model settings</button>
+                </div>
+              </div>
+              <progress id="knowledgeSemanticProgress" max="100" hidden data-i18n-aria-label="knowledge.search.progressLabel" aria-label="Search preparation progress"></progress>
+              <p id="knowledgeSemanticStatus" role="status" aria-live="polite"></p>
+            </div>
+            <p id="knowledgeSearchStatus" role="status"></p>
+            <div id="knowledgeSearchResults" class="knowledge-list"></div>
+            <div id="knowledgeSearchPagination" class="knowledge-search-pagination" hidden><button id="knowledgeSearchPrevious" type="button" class="secondary" disabled data-i18n="knowledge.page.previous">Previous</button><button id="knowledgeSearchNext" type="button" class="secondary" disabled data-i18n="knowledge.page.next">Next</button></div>
+          </section>
+
+          <section id="knowledgeTools" class="panel knowledge-tools" hidden aria-labelledby="knowledgeToolsTitle">
+            <div class="knowledge-tools-heading"><div><h2 id="knowledgeToolsTitle" data-i18n="knowledge.tools.title">Manage knowledge</h2><p id="knowledgePageRoot" class="quiet knowledge-path"></p></div>
+              <div class="knowledge-actions">
+              <button type="button" class="secondary" data-view-target="settings" data-i18n="knowledge.page.settings">Directory settings</button>
+              <button id="knowledgeRefresh" type="button" class="secondary" data-i18n="knowledge.page.refresh">Refresh</button>
+              </div>
+            </div>
+            <div id="knowledgeIndexAlert" class="knowledge-index-alert" hidden><span id="knowledgeIndexStatus" role="status"></span><button id="knowledgeRebuild" type="button" class="secondary" data-i18n="knowledge.page.rebuild">Rebuild index</button></div>
+          <details class="knowledge-activity" aria-labelledby="knowledgeActivityTitle">
+            <summary id="knowledgeActivityTitle" data-i18n="knowledge.page.activity">Recent intake</summary>
+            <p class="quiet" data-i18n="knowledge.page.activityHint">View Agent drafts and saved results. Refresh to see new activity.</p>
+            <p id="knowledgeActivityStatus" role="status"></p><div id="knowledgeActivityList" class="knowledge-list"></div>
+            <button id="knowledgeMoreActivity" class="link-button" type="button" hidden data-i18n="knowledge.page.moreActivity">More records</button>
+          </details>
+          <details id="knowledgeCapture" class="knowledge-capture">
+            <summary data-i18n="knowledge.capture.title">Save material to organize later</summary>
+            <p class="quiet" data-i18n="knowledge.capture.hint">Keep a source link or excerpt. An Agent can later check the source, organize sections and add meaningful links.</p>
+            <form id="knowledgeCaptureForm">
+              <div class="knowledge-form-row"><label for="knowledgeCaptureTitle"><span data-i18n="knowledge.capture.name">Title</span><input id="knowledgeCaptureTitle" maxlength="240" required></label><label for="knowledgeCaptureDate"><span data-i18n="knowledge.capture.date">Source date</span><input id="knowledgeCaptureDate" type="date" required></label></div>
+              <label for="knowledgeCaptureSource"><span data-i18n="knowledge.capture.source">Source URL, document or conversation reference</span><input id="knowledgeCaptureSource" maxlength="2000" required></label>
+              <label for="knowledgeCaptureBody"><span data-i18n="knowledge.capture.body">Original excerpt (optional for a source link)</span><textarea id="knowledgeCaptureBody" rows="7" aria-describedby="knowledgeCaptureNotice"></textarea></label>
+              <label for="knowledgeCaptureReason"><span data-i18n="knowledge.capture.reason">Why keep it?</span><input id="knowledgeCaptureReason" maxlength="2000" required></label>
+              <button id="knowledgeCapturePreview" class="secondary" type="submit" data-i18n="knowledge.capture.preview">Preview</button>
+            </form>
+            <p id="knowledgeCaptureNotice" role="status" aria-live="polite"></p>
+            <div id="knowledgeCapturePreviewPanel" hidden><h3 data-i18n="knowledge.capture.previewTitle">Content to save</h3><pre id="knowledgeCaptureAddition"></pre><button id="knowledgeCaptureSave" class="primary" type="button" data-i18n="knowledge.capture.save">Save to inbox</button> <button id="knowledgeCaptureCancel" class="secondary" type="button" data-i18n="knowledge.capture.cancel">End this preview</button></div>
+          </details>
+          </section>
+          <div id="knowledgeWorkspace" class="knowledge-workspace">
+            <section id="knowledgeCatalog" class="knowledge-catalog" aria-labelledby="knowledgeCatalogTitle">
+              <h2 id="knowledgeCatalogTitle" data-i18n="knowledge.page.documents">Documents</h2>
+              <label for="knowledgeFolder" data-i18n="knowledge.page.folder">Collection</label>
+              <select id="knowledgeFolder"><option value="" data-i18n="knowledge.page.all">Notes and topics</option><option value="notes" data-i18n="knowledge.page.notes">Notes</option><option value="topics" data-i18n="knowledge.page.topics">Topics</option><option value="inbox" data-i18n="knowledge.page.inbox">To organize</option></select>
+              <p id="knowledgeCatalogStatus" class="quiet" role="status"></p>
+              <div id="knowledgeCatalogList" class="knowledge-list"></div>
+              <div class="knowledge-pagination"><button id="knowledgePrevious" type="button" class="secondary" data-i18n="knowledge.page.previous">Previous</button><button id="knowledgeNext" type="button" class="secondary" data-i18n="knowledge.page.next">Next</button></div>
+            </section>
+            <div id="knowledgePanes" class="knowledge-panes">
+            <article id="knowledgeMainPane" class="knowledge-reader" data-i18n-aria-label="knowledge.page.reader" aria-label="Reader">
+              <div class="knowledge-reader-toolbar"><button id="knowledgeBack" type="button" class="secondary" disabled data-i18n="knowledge.page.back">Back to previous view</button><span id="knowledgeReaderPath" class="quiet knowledge-path"></span><button id="knowledgeCopyReference" type="button" class="link-button" disabled data-i18n="knowledge.page.copyDocument">Copy document reference</button></div>
+              <p id="knowledgeReaderStatus" role="status" aria-live="polite"></p>
+              <details id="knowledgeContents" hidden><summary data-i18n="knowledge.page.contents">Sections</summary><div id="knowledgeContentsList" class="knowledge-toc"></div></details>
+              <div id="knowledgeReaderBody" class="knowledge-prose" tabindex="-1"><p data-i18n="knowledge.page.select">Select a document to start reading.</p></div>
+              <section id="knowledgeRelations" class="knowledge-relations" hidden aria-labelledby="knowledgeRelationsTitle">
+                <h2 id="knowledgeRelationsTitle" data-i18n="knowledge.page.relations">Connections</h2>
+                <p id="knowledgeLinksStatus" role="status"></p>
+                <details open><summary data-i18n="knowledge.page.incoming">Linked from</summary><div id="knowledgeIncoming" class="knowledge-list"></div><button id="knowledgeMoreIncoming" class="link-button" type="button" hidden data-i18n="knowledge.page.more">More connections</button></details>
+                <details><summary data-i18n="knowledge.page.outgoing">Links in this document</summary><div id="knowledgeOutgoing" class="knowledge-list"></div><button id="knowledgeMoreOutgoing" class="link-button" type="button" hidden data-i18n="knowledge.page.more">More connections</button></details>
+              </section>
+            </article>
+            <div id="knowledgeDivider" class="knowledge-divider" role="separator" tabindex="0" aria-orientation="vertical" aria-valuemin="30" aria-valuemax="70" aria-valuenow="52" data-i18n-aria-label="knowledge.reader.resize" aria-label="Resize reading panes" hidden></div>
+            <article id="knowledgeReferencePane" class="knowledge-reader knowledge-reference" hidden data-i18n-aria-label="knowledge.reader.reference" aria-label="Reference reader">
+              <div class="knowledge-reader-toolbar">
+                <button id="knowledgeReferenceBack" type="button" class="secondary" disabled data-i18n="knowledge.reader.back">Back</button>
+                <span data-i18n="knowledge.reader.reference">Reference</span>
+                <button id="knowledgeReferencePromote" type="button" class="secondary" disabled data-i18n="knowledge.reader.promote">Read in main pane</button>
+                <button id="knowledgeReferenceClose" type="button" class="secondary" data-i18n="knowledge.reader.close">Close</button>
+              </div>
+              <p id="knowledgeReferencePath" class="quiet knowledge-path"></p>
+              <p id="knowledgeReferenceStatus" role="status" aria-live="polite"></p>
+              <details id="knowledgeReferenceContents" hidden><summary data-i18n="knowledge.page.contents">Sections</summary><div id="knowledgeReferenceContentsList" class="knowledge-toc"></div></details>
+              <div id="knowledgeReferenceBody" class="knowledge-prose" tabindex="-1"></div>
+            </article>
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -735,6 +840,32 @@
                 </div>
               </section>
 
+              <section class="settings-section-card" aria-labelledby="knowledgeDirectoryTitle">
+                <div class="settings-section-head">
+                  <div>
+                    <h3 id="knowledgeDirectoryTitle" data-i18n="knowledge.directory.title">Knowledge directory</h3>
+                    <p data-i18n="knowledge.directory.body">Choose the folder containing your Markdown knowledge. The original files stay there.</p>
+                  </div>
+                </div>
+                <div class="settings-grid">
+                  <div class="field wide-field">
+                    <label for="knowledgeRootPath" data-i18n="knowledge.directory.path">Selected folder</label>
+                    <div class="knowledge-root-field">
+                      <input id="knowledgeRootPath" type="text" readonly aria-describedby="knowledgeRootStatus" />
+                      <button id="clearKnowledgeRoot" type="button" data-i18n-aria-label="knowledge.directory.clear" aria-label="Clear knowledge directory setting" aria-describedby="knowledgeRootClearHint" hidden>
+                        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" /></svg>
+                      </button>
+                    </div>
+                    <small id="knowledgeRootClearHint" class="quiet" data-i18n="knowledge.directory.clearHint" hidden>Removing the setting does not delete files in the folder.</small>
+                  </div>
+                </div>
+                <div class="settings-actions compact-actions">
+                  <button id="chooseKnowledgeRoot" class="secondary" type="button" data-i18n="knowledge.directory.choose">Choose folder</button>
+                </div>
+                <p id="knowledgeRootStatus" class="quiet" role="status" aria-live="polite"></p>
+              </section>
+
+
               <div id="appDataSettingsGroups" class="advanced-settings-list">
                 <details id="dataRecoveryDetails" class="advanced-settings-group">
                   <summary><span><strong data-i18n="settings.dataRecoveryTitle">Data and recovery</strong><small data-i18n="settings.dataRecoveryBody">Create safe copies or recover local product data.</small></span></summary>
@@ -930,6 +1061,25 @@
                   </div>
                 </div>
               </details>
+              <details id="jevSettings" class="model-config-card capability-card" aria-labelledby="jevTitle">
+                <summary class="model-config-head">
+                  <div><h3 id="jevTitle" data-i18n="jev.title">Decision model</h3><p data-i18n="jev.privacy">Optional TypeSafe service. Only retrieval queries are sent.</p><strong class="capability-provider">TypeSafe · Jev</strong></div>
+                  <span class="capability-summary-action"><span data-i18n="settings.change">Change</span></span>
+                </summary>
+                <div class="capability-form">
+                  <div class="settings-grid jev-settings-grid">
+                    <label class="toggle-row jev-observation-toggle"><input id="jevEnabled" type="checkbox"><span data-i18n="jev.enable">Enable observation</span></label>
+                    <label class="field"><span data-i18n="jev.model">Model</span><span class="model-picker-field"><select id="jevModel"></select><button id="jevRefreshModels" class="secondary" type="button" data-i18n="settings.fetchModels">Fetch</button></span><small id="jevModelNotice" class="quiet" role="status" aria-live="polite"></small></label>
+                    <div class="jev-key-group">
+                      <label class="field"><span>API Key</span><input id="jevKey" type="password" autocomplete="new-password" maxlength="4096"></label>
+                      <label class="toggle-row"><input id="jevClearKey" type="checkbox"><span data-i18n="jev.clearKey">Remove saved key</span></label>
+                    </div>
+                  </div>
+                  <details class="jev-advanced"><summary data-i18n="jev.advanced">Advanced</summary><label class="field jev-advanced-field"><span data-i18n="jev.timeout">Timeout (ms)</span><input id="jevTimeout" type="number" min="250" max="5000" value="1200"></label></details>
+                  <div class="settings-actions compact-actions"><button id="jevSave" type="button" class="primary" data-i18n="jev.save">Save</button><button id="jevTest" type="button" class="secondary" data-i18n="jev.test">Test saved connection</button></div>
+                  <p id="jevStatus" role="status"></p>
+                </div>
+              </details>
             </div>
             <div class="settings-actions">
               <button id="saveSettings" class="primary" data-i18n="settings.saveCapabilities">Save capability settings</button>
@@ -1033,6 +1183,9 @@
     <script src="./app/views/home-vision.js"></script>
     <script src="./app/views/home.js"></script>
     <script src="./app/views/logs.js"></script>
+    <script src="./app/knowledge-markdown.js"></script>
+    <script src="./app/views/knowledge.js"></script>
+    <script src="./app/views/jev-settings.js"></script>
     <script src="./app/views/memoria-list.js"></script>
     <script src="./app/views/memoria.js"></script>
     <script src="./app/views/settings.js"></script>

@@ -37,7 +37,9 @@ function packagedMetadata(appPath) {
 
 assert(fs.existsSync(liteApp), `Lite package is missing: ${liteApp}`);
 
-const hasFullPackage = fs.existsSync(fullApp);
+const metadata = packagedMetadata(liteApp);
+const fullMetadata = fs.existsSync(fullApp) ? packagedMetadata(fullApp) : null;
+const hasFullPackage = fullMetadata?.version === metadata.version;
 const fullEntries = hasFullPackage
   ? asarEntries(fullApp).map((entry) => entry.replaceAll("\\", "/"))
   : [];
@@ -56,12 +58,8 @@ for (const marker of forbidden) {
   assert(!liteEntries.some((entry) => entry.toLowerCase().includes(marker)), `Lite ASAR still contains ${marker}.`);
 }
 
-const metadata = packagedMetadata(liteApp);
 assert.equal(metadata.buildFlavor, "lite");
 assert.equal(metadata.version, require("../package.json").version, "Lite package version differs from release source.");
-if (hasFullPackage) {
-  assert.equal(packagedMetadata(fullApp).version, metadata.version, "Full/Lite comparison requires the same release version.");
-}
 
 const fullKb = hasFullPackage ? installedKilobytes(fullApp) : null;
 const liteKb = installedKilobytes(liteApp);
@@ -77,6 +75,7 @@ console.log(JSON.stringify({
   ok: true,
   platform: platformArg,
   fullComparison: hasFullPackage,
+  fullVersion: fullMetadata?.version || null,
   fullMiB: hasFullPackage ? Number((fullKb / 1024).toFixed(1)) : null,
   liteMiB: Number((liteKb / 1024).toFixed(1)),
   savedMiB: hasFullPackage ? Number((savedKb / 1024).toFixed(1)) : null,

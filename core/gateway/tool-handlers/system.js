@@ -1,3 +1,6 @@
+const { CONTRACT, createKnowledgeContext } = require("../knowledge-context");
+const { searchKnowledge } = require("../../knowledge/search");
+const { evaluateJev } = require("../../jev/service");
 const { getGatewayContext } = require("../context");
 const { buildGatewayDocs } = require("../docs");
 const { arbitrateAutomaticContext } = require("../auto-context");
@@ -10,7 +13,11 @@ const { runMemoryContext } = require("./memory-controller");
 // than re-deriving eligibility. InnerLife is not collected: it stays
 // model-driven through innerlife_share_check.
 const turnContextService = createTurnContextService({
-  runMemoryController: (core, input) => runMemoryContext({ prompt: input.prompt }, core.handlerContext)
+  runMemoryController: (core, input) => runMemoryContext({ prompt: input.prompt }, core.handlerContext),
+  searchKnowledge: async (core, input) => {
+    try { return await searchKnowledge(core.handlerContext.runtimeAppForGateway(), input, await core.database.getSettings()); }
+    catch (error) { return { status: error.code || "knowledge_failed", items: [] }; }
+  }
 });
 
 async function handleSystemTool(name, args, context) {
@@ -95,6 +102,7 @@ async function handleSystemTool(name, args, context) {
 
   if (name === "gateway_auto_context") {
     const input = args || {};
+    if (input.deliveryContract && !["memory-v1", CONTRACT].includes(input.deliveryContract)) throw new Error("unsupported_delivery_contract");
     const prompt = String(input.prompt || "").trim();
     const turnKind = String(input.turnKind || "user").trim();
     const hasCandidates = Array.isArray(input.memoryCandidates) || Array.isArray(input.shareCandidates);
@@ -108,6 +116,7 @@ async function handleSystemTool(name, args, context) {
 
     const agentId = currentMcpAgentId(args);
     if (!prompt) {
+      if (input.deliveryContract === CONTRACT) throw new Error("dual_context_requires_prompt");
       return textResult(arbitrateAutomaticContext({ ...input, agentId }));
     }
 
@@ -117,6 +126,9 @@ async function handleSystemTool(name, args, context) {
     // it only repeats the same lookup and ledger work. The caller must label
     // this case explicitly so ordinary user turns never enter this fast path.
     if (turnKind === "goal_continuation") {
+      if (input.deliveryContract === CONTRACT) return textResult({ contract: CONTRACT, decision: "abstain", blocks: [], selected: [],
+        turnKind, collectionSkipped: true, reason: "non_user_goal_continuation", latencyMs: 0,
+        domainStatus: { memory: "skipped", knowledge: "skipped", innerlife: "not_collected" } });
       return textResult({
         ...arbitrateAutomaticContext({
           agentId,
@@ -129,20 +141,32 @@ async function handleSystemTool(name, args, context) {
       });
     }
 
+    if (input.domain && !["none", "memory", "knowledge", "both"].includes(input.domain)) throw new Error("invalid_recall_domain");
+    if (input.mode && !["exact", "semantic", "hybrid"].includes(input.mode)) throw new Error("invalid_recall_mode");
+    const jevPromise = input.domain === "none" ? Promise.resolve({ status: "skipped", applied: false }) : evaluateJev(context.runtimeAppForGateway(), input.query || prompt, { budgetMs: 1200 });
     const collected = await turnContextService.collect(
       { ...core, handlerContext: context },
-      { prompt, agentId }
+      { prompt, agentId, domain: input.domain, mode: input.mode, query: input.query }
     );
+    const memoryResult = arbitrateAutomaticContext({ agentId, memoryCandidates: collected.memoryCandidates,
+      shareCandidates: collected.shareCandidates, domainStatus: collected.domainStatus });
+    if (input.deliveryContract === CONTRACT) return textResult({
+      ...await createKnowledgeContext(context.runtimeAppForGateway(), memoryResult, collected.knowledgeSearch),
+      turnKind, collectionSkipped: false, jev: await jevPromise, latencyMs: collected.latencyMs
+    });
     return textResult({
-      ...arbitrateAutomaticContext({
-        agentId,
-        memoryCandidates: collected.memoryCandidates,
-        shareCandidates: collected.shareCandidates,
-        domainStatus: collected.domainStatus
-      }),
+      ...memoryResult,
       turnKind,
       collectionSkipped: false,
-      latencyMs: collected.latencyMs
+      latencyMs: collected.latencyMs,
+      jev: await jevPromise,
+      knowledgeObservation: {
+        status: collected.domainStatus.knowledge || "not_collected",
+        applied: false,
+        requestedMode: collected.domainStatus.knowledge === "skipped" ? null : input.mode || "semantic",
+        note: "Knowledge candidates are observation-only; existing hosts still consume the Memory block. Scores are not compared across domains.",
+        items: (collected.knowledgeSearch?.items || []).map(item => ({ reference: item.reference, detailRef: item.detailRef, matchedBy: item.matchedBy, semanticScore: item.semanticScore }))
+      }
     });
   }
 

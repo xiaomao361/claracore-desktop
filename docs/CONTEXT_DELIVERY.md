@@ -152,3 +152,17 @@ A new list, aggregate, write acknowledgement, or diagnostic read is incomplete
 until its default projection, expansion path, pagination truth, and byte budget
 are tested. A schema description that merely asks an Agent to be restrained is
 not an implementation of this contract.
+
+## v0.8.0 Knowledge Development Contract
+
+The development branch adds four everyday tools: `knowledge_read`,
+`knowledge_intake_preview`, `knowledge_intake_commit`, and
+`knowledge_index_rebuild`. The maintained core manifest ceiling is now 35 tools
+and 18 KiB (previously 31 and 14 KiB). Read actions remain a single bounded
+entry; new intake schemas retain attribution and reviewed-relation fields.
+Catalogs and exact matches default to 10 and allow up to 50. A preview shows
+the explicit proposed addition (at most 48 KiB); commit returns pointers and
+state rather than the body. Knowledge requests and read/preview results are
+omitted from the trace database to avoid retaining a second body copy.
+The explicit full Agent Guide ceiling is 14 KiB (previously 12 KiB) to include
+the Knowledge section. Default guide and individual-section ceilings are unchanged.

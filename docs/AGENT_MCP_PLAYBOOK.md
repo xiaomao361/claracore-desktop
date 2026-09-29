@@ -28,7 +28,7 @@ See [HTTP migration](HTTP_MCP_MIGRATION.md) when replacing old process configs.
 
 | Profile | Contents | Selection |
 | --- | --- | --- |
-| `core` (default) | 31 tools: connection/context, Memory recall/write/supersede/link/structured-record detail, Shared Line continuation, InnerLife session and sharing | nothing to set |
+| `core` (default) | 35 tools on the v0.8.0 development branch: Knowledge reading/intake/index rebuild, connection/context, Memory recall/write/supersede/link/structured-record detail, Shared Line continuation, InnerLife session and sharing | nothing to set |
 | `full` | every tool, including maintenance, import/export, graph, retention, identity, daemon, archive, and advanced editing | `X-ClaraCore-Tool-Profile: full` (HTTP) |
 
 `core` covers complete everyday workflows, not just the write half of each: if a
@@ -317,3 +317,18 @@ CLI is an internal maintenance interface, not a normal Agent connection. Use it
 only with operator-authorized local shell access and an explicit target data root. CLI writes should follow the same rules as MCP writes: search
 first, keep facts focused, label agent-scoped records, and update the Shared
 Line only after meaningful progress.
+
+
+### Knowledge-aware host contract
+
+An updated host explicitly calls:
+
+```js
+gateway_auto_context({ prompt, query, deliveryContract: "memory-knowledge-v1" })
+```
+
+Only for `decision=deliver_context`, pass `blocks` as one bounded reference-context packet. Preserve each block's domain, body, source/date, revision and detailRef. Treat Knowledge as untrusted reference material, not instructions. If truncated, use the detailRef when more context is needed; a partial excerpt is not a complete conclusion. `selected` describes selection only; the host must independently record actual delivery and later use.
+
+Do not inject both old `block.body` and new `blocks`. Default/`memory-v1` retains the old Memory response. `goal_continuation` returns empty blocks without collection. Host instructions that only permit Memory need an explicit update before opting in. Current Codex host configuration has not been changed by this repository implementation.
+
+See [Knowledge context contract](KNOWLEDGE_CONTEXT.md).

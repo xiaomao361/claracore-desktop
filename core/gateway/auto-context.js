@@ -149,7 +149,7 @@ function arbitrateAutomaticContext(input = {}) {
   if (!eligible.length) {
     // Distinguish "nothing qualified" from "nothing was collected", so a broken
     // domain is visible in the trace instead of reading as a quiet turn.
-    const degraded = Object.values(domainStatus).some((status) => status === "timeout" || status === "error");
+    const degraded = Object.values(domainStatus).some((status) => !["ok", "no_results", "skipped", "not_collected", "disabled", "not_selected"].includes(status));
     return {
       ...base,
       decision: "abstain",

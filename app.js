@@ -170,6 +170,9 @@ function t(key, values = {}) {
 let snapshot = null;
 let activeView = "home";
 let editingMemoryId = null;
+let knowledgeRootRequest = 0;
+let knowledgeRootBusy = false;
+const jevSettingsView = window.createJevSettings({ dom: window.ClaraCoreDom, api: window.ClaraCoreDesktop, t });
 const rendererState = {
   activeSharedLineAgentFilter: "",
   activeMemoryAgentFilter: "",
@@ -189,7 +192,7 @@ const pendingRuntimeScopes = new Set();
 const hydratedViews = new Set();
 const hydratingViews = new Map();
 const viewDetailReadCounts = new Map();
-const localOnlyHydrationViews = new Set(["memory", "agent-setup"]);
+const localOnlyHydrationViews = new Set(["memory", "agent-setup", "knowledge"]);
 const viewOwnedSnapshotFields = {
   memory: ["memories", "memoryGraph", "restrictedMemoryGraph", "memoryController"],
   home: ["agentActivitySummary"],
@@ -222,6 +225,11 @@ const modelOptions = window.createClaraCoreModelOptions({
   t,
   getSecretInputValue
 });
+const knowledgeView = window.createClaraCoreKnowledgeView({
+  dom: window.ClaraCoreDom, api: window.ClaraCoreDesktop, t,
+  markdown: window.ClaraCoreKnowledgeMarkdown, formatLocalDateTime
+});
+
 const logsView = window.createClaraCoreLogsView({
   dom: window.ClaraCoreDom,
   t,
@@ -659,13 +667,50 @@ function setView(viewName) {
   });
   viewTitle.textContent = t(views[nextView].titleKey);
   viewSubtitle.textContent = t(views[nextView].subtitleKey);
+  if (nextView === "settings") { loadKnowledgeRootPreference().catch(console.error); jevSettingsView.load(); }
   homeView.setActive(nextView === "home");
+  knowledgeView.setActive(nextView === "knowledge");
   if (enteringLogs) logsView.closeAdvancedDiagnostics();
   syncLogRefreshTimer();
   if (snapshot) {
     hydrateView(nextView).catch(console.error);
     dataRefreshLoop.refreshNow();
   }
+}
+
+function renderKnowledgeRootPreference(preference) {
+  const { knowledgeRootPath, knowledgeRootStatus, clearKnowledgeRoot, knowledgeRootClearHint } = window.ClaraCoreDom;
+  if (!knowledgeRootPath || !knowledgeRootStatus) return;
+  knowledgeRootPath.value = preference.root || "";
+  if (clearKnowledgeRoot) clearKnowledgeRoot.hidden = !preference.root;
+  if (knowledgeRootClearHint) knowledgeRootClearHint.hidden = !preference.root;
+  const keys = {
+    not_selected: "knowledge.directory.notSelected",
+    ok: "knowledge.directory.ready",
+    empty_corpus: "knowledge.directory.empty",
+    root_missing: "knowledge.directory.rootMissing",
+    permission_denied: "knowledge.directory.permissionDenied"
+  };
+  knowledgeRootStatus.textContent = t(keys[preference.status] || "knowledge.directory.invalid", {
+    count: preference.documentCount || 0
+  });
+}
+
+async function loadKnowledgeRootPreference() {
+  const request = ++knowledgeRootRequest;
+  try {
+    const preference = await window.ClaraCoreDesktop.getKnowledgeRootPreference();
+    if (request === knowledgeRootRequest && !knowledgeRootBusy) renderKnowledgeRootPreference(preference);
+  } catch (error) {
+    if (request === knowledgeRootRequest) window.ClaraCoreDom.knowledgeRootStatus.textContent = t("knowledge.directory.invalid");
+    console.error(error);
+  }
+}
+
+function setKnowledgeRootBusy(busy) {
+  knowledgeRootBusy = busy;
+  window.ClaraCoreDom.chooseKnowledgeRoot.disabled = busy;
+  window.ClaraCoreDom.clearKnowledgeRoot.disabled = busy;
 }
 
 function allViewNames() {
@@ -1207,6 +1252,46 @@ saveDataRootSettings?.addEventListener("click", async () => {
     storageSettingsNotice.textContent = t("settings.storageSaveFailed");
   } finally {
     saveDataRootSettings.disabled = false;
+  }
+});
+
+window.ClaraCoreDom.chooseKnowledgeRoot?.addEventListener("click", async () => {
+  if (knowledgeRootBusy) return;
+  const { knowledgeRootStatus } = window.ClaraCoreDom;
+  setKnowledgeRootBusy(true);
+  ++knowledgeRootRequest;
+  try {
+    const result = await window.ClaraCoreDesktop.chooseKnowledgeRoot();
+    if (result?.canceled) return;
+    if (typeof result?.path !== "string" || !result.path) {
+      knowledgeRootStatus.textContent = t("knowledge.directory.chooseFailed");
+      return;
+    }
+    knowledgeRootStatus.textContent = t("common.checking");
+    const preference = await window.ClaraCoreDesktop.saveKnowledgeRootPreference(result.path);
+    renderKnowledgeRootPreference(preference);
+  } catch (error) {
+    try { renderKnowledgeRootPreference(await window.ClaraCoreDesktop.getKnowledgeRootPreference()); } catch {}
+    knowledgeRootStatus.textContent = t("knowledge.directory.saveFailed", { error: error.message || String(error) });
+    console.error(error);
+  } finally {
+    setKnowledgeRootBusy(false);
+  }
+});
+
+window.ClaraCoreDom.clearKnowledgeRoot?.addEventListener("click", async () => {
+  if (knowledgeRootBusy) return;
+  const { knowledgeRootStatus } = window.ClaraCoreDom;
+  setKnowledgeRootBusy(true);
+  ++knowledgeRootRequest;
+  try {
+    const preference = await window.ClaraCoreDesktop.saveKnowledgeRootPreference("");
+    renderKnowledgeRootPreference(preference);
+  } catch (error) {
+    try { renderKnowledgeRootPreference(await window.ClaraCoreDesktop.getKnowledgeRootPreference()); } catch {}
+    knowledgeRootStatus.textContent = t("knowledge.directory.clearFailed", { error: error.message || String(error) });
+  } finally {
+    setKnowledgeRootBusy(false);
   }
 });
 

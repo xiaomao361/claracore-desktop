@@ -28,6 +28,9 @@ expanding `app.js`.
 - `views/trace.js`: read-only Trace narrative, milestones, Agent participation,
   domain counts, and advanced statistics.
 - `views/data.js`: SQLite backups, restore confirmation, and full product JSON import/export.
+- `views/knowledge.js`: selected-directory catalog and reader, section/backlink navigation,
+  intake activity and source capture through the shared intake service.
+- `knowledge-markdown.js`: escaped Markdown display and scoped link resolution; no raw HTML or automatic external loading.
 - `views/logs.js`: runtime logs, follow mode, decay audit, and time flow.
 - `views/settings.js`: Settings and model configuration rendering/collection.
 - `views/agent-setup.js`: focused Agent Access setup and copy surface.

@@ -166,9 +166,9 @@ it must change to keep its previous behavior.
 
 | Client / transport | Default tool manifest | Default payload shapes | Needs a client change? |
 | --- | --- | --- | --- |
-| **Codex** (HTTP MCP) | `core` (31 tools) | minimum-sufficient defaults | Use returned `detailRef` or one-object get tools when content is needed. Send `X-ClaraCore-Tool-Profile: full` only for advanced tools. |
-| **Claude Code** (HTTP MCP) | `core` (31 tools) | minimum-sufficient defaults | No change for ordinary recall/continuation; do not assume list rows contain bodies. |
-| **Hermes / Lara** (HTTP MCP) | `core` (31 tools) | minimum-sufficient defaults | Stop treating `shared_line_list` as resume content; select a line, then call `shared_line_get`. |
+| **Codex** (HTTP MCP) | `core` (35 tools on the v0.8.0 development branch) | minimum-sufficient defaults | Use returned `detailRef` or one-object get tools when content is needed. Send `X-ClaraCore-Tool-Profile: full` only for advanced tools. |
+| **Claude Code** (HTTP MCP) | `core` (35 tools on the v0.8.0 development branch) | minimum-sufficient defaults | No change for ordinary recall/continuation; do not assume list rows contain bodies. |
+| **Hermes / Lara** (HTTP MCP) | `core` (35 tools on the v0.8.0 development branch) | minimum-sufficient defaults | Stop treating `shared_line_list` as resume content; select a line, then call `shared_line_get`. |
 | **HTTP `/agent/setup`** | reports `toolProfiles` and `contextStates` | `firstCalls` no longer requires `gateway_docs` | No. |
 | **HTTP `/gateway/context`** | unchanged endpoint | bounded ambiguity body with `candidateCount`, `totalCount`, `detailRef` | No, unless it assumed an unbounded `candidates` array. |
 | **Desktop UI / CLI** | not applicable | **unchanged — full records** | No. Shaping is a Gateway-boundary concern only. |

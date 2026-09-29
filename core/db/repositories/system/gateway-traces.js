@@ -159,9 +159,14 @@ function createGatewayTraceRepository(helpers) {
       const toolName = String(input.toolName || "unknown").trim() || "unknown";
       const status = input.status === "error" ? "error" : "ok";
       const durationMs = Math.max(0, Number.parseInt(String(input.durationMs || 0), 10) || 0);
-      const responseSummary = String(input.responseSummary || "").slice(0, 500);
-      const error = String(input.error || "").slice(0, 500);
-      const request = boundedGatewayTraceRequest(input.request || {});
+      // Knowledge bodies stay in Markdown. Neither read results nor intake
+      // drafts belong in the product trace database as a second body copy.
+      const knowledge = toolName.startsWith("knowledge_") || (toolName === "gateway_auto_context" && input.request?.deliveryContract === "memory-knowledge-v1");
+      const responseSummary = knowledge ? `Knowledge operation: ${status}` : String(input.responseSummary || "").slice(0, 500);
+      const error = knowledge && input.error ? "Knowledge operation failed; inspect the caller result." : String(input.error || "").slice(0, 500);
+      const request = boundedGatewayTraceRequest(knowledge
+        ? { action: input.request?.action, mode: input.request?.mode, contentOmitted: true }
+        : input.request || {});
       const createdAt = new Date().toISOString();
       await this.exec(`
         INSERT INTO gateway_traces (id, agent_id, client_id, conversation_id, session_id, transport, tool_name, status, duration_ms, request_json, response_summary, error, created_at)

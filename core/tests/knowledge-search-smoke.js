@@ -1,0 +1,77 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const http = require('node:http');
+const { saveKnowledgeRootPreference } = require('../knowledge/preferences');
+const { searchKnowledge, rebuildKnowledgeSearchIndex, snapshot } = require('../knowledge/search');
+const { stateDirectory } = require('../knowledge/storage');
+const { createKnowledgeEmbedder, localEndpoint } = require('../knowledge/embedding');
+const { handleKnowledgeTool } = require('../gateway/tool-handlers/knowledge');
+async function main() {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'knowledge-search-'));
+  const root = path.join(tmp, 'corpus'), app = { getPath: () => path.join(tmp, 'data') };
+  let server;
+  try {
+    fs.mkdirSync(path.join(root, 'notes'), { recursive: true }); fs.mkdirSync(path.join(root, 'inbox'));
+    fs.writeFileSync(path.join(root, 'notes/a.md'), '# 资料\n\n<a id="rest"></a>\n## 休息\n来源：对话整理\n日期：2026-09-22\n睡眠让大脑恢复精力。\n\n<a id="long"></a>\n## 长文\n' + '填充内容。'.repeat(200) + '长文尾端证据\n');
+    fs.writeFileSync(path.join(root, 'inbox/raw.md'), '# 待整理\n私有待处理内容\n');
+    await saveKnowledgeRootPreference(app, root);
+    fs.writeFileSync(path.join(root, 'notes/z.md'), '---\nkb_id: test\ncreated: 2026-09-24\n---\n# Certbot\n来源：[Manual](https://example.org/' + 'x'.repeat(250) + ')\n\n## 使用\nCertbot command\n');
+    fs.writeFileSync(path.join(root, 'notes/b.md'), '# 普通资料\nCertbot body only\n');
+    const folded = await searchKnowledge(app, { query: '  certbot  ', textMatch: 'folded' });
+    assert.equal(folded.total, 3); assert.equal(folded.items[0].reference, 'notes/z.md#certbot');
+    assert.equal(folded.items[0].date, '', 'Document creation is not a section source date');
+    assert.equal(folded.items[0].documentDate, '2026-09-24');
+    assert.equal(folded.items[0].sourceLabel, 'Manual'); assert.equal(folded.items[0].sourceTruncated, true);
+    assert.equal(folded.items.find(item => item.reference.endsWith('#使用')).source, '', 'Sources must not leak across sections');
+    assert.equal((await searchKnowledge(app, { query: 'certbot' })).total, 0, 'Agent literal matching remains case sensitive');
+    const strictContext = { runtimeAppForGateway: () => app, currentCallerContext: () => ({}), textResult: result => ({ result }) };
+    assert.equal((await handleKnowledgeTool('knowledge_read', { action: 'search', query: 'certbot', textMatch: 'folded' }, strictContext)).result.total, 0);
+    fs.unlinkSync(path.join(root, 'notes/z.md')); fs.unlinkSync(path.join(root, 'notes/b.md'));
+    let key = 'model-1';
+    const embedded = [];
+    const ports = { createEmbedder: async () => ({ key, descriptor: { model: key }, embed: async (text) => { embedded.push(text); return /睡眠|休息|恢复/.test(text) ? [1, 0] : [0, 1]; } }) };
+    const exact = await searchKnowledge(app, { query: '长文尾端证据' }); assert.equal(exact.total, 1); assert.match(exact.items[0].reference, /#long$/);
+    assert.equal((await searchKnowledge(app, { query: '私有待处理内容' })).total, 0);
+    const partial = await searchKnowledge(app, { query: '睡眠', mode: 'hybrid' }, {}, ports); assert.equal(partial.status, 'partial'); assert.equal(partial.semanticError.code, 'index_missing'); assert.equal(partial.total, 1);
+    await assert.rejects(searchKnowledge(app, { query: '恢复', mode: 'semantic' }, {}, ports), { code: 'index_missing' });
+    let batch = await rebuildKnowledgeSearchIndex(app, {}, { batchSize: 1 }, ports); assert.equal(batch.status, 'building');
+    while (batch.status === 'building') batch = await rebuildKnowledgeSearchIndex(app, {}, { batchSize: 2 }, ports);
+    assert(embedded.some(text => text.includes('长文尾端证据')));
+    const result = await searchKnowledge(app, { query: '恢复活力', mode: 'semantic' }, {}, ports); assert.equal(result.items[0].reference, 'notes/a.md#rest'); assert.equal(result.items[0].date, '2026-09-22');
+    assert.equal((await searchKnowledge(app, { query: '无此文本' })).status, 'no_results');
+    const hybrid = await searchKnowledge(app, { query: '睡眠', mode: 'hybrid' }, {}, ports); assert.deepEqual(hybrid.items[0].matchedBy, ['exact', 'semantic']);
+    key = 'model-2'; await assert.rejects(searchKnowledge(app, { query: '恢复', mode: 'semantic' }, {}, ports), { code: 'model_changed' }); key = 'model-1';
+    const unavailable = { createEmbedder: async () => { const error = new Error('offline'); error.code = 'model_unavailable'; throw error; } };
+    await assert.rejects(searchKnowledge(app, { query: '恢复', mode: 'semantic' }, {}, unavailable), { code: 'model_unavailable' });
+    assert.equal((await searchKnowledge(app, { query: '睡眠', mode: 'hybrid' }, {}, unavailable)).status, 'partial');
+    await assert.rejects(searchKnowledge(app, { query: '恢复', mode: 'semantic' }, {}, { createEmbedder: async () => ({ key, embed: async () => [1, 0, 0] }) }), { code: 'model_changed' });
+    fs.appendFileSync(path.join(root, 'notes/a.md'), '\n新增内容');
+    await assert.rejects(searchKnowledge(app, { query: '恢复', mode: 'semantic' }, {}, ports), { code: 'index_stale' });
+    const indexPath = path.join(stateDirectory(app, root), 'semantic.json'); const before = fs.readFileSync(indexPath, 'utf8');
+    await assert.rejects(rebuildKnowledgeSearchIndex(app, {}, {}, { createEmbedder: async () => ({ key: 'new', embed: async () => [NaN] }) }), { code: 'invalid_embedding' }); assert.equal(fs.readFileSync(indexPath, 'utf8'), before);
+    fs.writeFileSync(indexPath, '{bad'); fs.writeFileSync(path.join(stateDirectory(app, root), 'semantic-building.json'), '{"schema":1,"entries":null}');
+    assert.equal((await searchKnowledge(app, { query: '新增', mode: 'hybrid' }, {}, ports)).semanticError.code, 'index_corrupt');
+    await rebuildKnowledgeSearchIndex(app, {}, { batchSize: 50 }, ports);
+    assert.equal((await searchKnowledge(app, { query: '恢复', mode: 'semantic' }, {}, ports)).status, 'ok');
+    assert.equal(snapshot(root).sections.find(s => s.reference.endsWith('#long')).source, '');
+    for (const url of ['https://example.com', 'http://localhost:11434', 'http://127.0.0.1/x', 'http://user@127.0.0.1']) assert.throws(() => localEndpoint(url), { code: 'local_model_required' });
+    let posted;
+    server = http.createServer((req, res) => { let body = ''; req.on('data', c => body += c); req.on('end', () => { res.setHeader('Content-Type', 'application/json'); if (req.url === '/api/tags') res.end(JSON.stringify({ models: [{ name: 'test:latest', digest: 'abc' }] })); else { posted = JSON.parse(body); res.end(JSON.stringify({ embeddings: [[1, 2, 3]] })); } }); });
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    const embedder = await createKnowledgeEmbedder({ 'memory.embedding.provider': 'ollama', 'memory.embedding.model': 'test', 'memory.embedding.base_url': `http://127.0.0.1:${server.address().port}` });
+    assert.equal((await embedder.embed('完整正文')).length, 3); assert.equal(posted.truncate, false); assert.equal(posted.input, '完整正文');
+    const context = { runtimeAppForGateway: () => app, currentCallerContext: () => ({}), textResult: result => ({ result }) };
+    assert.equal((await handleKnowledgeTool('knowledge_read', { action: 'search', query: '睡眠' }, context)).result.total, 1);
+    if (process.argv.includes('--builtin')) {
+      fs.writeFileSync(path.join(root, 'notes/a.md'), '# 休息\n睡眠可以帮助大脑恢复精力，提高注意力和记忆能力。\n');
+      fs.writeFileSync(path.join(root, 'notes/b.md'), '# 烹饪\n番茄切块放入锅中，加盐炒熟，搭配米饭食用。\n');
+      await rebuildKnowledgeSearchIndex(app, {}, { batchSize: 50 });
+      const real = await searchKnowledge(app, { query: '疲惫时怎样恢复精神和专注力', mode: 'semantic', minimumScore: -1 });
+      assert.equal(real.items[0].path, 'notes/a.md'); console.log('Built-in 512-dimensional local model: semantic ranking passed', real.items.map(x => ({ path: x.path, score: x.semanticScore })));
+    }
+    console.log('Knowledge search: exact/semantic/hybrid, complete windows, resume, stale/corrupt/model failures, local Ollama contract passed');
+  } finally { if (server) await new Promise(resolve => server.close(resolve)); fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+main().catch(error => { console.error(error); process.exitCode = 1; });

@@ -21,15 +21,17 @@ const CONTEXT_BUDGET_CEILINGS = Object.freeze({
   // the "when not to use this" clauses, which are what stop misuse. Better to
   // spend 2 KB than to make every tool description shallower. core is still
   // 31.7% of the full manifest and 65% below the 37,130-byte 0.6.5 baseline.
-  coreToolsList: 14 * 1024,
+  // v0.8.0 adds four knowledge tools: bounded read, preview, commit and index rebuild.
+  coreToolsList: 18 * 1024,
   // v0.6.10 adds memoria_record_get so the bounded record catalog has an
   // explicit one-object expansion path.
-  coreToolCount: 31,
+  coreToolCount: 35,
   docsDefault: 4 * 1024,
   docsSection: 8 * 1024,
   // `full` concatenates every section, so it is bounded as the sum rather than
   // as one more independent section.
-  docsFullSection: 12 * 1024,
+  // v0.8.0 includes the new Knowledge section in explicit full-guide reads.
+  docsFullSection: 14 * 1024,
   ambiguityPayload: 4 * 1024,
   ambiguityCandidatePreview: 240,
   ambiguityCandidateLimit: 5,

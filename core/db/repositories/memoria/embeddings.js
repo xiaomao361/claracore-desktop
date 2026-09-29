@@ -10,6 +10,15 @@ const MAX_VECTOR_SEARCH_RESULTS = 10;
 
 let builtInExtractorPromise = null;
 let builtInExtractorLoadStarted = false;
+let builtInExtractorRevision = null;
+function builtInModelRevision() {
+  const root = resolveBuiltInModelRoot();
+  return JSON.stringify([root, ...["config.json", "tokenizer.json", "onnx/model_quantized.onnx"].map(name => {
+    const stat = fs.statSync(path.join(root, BUILT_IN_EMBEDDING_MODEL, name));
+    return [name, stat.size, stat.mtimeMs];
+  })]);
+}
+
 
 function resolveBuiltInModelRoot() {
   const candidates = [
@@ -26,6 +35,7 @@ async function getBuiltInExtractor(model) {
     throw new Error("The Lite build does not include the ClaraCore built-in embedding model. Switch Memory embedding to Ollama or Disabled.");
   }
   if (!builtInExtractorPromise) {
+    builtInExtractorRevision = builtInModelRevision();
     builtInExtractorLoadStarted = true;
     builtInExtractorPromise = (async () => {
       const { pipeline, env } = require("@xenova/transformers");
@@ -45,8 +55,20 @@ function builtInEmbeddingLoadState() {
   };
 }
 
-async function createBuiltInEmbedding(prompt, model) {
+async function createBuiltInEmbedding(prompt, model, { rejectTruncation = false } = {}) {
   const extractor = await getBuiltInExtractor(model);
+  if (rejectTruncation) {
+    if (builtInExtractorRevision !== builtInModelRevision()) {
+      const error = new Error("Built-in model files changed; restart before reindexing.");
+      error.code = "model_changed"; throw error;
+    }
+    const tokens = extractor.tokenizer(prompt, { truncation: false, padding: false });
+    if (tokens.input_ids.dims.at(-1) > 512) {
+      const error = new Error("Knowledge embedding input exceeds the model token window.");
+      error.code = "embedding_input_too_long";
+      throw error;
+    }
+  }
   const output = await extractor(prompt, { pooling: "mean", normalize: true });
   const vector = Array.from(output?.data || []);
   if (vector.length !== 512) {
@@ -474,6 +496,8 @@ function createMemoriaEmbeddingRepository(helpers) {
 }
 
 module.exports = {
+  createBuiltInEmbedding,
+  resolveBuiltInModelRoot,
   builtInEmbeddingLoadState,
   createMemoriaEmbeddingRepository
 };

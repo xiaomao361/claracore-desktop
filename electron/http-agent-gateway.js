@@ -583,7 +583,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
         conversationId,
         transport: "streamable-http",
         toolName: name,
-        status: "ok",
+        status: result.isError ? "error" : "ok",
         durationMs: Date.now() - startedAt,
         request: callArgs,
         responseSummary: responseText(result)
