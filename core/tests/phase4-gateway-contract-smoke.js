@@ -162,8 +162,8 @@ async function main() {
     const docsText = docsResponse.result?.content?.[0]?.text || "";
     // section=full concatenates every section, so it is bounded as the sum
     // rather than as one more independent 8 KB section.
-    if (Buffer.byteLength(docsText, "utf8") > 12288) {
-      throw new Error(`Gateway docs section=full is ${Buffer.byteLength(docsText, "utf8")} bytes, over the 12 KB ceiling.`);
+    if (Buffer.byteLength(docsText, "utf8") > CONTEXT_BUDGET_CEILINGS.docsFullSection) {
+      throw new Error(`Gateway docs section=full is ${Buffer.byteLength(docsText, "utf8")} bytes, over the ${CONTEXT_BUDGET_CEILINGS.docsFullSection}-byte ceiling.`);
     }
     if (docsText.includes("[truncated")) {
       throw new Error("Gateway docs section=full was truncated; guidance must be bounded, not cut.");
