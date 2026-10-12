@@ -51,8 +51,8 @@ function createInnerLifeSessionRepository(_helpers, dependencies = {}) {
       const limit = Math.max(1, Math.min(Number.parseInt(String(input.limit || 10), 10) || 10, 50));
       const offset = Math.max(0, Number.parseInt(String(input.offset || 0), 10) || 0);
       const [items, total] = await Promise.all([
-        sessionStore.listCompact(this, agentId, limit, offset),
-        sessionStore.count(this, agentId)
+        sessionStore.listCompact(this, agentId, limit, offset, input.status || "all"),
+        sessionStore.count(this, agentId, input.status || "all")
       ]);
       return {
         agentId,

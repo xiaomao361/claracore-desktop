@@ -93,11 +93,19 @@ async function main() {
     const t = (key, values = {}) => { let text = window.ClaraCoreTranslationsZh[key]; assert.equal(typeof text, 'string'); for (const [name,value] of Object.entries(values)) text = text.replace(`{${name}}`, value); return text; };
     let tested = 0;
     const ui = createJevSettings({ dom, t, api: { getJevSettings: async () => getJevSettings(app), saveJevSettings: async input => saveJevSettings(app, input, ports), listJevModels: async () => listJevModels(app, { ...ports, fetch: modelFetch }), testJevConnection: async () => { tested++; return { status: 'not_configured', latencyMs: 0 }; } } });
-    await ui.load(); assert.equal(dom.jevEnabled.checked, false); dom.jevKey.value = 'ui-secret'; dom.jevKey.dispatchEvent(new window.Event('input', { bubbles: true }));
+    await ui.load(); assert.equal(dom.jevMode.querySelector('option[selected]').getAttribute('value'), 'off'); dom.jevKey.value = 'ui-secret'; dom.jevKey.dispatchEvent(new window.Event('input', { bubbles: true }));
     dom.jevTest.click(); assert.equal(tested, 0); assert.match(dom.jevStatus.textContent, /先保存/);
     dom.jevSave.click(); await new Promise(resolve => setImmediate(resolve)); assert.equal(dom.jevKey.value, ''); assert.equal(getJevSettings(app).keyConfigured, true);
-    dom.jevRefreshModels.click(); await new Promise(resolve => setImmediate(resolve)); assert.equal(dom.jevModel.querySelector('option[selected]')?.getAttribute('value'), 'jev-latest'); assert.match(dom.jevModelNotice.textContent, /已获取/);
+    dom.jevRefreshModels.click(); await new Promise(resolve => setImmediate(resolve)); assert.equal(dom.jevModel.value, 'jev-latest'); assert.match(dom.jevModelNotice.textContent, /已获取/);
     dom.jevTest.click(); await new Promise(resolve => setImmediate(resolve)); assert.equal(tested, 1);
+    // UI persists actual mode, not merely an observation boolean.
+    for (const option of dom.jevMode.querySelectorAll('option')) option.toggleAttribute('selected', option.getAttribute('value') === 'apply');
+    dom.jevMode.dispatchEvent(new window.Event('change', { bubbles: true }));
+    dom.jevSave.click(); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(getJevSettings(app).mode, 'apply');
+    answer = { type: 'choice', choice: 'both', confidence: .9, probabilities: { none: .01, memory: .04, knowledge: .05, both: .9 } };
+    const adoptAdvice = await evaluateJev(app, 'query', {}, ports);
+    assert.equal(adoptAdvice.mode, 'apply'); assert.equal(adoptAdvice.applied, false, 'Model response alone cannot prove adoption');
     console.log('Jev/recall: off has zero requests; encrypted credential port; query-only domain and knowledge-mode advice; independent failures; settings DOM passed. No live TypeSafe or host UI calls.');
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }

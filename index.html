@@ -1063,13 +1063,15 @@
               </details>
               <details id="jevSettings" class="model-config-card capability-card" aria-labelledby="jevTitle">
                 <summary class="model-config-head">
-                  <div><h3 id="jevTitle" data-i18n="jev.title">Decision model</h3><p data-i18n="jev.privacy">Optional TypeSafe service. Only retrieval queries are sent.</p><strong class="capability-provider">TypeSafe · Jev</strong></div>
+                  <div><h3 id="jevTitle" data-i18n="jev.title">Decision model</h3><p data-i18n="jev.privacy">Optional decision service. Only retrieval queries are sent.</p><strong id="jevProviderSummary" class="capability-provider">Decision model</strong></div>
                   <span class="capability-summary-action"><span data-i18n="settings.change">Change</span></span>
                 </summary>
                 <div class="capability-form">
                   <div class="settings-grid jev-settings-grid">
-                    <label class="toggle-row jev-observation-toggle"><input id="jevEnabled" type="checkbox"><span data-i18n="jev.enable">Enable observation</span></label>
-                    <label class="field"><span data-i18n="jev.model">Model</span><span class="model-picker-field"><select id="jevModel"></select><button id="jevRefreshModels" class="secondary" type="button" data-i18n="settings.fetchModels">Fetch</button></span><small id="jevModelNotice" class="quiet" role="status" aria-live="polite"></small></label>
+                    <label class="field jev-observation-toggle"><span data-i18n="jev.mode">Decision mode</span><select id="jevMode"><option value="off" data-i18n="jev.mode.off">Off</option><option value="shadow" data-i18n="jev.mode.shadow">Observe</option><option value="apply" data-i18n="jev.mode.apply">Use suggestions</option></select><small data-i18n="jev.mode.help">Using suggestions requires a compatible host.</small></label>
+                    <label class="field"><span data-i18n="jev.provider">Provider</span><select id="jevProvider"><option value="openai-compatible" data-i18n="jev.provider.openai">OpenAI compatible</option><option value="typesafe">TypeSafe · Jev</option></select></label>
+                    <label class="field"><span data-i18n="jev.baseUrl">API base URL</span><input id="jevBaseUrl" type="url" maxlength="2048" placeholder="https://api.openai.com/v1"></label>
+                    <label class="field"><span data-i18n="jev.model">Model</span><span class="model-picker-field"><input id="jevModel" type="text" list="jevModelOptions" maxlength="200" autocomplete="off"><datalist id="jevModelOptions"></datalist><button id="jevRefreshModels" class="secondary" type="button" data-i18n="settings.fetchModels">Fetch</button></span><small id="jevModelNotice" class="quiet" role="status" aria-live="polite"></small></label>
                     <div class="jev-key-group">
                       <label class="field"><span>API Key</span><input id="jevKey" type="password" autocomplete="new-password" maxlength="4096"></label>
                       <label class="toggle-row"><input id="jevClearKey" type="checkbox"><span data-i18n="jev.clearKey">Remove saved key</span></label>

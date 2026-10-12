@@ -15,7 +15,7 @@ const STATUS_ISSUE_BYTES = 300;
 const STATUS_ISSUE_LIMIT = 3;
 
 const SHARE_PREVIEW_BYTES = 320;
-const SHARE_CANDIDATE_LIMIT = 3;
+const SHARE_CANDIDATE_LIMIT = 10;
 const SHARE_CHECK_REASON_BYTES = 600;
 const SHARE_CHECK_EVIDENCE_LIMIT = 5;
 
@@ -112,11 +112,14 @@ function shapeInnerLifeStatus(snapshot, detailInput) {
       hasPendingShares: pendingShares.length > 0,
       pendingShareCount: Number(counts.pending_shares_count ?? pendingShares.length),
       hasPendingInbox: pendingInbox.length > 0,
-      pendingInboxCount: Number(counts.pending_inbox_count ?? pendingInbox.length)
+      pendingInboxCount: Number(counts.pending_inbox_count ?? pendingInbox.length),
+      activeSessionCount: Number(counts.active_sessions_count || 0),
+      sessionEndEvidence: "host_required"
     },
     detailRefs: {
       shares: { tool: "innerlife_pending_shares", arguments: {} },
-      inbox: { tool: "innerlife_status", arguments: { detail: true } },
+      inbox: { tool: "innerlife_status", arguments: { detail: "full", section: "inbox" } },
+      sessions: { tool: "innerlife_status", arguments: { detail: "full", section: "sessions", status: "active" } },
       full: { tool: "innerlife_status", arguments: { detail: true } }
     }
   };
@@ -131,7 +134,7 @@ function shapePendingShares(shares, detailInput, requestedLimit, totalInput) {
   if (detail === "full") return { detail, shares: all, totalPending };
 
   const parsedLimit = Number.parseInt(String(requestedLimit ?? SHARE_CANDIDATE_LIMIT), 10);
-  const limit = Math.max(1, Math.min(Number.isFinite(parsedLimit) ? parsedLimit : SHARE_CANDIDATE_LIMIT, 10));
+  const limit = Math.max(1, Math.min(Number.isFinite(parsedLimit) ? parsedLimit : SHARE_CANDIDATE_LIMIT, 50));
   const candidates = all.slice(0, limit).map((share) => ({
     id: share.id,
     agentId: share.agent_id || share.agentId || "",

@@ -47,7 +47,7 @@ const CONTEXT_BUDGET_CEILINGS = Object.freeze({
   // its own bound rather than forcing Shared Reality to be cut to fit 4 KB.
   sharedLineGetContext: 6 * 1024,
   innerlifeStatusDefault: 3 * 1024,
-  innerlifePendingSharesDefault: 3 * 1024,
+  innerlifePendingSharesDefault: 6 * 1024, // General catalog now defaults to ten identifiable previews.
   innerlifeShareCheckDefault: 6 * 1024,
   innerlifeBriefingDefault: 6 * 1024,
   gatewayContextBrief: 8 * 1024,

@@ -138,8 +138,8 @@ function createInnerLifeShareRepository(helpers, dependencies = {}) {
     async listInnerLifeShareSummariesPage(input = {}) {
       const statusFilter = String(input.status || "pending").trim();
       const agentFilter = String(input.agentId || input.agent_id || "all").trim();
-      const requestedLimit = Number.parseInt(String(input.limit ?? 3), 10);
-      const limit = Math.max(1, Math.min(Number.isFinite(requestedLimit) ? requestedLimit : 3, 10));
+      const requestedLimit = Number.parseInt(String(input.limit ?? 10), 10);
+      const limit = Math.max(1, Math.min(Number.isFinite(requestedLimit) ? requestedLimit : 10, 50));
       const offset = Math.max(0, Number.parseInt(String(input.offset || 0), 10) || 0);
       const filters = [];
       if (statusFilter !== "all") filters.push(`s.status = ${sqlString(statusFilter)}`);
@@ -151,7 +151,7 @@ function createInnerLifeShareRepository(helpers, dependencies = {}) {
                  s.created_at, s.updated_at
           FROM innerlife_shares s
           ${whereClause}
-          ORDER BY s.updated_at DESC, s.created_at DESC
+          ORDER BY s.updated_at DESC, s.created_at DESC, s.id DESC
           LIMIT ${limit} OFFSET ${offset};
         `),
         this.query(`SELECT COUNT(*) AS total FROM innerlife_shares s ${whereClause};`)

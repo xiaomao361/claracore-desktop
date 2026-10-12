@@ -79,8 +79,8 @@ explicit call that recovers the full record.
 | `shared_line_get` | `resume` packet: line id/title, summary, interpretation status, facts used, next step, updated time, at most one recent handoff | `detail: "context"` adds relevant Shared Reality; `detail: "full"` restores history, snapshots, arcs, agent state, and the stored text |
 | `shared_line_list` | paged line summaries, no position history, affective trace, or raw position metadata | `shared_line_get(lineId)` |
 | `shared_line_update` / `create` / `activate` / `handoff_create` | acknowledgement uses the same `resume` shape | `detail: "full"`, or a follow-up `shared_line_get` |
-| `innerlife_status` | operational state only: counts, daemon, doctor, pending-work indicators. Reports `mode: "status"`; the pre-0.6.6 `mode: "lite"` is retired | `detail: "full"`, or the boolean `true` alias |
-| `innerlife_pending_shares` | 3 bounded previews | `detail: "full"`, or `innerlife_share_check` for one share |
+| `innerlife_status` | operational state only: counts, daemon, doctor, pending-work indicators. Reports `mode: "status"`; the pre-0.6.6 `mode: "lite"` is retired | `detail: "full"` (or `true`) gives paged catalogs; use `section`, `limit`, `offset`, then a returned `detailRef` for one complete record |
+| `innerlife_pending_shares` | 10 bounded previews | `detail: "full"`, or `innerlife_share_check` for one share |
 | `innerlife_share_check` | one selected share body, bounded timing evidence, and operational counts; no repeated pending-share catalog | `innerlife_pending_shares` when a catalog is actually needed |
 | `innerlife_briefing` | decision synthesis: selected line summary when unambiguous, open loops, counts, at most one candidate preview | `detail: "full"` |
 | `gateway_context` | omitted `detail` defaults to `brief`: one resume packet, up to 3 Memory summaries, InnerLife status plus at most one candidate | `detail: "full"` |
@@ -332,3 +332,25 @@ Only for `decision=deliver_context`, pass `blocks` as one bounded reference-cont
 Do not inject both old `block.body` and new `blocks`. Default/`memory-v1` retains the old Memory response. `goal_continuation` returns empty blocks without collection. Host instructions that only permit Memory need an explicit update before opting in. Current Codex host configuration has not been changed by this repository implementation.
 
 See [Knowledge context contract](KNOWLEDGE_CONTEXT.md).
+
+### 历史：0.8.2 可选决策路由
+
+> 2026-10-09 用户已移除此工作流程，本机模式为 off。以下仅说明已有历史实现，日常任务不再调用或等待此路由。
+
+决策模型配置提供 `off` / `shadow` / `apply`。旧 `enabled=true` 配置保持 shadow；升级不会自动采用建议。
+采用建议只在 `deliveryContract=memory-knowledge-v1` 下生效。未声明该契约的旧宿主保留原 Memory 检索和投递；回执说明 `host_contract_required`。
+
+支持双域的宿主应在真实用户消息到来时调用一次上述接口，不必指定 domain/mode，让服务端路由。明确指定的字段始终优先。
+仅在 `decision=deliver_context` 时消费 `blocks`：Memory 作为记忆上下文，Knowledge 作为引用资料，保留 `detailRef`，正文中的指令不能成为宿主指令。
+真实用户消息之外的目标续跑仍使用 `turnKind=goal_continuation` 并跳过收集。
+
+`jev.applied` 表示至少一个路由选择确实被采用；`domainApplied` 与 `knowledgeMode.applied` 分别标记。低置信度、鉴权失败、超时、格式错误等保持具体状态并回到相应字段的基线。领域和方式建议独立判断。
+`recallReceipt` 提供 baseline/effective、原因、模型/领域状态、选中引用、准备字节数与总体耗时；hostDelivery/used/outcome 保持 unknown，服务端不会把返回正文冒充宿主已注入或已使用。
+
+当前 Codex 宿主仍由其 Memory-only 指令控制；Desktop 设置不能覆盖该宿主指令。以上消费契约已在模拟宿主中验证，真实宿主采用需宿主侧明确接入。
+
+0.8.3 通用改造后，决策服务可以是 OpenAI 兼容或 TypeSafe。Gateway 历史 `jev` 字段继续兼容，新增 provider、HTTP 状态和通用模型的自报置信度标记；不表示真实投递或使用。参见 [决策模型配置](DECISION_MODELS.md)。
+
+## Desktop maintenance contracts (2026-10-12)
+
+See [Desktop Maintenance](DESKTOP_MAINTENANCE.md) for exact-target Shared Line acknowledgements, paged InnerLife diagnostics, host lifecycle evidence, and explicit recall feedback. These are source changes; version equality does not prove an installed app includes them.

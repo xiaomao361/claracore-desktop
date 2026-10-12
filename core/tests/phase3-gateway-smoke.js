@@ -257,8 +257,8 @@ async function main() {
       throw new Error("Gateway shared_line_rename did not persist title.");
     }
     const archived = parseTextResult(await client.callTool("shared_line_archive", { lineId: createdLine.line.id }));
-    if (archived.line.status !== "archived" || archived.sharedLine.lineId !== "line_default") {
-      throw new Error("Gateway shared_line_archive did not archive and return to default.");
+    if (archived.line.status !== "archived" || archived.sharedLine.lineId !== createdLine.line.id) {
+      throw new Error("Gateway shared_line_archive did not acknowledge the exact archived line.");
     }
     const restored = parseTextResult(
       await client.callTool("shared_line_restore", {

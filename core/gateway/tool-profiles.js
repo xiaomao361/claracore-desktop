@@ -145,11 +145,11 @@ const CORE_TOOL_SHAPES = Object.freeze({
   },
   innerlife_status: {
     description:
-      "InnerLife operational state: counts, daemon, doctor, pending-work indicators. No share or Inbox bodies. Pass detail=true for the full snapshot."
+      "InnerLife operational state without bodies. detail=full returns paged catalogs; use section/limit/offset or recordId for one caller-owned record."
   },
   innerlife_pending_shares: {
     description:
-      "InnerLife share candidates as bounded previews, three by default. Reading never marks delivery.",
+      "InnerLife share candidates as bounded previews, ten by default. Reading never marks delivery.",
     properties: ["status", "limit", "offset", "detail"]
   },
   innerlife_share_check: {

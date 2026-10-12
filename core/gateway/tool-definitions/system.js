@@ -94,9 +94,9 @@ const systemToolDefinitions = [
       "type": "object",
       "properties": {
         "deliveryContract": { "type": "string", "enum": ["memory-v1", "memory-knowledge-v1"], "description": "Opt in to deliver_context/blocks for Knowledge-aware hosts. Default keeps legacy Memory block." },
-        "domain": { "type": "string", "enum": ["none", "memory", "knowledge", "both"], "description": "Recall collection scope; default both. Knowledge stays observation-only for current Memory-only hosts." },
-        "query": { "type": "string", "maxLength": 500, "description": "Optional bounded retrieval query; only this query (or bounded prompt) may reach enabled Jev shadow." },
-        "mode": { "type": "string", "enum": ["exact", "semantic", "hybrid"], "description": "Knowledge retrieval mode; default semantic. Memory retains its controller gates." },
+        "domain": { "type": "string", "enum": ["none", "memory", "knowledge", "both"], "description": "Explicit scope wins; otherwise both or opted-in Jev advice. Knowledge stays observation-only for current Memory-only hosts." },
+        "query": { "type": "string", "maxLength": 500, "description": "Optional bounded retrieval query; only this query (or bounded prompt) may reach enabled Jev." },
+        "mode": { "type": "string", "enum": ["exact", "semantic", "hybrid"], "description": "Explicit mode wins; otherwise semantic or opted-in Jev advice. Memory retains its controller gates." },
         "prompt": {
           "type": "string",
           "description": "The current user message. Mutually exclusive with the candidate arrays."

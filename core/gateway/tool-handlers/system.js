@@ -1,6 +1,6 @@
 const { CONTRACT, createKnowledgeContext } = require("../knowledge-context");
 const { searchKnowledge } = require("../../knowledge/search");
-const { evaluateJev } = require("../../jev/service");
+const { collectWithJev, recallReceipt } = require("../../jev/recall-route");
 const { getGatewayContext } = require("../context");
 const { buildGatewayDocs } = require("../docs");
 const { arbitrateAutomaticContext } = require("../auto-context");
@@ -143,23 +143,26 @@ async function handleSystemTool(name, args, context) {
 
     if (input.domain && !["none", "memory", "knowledge", "both"].includes(input.domain)) throw new Error("invalid_recall_domain");
     if (input.mode && !["exact", "semantic", "hybrid"].includes(input.mode)) throw new Error("invalid_recall_mode");
-    const jevPromise = input.domain === "none" ? Promise.resolve({ status: "skipped", applied: false }) : evaluateJev(context.runtimeAppForGateway(), input.query || prompt, { budgetMs: 1200 });
-    const collected = await turnContextService.collect(
+    const collected = await collectWithJev(context.runtimeAppForGateway(),
       { ...core, handlerContext: context },
-      { prompt, agentId, domain: input.domain, mode: input.mode, query: input.query }
-    );
+      { prompt, agentId, domain: input.domain, mode: input.mode, query: input.query, deliveryContract: input.deliveryContract },
+      (serviceCore, routeInput) => turnContextService.collect(serviceCore, routeInput));
     const memoryResult = arbitrateAutomaticContext({ agentId, memoryCandidates: collected.memoryCandidates,
       shareCandidates: collected.shareCandidates, domainStatus: collected.domainStatus });
-    if (input.deliveryContract === CONTRACT) return textResult({
-      ...await createKnowledgeContext(context.runtimeAppForGateway(), memoryResult, collected.knowledgeSearch),
-      turnKind, collectionSkipped: false, jev: await jevPromise, latencyMs: collected.latencyMs
-    });
+    if (input.deliveryContract === CONTRACT) {
+      const result = {
+        ...await createKnowledgeContext(context.runtimeAppForGateway(), memoryResult, collected.knowledgeSearch),
+        turnKind, collectionSkipped: false, jev: collected.jev, latencyMs: collected.latencyMs
+      };
+      return textResult({ ...result, recallReceipt: recallReceipt(result, collected) });
+    }
     return textResult({
       ...memoryResult,
       turnKind,
       collectionSkipped: false,
       latencyMs: collected.latencyMs,
-      jev: await jevPromise,
+      jev: collected.jev,
+      recallReceipt: recallReceipt(memoryResult, collected),
       knowledgeObservation: {
         status: collected.domainStatus.knowledge || "not_collected",
         applied: false,

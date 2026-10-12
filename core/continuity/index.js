@@ -40,7 +40,7 @@ async function rename(core, lineId, title, options = {}) {
   const line = await core.database.renameContinuityLine(lineId, title);
   return {
     line,
-    sharedLine: await core.database.getResumePacket({ lineId: line.active ? line.id : undefined, lite: options.lite === true })
+    sharedLine: await core.database.getResumePacket({ lineId: line.id, lite: options.lite === true })
   };
 }
 
@@ -48,7 +48,7 @@ async function archive(core, lineId, options = {}) {
   const line = await core.database.archiveContinuityLine(lineId);
   return {
     line,
-    sharedLine: await core.database.getResumePacket({ lite: options.lite === true })
+    sharedLine: await core.database.getResumePacket({ lineId: line.id, lite: options.lite === true })
   };
 }
 
@@ -56,7 +56,7 @@ async function restore(core, lineId, makeActive = false, options = {}) {
   const line = await core.database.restoreContinuityLine(lineId, makeActive);
   return {
     line,
-    sharedLine: await core.database.getResumePacket({ lineId: line.active ? line.id : undefined, lite: options.lite === true })
+    sharedLine: await core.database.getResumePacket({ lineId: line.id, lite: options.lite === true })
   };
 }
 

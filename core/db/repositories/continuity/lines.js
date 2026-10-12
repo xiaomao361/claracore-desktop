@@ -164,7 +164,7 @@ function createContinuityLineRepository(helpers) {
       const rows = await this.query(`
         SELECT id
         FROM continuity_lines
-        WHERE id = ${sqlString(requested)} AND status = 'active'
+        WHERE id = ${sqlString(requested)} AND status IN ('active', 'archived')
         LIMIT 1;
       `);
       if (!rows[0]?.id && requested !== "line_default") throw new Error("Shared Line not found.");

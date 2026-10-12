@@ -4,8 +4,8 @@ const { BUILD_FLAVOR, HAS_BUILT_IN_EMBEDDING } = require("../build-flavor");
 // version bump must explicitly confirm that the Agent Guide still describes
 // the shipped product; context-budget-smoke enforces parity.
 const DOCS_RELEASE = Object.freeze({
-  version: "0.8.1",
-  updatedAt: "2026-09-22"
+  version: "0.8.4",
+  updatedAt: "2026-10-12"
 });
 
 const DOCS_SECTIONS = Object.freeze([
@@ -106,7 +106,7 @@ function defaultDocs({ toolProfile }) {
     "- shared_line_list: bounded catalog -> shared_line_get",
     "- shared_line_get: a resume packet -> detail=context, detail=full",
     "- innerlife_status: operational state only -> detail=true",
-    "- innerlife_pending_shares: 3 previews -> innerlife_share_check returns one complete share without repeating the catalog, or detail=full",
+    "- innerlife_pending_shares: 10 previews -> innerlife_share_check returns one complete share without repeating the catalog, or detail=full",
     "- innerlife_briefing: one decision synthesis -> detail=full",
     "- gateway_context: omitted detail defaults to brief -> detail=full",
     "- gateway_trace_list: bounded summaries -> gateway_trace_get",
@@ -239,6 +239,7 @@ function memorySection() {
     "- memory_context runs the deterministic Memory Controller for the authenticated caller. Off is the default; observe returns bounded evidence with empty context.",
     "- The trusted canary returns at most one current project-scoped Memory owned by the authenticated caller. Unidentified callers and historical/all views stay context-free.",
     "- Treat canary context as prior read-only evidence. Verify current code, runtime, data, and user statements before acting, and never mutate Memory because of that block.",
+    "- recallReceipt.decisionId points to the Memory ledger; hostDelivery/used/outcome remain unknown without observation. Full-profile memory_context_feedback records evidenced delivered/used/ignored/wrong/corrected/outcome_unknown or inspects receipts. It never changes Memory and deduplicates identical acknowledgements.",
     "- Use explicit memoria_search for user-requested research, maintenance, audit, or historical comparison."
   ].join("\n");
 }
@@ -248,6 +249,7 @@ function sharedLineSection() {
     "## Shared Line",
     "",
     "- Shared Line is the current resumable working position, not long-term fact storage.",
+    "- Rename/archive/restore acknowledgements return the exact target line, never the global current line. Explicit archived-line reads preserve history; writes still require an active line.",
     "- shared_line_get returns a resume packet: line, summary, interpretation status, facts used, next step, and at most one recent handoff. Use detail=context for relevant Shared Reality and detail=full for history, snapshots, arcs, and agent state.",
     "- Start resume reads with gateway_context; omitted detail defaults to brief. shared_line_list is a bounded catalog and shared_line_get expands one selected line. In the catalog, status is lifecycle and isCurrent is only the globally selected fallback; an Agent-filtered page may have no current row.",
     "- SHARED_LINE_ID_REQUIRED is a safe refusal: nothing was read or written. Pick a candidate and retry with lineId.",
@@ -274,9 +276,9 @@ function innerLifeSection() {
     "- innerlife_session_start at the beginning of a real work session; it returns the session id, a compact share_plan, and a Shared Line resume packet.",
     "- innerlife_session_end with a structured summary of the actual conversation. Do not invent an afterthought; InnerLife decides whether one exists.",
     "- Session afterthoughts stay drafting and cannot enter share_plan, pending shares, or share checks until generation completes. Empty model output is discarded as no_model_output; model failures stay drafting while the durable job retries. Never treat a session_end placeholder as shareable content.",
-    "- innerlife_status returns operational state only: counts, daemon, doctor, and whether work is waiting. profileEnabled is profile participation across all InnerLife profile tools; loopEnabled is daemon scheduling. Pass detail=true for the full snapshot.",
+    "- innerlife_status returns operational state only: counts, daemon, doctor, and whether work is waiting. profileEnabled is profile participation across all InnerLife profile tools; loopEnabled is daemon scheduling. Pass detail=full for paged diagnostic catalogs (section/limit/offset); follow detailRef for one complete caller-owned record.",
     "- In Gateway trace request detail, truncated means one text field was shortened, previewOnly means the whole request was replaced by a bounded preview, and serializationFailed means JSON conversion failed.",
-    "- innerlife_pending_shares returns three bounded previews. General catalogs default to 10 rows and accept an explicit page up to 50; expand one object or one useful page instead of treating the ceiling as a target.",
+    "- innerlife_pending_shares returns ten bounded previews. General catalogs default to 10 rows and accept an explicit page up to 50; expand one object or one useful page instead of treating the ceiling as a target.",
     "- innerlife_share_check before surfacing a waiting share. It returns one complete share plus compact timing and operational evidence, not a repeated pending catalog. Pass real conversation context, not keywords. Topic overlap is supporting evidence rather than a hard gate; review the returned thought against the conversational register. Use at most one share per turn.",
     "- A waiting thought does not have to be about the current topic. The gate is register, not relevance: an off-topic engineering thought during engineering work is fine, the same thought during an intimate conversation is not. Automatic context never delivers shares for exactly this reason — only the model can read register.",
     "- innerlife_mark_share reports the outcome. action=used requires deliveryEvidence with conversationId, a responseExcerpt of at least 12 characters taken from what you actually said, and sharedAt. deferred and discarded need no evidence. An invalid transition returns the current share body and status for immediate reconciliation.",
@@ -296,7 +298,10 @@ function diagnosticsSection({ launch, paths }) {
     "- claracore_status for product health, this authenticated connection, and secret-safe configuration. Inline API keys are reported only as inline; env references remain visible.",
     "- gateway_trace_list returns bounded recent summaries; gateway_trace_get opens one request record. The operator can see these traces.",
     "- Every final tool response is capped. GATEWAY_RESPONSE_TOO_LARGE means narrow a page, select one object, or request an artifact.",
-    "- gateway_auto_context collects Memory and local Knowledge (domain/mode/query selectable), returns the existing bounded Memory block or abstains, and reports Knowledge pointers in knowledgeObservation (applied=false). Knowledge-aware hosts can request deliveryContract=memory-knowledge-v1 to receive deliver_context/blocks under one serialized budget; old hosts keep the Memory contract. Optional configured Jev is query-only shadow; it never changes retrieval. Set turnKind=goal_continuation only for a host-generated continuation without a new human message; that explicit label skips collection. It never marks delivery or use, and it never delivers InnerLife shares.",
+    "- gateway_auto_context collects Memory and local Knowledge (domain/mode/query selectable), returns the existing bounded Memory block or abstains, and reports Knowledge pointers in knowledgeObservation (applied=false). Knowledge-aware hosts can request deliveryContract=memory-knowledge-v1 to receive deliver_context/blocks under one serialized budget; old hosts keep the Memory contract. Set turnKind=goal_continuation only for a host-generated continuation without a new human message; that explicit label skips collection. It never marks delivery or use, and it never delivers InnerLife shares.",
+    "",
+    "- Decision model settings: off/shadow/apply. Apply requires the negotiated dual-domain contract; explicit choices win, low confidence/failure retains baseline. The decision receipt reports routes, references, bytes and unknown host delivery/use; applied means adoption, not retrieval success.",
+    "",
     "- Keep tool calls bounded. Never mutate SQLite directly.",
     "- Do not read local source files as the normal workflow; packaged Desktop runs from app.asar.",
     "",

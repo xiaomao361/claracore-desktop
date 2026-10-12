@@ -1,6 +1,10 @@
 window.ClaraCoreDom = {
   jevSettings: document.querySelector("#jevSettings"),
-  jevEnabled: document.querySelector("#jevEnabled"),
+  jevMode: document.querySelector("#jevMode"),
+  jevProvider: document.querySelector("#jevProvider"),
+  jevProviderSummary: document.querySelector("#jevProviderSummary"),
+  jevBaseUrl: document.querySelector("#jevBaseUrl"),
+  jevModelOptions: document.querySelector("#jevModelOptions"),
   jevModel: document.querySelector("#jevModel"),
   jevRefreshModels: document.querySelector("#jevRefreshModels"),
   jevModelNotice: document.querySelector("#jevModelNotice"),

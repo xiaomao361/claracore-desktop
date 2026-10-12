@@ -35,9 +35,17 @@ function createInnerLifeSessionStore(helpers) {
     };
   }
 
-  async function count(database, agentId = "all") {
+  function sessionFilter(agentId, status = "all") {
+    if (!["all", "active", "ended"].includes(status)) throw new Error("InnerLife session status must be all, active, or ended.");
+    const clauses = [];
+    if (agentId !== "all") clauses.push(`agent_id = ${sqlString(agentId)}`);
+    if (status !== "all") clauses.push(`status = ${sqlString(status)}`);
+    return clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+  }
+
+  async function count(database, agentId = "all", status = "all") {
     const agentFilter = String(agentId || "all").trim();
-    const whereClause = agentFilter === "all" ? "" : `WHERE agent_id = ${sqlString(agentFilter)}`;
+    const whereClause = sessionFilter(agentFilter, status);
     const rows = await database.query(`
       SELECT COUNT(*) AS count
       FROM innerlife_sessions
@@ -61,11 +69,11 @@ function createInnerLifeSessionStore(helpers) {
     return rows.map(mapSessionRow);
   }
 
-  async function listCompact(database, agentId = DEFAULT_AGENT_ID, limit = 20, offset = 0) {
+  async function listCompact(database, agentId = DEFAULT_AGENT_ID, limit = 20, offset = 0, status = "all") {
     const safeLimit = Math.max(1, Math.min(Number.parseInt(String(limit), 10) || 20, 100));
     const safeOffset = Math.max(0, Number.parseInt(String(offset), 10) || 0);
     const agentFilter = String(agentId || DEFAULT_AGENT_ID).trim();
-    const whereClause = agentFilter === "all" ? "" : `WHERE agent_id = ${sqlString(agentFilter)}`;
+    const whereClause = sessionFilter(agentFilter, status);
     const rows = await database.query(`
       SELECT id, agent_id, user_id, host, external_session_id, status, started_at, ended_at,
              substr(summary, 1, 600) AS summary

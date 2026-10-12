@@ -208,11 +208,11 @@ single-object reads retain meaningful evidence up to the final safety ceiling.
 - `agentState` is absent from every line packet. Read it once per session with
   `shared_line_agent_state`.
 - `innerlife_status` returns operational state only; pass `detail: "full"` (or
-  the boolean `true` alias) for the previous snapshot. **Its `mode` value
+  the boolean `true` alias) for paged diagnostic catalogs (`section`, `limit`, `offset`) and explicit caller-owned record reads. **Its `mode` value
   changed**: the default read now reports `mode: "status"` and the full read
   reports `mode: "full"`. The pre-0.6.6 `mode: "lite"` is retired — branch on
   `detail`, not on `mode`.
-- `innerlife_pending_shares` returns 3 previews; pass `detail: "full"` for whole
+- `innerlife_pending_shares` returns 10 previews; pass `detail: "full"` for whole
   bodies.
 - `innerlife_briefing` returns a decision synthesis with `counts` and no `text`
   block; pass `detail: "full"` for the previous aggregate.
@@ -429,3 +429,7 @@ After reconnecting, verify:
 3. `shared_line_list(status="active")` returns only the caller's owned lines.
 4. `innerlife_status` returns only the caller's profile and counts.
 5. `gateway_trace_list` records the correct agent, client, and conversation.
+
+## 2026-10-12 maintenance
+
+Shared Line mutation receipts stay on the exact target, including archived-line history reads. The Codex hook skips SessionStart registration only for the host-owned `.codex/memories` and `.codex/memories_v2` job directories; existing sessions still require actual Stop/terminal evidence. See [Desktop Maintenance](DESKTOP_MAINTENANCE.md).

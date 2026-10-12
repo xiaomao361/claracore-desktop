@@ -155,8 +155,8 @@ const innerlifeShareToolDefinitions = [
         "limit": {
           "type": "number",
           "minimum": 1,
-          "maximum": 10,
-          "description": "Default 3."
+          "maximum": 50,
+          "description": "Default 10."
         },
         "offset": {
           "type": "number",

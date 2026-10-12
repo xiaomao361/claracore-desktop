@@ -6,6 +6,7 @@ instructions.
 
 ## Start Here
 
+- [Desktop Maintenance](DESKTOP_MAINTENANCE.md): scoped receipts, diagnostic pagination, lifecycle and explicit recall feedback.
 - [Positioning](POSITIONING.md): product boundary and north star.
 - [Context Delivery](CONTEXT_DELIVERY.md): minimum-sufficient defaults,
   progressive disclosure, bounded explicit reads, and Agent-facing budgets.
@@ -33,6 +34,10 @@ instructions.
 
 ## Build And Release
 
+- [Decision Models](DECISION_MODELS.md): generic provider setup, credential isolation and routing boundaries.
+- [v0.8.4 Release Notes](RELEASE_NOTES_V0.8.4.md): Shared Line acknowledgements, paged diagnostics and evidenced Memory feedback.
+- [v0.8.3 Release Notes](RELEASE_NOTES_V0.8.3.md): generic decision model providers and credential isolation (development).
+- [v0.8.2 Release Notes](RELEASE_NOTES_V0.8.2.md): historical optional routing implementation and validation boundaries; daily-workflow participation discontinued 2026-10-09.
 - [v0.8.1 Release Notes](RELEASE_NOTES_V0.8.1.md): Knowledge search, recovery, metadata and real-corpus evaluation.
 
 - [v0.8.0 Local Knowledge Plan](V0.8.0_LOCAL_KNOWLEDGE_PLAN.md): staged

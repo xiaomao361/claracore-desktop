@@ -13,7 +13,7 @@
   checks; actual Host acceptance is pending. `0.7.0-preview.2` is a local unsigned
   Lite trial artifact, not the public release.
 - `package.json` is the product-version source through `core/version.js`.
-- Current source version: `0.8.1` (released local Knowledge support).
+- Current source version: `0.8.4` (Shared Line receipts, paged InnerLife diagnostics and explicit Memory feedback; local trial, not publicly released).
 - 0.7.2 retires stdio, keeps both HTTP protocol versions, and reserves CLI for internal maintenance. See [migration](HTTP_MCP_MIGRATION.md).
 - 0.7.7 adds bounded InnerLife state selection, output novelty and evidence review. See [plan](V0.7.7_INNERLIFE_PLAN.md) and [notes](RELEASE_NOTES_V0.7.7.md).
 - Current public release: `0.8.1`.

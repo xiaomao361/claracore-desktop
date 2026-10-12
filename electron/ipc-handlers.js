@@ -1,4 +1,4 @@
-const { getJevSettings, saveJevSettings, listJevModels, evaluateJev } = require("../core/jev/service");
+const { getDecisionModelSettings: getJevSettings, saveDecisionModelSettings: saveJevSettings, listDecisionModels: listJevModels, evaluateDecisionModel: evaluateJev } = require("../core/decision-model/service");
 const { searchKnowledge, rebuildKnowledgeSearchIndex } = require("../core/knowledge/search");
 const { ensureProductCore } = require("../core/runtime");
 const { previewKnowledgeIntake, commitKnowledgeIntake, knowledgeIndexStatus, rebuildKnowledgeIndex, listKnowledgeActivity, readKnowledgeActivity } = require("../core/knowledge/intake");

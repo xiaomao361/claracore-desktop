@@ -1,4 +1,6 @@
 const innerlife = require("../../innerlife");
+const { statusPage } = require("../innerlife-status-page");
+const { catalogInput } = require("../catalog-input");
 const {
   normalizeInnerLifeDetail,
   shapeInnerLifeBriefing,
@@ -112,10 +114,11 @@ async function handleInnerLifeTool(name, args, context) {
   }
 
   if (name === "innerlife_sessions") {
+    const pageInput = catalogInput(args);
     const page = await innerlife.recentSessionsPage(core, {
       agentId: currentMcpAgentId(args),
-      limit: args.limit,
-      offset: args.offset
+      ...pageInput,
+      status: args.status
     });
     return textResult({
       sessions: page.items.map(shapeInnerLifeSessionCatalogEntry),
@@ -131,16 +134,18 @@ async function handleInnerLifeTool(name, args, context) {
 
   if (name === "innerlife_session_get") {
     const session = await innerlife.session(core, args.id);
+    if (session && session.agentId !== currentMcpAgentId(args)) throw new Error("InnerLife record not found for this Agent.");
     return textResult(session ? { session } : { error: "not found", id: args.id });
   }
 
   if (name === "innerlife_status") {
-    // v0.6.6: the default read is operational state only. detail=true still
-    // returns the complete snapshot, including inbox bodies and history.
     const agentId = currentMcpAgentId(args);
     const detail = normalizeInnerLifeDetail(args.detail);
-    const snapshot = detail === "full" ? await innerlife.snapshot(core, agentId) : await innerlife.snapshotLite(core, agentId);
-    return textResult(shapeInnerLifeStatus(snapshot, detail));
+    if (detail === "full") return textResult(await statusPage(core, agentId, args));
+    if (["recordId", "section", "offset", "limit", "status"].some(key => args[key] !== undefined)) {
+      throw new Error("InnerLife status record and page arguments require detail=full.");
+    }
+    return textResult(shapeInnerLifeStatus(await innerlife.snapshotLite(core, agentId), detail));
   }
 
   if (name === "innerlife_briefing") {
@@ -227,19 +232,17 @@ async function handleInnerLifeTool(name, args, context) {
     // Summary reads project previews in SQL; full bodies require explicit
     // detail=full and remain capped to one bounded page.
     const detail = normalizeInnerLifeDetail(args.detail);
-    if (detail === "full") {
-      const shares = await innerlife.pendingShares(
-        core,
-        args.status || "pending",
-        Math.min(10, Number.parseInt(String(args.limit || 3), 10) || 3),
-        currentMcpAgentId(args)
-      );
-      return textResult(shapePendingShares(shares, detail, args.limit));
-    }
+    const pageInput = catalogInput(args);
+    const status = args.status || "pending";
+    if (!["all", "drafting", "pending", "approved", "rejected", "used", "deferred", "discarded"].includes(status)) throw new Error("Invalid InnerLife status filter.");
     const page = await innerlife.pendingShareSummaries(core, {
-      ...args,
-      agentId: currentMcpAgentId(args)
+      ...args, ...pageInput, agentId: currentMcpAgentId(args)
     });
+    if (detail === "full") {
+      const shares = await Promise.all(page.items.map(item => core.database.getInnerLifeShare(item.id)));
+      return textResult({ ...shapePendingShares(shares, detail, page.limit, page.total),
+        page: { ...pageInput, returned: shares.length, total: page.total, hasMore: page.offset + shares.length < page.total } });
+    }
     return textResult({
       ...shapePendingShares(page.items, detail, page.limit, page.total),
       page: {

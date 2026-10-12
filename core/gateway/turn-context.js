@@ -63,8 +63,8 @@ function withTimeout(operation, timeoutMs, domain) {
 function domainOutcome(settled, domain) {
   if (settled.status === "fulfilled") return { status: "ok", value: settled.value };
   const error = settled.reason;
-  if (error instanceof DomainTimeoutError) return { status: "timeout", value: null, domain };
-  return { status: "error", value: null, reason: error?.message || String(error) };
+  if (error instanceof DomainTimeoutError) return { status: "timeout", value: null, domain, decisionId: error.decisionId || "" };
+  return { status: "error", value: null, reason: error?.message || String(error), decisionId: error?.decisionId || "" };
 }
 
 function createTurnContextService(inputPorts = {}) {
@@ -76,7 +76,11 @@ function createTurnContextService(inputPorts = {}) {
 
   async function collectMemory(core, { prompt, agentId }) {
     const packet = await ports.runMemoryController(core, { prompt, agentId });
-    if (packet?.resultStatus === "error") { const error = new Error(packet.reason || "memory_failed"); error.code = packet.reason || "memory_failed"; throw error; }
+    if (["timeout", "error"].includes(packet?.resultStatus)) {
+      const error = packet.resultStatus === "timeout" ? new DomainTimeoutError("memory") : new Error(packet.reason || "memory_failed");
+      error.decisionId = packet.decisionId || "";
+      throw error;
+    }
     const context = typeof packet?.context === "string" ? packet.context : "";
     // Forward the Controller's real similarity score. Hardcoding 1 here made
     // any injected Memory outrank every share permanently: a 0.4 Memory beat a
@@ -89,6 +93,7 @@ function createTurnContextService(inputPorts = {}) {
     return [
       {
         id: selectedId || packet?.decisionId || "",
+        decisionId: packet?.decisionId || "",
         agentId,
         action: packet?.action || "",
         policyMode: packet?.policyMode || "",
@@ -132,6 +137,7 @@ function createTurnContextService(inputPorts = {}) {
         knowledgeSearch: knowledge.value,
         knowledgeFailure: knowledge.reason || null,
         memoryCandidates: memory.value || [],
+        memoryDecisionId: memory.value?.[0]?.decisionId || memory.decisionId || "",
         shareCandidates: [],
         // "not_collected" is not "nothing was waiting": InnerLife is reached
         // through innerlife_share_check, not through automatic delivery.

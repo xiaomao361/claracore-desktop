@@ -115,13 +115,13 @@ function createInnerLifeReadModelRepository(helpers) {
           enabled: Boolean(row.enabled)
         }));
       const selectedProfile = profiles.find((item) => item.agentId === requestedAgentId) || profiles.find((item) => item.agentId === DEFAULT_AGENT_ID) || profiles[0] || null;
-      const pendingShares = (await this.listInnerLifeShares("pending", 20, requestedAgentId)).map((share) => ({
+      const pendingShares = (await this.listInnerLifeShareSummariesPage({ status: "pending", limit: 20, agentId: requestedAgentId })).items.map((share) => ({
         id: share.id,
         agent_id: share.agent_id,
         status: share.status,
         created_at: share.created_at,
         updated_at: share.updated_at,
-        preview: String(share.body || "").slice(0, 200)
+        preview: String(share.preview || "").slice(0, 200)
       }));
       const settings = selectedProfile ? await this.getSettings() : null;
       const daemon = selectedProfile
@@ -130,6 +130,7 @@ function createInnerLifeReadModelRepository(helpers) {
       const counts = await this.getInnerLifeCounts(requestedAgentId);
       const pendingInbox = selectedProfile
         ? await this.listInnerLifeInboxForAgent(selectedProfile.agentId, "pending", 5, {
+            summaryOnly: true,
             excludeSources: ["session_end_afterthought"]
           })
         : [];

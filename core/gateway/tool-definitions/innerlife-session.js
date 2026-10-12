@@ -136,6 +136,7 @@ const innerlifeSessionToolDefinitions = [
           "minimum": 1,
           "maximum": 50
         },
+        "status": { "type": "string", "enum": ["all", "active", "ended"] },
         "offset": {
           "type": "number",
           "minimum": 0
@@ -160,16 +161,21 @@ const innerlifeSessionToolDefinitions = [
   {
     "name": "innerlife_status",
     "title": "InnerLife Status",
-    "description": "Read Desktop-owned InnerLife operational state: counts, daemon, doctor, and indicators that shares or Inbox work are waiting. It does not return share bodies or Inbox bodies. Pass detail=true for the full snapshot including inbox, sessions, digest runs, and history.",
+    "description": "Read Desktop-owned InnerLife operational state: counts, daemon, doctor, and indicators that shares or Inbox work are waiting. It does not return share bodies or Inbox bodies. Pass detail=full for paged diagnostic catalogs, then follow detailRef for a complete selected record.",
     "inputSchema": {
       "type": "object",
       "properties": {
+        "section": { "type": "string", "enum": ["overview", "sessions", "inbox", "digestRuns", "shares"] },
+        "limit": { "type": "integer", "minimum": 1, "maximum": 50 },
+        "offset": { "type": "integer", "minimum": 0 },
+        "status": { "type": "string", "description": "Filter a sessions, inbox or shares section. Sessions: all, active or ended." },
+        "recordId": { "type": "string", "description": "Read one complete record in the selected section; restricted to the caller Agent." },
         "detail": {
           "oneOf": [
             { "type": "string", "enum": ["summary", "full"] },
             { "type": "boolean" }
           ],
-          "description": "summary (default) is operational state only; full returns the complete snapshot. Boolean true is a compatibility alias for full. Responses report mode=status or mode=full; clients that branched on the pre-0.6.6 mode value must use detail instead."
+          "description": "summary (default) is operational state only; full returns bounded catalogs with section/limit/offset and explicit record reads. Boolean true is a compatibility alias for full. Responses report mode=status or mode=full; clients that branched on the pre-0.6.6 mode value must use detail instead."
         }
       },
       "additionalProperties": false

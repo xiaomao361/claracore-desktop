@@ -243,15 +243,18 @@ function createMemoryControllerRepository(helpers) {
           ${jsonSql(evidence)},
           ${input.observedAt || input.observed_at ? sqlString(new Date(input.observedAt || input.observed_at).toISOString()) : "NULL"},
           ${idempotencyKey ? sqlString(idempotencyKey) : "NULL"}
-        );
+        ) ON CONFLICT(idempotency_key) WHERE idempotency_key IS NOT NULL AND idempotency_key != '' DO NOTHING;
       `);
-      const rows = await this.query(`SELECT * FROM memory_control_feedback WHERE id = ${sqlString(id)} LIMIT 1;`);
+      const rows = idempotencyKey
+        ? await this.query(`SELECT * FROM memory_control_feedback WHERE idempotency_key = ${sqlString(idempotencyKey)} LIMIT 1;`)
+        : await this.query(`SELECT * FROM memory_control_feedback WHERE id = ${sqlString(id)} LIMIT 1;`);
       return mapFeedbackRow(rows[0]);
     },
 
     async listMemoryControlFeedback(input = {}) {
       const decisionId = boundedText(input.decisionId || input.decision_id, 160);
       const limit = Math.max(1, Math.min(100, boundedInteger(input.limit, 20, 100) || 20));
+      const offset = boundedInteger(input.offset, 0);
       const filters = [];
       if (decisionId) filters.push(`decision_id = ${sqlString(decisionId)}`);
       if (input.feedbackType || input.feedback_type) {
@@ -262,7 +265,7 @@ function createMemoryControllerRepository(helpers) {
         SELECT * FROM memory_control_feedback
         ${where}
         ORDER BY created_at DESC, id DESC
-        LIMIT ${limit};
+        LIMIT ${limit} OFFSET ${offset};
       `);
       return rows.map(mapFeedbackRow);
     },

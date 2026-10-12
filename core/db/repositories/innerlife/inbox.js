@@ -46,7 +46,8 @@ function createInnerLifeInboxRepository(helpers) {
       const excludeSources = (options.excludeSources || []).map((source) => String(source || "").trim()).filter(Boolean);
       if (excludeSources.length) filters.push(`source NOT IN (${excludeSources.map(sqlString).join(", ")})`);
       const rows = await this.query(`
-        SELECT id, agent_id, source, body, status, created_at, processed_at, metadata_json
+        SELECT id, agent_id, source, ${options.summaryOnly ? "substr(body, 1, 800)" : "body"} AS body,
+               status, created_at, processed_at, ${options.summaryOnly ? "'{}'" : "metadata_json"} AS metadata_json
         FROM innerlife_inbox
         WHERE ${filters.join(" AND ")}
         ORDER BY created_at DESC, id DESC
