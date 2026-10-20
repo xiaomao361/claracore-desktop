@@ -1,5 +1,6 @@
 const { createContinuityAgentRepository } = require("./continuity/agents");
 const { createContinuityLineRepository } = require("./continuity/lines");
+const { positionGuardSql, guardedWrite } = require("./continuity/position-guard");
 const { composeRepositoryMethods, installRepositoryMethods } = require("../repository-installer");
 
 function installContinuityRepository(ProductDatabase, helpers) {
@@ -241,7 +242,8 @@ function installContinuityRepository(ProductDatabase, helpers) {
       const metadata = buildContinuityMetadata(input || {}, current);
       const writerAgentId = String(input?.agentId || input?.agent_id || "").trim();
       if (writerAgentId) metadata.writerAgentId = resolveAgentIdentity({ agentId: writerAgentId }).id;
-      await this.exec(`
+      await guardedWrite(this, `
+        ${positionGuardSql(lineId, input.expectedPosition)}
         INSERT INTO current_positions (id, line_id, summary, interpretation_status, facts_used_json, metadata_json, updated_at)
         VALUES (${sqlString(positionId)}, ${sqlString(lineId)}, ${sqlString(summary)}, ${sqlString(status)}, ${jsonSql(factsUsed)}, ${jsonSql(metadata)}, CURRENT_TIMESTAMP)
         ON CONFLICT(line_id) DO UPDATE SET
@@ -260,7 +262,7 @@ function installContinuityRepository(ProductDatabase, helpers) {
         UPDATE continuity_lines
         SET updated_at = CURRENT_TIMESTAMP
         WHERE id = ${sqlString(lineId)};
-      `);
+      `, input.expectedPosition);
       return this.getCurrentPosition(lineId);
     },
 

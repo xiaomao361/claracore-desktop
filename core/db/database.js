@@ -209,6 +209,21 @@ class ProductDatabase {
     });
   }
 
+  // One SQLite-domain write with rollback on failure. This does not include
+  // Markdown or the Gateway execution journal in a distributed transaction.
+  async execAtomic(sql) {
+    return withDatabaseLock(this.dbPath, async () => {
+      if (!this.sqlite?.DatabaseSync) return runSqliteCli(this.dbPath, `BEGIN IMMEDIATE; ${sql} COMMIT;`, false);
+      const db = this.openConnection();
+      try { db.exec(`BEGIN IMMEDIATE; ${sql} COMMIT;`); return []; }
+      catch (error) {
+        try { db.exec("ROLLBACK;"); }
+        catch { db.close(); this.connection = null; }
+        throw error;
+      }
+    });
+  }
+
   async exec(sql) {
     return withDatabaseLock(this.dbPath, async () => {
       if (this.sqlite?.DatabaseSync) {

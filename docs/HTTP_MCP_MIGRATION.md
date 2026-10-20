@@ -14,6 +14,11 @@ CLI 保留为内部维护入口，不作为 Agent 的接入回退。
 3. 配置 `Authorization: Bearer <token>`、`X-ClaraCore-Agent-ID` 和
    `X-ClaraCore-Client-ID`。宿主可提供当前对话 ID 时，再发送
    `X-ClaraCore-Conversation-ID`；该字段不能代替 InnerLife 的 sessionId。
+   `understanding_submit` 和 `understanding_resume` 必须有真实会话 ID，缺少时
+   返回 `conversation_identity_required`；`understanding_context` 不要求此头。
+   旧工具在无会话 ID 时可用，不能推导为所有新工具都可用。宿主应按当前真实
+   会话动态发送，同会话重连/恢复保持一致，新会话使用不同 ID；不要在全局配置
+   填一个跨会话共用的固定值。此身份头不授予模型/写入权限，也不启用自动采集。
 4. 重新连接，调用 `claracore_connection_test`，再调用
    `gateway_context(detail="brief")`。多线歧义时选择明确 lineId 再试。
 5. 不支持 Streamable HTTP 的客户端需要升级或更换；旧 HTTP 协议兼容

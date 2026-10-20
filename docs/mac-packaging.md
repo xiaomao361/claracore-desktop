@@ -6,6 +6,12 @@ The current public stable release is `0.8.1`, tagged `v0.8.1`. Treat
 [Version Branching](VERSION_BRANCHING.md) and the versioned release notes as
 the release truth.
 
+The current local source checkpoint is `1.0.0`, approved by the user on
+2026-10-19. The local arm64 Lite recipe is
+`scripts/v1-lite-builder-config.js` (ad-hoc signature, no notarization or
+publication). See [1.0.0 notes](RELEASE_NOTES_V1.0.0.md) and the
+[package receipt](validation/2026-10-19-v1.0.0-lite-package.md).
+
 ## 0.8.1 public release
 
 Full and Lite macOS Apple Silicon DMGs are Developer ID signed, notarized,

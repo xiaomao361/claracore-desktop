@@ -2,6 +2,7 @@ const {
   IL_SYSTEM,
   summarizeInnerLifeProfile
 } = require("../policy");
+const { resolveInboxMaterials } = require("../material-reference");
 
 const DIGEST_RUN_PORTS = [
   "ensureProfile",
@@ -36,12 +37,18 @@ function createInnerLifeDigestRunService(inputPorts = {}) {
       profile.agent_id
     );
     const memories = await ports.listMemories(database, 5);
-    const inboxItems = (await ports.listInboxPage(database, {
+    const pendingInbox = (await ports.listInboxPage(database, {
       agentId: profile.agent_id,
       status: "pending",
       limit: 10,
       offset: 0
     })).items;
+    const materialResolution = await resolveInboxMaterials(database, pendingInbox, profile.agent_id);
+    const inboxItems = materialResolution.items;
+    if (pendingInbox.length && !inboxItems.length && !prompt) return {
+      status: "blocked", reason: "material_unavailable", materialResolution: materialResolution.receipts, processedInboxIds: [],
+      snapshot: await ports.getSnapshotLite(database, profile.agent_id)
+    };
     const digestId = ports.newId("inner_digest");
     const eventId = ports.newId("inner_event");
     const thoughtId = ports.newId("inner_thought");
@@ -90,11 +97,14 @@ function createInnerLifeDigestRunService(inputPorts = {}) {
       request: input,
       resumePacket,
       sharedLineContext,
+      materialResolution: materialResolution.receipts,
       summary: generated.body,
       thoughtId
     });
     await ports.pruneDigestRuns(database, profile.agent_id);
     return {
+      status: materialResolution.partial ? "partial" : "completed",
+      materialResolution: materialResolution.receipts,
       digest: await ports.getDigestRun(database, digestId),
       eventId,
       thoughtId,

@@ -1,5 +1,6 @@
 const { MAX_PROMPT_CHARS, makeSource, collectConvergenceSources, reviewInnerLifeCandidate } = require("../../../innerlife/grounding");
 const { normalizeSources } = require("../../../innerlife/source-ingest");
+const { resolveInboxMaterials } = require("../../../innerlife/material-reference");
 const {
   IL_SYSTEM,
   buildInnerLifeProfileContext,
@@ -23,10 +24,16 @@ function createInnerLifeReflectionRepository(helpers) {
       const profile = await this.ensureInnerLifeProfile(agentId);
       const { resumePacket, sharedLineContext } = await this.getOptionalInnerLifeResumePacket(input, profile.agent_id);
       const memories = await this.listMemories(5);
-      const inboxItems = await this.listInnerLifeInboxForAgent(profile.agent_id, "pending", 5, {
+      const pendingInbox = await this.listInnerLifeInboxForAgent(profile.agent_id, "pending", 5, {
         excludeSources: ["session_end_afterthought"]
       });
       const prompt = String(input?.prompt || "").trim();
+      const materialResolution = await resolveInboxMaterials(this, pendingInbox, profile.agent_id);
+      const inboxItems = materialResolution.items;
+      if (pendingInbox.length && !inboxItems.length && (!prompt || /^Daemon tick:/.test(prompt))) return {
+        eventId: null, share: null, processedInboxIds: [], materialResolution: materialResolution.receipts,
+        shareDecision: { create: false, reason: "material_unavailable", retryable: true }
+      };
       const eventId = newId("inner_event");
       const thoughtId = newId("inner_thought");
       const shareId = newId("inner_share");
@@ -113,6 +120,7 @@ function createInnerLifeReflectionRepository(helpers) {
             memoryIds: memories.map((memory) => memory.id),
             inboxIds: inboxItems.map((item) => item.id),
             inboxSources: inboxItems.map((item) => item.source),
+            materialResolution: materialResolution.receipts,
             generationSource: generated.source,
             generationTier: generated.tier,
             shareNoveltyText: noveltyText,
@@ -150,6 +158,7 @@ function createInnerLifeReflectionRepository(helpers) {
           })
         : null;
       return {
+        materialResolution: materialResolution.receipts,
         eventId,
         thoughtId,
         share: shareDecision.create ? await this.getInnerLifeShare(shareId) : null,
@@ -168,7 +177,9 @@ function createInnerLifeReflectionRepository(helpers) {
         : await this.ingestInnerLifeSources({ agentId: profile.agent_id, maxItems: input.maxSourceItems || 5 });
       const prompt = String(input.prompt || "").trim();
       const memories = await this.listMemories(5);
-      const inboxItems = (await this.listInnerLifeInboxPage({ agentId: profile.agent_id, status: "pending", limit: 5, offset: 0 })).items;
+      const pendingInbox = (await this.listInnerLifeInboxPage({ agentId: profile.agent_id, status: "pending", limit: 5, offset: 0 })).items;
+      const materialResolution = await resolveInboxMaterials(this, pendingInbox, profile.agent_id);
+      const inboxItems = materialResolution.items;
       const profileContext = buildInnerLifeProfileContext(profile, { triggerText: [prompt, ...inboxItems.map((item) => item.body)].join("\n") });
       const sources = [makeSource("identity", "identity", JSON.stringify(profile.profile?.identity || {})),
         ...memories.map((m) => makeSource(m.id, "memory", `${m.title || ""}\n${String(m.body || "").slice(0, 800)}`, m.created_at || m.createdAt)),
@@ -225,6 +236,7 @@ function createInnerLifeReflectionRepository(helpers) {
               insertedCount: sourceIngest.insertedCount,
               errors: sourceIngest.errors
             },
+            materialResolution: materialResolution.receipts,
             generationSource: generated.source,
             generationTier: generated.tier,
             generationSystem: IL_SYSTEM.explore,
@@ -253,6 +265,7 @@ function createInnerLifeReflectionRepository(helpers) {
         eventId,
         thoughtId,
         share: grounding.create ? await this.getInnerLifeShare(shareId) : null,
+        materialResolution: materialResolution.receipts,
         shareDecision: { create: grounding.create, reason: grounding.reason },
         convergence,
         snapshot: await this.getInnerLifeSnapshotLite(profile.agent_id)

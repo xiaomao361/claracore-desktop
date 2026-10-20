@@ -32,34 +32,47 @@
       : `<a href="#knowledge:${encodeURIComponent(resolved.reference)}" data-knowledge-ref="${escape(resolved.reference)}">${escape(label)}</a>`;
   }
 
-  function inline(text, reference) {
+  function inline(text, reference, options = {}) {
     // Tokenize before escaping; user content never becomes an HTML attribute or
     // HTML node without escaping. Code tokens cannot create links/emphasis.
-    const pattern = /(`+)([^\n]*?)\1|\[([^\]\n]+)\]\((<[^>]+>|[^)\s]+)\)|\*\*([^*\n]+)\*\*|__([^_\n]+)__|\*([^*\n]+)\*|https?:\/\/[^\s<>]+/gu;
+    const basePattern = /(`+)([^\n]*?)\1|\[([^\]\n]+)\]\((<[^>]+>|[^)\s]+)\)|\*\*([^*\n]+)\*\*|__([^_\n]+)__|\*([^*\n]+)\*|https?:\/\/[^\s<>]+/gu;
+    const pattern = options.reading ? new RegExp(basePattern.source + "|【[^】\\n]{1,30}】", "gu") : basePattern;
     let html = "";
     let end = 0;
     for (const match of text.matchAll(pattern)) {
       html += escape(text.slice(end, match.index));
       if (match[1]) html += `<code>${escape(match[2])}</code>`;
-      else if (match[3]) html += link(match[3], match[4].replace(/^<|>$/gu, ""), reference);
+      else if (match[3]) html += options.linkMode === "text" ? `${escape(match[3])} (${escape(match[4].replace(/^<|>$/gu, ""))})` : link(match[3], match[4].replace(/^<|>$/gu, ""), reference);
       else if (match[5] || match[6]) html += `<strong>${escape(match[5] || match[6])}</strong>`;
       else if (match[7]) html += `<em>${escape(match[7])}</em>`;
-      else html += link(match[0], match[0], reference);
+      else if (match[0].startsWith("【")) html += options.reading ? `<strong>${escape(match[0])}</strong>` : escape(match[0]);
+      else html += options.linkMode === "text" ? escape(match[0]) : link(match[0], match[0], reference);
       end = match.index + match[0].length;
     }
     return html + escape(text.slice(end));
   }
 
-  function render(text, reference) {
+  function render(text, reference, options = {}) {
     const lines = String(text || "").replace(/\r\n?/gu, "\n").split("\n");
     const blocks = [];
     let paragraph = [];
     let list = null;
     let code = null;
+    const format = value => inline(value, reference, options);
+    function paragraphMarkup() {
+      const body = paragraph.join("\n");
+      const markers = options.reading && body.startsWith("①") ? [...body.matchAll(/[①-⑳]/gu)] : [];
+      // Recognize an explicit ascending list only. Keep circled markers in
+      // code, quotations or ambiguous prose as ordinary text.
+      const numbered = options.reading && body.startsWith("①") && !body.includes("`") && markers.every((match, index) =>
+        match[0].codePointAt(0) === "①".codePointAt(0) + index && (index === 0 || /[。；;.!?\n]\s*$/u.test(body.slice(0, match.index))));
+      if (numbered && markers.length) return `<ol class="reading-numbered">${markers.map((match, index) => `<li><span class="reading-number-marker">${match[0]}</span><div>${format(body.slice(match.index + 1, markers[index + 1]?.index ?? body.length).trim())}</div></li>`).join("")}</ol>`;
+      return `<p>${paragraph.map(format).join("<br>")}</p>`;
+    }
     function flush() {
-      if (paragraph.length) blocks.push(`<p>${paragraph.map((line) => inline(line, reference)).join("<br>")}</p>`);
+      if (paragraph.length) blocks.push(paragraphMarkup());
       paragraph = [];
-      if (list) blocks.push(`<${list.type}>${list.items.map((line) => `<li>${inline(line, reference)}</li>`).join("")}</${list.type}>`);
+      if (list) blocks.push(`<${list.type}>${list.items.map((line, index) => `<li${options.reading && list.numbers[index] ? ` value="${list.numbers[index]}"` : ""}>${format(line)}</li>`).join("")}</${list.type}>`);
       list = null;
     }
     const cells = (line) => line.trim().replace(/^\||\|$/gu, "").split("|").map((cell) => cell.trim());
@@ -73,30 +86,31 @@
         continue;
       }
       if (fence) { flush(); code = { marker: fence[1], lines: [] }; continue; }
-      if (/^<a id="[a-zA-Z0-9_-]+"><\/a>\s*$/u.test(line)) continue;
+      if (!options.reading && /^<a id="[a-zA-Z0-9_-]+"><\/a>\s*$/u.test(line)) continue;
       if (!line.trim()) { flush(); continue; }
       const heading = /^(#{1,6})\s+(.+)$/u.exec(line);
       if (heading) {
-        flush(); const level = Math.min(6, heading[1].length + 1);
-        blocks.push(`<h${level}>${inline(heading[2], reference)}</h${level}>`); continue;
+        flush(); const level = Math.min(6, heading[1].length + (options.reading ? 3 : 1));
+        blocks.push(`<h${level}>${format(heading[2])}</h${level}>`); continue;
       }
+      if (options.reading && /^【[^】\n]{1,30}】\s*$/u.test(line)) { flush(); blocks.push(`<h4>${escape(line.trim())}</h4>`); continue; }
       if (/^\s*(?:---+|\*\*\*+)\s*$/u.test(line)) { flush(); blocks.push("<hr>"); continue; }
       if (line.includes("|") && lines[index + 1] && /^\s*\|?\s*:?-{3,}/u.test(lines[index + 1])
         && cells(lines[index + 1]).every((cell) => /^:?-{3,}:?$/u.test(cell))) {
         flush(); const headings = cells(line); const rows = []; index += 1;
         while (lines[index + 1]?.includes("|")) rows.push(cells(lines[++index]));
-        blocks.push(`<div class="knowledge-table"><table><thead><tr>${headings.map((cell) => `<th scope="col">${inline(cell, reference)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${inline(cell, reference)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`);
+        blocks.push(`<div class="knowledge-table"><table><thead><tr>${headings.map((cell) => `<th scope="col">${format(cell)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${format(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`);
         continue;
       }
-      const item = /^\s*(?:([-*+])|\d+[.)])\s+(.+)$/u.exec(line);
+      const item = /^\s*(?:([-*+])|(\d+)[.)])\s+(.+)$/u.exec(line);
       if (item) {
         const type = item[1] ? "ul" : "ol";
         if (paragraph.length || (list && list.type !== type)) flush();
-        if (!list) list = { type, items: [] };
-        list.items.push(item[2]); continue;
+        if (!list) list = { type, items: [], numbers: [] };
+        list.items.push(item[3]); list.numbers.push(item[2]); continue;
       }
       const quote = /^>\s?(.*)$/u.exec(line);
-      if (quote) { flush(); blocks.push(`<blockquote>${inline(quote[1], reference)}</blockquote>`); continue; }
+      if (quote) { flush(); blocks.push(`<blockquote>${format(quote[1])}</blockquote>`); continue; }
       if (list) flush();
       paragraph.push(line);
     }

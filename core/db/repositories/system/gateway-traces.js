@@ -161,7 +161,7 @@ function createGatewayTraceRepository(helpers) {
       const durationMs = Math.max(0, Number.parseInt(String(input.durationMs || 0), 10) || 0);
       // Knowledge bodies stay in Markdown. Neither read results nor intake
       // drafts belong in the product trace database as a second body copy.
-      const knowledge = toolName.startsWith("knowledge_") || (toolName === "gateway_auto_context" && input.request?.deliveryContract === "memory-knowledge-v1");
+      const knowledge = toolName.startsWith("knowledge_") || toolName.startsWith("understanding_") || (toolName === "gateway_auto_context" && input.request?.deliveryContract === "memory-knowledge-v1");
       const responseSummary = knowledge ? `Knowledge operation: ${status}` : String(input.responseSummary || "").slice(0, 500);
       const error = knowledge && input.error ? "Knowledge operation failed; inspect the caller result." : String(input.error || "").slice(0, 500);
       const request = boundedGatewayTraceRequest(knowledge

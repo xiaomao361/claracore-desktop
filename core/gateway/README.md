@@ -11,9 +11,14 @@ See [migration](../../docs/HTTP_MCP_MIGRATION.md).
 - Gateway exposes product tools for Gateway context, Memory Controller,
   Memoria, Shared Line, and InnerLife.
 - Gateway calls product domain facades such as `core/runtime` and
-  `core/memory-controller`; it should not implement policy or edit database
+  `core/memory-controller`; it should not duplicate domain policy or edit database
   state directly.
 - Gateway writes trace records so Desktop can show recent agent activity.
+- The explicit understanding-v1 layer organizes bounded reads, semantic delta
+  planning, evidence/authority gates and recoverable execution through existing
+  domains. Its journal is execution evidence, not another fact authority.
+  See [contract](../../docs/UNDERSTANDING_CONTRACT.md). It does not install host
+  hooks or change automatic Memory delivery.
 - Gateway is not the old ClaraCore Python/web Gateway service.
 
 ## Runtime Contract
@@ -22,6 +27,12 @@ See [migration](../../docs/HTTP_MCP_MIGRATION.md).
   `Authorization: Bearer <token>`, `X-ClaraCore-Agent-ID`, and optionally
   `X-ClaraCore-Client-ID` and `X-ClaraCore-Conversation-ID` with each request.
   `X-ClaraCore-Session-ID` remains a compatible conversation-header alias.
+  `understanding_submit` and `understanding_resume` require an actual conversation
+  ID; omission returns `conversation_identity_required`. `understanding_context`
+  does not require it. Hosts must supply the current session's ID dynamically,
+  preserve it for reconnect/recovery, and isolate concurrent sessions. A shared
+  static ID cannot identify distinct chats. Adding identity does not enable
+  model calls, grant writes, or install conversation capture.
 
 
 ## Streamable HTTP

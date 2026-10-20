@@ -1,8 +1,21 @@
 # Desktop v0.8 本地知识 — 下一 Session 交接
 
-更新：2026-10-12（Asia/Shanghai）。这是当前交接入口；[初始讨论快照](HANDOFF_LOCAL_KNOWLEDGE_INITIAL.md)仅供查历史。
+更新：2026-10-20（Asia/Shanghai）。这是当前交接入口；[初始讨论快照](HANDOFF_LOCAL_KNOWLEDGE_INITIAL.md)仅供查历史。
 
-## 当前工程位置：0.8.4
+## 当前工程位置：1.0.0 发布准备
+
+用户已确认 GUI／品牌效果，批准 1.0.0，并授权正式 release。当前源码、锁文件和
+Agent Guide 均为 1.0.0，按 macOS arm64 与 Windows x64 Full/Lite 矩阵准备发布。
+实际发布状态、资产与验证边界以 [1.0.0 说明](RELEASE_NOTES_V1.0.0.md) 为准。
+以下各节保留为阶段历史，不再表示当前版本或尚未实现 GUI。
+
+## 0.9.2 工程记录（2026-10-15）
+
+- 用户确认共同理解改版为 0.9.0，随后修复为 0.9.1；本次首页长标题布局修复为 0.9.2，package、lockfile 和 Agent Guide 已同步。此前 .1/.2 测试包误沿用 0.8.4，保留作历史记录。
+- 当前实现与验证边界见 [0.9.2 说明](RELEASE_NOTES_V0.9.2.md)、[共同理解契约](UNDERSTANDING_CONTRACT.md) 和 [Lite 包回执](validation/2026-10-15-understanding-lite-package.md)。Hermes 动态会话头修复已完成源码与隔离测试，日用进程仍待用户重启；权限配置页未实现。
+- 0.9.2 为本地测试版本，未公开发布，未提交推送。以下为原 0.8.4 阶段记录。
+
+## 0.8.4 工程记录（2026-10-12）
 
 - 仓库、分支和远端仍为下方记录的独立 Desktop 仓库。接手时 HEAD 为 `6f2997015f5102e1e9893e2ac53bb772344a77dd`；原有 0.8.2 路由、0.8.3 通用决策配置未提交，已保留并纳入本轮整体版本收尾（当前分支提交，不覆盖 main）。
 - 本轮接续 2026-10-12 日常运维授权交接，逐项审查撤回归档，修复 Shared Line 精确目标回执、InnerLife 分区分页/Agent 明细边界、Memory Controller 显式反馈与 timeout。见 [0.8.4 说明](RELEASE_NOTES_V0.8.4.md) 和 [维护契约](DESKTOP_MAINTENANCE.md)。

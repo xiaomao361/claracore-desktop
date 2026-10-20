@@ -55,7 +55,7 @@ function targetPath(root, reference, createParents = false) {
   return full;
 }
 
-function normalizeDraft(input) {
+function normalizeDraft(input, options = {}) {
   if (!input || typeof input !== "object" || Array.isArray(input)) fail("invalid_draft", "Provide a structured draft.");
   const { mode, path: reference } = input;
   if (!["create", "append"].includes(mode)) fail("invalid_draft", "mode must be create or append.");
@@ -94,7 +94,7 @@ function normalizeDraft(input) {
   const pendingReason = pending ? field(input.pendingReason, "pendingReason") : "";
   const nextStep = pending ? field(input.nextStep, "nextStep") : "";
   const kbId = mode === "create" && typeof reference === "string" && reference.startsWith("notes/")
-    ? `desktop-${randomUUID()}` : "";
+    ? options.kbId || `desktop-${randomUUID()}` : "";
   return { mode, path: reference, title, sections, pendingReason, nextStep, kbId };
 }
 
@@ -181,9 +181,11 @@ async function rebuildKnowledgeIndex(app) {
   return { ...await knowledgeIndexStatus(app), documentCount: documents.length };
 }
 
-async function previewKnowledgeIntake(app, input, owner = "desktop") {
+async function previewKnowledgeIntake(app, input, owner = "desktop", options = {}) {
   const root = await selectedRoot(app);
-  const draft = normalizeDraft(input);
+  // Internal recovery identity; public Gateway draft arguments do not set it.
+  if (options.kbId && !/^desktop-understanding-[a-f0-9]{64}$/u.test(options.kbId)) fail("invalid_draft", "Invalid stable intake identity.");
+  const draft = normalizeDraft(input, options);
   const checked = validateDraft(root, draft);
   for (const [key, value] of previews) if (value.expiresAt <= Date.now()) previews.delete(key);
   if (previews.size >= 32) fail("preview_capacity", "Too many active previews; finish them or wait for expiry.");

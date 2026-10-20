@@ -312,6 +312,52 @@ async function main() {
     if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
       await page.screenshot({ path: process.env.CLARACORE_UI_SCREENSHOT_PATH });
     }
+    // Regression for a path-heavy title growing through the old fixed horizon.
+    const originalCopy = await page.evaluate(() => ({
+      title: document.querySelector("#homePresenceTitle").textContent,
+      horizon: document.querySelector("#homeHorizonLabel").textContent
+    }));
+    const longCopyLayouts = [];
+    try {
+      for (const width of [1440, 1100, 900, 720]) {
+        await page.setViewportSize({ width, height: 900 });
+        for (const title of [
+          "bosun 团队 MCP 网关（/Volumes/E61/zhouwei/projects/bosun）与各服务改造",
+          "VeryLongUnbrokenProjectIdentifier".repeat(5)
+        ]) {
+          await page.evaluate((value) => {
+            document.querySelector("#homePresenceTitle").textContent = value;
+            document.querySelector("#homeHorizonLabel").textContent = `共同线 · ${value}`;
+          }, title);
+          const layout = await page.evaluate(() => {
+            const bounds = (selector) => document.querySelector(selector).getBoundingClientRect();
+            const presence = document.querySelector(".home-presence");
+            const now = bounds(".home-presence-now"), scene = bounds("#homeVisionField");
+            const recent = bounds("#homeRecentActivitySection"), title = bounds("#homePresenceTitle");
+            const action = bounds("#homePresenceEmptyAction"), detail = bounds("#homePresenceDetail");
+            return {
+              sceneAfterCopy: scene.top >= now.bottom + 20,
+              activityAfterScene: recent.top >= scene.bottom + 20,
+              actionAfterDetail: action.top >= detail.bottom,
+              actionBeforeScene: action.bottom <= scene.top,
+              titleInside: title.right <= presence.getBoundingClientRect().right,
+              horizontalOverflow: presence.scrollWidth > presence.clientWidth,
+              sceneHeight: scene.height
+            };
+          });
+          longCopyLayouts.push({ width, ...layout });
+          if (!layout.sceneAfterCopy || !layout.activityAfterScene || !layout.actionAfterDetail ||
+              !layout.actionBeforeScene || !layout.titleInside || layout.horizontalOverflow || layout.sceneHeight < 200) {
+            throw new Error(`Long Home copy overlaps the scene: ${JSON.stringify({ width, layout })}`);
+          }
+        }
+      }
+    } finally {
+      await page.evaluate((copy) => {
+        document.querySelector("#homePresenceTitle").textContent = copy.title;
+        document.querySelector("#homeHorizonLabel").textContent = copy.horizon;
+      }, originalCopy);
+    }
     await page.setViewportSize({ width: 900, height: 720 });
     await page.click("[data-view='home']");
     await page.waitForFunction(() => document.querySelector("#homeView")?.classList.contains("active-view"));
@@ -371,7 +417,7 @@ async function main() {
     await page.waitForFunction(() => ["ready", "attention"].includes(document.querySelector(".home-presence")?.dataset.state));
     if (rendererErrors.length) throw new Error(`Renderer errors: ${rendererErrors.join(" | ")}`);
 
-    console.log(JSON.stringify({ ok: true, empty, loading, errorState, initial, away, returned, reduced, arrivalSettled, narrow, narrowError }, null, 2));
+    console.log(JSON.stringify({ ok: true, empty, loading, errorState, initial, away, returned, reduced, arrivalSettled, longCopyLayouts, narrow, narrowError }, null, 2));
   } finally {
     if (app) await app.close();
     await Promise.resolve(database.close?.()).catch(() => {});

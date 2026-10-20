@@ -50,7 +50,7 @@ function createClaraCoreHomePresence({ t, actionableGatewayErrors }) {
       if (!agentId || !observedAt || now - observedAt > PRESENCE_WINDOW_MS || latestByAgent.has(agentId)) continue;
       latestByAgent.set(agentId, trace);
     }
-    const agents = [...latestByAgent.entries()].slice(0, 3).map(([id, trace], index) => {
+    const agents = [...latestByAgent.entries()].slice(0, 20).map(([id, trace], index) => {
       const lastObservedAt = traceTimestamp(trace);
       const age = Math.max(0, now - lastObservedAt);
       const presence = isExplicitlyActive(trace) ? "active" : age <= BRIGHT_WINDOW_MS ? "recent" : "fading";
@@ -139,7 +139,8 @@ function createClaraCoreHomePresence({ t, actionableGatewayErrors }) {
       recentActivityDetail,
       agents,
       empty: !agents.length && !hasSharedLine,
-      actionableIssue: issue
+      actionableIssue: issue,
+      agentLabel
     };
   }
 

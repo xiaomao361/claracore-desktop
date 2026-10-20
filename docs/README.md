@@ -6,6 +6,8 @@ instructions.
 
 ## Start Here
 
+- [1.0 GUI](design/V1_GUI.md): topic-based shared understanding, content-first reading, and local validation boundaries.
+
 - [Desktop Maintenance](DESKTOP_MAINTENANCE.md): scoped receipts, diagnostic pagination, lifecycle and explicit recall feedback.
 - [Positioning](POSITIONING.md): product boundary and north star.
 - [Context Delivery](CONTEXT_DELIVERY.md): minimum-sufficient defaults,
@@ -20,6 +22,8 @@ instructions.
 
 ## Product Contracts
 
+- [Shared Understanding](UNDERSTANDING_CONTRACT.md): bounded context, evidence submission, permissions and recovery.
+
 - [Knowledge Page](KNOWLEDGE_PAGE.md): reading, connections, material capture and manual acceptance.
 - [Knowledge Intake](KNOWLEDGE_INTAKE.md): preview, commit, recovery and structural index contract.
 - [Agent MCP Playbook](AGENT_MCP_PLAYBOOK.md): agent-facing tool workflow.
@@ -33,6 +37,10 @@ instructions.
   definitions for accumulated statistics.
 
 ## Build And Release
+
+- [v1.0.0 Release Notes](RELEASE_NOTES_V1.0.0.md): shared-understanding GUI, concurrent Agent presence and refreshed product identity; local Lite checkpoint.
+- [v0.9.2 Release Notes](RELEASE_NOTES_V0.9.2.md): Home long-title wrapping and content-driven horizon layout.
+- [v0.9.1 Release Notes](RELEASE_NOTES_V0.9.1.md): shared-understanding local checkpoint and conversation-identity integration fix.
 
 - [Decision Models](DECISION_MODELS.md): generic provider setup, credential isolation and routing boundaries.
 - [v0.8.4 Release Notes](RELEASE_NOTES_V0.8.4.md): Shared Line acknowledgements, paged diagnostics and evidenced Memory feedback.

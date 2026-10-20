@@ -17,6 +17,9 @@ const PROFILE_NAMES = Object.freeze(["core", "full"]);
 //   propertyDescriptions  short descriptions to keep; every other nested
 //                         `description` in the schema is stripped
 const CORE_TOOL_SHAPES = Object.freeze({
+  understanding_context: {},
+  understanding_submit: {},
+  understanding_resume: {},
   knowledge_read: {},
   knowledge_intake_preview: {},
   knowledge_intake_commit: {},

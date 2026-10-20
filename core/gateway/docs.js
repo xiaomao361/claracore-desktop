@@ -4,14 +4,15 @@ const { BUILD_FLAVOR, HAS_BUILT_IN_EMBEDDING } = require("../build-flavor");
 // version bump must explicitly confirm that the Agent Guide still describes
 // the shipped product; context-budget-smoke enforces parity.
 const DOCS_RELEASE = Object.freeze({
-  version: "0.8.4",
-  updatedAt: "2026-10-12"
+  version: "1.0.0",
+  updatedAt: "2026-10-19"
 });
 
 const DOCS_SECTIONS = Object.freeze([
   "start",
   "memory",
   "knowledge",
+  "understanding",
   "shared-line",
   "innerlife",
   "diagnostics",
@@ -23,7 +24,7 @@ const SECTION_DOCS_BYTES = 8192;
 // `full` is the concatenation of every section, not an independent one, so the
 // 8 KB per-section bound does not apply to it. Truncating it would silently
 // drop guidance; give it room for the sum instead.
-const FULL_SECTION_DOCS_BYTES = 14336;
+const FULL_SECTION_DOCS_BYTES = 20 * 1024;
 const SEARCH_DOCS_BYTES = 6144;
 
 const STARTUP_SEQUENCE =
@@ -103,6 +104,7 @@ function defaultDocs({ toolProfile }) {
     "- memoria_search: 3 bounded summaries -> memoria_get, or detail=full",
     "- memoria_link_list and memoria_record_list: bounded catalogs -> memoria_get or memoria_record_get",
     "- writes: bounded acknowledgement -> returned detailRef",
+    "- understanding_context / understanding_submit: explicit cross-domain read and evidence-delta workflow; understanding_resume inspects plans and recovers receipts. See section=understanding. Host hooks are unchanged.",
     "- shared_line_list: bounded catalog -> shared_line_get",
     "- shared_line_get: a resume packet -> detail=context, detail=full",
     "- innerlife_status: operational state only -> detail=true",
@@ -117,6 +119,7 @@ function defaultDocs({ toolProfile }) {
     "",
     "- start: first connection, identity headers, MCP config, model defaults",
     "- memory: Memoria write/search/link/supersede rules and automatic recall",
+    "- understanding: evidence deltas, authority, four-domain plans and recovery",
     "- shared-line: line selection, ambiguity recovery, update and handoff rules",
     "- innerlife: sessions, share timing, delivery evidence",
     "- diagnostics: health, traces, internal CLI maintenance",
@@ -208,6 +211,22 @@ function knowledgeSection() {
     "- knowledge_read(action=status) detects stale structural indexes; knowledge_index_rebuild repairs them explicitly. The index contains hashes and pointers. semantic=true builds local vectors in resumable batches (repeat status=building); hybrid reports partial when semantics fail.",
     "- Return actual path#anchor receipts. Intake proves storage, not later use or factual validation. Markdown bodies stay out of Gateway trace storage."
   ].join("\n");
+}
+
+function understandingSection() {
+  return [
+    "## Shared understanding (explicit understanding-v1)",
+    "- Use understanding_context(query, lineId when known). Without lineId it returns owned candidates; allowModel=true opts into semantic matching, ambiguity abstains. Catalogs default to 10 and accept lineLimit up to 50. Reads never create or activate. Ordinary questions may have no line. Private/pending shares are withheld; selection is not delivery/use.",
+    "- At meaningful progress or conversation end, submit ONLY new evidence events through understanding_submit: stable submissionId, events{id,speaker,text,sourceRef}, grants and optional exact lineId. Do not preclassify the domains. Speaker/sourceRef and grants are caller attestations of actual evidence and existing authority, not independently authenticated human consent.",
+    "- Gateway semantically extracts and routes through the existing configured chat model only with allowModel=true. Missing permission, disabled model, failed/invalid output and pending evidence remain distinct; no keyword confirmation or silent fallback. The model provides exact quotes, rationale and per-event coverage of all four domains; structural checks do not prove semantic quality.",
+    "- Planning recalls every event through overlapping UTF-8 windows and source identities, with shared object previews and per-event references. knowledgeMode defaults to hybrid using existing local embeddings; exact is explicit. Index/model failures stay partial. Omitted relevant candidates block new facts/notes pending scoped review; query coverage is not exhaustive semantic deduplication.",
+    "- Default is plan only. Inspect planRef (understanding_resume detail=plan); execute=true writes authorized items. Missing grants block only dependent items. Reuse existing authority without asking again. Never manufacture grants. Confirmed facts need quoted user evidence; source positions and Agent guesses remain distinct. Uncertainty/conflict requires review.",
+    "- A line needs a concrete resumable objective. The server planner may reuse one clearly identified candidate or create a clearly distinct objective after evaluating the complete owned catalog, with createLine authority. Incomplete catalogs or uncertain matching require review. Semantic selection never activates a line. End-of-chat saves position; archival still requires caller-selected lineId, completion evidence and archiveLine authority. Confirmed-position changes require overwriteConfirmed.",
+    "- Each operation returns completed/unchanged/blocked/needs_review/failed/partial and stable references. Retry the SAME submissionId, same evidence/grants, and same authenticated agent/client/conversation. Changed payload is refused. resume execute=true retries unfinished work against the immutable plan; replan=true only retries failed planning. New evidence/authority uses a new submissionId. An explicit plan read contains bounded quotes and provenance.",
+    "- The durable local journal stores submitted deltas and execution evidence, not another fact authority. SQLite and Markdown are not a shared atomic transaction. Lost acknowledgments reconcile existing objects; conflicting bytes/positions stop the item. Recovered knowledge writes may be partial with index-unverified: read the returned section and use knowledge_read(action=status) / explicit index rebuild as needed, never rewrite the note.",
+    "- Memory creation/reuse and new knowledge files are supported; evolution, arbitrary edits and line merging remain explicit maintenance. InnerLife inbox stores versioned references. Its process/digest/explore paths resolve bounded excerpts of allowed memories, owned lines and the selected knowledge root; changed/restricted/foreign/unreadable material stays pending. No arbitrary file/URL fetching. Reading a source does not force a thought, sharing or user endorsement.",
+    "- The repository provides a disabled-by-default host adapter and explicit event bridge with durable checkpoints and receipt recovery. It requires real raw-evidence callbacks and stable IDs; event text cannot grant authority. Missing end callbacks are reported, never inferred. It does not install hooks or change automatic Memory-only injection. The synthetic eight-case evaluator defaults to zero requests; actual model runs need explicit authorization and do not establish broad business acceptance.",
+  ].join("\n\n");
 }
 
 function memorySection() {
@@ -338,6 +357,7 @@ function buildGatewayDocs({ section, query, launch, paths, toolProfile }) {
     start: () => startSection(context),
     memory: () => memorySection(),
     knowledge: () => knowledgeSection(),
+    understanding: () => understandingSection(),
     "shared-line": () => sharedLineSection(),
     innerlife: () => innerLifeSection(),
     diagnostics: () => diagnosticsSection(context)

@@ -25,6 +25,7 @@ function createInnerLifeDigestRunStore(helpers) {
           memoryIds: input.memories.map((memory) => memory.id),
           inboxIds: input.inboxItems.map((item) => item.id),
           generationSource: input.generated.source,
+          materialResolution: input.materialResolution || [],
           generationTier: input.generated.tier
         })}
       );

@@ -13,26 +13,29 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <aside class="sidebar">
+    <header class="sidebar app-navigation">
       <div class="brand">
-        <img class="brand-mark" src="./assets/brand/claracore-mark-flat.svg" alt="" />
+        <img class="brand-mark brand-mark-light" src="./assets/brand/claracore-mark-flat.svg" alt="" />
+        <img class="brand-mark brand-mark-dark" src="./assets/brand/claracore-mark-flat-dark.svg" alt="" />
         <div>
           <strong>ClaraCore</strong>
           <span id="brandVersion">Desktop</span>
         </div>
       </div>
-      <nav aria-label="Primary">
+      <nav class="primary-navigation" aria-label="Primary">
         <button class="nav-item active" data-view="home"><span class="nav-icon nav-icon-home"></span><span data-i18n="nav.home">Home</span></button>
         <button class="nav-item" data-view="memory"><span class="nav-icon nav-icon-memory"></span><span data-i18n="nav.memory">Memoria</span></button>
         <button class="nav-item" data-view="knowledge"><span class="nav-icon nav-icon-knowledge" aria-hidden="true"></span><span data-i18n="nav.knowledge">Knowledge</span></button>
         <button class="nav-item" data-view="shared-line"><span class="nav-icon nav-icon-shared-line"></span><span data-i18n="nav.sharedLine">Shared Line</span></button>
         <button class="nav-item" data-view="innerlife"><span class="nav-icon nav-icon-innerlife"></span><span data-i18n="nav.innerLife">InnerLife</span></button>
+      </nav>
+      <nav class="utility-navigation" aria-label="Tools">
         <button class="nav-item" data-view="trace"><span class="nav-icon nav-icon-trace"></span><span data-i18n="nav.trace">Trace</span></button>
         <button class="nav-item" data-view="logs"><span class="nav-icon nav-icon-logs"></span><span data-i18n="nav.logs">Logs</span></button>
         <button class="nav-item" data-view="agent-setup"><span class="nav-icon nav-icon-agent"></span><span data-i18n="nav.agentSetup">Agent Access</span></button>
         <button class="nav-item" data-view="settings"><span class="nav-icon nav-icon-settings"></span><span data-i18n="nav.settings">Settings</span></button>
       </nav>
-    </aside>
+    </header>
 
     <main class="workspace">
       <header class="topbar">
@@ -47,29 +50,29 @@
       </header>
 
       <section id="homeView" class="view active-view">
-        <section class="home-presence" aria-labelledby="homePresenceTitle">
-          <div class="home-presence-copy" aria-live="polite">
-            <div class="home-presence-block home-presence-now">
-              <span data-i18n="home.presence.now">At this moment</span>
-              <h2 id="homePresenceTitle" data-i18n="home.presence.loading">The shared space is gathering itself.</h2>
-              <p id="homePresenceDetail" class="quiet"></p>
-              <button id="homePresenceEmptyAction" class="link-button" data-view-target="agent-setup" data-i18n="home.presence.openAgentAccess" hidden>Open Agent Access</button>
-            </div>
-            <div id="homeRecentActivitySection" class="home-presence-block" hidden>
-              <span data-i18n="home.presence.recentActivity">Recent activity</span>
-              <p id="homeRecentActivityText"></p>
-              <button id="homeRecentActivityAction" class="link-button" data-view-target="trace" data-i18n="home.presence.openTrace">Open Trace</button>
-            </div>
-            <div id="homeActionableIssue" class="home-presence-issue" hidden></div>
+        <header class="home-world-heading">
+          <div class="home-world-intro"><p class="understanding-eyebrow" data-i18n="home.fusion.eyebrow">我们的共同世界</p><h2 data-i18n="home.fusion.title">让经历、知识与思考连起来</h2></div>
+          <section id="homeConnection" class="home-connection" data-state="loading" data-animate="false" aria-busy="true" data-i18n-aria-label="home.connection.label" aria-label="Agent presence">
+            <div id="homePresenceAgents" class="home-agent-roster" role="list" data-i18n-aria-label="home.connection.roster" aria-label="Agents with recent activity" hidden></div>
+            <details id="homePresenceDisclosure">
+              <summary><span id="homePresenceTitle" role="status" data-i18n="home.connection.loading">Reading activity…</span><span class="home-connection-chevron" aria-hidden="true">⌄</span></summary>
+              <div class="home-connection-detail"><p id="homePresenceDetail"></p><button type="button" class="link-button" data-view-target="trace" data-i18n="home.connection.details">查看连接动态 →</button><button id="homePresenceEmptyAction" class="link-button" data-view-target="agent-setup" hidden></button></div>
+            </details>
+            <button id="homeConnectionOverflow" class="home-connection-overflow" type="button" hidden></button>
+            <button id="homeConnectionMotion" class="home-connection-motion" type="button" aria-pressed="false" data-i18n="home.connection.pauseMotion">暂停动效</button>
+          </section>
+        </header>
+        <section id="homeUnderstanding" class="home-understanding" aria-label="Shared understanding" data-i18n-aria-label="home.understanding.label">
+          <div class="home-topic-bar">
+            <label for="homeTopicSelect" data-i18n="home.understanding.topic">正在阅读的主题</label>
+            <select id="homeTopicSelect" aria-describedby="homeTopicNotice"></select>
+            <button class="link-button" type="button" data-view-target="shared-line" data-i18n="home.understanding.allTopics">全部共同线 →</button>
           </div>
-
-          <div id="homeVisionField" class="home-vision-field">
-            <span id="homeHorizonLabel" class="home-horizon-label" data-i18n="home.presence.horizon">Shared Line</span>
-            <canvas id="homeVisionCanvas" aria-label="Shared consciousness presence" data-i18n-aria-label="home.presence.canvasLabel"></canvas>
-            <div id="homeVisionFallback" class="home-vision-fallback" hidden data-i18n="home.presence.canvasFallback">The shared space remains available.</div>
-            <div id="homePresenceAgents" class="home-presence-agents" aria-live="polite"></div>
-          </div>
+          <p id="homeTopicNotice" class="home-topic-notice" role="status" aria-live="polite"></p>
+          <div id="homeUnderstandingBody"></div>
         </section>
+        <div id="homeActionableIssue" class="home-presence-issue" role="alert" hidden></div>
+
       </section>
 
       <section id="memoryView" class="view">
@@ -95,13 +98,7 @@
             <div id="memoryTopicList" class="memory-topic-list" aria-label="主要记忆主题"></div>
           </section>
 
-          <section class="panel memory-process-section" aria-labelledby="memoryProcessTitle">
-            <div class="memory-section-heading">
-              <div><span class="memory-kicker">HOW IT WORKS</span><h2 id="memoryProcessTitle">一条记忆怎样被再次想起</h2></div>
-              <p>依次查看检索、相关性判断和实际返回。</p>
-            </div>
-            <div id="memoryProcessFlow" class="memory-process-flow"></div>
-          </section>
+
 
           <div class="panel memory-toolbar">
             <div class="memory-search">
@@ -138,6 +135,17 @@
               <button type="button" data-memory-open="graph"><span>关系与状态链</span><strong>看看事实之间如何连接和演变</strong><small>查看记忆之间的关联</small></button>
             </div>
           </section>
+
+          <details class="reading-mechanism">
+            <summary data-i18n="reading.memoryMechanism">记忆如何被再次想起</summary>
+            <section class="panel memory-process-section" aria-labelledby="memoryProcessTitle">
+            <div class="memory-section-heading">
+              <div><span class="memory-kicker">HOW IT WORKS</span><h2 id="memoryProcessTitle">一条记忆怎样被再次想起</h2></div>
+              <p>依次查看检索、相关性判断和实际返回。</p>
+            </div>
+            <div id="memoryProcessFlow" class="memory-process-flow"></div>
+          </section>
+          </details>
 
           <dialog id="memoryDetailDialog" class="memory-detail-dialog" aria-labelledby="memoryDetailDialogTitle">
             <div class="memory-dialog-head">
@@ -303,13 +311,7 @@
           </div>
         </section>
 
-        <section class="panel shared-line-process-section" aria-labelledby="sharedLineProcessTitle">
-          <div class="memory-section-heading">
-            <div><span class="memory-kicker">HOW IT CONTINUES</span><h2 id="sharedLineProcessTitle" data-i18n="sharedLine.process.title">一条共同线怎样延续</h2></div>
-            <p data-i18n="sharedLine.process.body">共同位置随进展更新，并成为下一次对话的起点。</p>
-          </div>
-          <div id="sharedLineProcessFlow" class="shared-line-process-flow"></div>
-        </section>
+
 
         <div class="shared-line-layout">
           <article class="panel shared-line-list-panel">
@@ -365,6 +367,10 @@
               <span data-i18n="sharedLine.unresolved">Still to confirm</span>
               <div id="sharedLineUnresolved"></div>
             </section>
+            <section id="sharedLineReferencesSection" class="shared-line-references-section" hidden>
+              <h3 data-i18n="home.understanding.evidence">Recorded references</h3>
+              <ul id="sharedLineReferences" class="shared-line-references"></ul>
+            </section>
 
             <div class="shared-line-detail-footer">
               <span id="sharedLineUpdated" class="quiet"></span>
@@ -384,6 +390,17 @@
             <button type="button" data-shared-line-open="archive"><span data-i18n="sharedLine.reading.archiveKicker">已经走过</span><strong data-i18n="sharedLine.reading.archive">查看已经结束的历史线</strong><small data-i18n="sharedLine.reading.archiveBody">查看已经结束的共同线。</small></button>
           </div>
         </section>
+
+          <details class="reading-mechanism">
+            <summary data-i18n="reading.lineMechanism">共同线如何延续</summary>
+            <section class="panel shared-line-process-section" aria-labelledby="sharedLineProcessTitle">
+          <div class="memory-section-heading">
+            <div><span class="memory-kicker">HOW IT CONTINUES</span><h2 id="sharedLineProcessTitle" data-i18n="sharedLine.process.title">一条共同线怎样延续</h2></div>
+            <p data-i18n="sharedLine.process.body">共同位置随进展更新，并成为下一次对话的起点。</p>
+          </div>
+          <div id="sharedLineProcessFlow" class="shared-line-process-flow"></div>
+        </section>
+          </details>
 
         <dialog id="sharedLineDetailDialog" class="memory-detail-dialog shared-line-detail-dialog" aria-labelledby="sharedLineDialogTitle">
           <div class="memory-dialog-head">
@@ -435,13 +452,7 @@
               <div id="innerLifeInterests" class="innerlife-interests"></div>
             </section>
 
-            <section class="innerlife-process-section" aria-labelledby="innerLifeProcessTitle">
-              <div class="innerlife-section-heading">
-                <div><span class="innerlife-section-kicker">HOW IT WORKS</span><h2 id="innerLifeProcessTitle">InnerLife 如何运作</h2></div>
-                <p>它先消化经历、形成念头，再判断当下是否适合说出口。</p>
-              </div>
-              <div id="innerLifeProcessFlow" class="innerlife-process-flow"></div>
-            </section>
+
 
             <section class="innerlife-primary-section" aria-labelledby="innerLifeUnsharedTitle">
               <div class="innerlife-section-heading">
@@ -463,6 +474,17 @@
               <div id="innerLifeSharedList" class="innerlife-shared-index"></div>
               <button id="innerLifeAllSharedAction" class="innerlife-collection-action" type="button" data-innerlife-open="shared-library" hidden></button>
             </section>
+
+          <details class="reading-mechanism">
+            <summary data-i18n="reading.innerlifeMechanism">内在活动如何运作</summary>
+            <section class="innerlife-process-section" aria-labelledby="innerLifeProcessTitle">
+              <div class="innerlife-section-heading">
+                <div><span class="innerlife-section-kicker">HOW IT WORKS</span><h2 id="innerLifeProcessTitle">InnerLife 如何运作</h2></div>
+                <p>它先消化经历、形成念头，再判断当下是否适合说出口。</p>
+              </div>
+              <div id="innerLifeProcessFlow" class="innerlife-process-flow"></div>
+            </section>
+          </details>
 
             <section class="innerlife-insight-section" aria-labelledby="innerLifeInsightTitle">
               <div class="innerlife-section-heading"><div><span class="innerlife-section-kicker">UNDER THE SURFACE</span><h2 id="innerLifeInsightTitle">了解它现在怎样工作</h2></div></div>
@@ -1182,8 +1204,9 @@
     <script src="./app/views/data.js"></script>
     <script src="./app/views/home-trace.js"></script>
     <script src="./app/views/home-presence.js"></script>
-    <script src="./app/views/home-vision.js"></script>
+    <script src="./app/views/home-connection.js"></script>
     <script src="./app/views/home.js"></script>
+    <script src="./app/views/home-understanding.js"></script>
     <script src="./app/views/logs.js"></script>
     <script src="./app/knowledge-markdown.js"></script>
     <script src="./app/views/knowledge.js"></script>

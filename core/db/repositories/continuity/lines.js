@@ -1,3 +1,5 @@
+const { positionGuardSql, guardedWrite } = require("./position-guard");
+
 function createContinuityLineRepository(helpers) {
   const {
     DEFAULT_AGENT_ID,
@@ -289,10 +291,21 @@ function createContinuityLineRepository(helpers) {
       if (!title) throw new Error("Shared Line title is required.");
       const id = String(input.id || newId("line")).trim();
       const identity = resolveAgentIdentity(input || {});
-      await this.exec(`
+      const expectedIds = input.expectedActiveLineIds;
+      if (expectedIds !== undefined && (!Array.isArray(expectedIds) || expectedIds.length > 50 || expectedIds.some(value => typeof value !== "string"))) throw new Error("Invalid expected Shared Line catalog.");
+      const guard = expectedIds === undefined ? "" : `
+        CREATE TEMP TABLE understanding_catalog_guard (valid INTEGER CONSTRAINT understanding_line_catalog_changed CHECK(valid = 1));
+        INSERT INTO understanding_catalog_guard(valid) SELECT
+          (SELECT COUNT(*) FROM continuity_lines WHERE agent_id = ${sqlString(identity.id)} AND status = 'active' AND id != 'line_default') = ${expectedIds.length}
+          AND NOT EXISTS (SELECT 1 FROM continuity_lines WHERE agent_id = ${sqlString(identity.id)} AND status = 'active' AND id != 'line_default'
+            AND id NOT IN (${expectedIds.length ? expectedIds.map(sqlString).join(", ") : "NULL"}));
+        DROP TABLE understanding_catalog_guard;
+      `;
+      await guardedWrite(this, `
+        ${guard}
         INSERT INTO continuity_lines (id, agent_id, title, status)
         VALUES (${sqlString(id)}, ${sqlString(identity.id)}, ${sqlString(title)}, 'active');
-      `);
+      `, expectedIds);
       if (input.makeActive !== false) {
         await this.setActiveContinuityLine(id);
       }
@@ -312,7 +325,7 @@ function createContinuityLineRepository(helpers) {
       return this.getContinuityLine(id);
     },
 
-    async archiveContinuityLine(lineId) {
+    async archiveContinuityLine(lineId, options = {}) {
       const id = String(lineId || "").trim();
       if (!id) throw new Error("Shared Line id is required.");
       if (id === "line_default") throw new Error("Default Shared Line cannot be archived.");
@@ -324,12 +337,13 @@ function createContinuityLineRepository(helpers) {
         LIMIT 1;
       `);
       if (!rows[0]?.id) throw new Error("Active Shared Line not found.");
-      await this.exec(`
+      await guardedWrite(this, `
+        ${positionGuardSql(id, options.expectedPosition)}
         UPDATE continuity_lines
         SET status = 'archived',
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ${sqlString(id)};
-      `);
+      `, options.expectedPosition);
       const activeLineId = await this.getActiveContinuityLineId();
       if (activeLineId === id) {
         await this.setActiveContinuityLine("line_default");

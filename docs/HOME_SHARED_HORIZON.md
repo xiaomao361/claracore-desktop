@@ -1,12 +1,18 @@
 # Home Shared Horizon
 
+> 2026-10-19 第二轮：依据用户截图反馈，首页改为四模块轻入口汇入共同理解，
+> 移除独立白色地平线面板与 Canvas；页头小型光点表达可核验的 Agent 请求活动。
+> 下文保留历史地平线设计与性能边界，不再描述当前首页。
+> 当前契约见 [1.0 GUI](design/V1_GUI.md)，实际窗口验收待用户观察。
+
+
 Date: 2026-07-17
 
 > Historical version snapshot: the Home behavior remains a current design
 > contract, but release/version statements below describe the date above. See
 > [Version Branching](VERSION_BRANCHING.md) for current release truth.
 
-Status: current Home product and performance contract, introduced in `0.5.8`
+Status: historical Home product and performance contract, introduced in `0.5.8`
 and carried forward through the current `0.6.7` line.
 
 ## Current Result
@@ -94,32 +100,33 @@ Initial windows remain:
 
 ## Screen Composition
 
-Wide layout:
+Current layout contract updated 2026-10-15 (0.9.2):
 
 ```text
-此刻
-Clara 刚刚来过这里
-最近一次可验证活动来自 shared_line_update。
+我们现在
+当前共同线标题（长标题与路径自然换行）
+当前摘要（有界预览）
+[打开共同线 →]
 
-共同线 · Default Shared Line
+共同线 · 标题预览
 ─────────────────────── ◉ ─── ○ ─── ○
 
-我们现在                              InnerLife · 回声
-当前共同线标题与摘要                  一条合格的可分享想法
+最近活动
+最近一次可验证活动与 [查看痕迹 →]
 ```
 
-Empty layout keeps the same horizon with no Agent signals:
+Copy, scene, and recent activity occupy successive grid rows in normal flow.
+The scene has at least 200px of its own space; text growth expands the card
+rather than running into a horizon fixed against the entire card. Critical
+buttons stay in text flow. Path-heavy and unbroken titles wrap within the
+content width; the repeated horizon label ellipsizes before Agent signals.
+Marker positions use the scene-width breakpoint shared with Canvas, not the
+window-width breakpoint. An actionable failure stays inside the first text
+section and can also grow without covering another section.
 
-```text
-共同意识空间安静地留在这里
-还没有观察到最近的智能体活动，但共同线仍然保持着位置。
-[打开智能体接入 →]
-
-共同线 ───────────────────────────────
-```
-
-Compact layout keeps the same order and metaphor. It reduces type scale and
-navigation width rather than inventing a second mobile design.
+The empty state keeps the same scene with no Agent signals. Compact layouts
+retain this order and the existing type scale, palette, and motion behavior.
+No pending InnerLife material is exposed by this change.
 
 ## Implementation Boundary
 

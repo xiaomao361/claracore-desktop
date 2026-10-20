@@ -1,4 +1,5 @@
 const { handleKnowledgeTool } = require("./tool-handlers/knowledge");
+const { handleUnderstandingTool } = require("./tool-handlers/understanding");
 const { createProfileToolDefinitions, normalizeProfile } = require("./tool-profiles");
 const { handleSystemTool } = require("./tool-handlers/system");
 const { handleMemoryControllerTool } = require("./tool-handlers/memory-controller");
@@ -6,7 +7,7 @@ const { handleMemoriaTool } = require("./tool-handlers/memoria");
 const { handleSharedLineTool } = require("./tool-handlers/shared-line");
 const { handleInnerLifeTool } = require("./tool-handlers/innerlife");
 
-const HANDLERS = [handleKnowledgeTool, handleSystemTool, handleMemoryControllerTool, handleMemoriaTool, handleSharedLineTool, handleInnerLifeTool];
+const HANDLERS = [handleUnderstandingTool, handleKnowledgeTool, handleSystemTool, handleMemoryControllerTool, handleMemoriaTool, handleSharedLineTool, handleInnerLifeTool];
 
 function createGatewayTools({ serverInfo, currentMcpAgentId, currentCallerContext, gatewayLaunchConfig, runtimeAppForGateway, textResult, toolProfile }) {
   const profile = normalizeProfile(typeof toolProfile === "function" ? toolProfile() : toolProfile);

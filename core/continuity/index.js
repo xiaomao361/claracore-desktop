@@ -45,7 +45,7 @@ async function rename(core, lineId, title, options = {}) {
 }
 
 async function archive(core, lineId, options = {}) {
-  const line = await core.database.archiveContinuityLine(lineId);
+  const line = await core.database.archiveContinuityLine(lineId, { expectedPosition: options.expectedPosition });
   return {
     line,
     sharedLine: await core.database.getResumePacket({ lineId: line.id, lite: options.lite === true })

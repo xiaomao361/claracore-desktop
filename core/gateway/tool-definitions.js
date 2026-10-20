@@ -1,4 +1,5 @@
 const { knowledgeToolDefinitions } = require("./tool-definitions/knowledge");
+const { understandingToolDefinitions } = require("./tool-definitions/understanding");
 const { systemToolDefinitions } = require("./tool-definitions/system");
 const { memoryControllerToolDefinitions } = require("./tool-definitions/memory-controller");
 const { memoriaToolDefinitions } = require("./tool-definitions/memoria");
@@ -7,6 +8,7 @@ const { innerlifeToolDefinitions } = require("./tool-definitions/innerlife");
 
 function toolDefinitions() {
   return [
+    ...understandingToolDefinitions,
     ...systemToolDefinitions,
     ...knowledgeToolDefinitions,
     ...memoryControllerToolDefinitions,

@@ -37,7 +37,10 @@ Read these before adding new features:
   pagination, resource ownership, memory telemetry, and long-run checks.
 - [macOS Packaging](docs/mac-packaging.md): current local packaging and packaged
   Gateway validation notes.
-- [v0.7.7 release notes](docs/RELEASE_NOTES_V0.7.7.md): current public release covering vector
+- [v1.0.0 release notes](docs/RELEASE_NOTES_V1.0.0.md): current local checkpoint for
+  the shared-understanding GUI and refreshed product identity.
+- [v0.8.1 release notes](docs/RELEASE_NOTES_V0.8.1.md): latest documented public release.
+- [v0.7.7 release notes](docs/RELEASE_NOTES_V0.7.7.md): previous public release covering vector
   retrieval, HTTP migration, verified backups and InnerLife grounding.
 - [v0.6.14 release notes](docs/RELEASE_NOTES_V0.6.14.md): previous public Full/Lite release
   for recovery safety, complete semantic retrieval, and source CI.
@@ -73,7 +76,11 @@ Read these before adding new features:
 
 ## Current Status
 
-The current public stable release is `0.7.7`, tagged `v0.7.7`. The public release contains Developer ID signed and
+The current source checkpoint is `1.0.0`, with the user-approved shared-understanding
+GUI and refreshed product identity. A local macOS Apple Silicon Lite installer is
+provided for review; this checkpoint has not been publicly released.
+
+The latest documented public stable release is `0.8.1`, tagged `v0.8.1`. That release contains Developer ID signed and
 notarized macOS Apple Silicon Full/Lite builds plus Windows x64 Full/Lite
 installers. Intel macOS and Mac App Store packages are outside that release. It
 is a working desktop shell with a product-owned local data store,
@@ -99,15 +106,16 @@ Included:
 - Settings-owned login-startup preference for installed macOS and Windows
   builds. Login launches stay in the tray; direct launches show the main
   window. Development and test instances never modify system login items.
-- Empty-data Home with one quiet shared-line horizon and a direct Agent
+- Empty-data Home with a quiet shared-understanding reading surface and a direct Agent
   Access entry; configured-only Agents are never presented as recently active.
 - ClaraCore root detection
 - Product-owned SQLite data root under Desktop user data
 - Home, Memoria, Shared Line, InnerLife, Trace, Agent Access, Logs, and Settings pages (model and data management live inside Settings tabs)
-- Home presence surface with a layered Shared Line horizon, at most three
-  recently observed Agent ripples, stable identity colors, reduced-motion
-  fallback, and strict animation/pixel budgets. The current Shared Line is the
-  primary content; recent Gateway activity is supporting evidence. Pending
+- Home brings four module entrances into one topic reading surface, with up to
+  four concurrent Agent signatures and a bounded activity catalog. Stable
+  shapes and colors, observable request states, pause and reduced-motion support
+  keep presence readable. The selected Shared Line is the primary content;
+  recent Gateway activity is supporting evidence. Pending
   InnerLife content never appears on Home before its sharing decision.
 - Agent Access page with connected-agent/recent-activity evidence and one
   primary `复制给智能体` / `Copy for agent` action. The copied brief carries

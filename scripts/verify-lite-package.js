@@ -9,10 +9,12 @@ const platformArg = process.argv.includes("--platform")
   ? process.argv[process.argv.indexOf("--platform") + 1]
   : "darwin";
 const windows = platformArg === "win32";
+const appArgIndex = process.argv.indexOf("--app");
+assert(appArgIndex < 0 || process.argv[appArgIndex + 1], "--app requires an application path");
 const fullApp = windows
   ? path.join(root, "dist", "win-unpacked")
   : path.join(root, "dist", "mac-arm64", "ClaraCore Desktop.app");
-const liteApp = windows
+const liteApp = appArgIndex >= 0 ? path.resolve(process.argv[appArgIndex + 1]) : windows
   ? path.join(root, "dist-lite", "win-unpacked")
   : path.join(root, "dist-lite", "mac-arm64", "ClaraCore Desktop.app");
 

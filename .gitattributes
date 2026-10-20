@@ -1,0 +1,2 @@
+# Patch context lines intentionally retain their leading space, including blank lines.
+docs/validation/*.patch whitespace=-blank-at-eol

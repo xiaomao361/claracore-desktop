@@ -20,6 +20,7 @@ function createClaraCoreSharedInnerLifeView(context) {
     sharedLineActiveCount, sharedLineOverviewActiveCount, sharedLineOverviewArchivedCount, sharedLineProcessFlow,
     sharedLineAgentFilter, sharedLineDetailTitle, sharedLineParticipants, sharedLineContinuityPath,
     sharedLineUnderstandingSection, sharedLineUnderstanding, sharedLineUnresolvedSection, sharedLineUnresolved,
+    sharedLineReferencesSection, sharedLineReferences,
     sharedLineAgentStatePanel, sharedLineMetadataPanel, sharedLineHistoryList, sharedLineSnapshotList, sharedLineArchiveList,
     sharedLineDetailDialog, sharedLineDialogClose, sharedLineDialogKicker, sharedLineDialogTitle, sharedLineDialogMeta,
     sharedLineDialogLines, sharedLineDialogAgents, sharedLineDialogEvidence, sharedLineDialogArchive,
@@ -321,7 +322,9 @@ function renderPrimaryValues(target, values, emptyKey, decorated = true) {
   if (!target) return;
   const items = uniqueValues(values);
   target.innerHTML = items.length
-    ? items.map((item) => `<p>${decorated ? renderReadableText(item, "•") || escapeHtml(item) : escapeHtml(item).replace(/\n/g, "<br>")}</p>`).join("")
+    ? items.map((item) => decorated
+      ? `<p>${renderReadableText(item, "•") || escapeHtml(item)}</p>`
+      : `<div class="reading-prose">${window.ClaraCoreKnowledgeMarkdown.render(item, "", { reading: true, linkMode: "text" })}</div>`).join("")
     : `<p class="quiet">${escapeHtml(t(emptyKey))}</p>`;
 }
 
@@ -503,6 +506,15 @@ function renderSharedLine() {
   const unresolved = uniqueValues([sharedReality.provisionalRead, sharedReality.misreadRisks]);
   sharedLineUnresolvedSection.hidden = unresolved.length === 0;
   renderPrimaryValues(sharedLineUnresolved, unresolved, "sharedLine.unresolvedEmpty");
+
+  const references = (Array.isArray(current.factsUsed)
+    ? current.factsUsed
+    : Array.isArray(current.metadata?.factsUsed) ? current.metadata.factsUsed : [])
+    .filter((reference) => typeof reference === "string" && reference.trim());
+  if (sharedLineReferencesSection) sharedLineReferencesSection.hidden = !hasSelection || !references.length;
+  if (sharedLineReferences) sharedLineReferences.innerHTML = hasSelection
+    ? references.map((reference) => `<li>${escapeHtml(reference)}</li>`).join("")
+    : "";
 
   const currentMetadata = {
     ...(current.metadata || {}),

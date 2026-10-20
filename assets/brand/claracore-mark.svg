@@ -1,24 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
   <title id="title">ClaraCore mark</title>
-  <desc id="desc">A calm local core mark shaped from an open C, a shared line, and a central memory point.</desc>
+  <desc id="desc">An open C, a shared line and a current-position point, in cool white, lavender and ice blue.</desc>
   <defs>
     <linearGradient id="bg" x1="160" y1="112" x2="864" y2="912" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#fbfbf8"/>
-      <stop offset="1" stop-color="#e9ece4"/>
+      <stop offset="0" stop-color="#fcfbff"/>
+      <stop offset="1" stop-color="#edf1fb"/>
     </linearGradient>
     <linearGradient id="line" x1="258" y1="706" x2="792" y2="320" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#28745a"/>
-      <stop offset="1" stop-color="#365f84"/>
+      <stop offset="0" stop-color="#795bac"/>
+      <stop offset="1" stop-color="#6088b0"/>
     </linearGradient>
     <filter id="softShadow" x="140" y="102" width="744" height="820" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
-      <feDropShadow dx="0" dy="22" stdDeviation="28" flood-color="#202421" flood-opacity=".16"/>
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#443256" flood-opacity=".10"/>
     </filter>
   </defs>
   <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
   <g filter="url(#softShadow)">
-    <path d="M657 246C609 210 551 192 492 196c-139 9-249 124-249 265 0 149 121 270 270 270 65 0 126-23 174-63" fill="none" stroke="#202421" stroke-width="112" stroke-linecap="round"/>
+    <path d="M657 246C609 210 551 192 492 196c-139 9-249 124-249 265 0 149 121 270 270 270 65 0 126-23 174-63" fill="none" stroke="#443256" stroke-width="112" stroke-linecap="round"/>
     <path d="M316 646c80-95 153-141 219-139 58 2 94 40 146 39 42 0 77-23 109-69" fill="none" stroke="url(#line)" stroke-width="54" stroke-linecap="round"/>
-    <circle cx="658" cy="512" r="72" fill="#fbfbf8" stroke="#202421" stroke-width="42"/>
-    <circle cx="658" cy="512" r="29" fill="#28745a"/>
+    <circle cx="658" cy="512" r="72" fill="#fcfbff" stroke="#443256" stroke-width="34"/>
+    <circle cx="658" cy="512" r="26" fill="#795bac"/>
   </g>
 </svg>

@@ -157,12 +157,31 @@ not an implementation of this contract.
 
 The development branch adds four everyday tools: `knowledge_read`,
 `knowledge_intake_preview`, `knowledge_intake_commit`, and
-`knowledge_index_rebuild`. The maintained core manifest ceiling is now 35 tools
+`knowledge_index_rebuild`. The v0.8.0 core manifest ceiling was 35 tools
 and 18 KiB (previously 31 and 14 KiB). Read actions remain a single bounded
 entry; new intake schemas retain attribution and reviewed-relation fields.
 Catalogs and exact matches default to 10 and allow up to 50. A preview shows
 the explicit proposed addition (at most 48 KiB); commit returns pointers and
 state rather than the body. Knowledge requests and read/preview results are
 omitted from the trace database to avoid retaining a second body copy.
-The explicit full Agent Guide ceiling is 14 KiB (previously 12 KiB) to include
+The v0.8.0 explicit full Agent Guide ceiling was 14 KiB (previously 12 KiB) to include
 the Knowledge section. Default guide and individual-section ceilings are unchanged.
+
+## Shared Understanding Development Contract
+
+The explicit `understanding-v1` workflow adds three tools for context, delta
+submission and plan/receipt recovery, while retaining all existing direct tools.
+The compact core manifest is 21,250 bytes; maintained ceilings are 38 tools and
+22 KiB. The full guide ceiling is 20 KiB to include evidence, authority and
+recovery guidance; default and individual-section ceilings stay unchanged.
+Context packets default to a 24 KiB safety ceiling; explicit candidate pages
+above 10 use a 64 KiB ceiling. They preserve source previews and detail refs.
+Planning recalls every event through overlapping UTF-8 windows plus provenance
+queries, sharing summaries across per-event references, within 64 KiB. Known
+omitted candidates block dependent new facts/notes pending review. Plan reads
+return one complete bounded plan, without a
+second coverage copy. Delta input is capped at 12 events / 32 KiB; raw semantic
+plans at 48 KiB. Ordinary receipts omit bodies; trace requests/results omit all
+understanding content. The automatic host delivery contract is unchanged.
+See [the implementation contract](UNDERSTANDING_CONTRACT.md) for the supported
+operations, conservative line lifecycle, model/host limits and recovery evidence.

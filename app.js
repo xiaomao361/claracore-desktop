@@ -288,6 +288,21 @@ const homeView = window.createClaraCoreHomeView({
   filterByAgent: sharedFilterByAgent,
   formatMode
 });
+const homeUnderstanding = window.createClaraCoreHomeUnderstanding({
+  root: document.querySelector("#homeUnderstanding"),
+  api: window.ClaraCoreDesktop,
+  t,
+  getSnapshot: () => snapshot,
+  onOpenLine: async (button, { isCurrent }) => {
+    await sharedLineActions.selectLine(button);
+    if (!isCurrent()) return;
+    const lineId = button.dataset.sharedLineId;
+    if (rendererState.selectedSharedLineId !== lineId || rendererState.selectedSharedLinePacket?.lineId !== lineId) {
+      throw new Error("The selected shared line could not be opened");
+    }
+    setView("shared-line");
+  }
+});
 const settingsView = window.createClaraCoreSettingsView({
   dom: window.ClaraCoreDom,
   desktop: window.ClaraCoreDesktop,
@@ -356,6 +371,7 @@ function renderEvents() {
 
 function renderHomeDashboard() {
   homeView.renderHomeDashboard();
+  homeUnderstanding.render();
 }
 
 function renderHealth() {
@@ -664,11 +680,14 @@ function setView(viewName) {
   });
   document.querySelectorAll(".nav-item").forEach((button) => {
     button.classList.toggle("active", button.dataset.view === nextView);
+    if (button.dataset.view === nextView) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
   });
   viewTitle.textContent = t(views[nextView].titleKey);
   viewSubtitle.textContent = t(views[nextView].subtitleKey);
   if (nextView === "settings") { loadKnowledgeRootPreference().catch(console.error); jevSettingsView.load(); }
   homeView.setActive(nextView === "home");
+  homeUnderstanding.setActive(nextView === "home");
   knowledgeView.setActive(nextView === "knowledge");
   if (enteringLogs) logsView.closeAdvancedDiagnostics();
   syncLogRefreshTimer();
@@ -1048,6 +1067,12 @@ homePresenceEmptyAction?.addEventListener("click", () => {
   refresh().catch(handleHomeRefreshError);
 });
 
+document.querySelector("#homeUnderstanding")?.addEventListener("click", (event) => {
+  if (!event.target.closest('[data-home-action="retry"]')) return;
+  homeUnderstanding.renderLoading();
+  refresh().catch(handleHomeRefreshError);
+});
+
 async function runDemoDataAction(button, action, busyKey) {
   if (!button) return;
   button.disabled = true;
@@ -1379,11 +1404,11 @@ openDesignPlan?.addEventListener("click", () => {
 window.ClaraCoreTestHooks = {
   refresh: () => refresh(),
   setHomeState: (state) => {
-    if (state === "loading") homeView.renderLoading();
-    if (state === "error") homeView.renderLoadError();
+    if (state === "loading") { homeView.renderLoading(); homeUnderstanding.renderLoading(); }
+    if (state === "error") { homeView.renderLoadError(); homeUnderstanding.renderLoadError(); }
   },
   handleRuntimeChanged: (payload = {}) => scheduleRuntimeRefresh(Array.isArray(payload.scopes) ? payload.scopes : ["snapshot"]),
-  homeVision: () => homeView.getVisionDebugState(),
+  homeConnection: () => homeView.getConnectionDebugState(),
   runtimeRefreshState: () => ({
     activeView,
     detailReads: Object.fromEntries(viewDetailReadCounts),
@@ -1403,11 +1428,13 @@ window.ClaraCoreTestHooks = {
 function handleHomeRefreshError(error) {
   console.error(error);
   homeView.renderLoadError();
+  homeUnderstanding.renderLoadError();
   if (runtimeMode) runtimeMode.textContent = t("runtime.unavailable");
   if (rootPath) rootPath.textContent = t("runtime.unableSnapshot");
 }
 
 homeView.renderLoading();
+homeUnderstanding.renderLoading();
 refresh().catch(handleHomeRefreshError);
 
 resourceRefreshLoop.start();

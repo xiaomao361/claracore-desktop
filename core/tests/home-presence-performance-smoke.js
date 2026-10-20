@@ -1,3 +1,4 @@
+// This smoke operates an isolated Electron window. Requires explicit UI authorization.
 const fs = require("fs/promises");
 const os = require("os");
 const path = require("path");
@@ -9,7 +10,7 @@ function average(values) {
 
 async function sampleMetrics(app, page, seconds) {
   const samples = [];
-  const startVision = await page.evaluate(() => window.ClaraCoreTestHooks.homeVision());
+
   for (let index = 0; index < seconds; index += 1) {
     await page.waitForTimeout(1000);
     const metrics = await app.evaluate(({ app: electronApp }) => electronApp.getAppMetrics());
@@ -20,15 +21,14 @@ async function sampleMetrics(app, page, seconds) {
       rendererPrivateMb: Number(renderer?.memory?.privateBytes ?? renderer?.memory?.workingSetSize ?? 0) / 1024
     });
   }
-  const endVision = await page.evaluate(() => window.ClaraCoreTestHooks.homeVision());
+  const connection = await page.evaluate(() => window.ClaraCoreTestHooks.homeConnection());
   return {
     seconds,
     totalCpu: average(samples.map((sample) => sample.cpu)),
     rendererCpu: average(samples.map((sample) => sample.rendererCpu)),
     rendererPrivateMb: average(samples.map((sample) => sample.rendererPrivateMb)),
-    frames: endVision.frameCount - startVision.frameCount,
-    fps: (endVision.frameCount - startVision.frameCount) / seconds,
-    scheduler: endVision
+    connection,
+    animations: await page.evaluate(() => document.getAnimations().filter(animation => animation.effect?.target?.closest?.("#homeConnection") && animation.playState === "running").length)
   };
 }
 
@@ -69,8 +69,9 @@ async function main() {
       }
     });
     const page = await app.firstWindow();
-    await page.waitForFunction(() => window.ClaraCoreTestHooks?.homeVision()?.agentCount === 1, null, { timeout: 15000 });
+    await page.waitForFunction(() => window.ClaraCoreTestHooks?.homeConnection()?.state === "recent", null, { timeout: 15000 });
     await page.click("[data-view='home']");
+    // The connection light is visible without expanding its details.
     await page.waitForFunction(() => {
       const vision = window.ClaraCoreTestHooks?.homeVision?.();
       return vision?.active && vision?.scheduled === 1;
@@ -79,17 +80,17 @@ async function main() {
     await page.evaluate(() => {
       document.body.dataset.motion = "off";
     });
-    await page.waitForFunction(() => window.ClaraCoreTestHooks.homeVision().scheduled === 0);
+    await page.waitForFunction(() => document.getAnimations().filter(animation => animation.effect?.target?.closest?.("#homeConnection") && animation.playState === "running").length === 0);
     const staticBaseline = await sampleMetrics(app, page, 30);
 
     await page.evaluate(() => {
       document.body.dataset.motion = "on";
     });
-    await page.waitForFunction(() => window.ClaraCoreTestHooks.homeVision().scheduled === 1);
+    await page.waitForFunction(() => document.getAnimations().some(animation => animation.effect?.target?.closest?.("#homeConnection") && animation.playState === "running"));
     const animated = await sampleMetrics(app, page, 30);
 
     await page.click("[data-view='memory']");
-    await page.waitForFunction(() => window.ClaraCoreTestHooks.homeVision().scheduled === 0);
+    await page.waitForFunction(() => document.getAnimations().filter(animation => animation.effect?.target?.closest?.("#homeConnection") && animation.playState === "running").length === 0);
     const away = await sampleMetrics(app, page, 10);
 
     const result = {
@@ -100,11 +101,11 @@ async function main() {
       cpuDelta: animated.totalCpu - staticBaseline.totalCpu,
       rendererMemoryDeltaMb: animated.rendererPrivateMb - staticBaseline.rendererPrivateMb
     };
-    if (animated.fps > 12.8 || animated.scheduler.particleCount !== 0 || animated.scheduler.horizonLayers !== 3 || animated.scheduler.canvasPixels > 720000) {
-      throw new Error(`Home scene budget failed: ${JSON.stringify(result)}`);
+    if (animated.connection.canvas !== false || animated.animations !== 1) {
+      throw new Error(`Home connection budget failed: ${JSON.stringify(result)}`);
     }
-    if (away.frames !== 0 || away.scheduler.scheduled !== 0) {
-      throw new Error(`Home kept rendering away from Home: ${JSON.stringify(result)}`);
+    if (away.animations !== 0 || away.connection.timerScheduled || away.connection.animated) {
+      throw new Error(`Home kept animating away from Home: ${JSON.stringify(result)}`);
     }
     if (result.cpuDelta > 5 || result.rendererMemoryDeltaMb > 50) {
       throw new Error(`Home performance budget failed: ${JSON.stringify(result)}`);

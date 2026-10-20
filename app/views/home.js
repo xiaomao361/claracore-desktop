@@ -26,18 +26,8 @@ function createClaraCoreHomeView(context) {
     homeAgentViewList,
     homeTraceList,
     homePresence,
-    homePresenceTitle,
-    homePresenceDetail,
     homePresenceEmptyAction,
-    homeRecentActivitySection,
-    homeRecentActivityText,
-    homeRecentActivityAction,
     homeActionableIssue,
-    homeVisionField,
-    homeHorizonLabel,
-    homeVisionCanvas,
-    homeVisionFallback,
-    homePresenceAgents,
     homeRuntimeDetails,
     healthSummary,
     healthList,
@@ -63,24 +53,10 @@ function createClaraCoreHomeView(context) {
     getSnapshot
   });
   const presenceBuilder = window.createClaraCoreHomePresence({ t, actionableGatewayErrors });
-  const homeVision = window.createClaraCoreHomeVision({
-    canvas: homeVisionCanvas,
-    container: homeVisionField,
-    fallback: homeVisionFallback
+  const connection = window.createClaraCoreHomeConnection({
+    root: homePresence, t, getSnapshot, buildPresence: presenceBuilder.build
   });
   let activeAgentActivityPeriod = "7d";
-
-  function emptyVisionModel(state = "quiet") {
-    return {
-      core: {
-        state,
-        dominantColor: state === "error" ? "#c85d63" : "#7f95ad",
-        currentLineTitle: "",
-        currentSummary: ""
-      },
-      agents: []
-    };
-  }
 
   function setHomeAction({ hidden = true, labelKey = "", viewTarget = "", action = "" } = {}) {
     if (!homePresenceEmptyAction) return;
@@ -98,39 +74,20 @@ function createClaraCoreHomeView(context) {
     else delete homePresenceEmptyAction.dataset.homeAction;
   }
 
-  function clearHomeDetailSections() {
-    homeRecentActivitySection.hidden = true;
+  function renderLoading() {
+    connection.renderLoading();
+    setHomeAction();
     homeActionableIssue.hidden = true;
     homeActionableIssue.textContent = "";
-    homeActionableIssue.className = "home-presence-issue";
-    homeActionableIssue.removeAttribute("role");
-    homePresenceAgents.innerHTML = "";
-  }
-
-  function renderLoading() {
-    homePresence.dataset.state = "loading";
-    homePresence.setAttribute("aria-busy", "true");
-    homePresenceTitle.textContent = t("home.presence.loading");
-    homePresenceDetail.textContent = t("home.presence.loadingDetail");
-    homeHorizonLabel.textContent = t("home.presence.horizon");
-    setHomeAction();
-    clearHomeDetailSections();
-    homeVision.setModel(emptyVisionModel());
   }
 
   function renderLoadError() {
-    homePresence.dataset.state = "error";
-    homePresence.setAttribute("aria-busy", "false");
-    homePresenceTitle.textContent = t("home.presence.loadErrorTitle");
-    homePresenceDetail.textContent = t("home.presence.loadErrorDetail");
-    homeHorizonLabel.textContent = t("home.presence.horizon");
+    connection.renderLoadError();
     setHomeAction({ hidden: false, labelKey: "home.presence.retry", action: "retry" });
-    clearHomeDetailSections();
     homeActionableIssue.hidden = false;
     homeActionableIssue.textContent = t("home.presence.loadErrorNotice");
     homeActionableIssue.className = "home-presence-issue error";
     homeActionableIssue.setAttribute("role", "alert");
-    homeVision.setModel(emptyVisionModel("error"));
   }
 
   function serviceBadge(module) {
@@ -657,39 +614,20 @@ function createClaraCoreHomeView(context) {
     const snapshot = getSnapshot();
     if (!snapshot) return;
     const model = presenceBuilder.build(snapshot);
-    homePresence.dataset.state = model.empty ? "empty" : model.actionableIssue ? "attention" : "ready";
-    homePresence.setAttribute("aria-busy", "false");
-    homePresenceTitle.textContent = model.title;
-    homePresenceDetail.textContent = model.detail;
+    connection.render(model);
     setHomeAction(model.actionableIssue
       ? { hidden: false, labelKey: "home.presence.openLogs", viewTarget: "logs" }
-      : model.core.currentSummary
-        ? { hidden: false, labelKey: "home.presence.openSharedLine", viewTarget: "shared-line" }
-        : model.empty
+      : model.empty
           ? { hidden: false, labelKey: "home.presence.openAgentAccess", viewTarget: "agent-setup" }
           : {});
-    homeHorizonLabel.textContent = model.core.currentSummary && model.core.currentLineTitle
-      ? `${t("home.presence.horizon")} · ${model.core.currentLineTitle}`
-      : t("home.presence.horizon");
-    homeRecentActivitySection.hidden = !model.recentActivityTitle;
-    homeRecentActivityText.textContent = [model.recentActivityTitle, model.recentActivityDetail].filter(Boolean).join(" · ");
-    homeRecentActivityAction.hidden = !model.recentActivityTitle;
     homeActionableIssue.hidden = !model.actionableIssue;
-    homeActionableIssue.textContent = model.actionableIssue?.text || "";
+    homeActionableIssue.innerHTML = model.actionableIssue
+      ? `<span>${escapeHtml(model.actionableIssue.text)}</span> <button type="button" class="link-button" data-view-target="logs">${escapeHtml(t("home.presence.openLogs"))}</button>`
+      : "";
     homeActionableIssue.className = `home-presence-issue ${model.actionableIssue?.tone || ""}`.trim();
     if (model.actionableIssue?.tone === "error") homeActionableIssue.setAttribute("role", "alert");
     else homeActionableIssue.removeAttribute("role");
-    homePresenceAgents.innerHTML = model.agents
-      .map(
-        (agent) => `
-          <span class="home-presence-agent ${escapeHtml(agent.presence)}${agent.arrival ? " arrival" : ""}" style="--agent-color:${escapeHtml(agent.color)}" title="${escapeHtml(agent.label)} · ${escapeHtml(formatRelativeTime(agent.lastObservedAt))}" tabindex="0" aria-label="${escapeHtml(agent.label)} · ${escapeHtml(formatRelativeTime(agent.lastObservedAt))}">
-            <i class="home-presence-agent-dot"></i>
-            <span class="home-presence-agent-label">${escapeHtml(agent.label)}</span>
-          </span>
-        `
-      )
-      .join("");
-    homeVision.setModel(model);
+
   }
 
   function renderHealth() {
@@ -971,8 +909,8 @@ function createClaraCoreHomeView(context) {
     renderConnections,
     actionableGatewayErrorCount,
     hasActionableError,
-    setActive: homeVision.setActive,
-    getVisionDebugState: homeVision.debugState
+    setActive: connection.setActive,
+    getConnectionDebugState: connection.debugState
   };
 }
 

@@ -1,11 +1,12 @@
 {
   "name": "claracore-desktop",
-  "version": "0.8.4",
+  "version": "1.0.0",
   "buildFlavor": "full",
   "private": true,
   "description": "ClaraCore desktop manager for the local personal cognitive core",
   "main": "electron/main.js",
   "scripts": {
+    "build:brand": "node scripts/build-brand-assets.js",
     "start": "node scripts/start-next-dev.js",
     "start:product": "electron .",
     "start:next": "node scripts/start-next-dev.js",
@@ -13,7 +14,7 @@
     "seed:ux:clear": "node scripts/seed-ux-test-data.js --clear",
     "memoria": "node core/cli.js",
     "check:syntax": "node scripts/check-js-syntax.js",
-    "check": "npm run check:syntax && npm run test:sql-lint && node core/tests/ipc-contract-lint.js && npm run test:login-item && npm run test:architecture && npm run test:context-budget && npm run test:turn-context && npm run test:innerlife:grounding && npm run test:knowledge && npm run test:jev && npm run test:desktop-maintenance",
+    "check": "npm run check:syntax && npm run test:sql-lint && node core/tests/ipc-contract-lint.js && npm run test:login-item && npm run test:architecture && npm run test:home:understanding && npm run test:context-budget && npm run test:turn-context && npm run test:understanding && npm run test:innerlife:grounding && npm run test:knowledge && npm run test:jev && npm run test:desktop-maintenance",
     "test:desktop-maintenance": "node core/tests/desktop-maintenance-smoke.js",
     "test:architecture": "node core/tests/product-core-owner-smoke.js && node core/tests/resource-refresh-loop-smoke.js && node core/tests/visible-data-refresh-smoke.js && node core/tests/agent-setup-contract-smoke.js && node core/tests/memory-hydration-smoke.js && node core/tests/repository-composition-smoke.js && node core/tests/innerlife-repository-boundary-smoke.js && node core/tests/innerlife-service-boundary-smoke.js && node core/tests/innerlife-session-service-boundary-smoke.js && node core/tests/innerlife-workflow-service-boundary-smoke.js && node core/tests/system-repository-boundary-smoke.js && node core/tests/continuity-repository-boundary-smoke.js && node core/tests/gateway-context-service-smoke.js",
     "test:shell": "node core/tests/run-ui-smoke.js core/tests/shell-window-smoke.js",
@@ -21,7 +22,8 @@
     "test:knowledge": "node core/tests/knowledge-library-smoke.js && node core/tests/knowledge-preferences-smoke.js && node core/tests/knowledge-intake-smoke.js && node core/tests/knowledge-gateway-http-smoke.js && node core/tests/knowledge-page-smoke.js && node core/tests/knowledge-search-smoke.js && node core/tests/knowledge-context-smoke.js",
     "test:ux:polish": "node core/tests/run-ui-smoke.js core/tests/ux-polish-ui-smoke.js",
     "test:onboarding": "node core/tests/run-ui-smoke.js core/tests/onboarding-ui-smoke.js",
-    "test:home": "node core/tests/run-ui-smoke.js core/tests/home-presence-ui-smoke.js",
+    "test:home": "node core/tests/run-ui-smoke.js core/tests/home-understanding-ui-smoke.js",
+    "test:home:understanding": "node core/tests/home-understanding-smoke.js",
     "test:home:performance": "node core/tests/run-ui-smoke.js core/tests/home-presence-performance-smoke.js",
     "test:trace": "node core/tests/run-ui-smoke.js core/tests/trace-ui-smoke.js",
     "test:agent-access": "node core/tests/run-ui-smoke.js core/tests/agent-access-ui-smoke.js",
@@ -97,7 +99,9 @@
     "test:runtime-recovery": "node core/tests/runtime-recovery-smoke.js && node core/tests/memory-controller-retention-scheduler-smoke.js && node core/tests/visible-data-refresh-smoke.js",
     "test:innerlife:grounding": "node core/tests/innerlife-grounding-smoke.js",
     "test:knowledge:semantic": "node core/tests/knowledge-search-smoke.js --builtin",
-    "test:jev": "node core/tests/jev-recall-smoke.js && node core/tests/jev-routing-smoke.js && node core/tests/decision-model-smoke.js"
+    "test:jev": "node core/tests/jev-recall-smoke.js && node core/tests/jev-routing-smoke.js && node core/tests/decision-model-smoke.js",
+    "test:understanding": "node core/tests/understanding-recall-smoke.js && node core/tests/understanding-material-smoke.js && node core/tests/understanding-lines-smoke.js && node core/tests/understanding-host-smoke.js && node core/tests/understanding-evaluation-smoke.js && node core/tests/understanding-smoke.js && node core/tests/understanding-http-smoke.js",
+    "evaluate:understanding": "node scripts/evaluate-understanding.mjs"
   },
   "build": {
     "beforePack": "scripts/stage-sqlite-vec.js",

@@ -37,6 +37,7 @@ const systemToolDefinitions = [
             "start",
             "memory",
             "knowledge",
+            "understanding",
             "shared-line",
             "innerlife",
             "diagnostics",

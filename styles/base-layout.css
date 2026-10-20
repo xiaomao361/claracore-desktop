@@ -1,15 +1,21 @@
 :root {
   color-scheme: light;
-  --bg: #f7f7f4;
-  --sidebar: #fbfbf8;
+  --bg: #f7f8fc;
+  --sidebar: #fcfcff;
   --surface: #ffffff;
-  --surface-soft: #f4f4f0;
-  --surface-warm: #fbf8f1;
-  --border: #d9dad2;
-  --border-strong: #c4c7bd;
-  --text: #202421;
-  --muted: #656d68;
-  --faint: #8c928c;
+  --surface-soft: #f3f2f9;
+  --surface-warm: #fff8ed;
+  --border: #e2e1ed;
+  --border-strong: #bab7cd;
+  --text: #292738;
+  --muted: #656175;
+  --faint: #706b80;
+  --accent: #7156a7;
+  --accent-strong: #634793;
+  --accent-bg: #eee8f8;
+  --accent-border: #c6b7de;
+  --accent-ink: #ffffff;
+  --ice-bg: #edf5fc;
   --green: #28745a;
   --green-bg: #e3f0e8;
   --amber: #91651f;
@@ -18,21 +24,34 @@
   --red-bg: #f3e3df;
   --blue: #365f84;
   --blue-bg: #e3ebf2;
-  --shadow: 0 1px 2px rgba(28, 33, 30, 0.04);
+  --control-bg: var(--surface);
+  --control-bg-soft: var(--surface-soft);
+  --control-border: var(--border-strong);
+  --code-text: #48405e;
+  --link: #634793;
+  --danger: var(--red);
+  --danger-border: #dfb4af;
+  --shadow: 0 3px 16px rgba(59, 44, 88, 0.04);
 }
 
 body[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #171a18;
-  --sidebar: #1d211f;
-  --surface: #232825;
-  --surface-soft: #2b302d;
-  --surface-warm: #202521;
-  --border: #3a413c;
-  --border-strong: #535c55;
-  --text: #eef2ee;
-  --muted: #aab3ac;
-  --faint: #828b84;
+  --bg: #181923;
+  --sidebar: #1c1d28;
+  --surface: #222431;
+  --surface-soft: #2b2c3c;
+  --surface-warm: #342c24;
+  --border: #3c3c50;
+  --border-strong: #626079;
+  --text: #f0eff8;
+  --muted: #b6b4c7;
+  --faint: #a29eb6;
+  --accent: #bda3eb;
+  --accent-strong: #c9b2ef;
+  --accent-bg: #39304e;
+  --accent-border: #73608f;
+  --accent-ink: #241a36;
+  --ice-bg: #233343;
   --green: #79c9a4;
   --green-bg: #1f3b31;
   --amber: #d6aa5d;
@@ -41,7 +60,10 @@ body[data-theme="dark"] {
   --red-bg: #3d2724;
   --blue: #8fb8dc;
   --blue-bg: #223447;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --code-text: #e0d8ee;
+  --link: #c9b2ef;
+  --danger-border: #8a524f;
+  --shadow: 0 3px 18px rgba(0, 0, 0, 0.14);
 }
 
 * {

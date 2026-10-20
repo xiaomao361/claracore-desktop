@@ -1,0 +1,287 @@
+/* Imported after the legacy view styles so their narrow sidebar rules do not
+   replace this shared top navigation. Content views retain their own layout. */
+body {
+  display: block;
+  background:
+    radial-gradient(ellipse at 72% 0, color-mix(in srgb, var(--accent-bg) 58%, transparent), transparent 58%),
+    var(--bg);
+}
+
+.sidebar.app-navigation {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+  min-height: 0;
+  width: 100%;
+  /* hiddenInset traffic lights occupy this strip on macOS. Keep it draggable
+     and free of controls even when navigation wraps onto another line. */
+  padding: 40px clamp(20px, 3vw, 48px) 18px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--sidebar);
+  -webkit-app-region: drag;
+}
+
+.app-navigation .brand {
+  flex: 0 0 auto;
+  gap: 10px;
+  min-width: 0;
+  padding: 0;
+}
+
+.app-navigation .brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  box-shadow: none;
+}
+
+.app-navigation .brand-mark-dark { display: none; }
+body[data-theme="dark"] .app-navigation .brand-mark-light { display: none; }
+body[data-theme="dark"] .app-navigation .brand-mark-dark { display: block; }
+
+.app-navigation .brand strong {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.app-navigation .brand span {
+  margin-top: 2px;
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.app-navigation :is(.primary-navigation, .utility-navigation) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  -webkit-app-region: no-drag;
+}
+
+.app-navigation .primary-navigation {
+  flex: 1 1 auto;
+}
+
+.app-navigation .utility-navigation {
+  flex: 0 1 auto;
+  margin-inline-start: auto;
+}
+
+.app-navigation .nav-item {
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 40px;
+  gap: 7px;
+  padding: 9px 11px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: start;
+  overflow-wrap: anywhere;
+  -webkit-app-region: no-drag;
+}
+
+.app-navigation .nav-item:hover {
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.app-navigation .nav-item.active {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--accent-strong);
+  font-weight: 650;
+}
+
+.app-navigation .nav-icon,
+.app-navigation .nav-item:is(:hover, .active) .nav-icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  transform: scale(0.8);
+}
+
+.app-navigation .utility-navigation .nav-item {
+  font-size: 12px;
+}
+
+.workspace {
+  width: min(1384px, 100%);
+  min-width: 0;
+  margin-inline: auto;
+  padding: clamp(24px, 3.2vw, 44px) clamp(20px, 3.2vw, 48px) 64px;
+  overflow: visible;
+}
+
+.workspace > .topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 14px 28px;
+  margin-bottom: 28px;
+}
+
+.topbar > div:first-child {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.topbar h1 {
+  font-size: clamp(24px, 2.2vw, 30px);
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+}
+
+.topbar p {
+  max-width: 68ch;
+  margin-top: 7px;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.topbar .status-rail {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 18px;
+  max-width: 100%;
+  margin-block-start: 7px;
+  margin-inline-start: auto;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: normal;
+}
+
+.topbar .status-rail span {
+  gap: 7px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  overflow-wrap: anywhere;
+}
+
+.topbar .status-rail :is(.dot, .stack-dot) {
+  transform: scale(0.75);
+}
+
+:is(
+  .memory-page,
+  .shared-line-page,
+  .innerlife-shell,
+  .trace-page,
+  #logsView .logs-grid,
+  #agentSetupView .agent-access-page,
+  #settingsView
+) {
+  width: 100%;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.workspace > .view {
+  min-width: 0;
+}
+
+.module-readonly-badge {
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+
+body .primary,
+body[data-theme="dark"] .primary {
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+  color: var(--accent-ink);
+}
+
+body .link-button {
+  color: var(--link);
+}
+
+body :is(button, input, select, textarea, summary, a, [tabindex]):focus-visible,
+body[data-theme="dark"] :is(button, input, select, textarea, summary, a, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 3px;
+}
+
+/* The legacy dark stylesheet has separate control tokens. Keep those aliases
+   tied to the same surfaces as the shell in both appearances. */
+body[data-theme="dark"] {
+  --control-bg: var(--surface);
+  --control-bg-soft: var(--surface-soft);
+  --control-border: var(--border-strong);
+  --code-text: #e0d8ee;
+  --link: var(--accent-strong);
+  --danger-border: #8a524f;
+}
+
+body[data-theme="dark"] .app-navigation .nav-icon {
+  background: transparent;
+  color: inherit;
+}
+
+body[data-theme="dark"] :is(input, textarea)::placeholder {
+  color: var(--faint);
+}
+
+@media (max-width: 900px) {
+  .sidebar.app-navigation {
+    gap: 12px 18px;
+    padding-inline: 20px;
+  }
+
+  .app-navigation .brand {
+    flex-basis: 100%;
+  }
+
+  .app-navigation .utility-navigation {
+    margin-inline-start: 0;
+  }
+
+  .topbar .status-rail {
+    justify-content: flex-start;
+    margin-inline-start: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .sidebar.app-navigation {
+    padding-inline: 16px;
+  }
+
+  .app-navigation .primary-navigation,
+  .app-navigation .utility-navigation {
+    flex-basis: 100%;
+  }
+
+  .app-navigation .nav-item {
+    padding-inline: 9px;
+  }
+
+  .workspace {
+    padding: 22px 14px 40px;
+  }
+
+  .workspace > .topbar {
+    margin-bottom: 22px;
+  }
+}

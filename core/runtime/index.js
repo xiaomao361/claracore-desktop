@@ -19,6 +19,7 @@ const { PRODUCT_VERSION } = require("../version");
 const continuity = require("../continuity");
 const { getGatewayContext } = require("../gateway/context");
 const innerlife = require("../innerlife");
+const { bindMaterialResolver } = require("../innerlife/material-reference");
 
 function timestampForFilename(date = new Date()) {
   return date.toISOString().replace(/[:.]/g, "-");
@@ -40,8 +41,10 @@ function resetCachedDatabase() {
   return productCoreOwner.reset();
 }
 
-function ensureProductCore(app) {
-  return productCoreOwner.ensure(app);
+async function ensureProductCore(app) {
+  const core = await productCoreOwner.ensure(app);
+  bindMaterialResolver(core, app);
+  return core;
 }
 
 function withExclusiveProductCore(app, operation) {

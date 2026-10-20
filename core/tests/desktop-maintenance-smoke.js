@@ -183,8 +183,10 @@ if (eventName === "Stop") { console.log('STOP_UNCHANGED'); }
     assert(runHook('SessionStart', root).stdout.includes('REGISTER_CONVERSATION'));
     assert(runHook('Stop', path.join(root, 'codex/memories_v2/jobs')).stdout.includes('STOP_UNCHANGED'));
     const manifest = require('../gateway/tool-profiles').profileToolDefinitions('core');
-    assert.equal(manifest.length, 35);
-    assert(Buffer.byteLength(JSON.stringify(manifest)) <= 18122);
+    const ceilings = require('./fixtures/context-budget-ceilings').CONTEXT_BUDGET_CEILINGS;
+    assert.equal(manifest.length, 38);
+    assert(Buffer.byteLength(JSON.stringify(manifest)) <= ceilings.coreToolsList);
+    for (const name of ['understanding_context', 'understanding_submit', 'understanding_resume']) assert(manifest.some(tool => tool.name === name));
     assert(!manifest.some(tool => tool.name === 'memory_context_feedback'));
     console.log('Desktop maintenance smoke passed: Agent isolation, archived history, bounded status pagination, lifecycle filters, evidenced feedback and host policy.');
   } finally {

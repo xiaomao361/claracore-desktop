@@ -2,6 +2,24 @@
 
 ## Current Truth
 
+- 2026-10-19: the user approved promoting the GUI and brand checkpoint to
+  `1.0.0`. Product, lockfile and reviewed Agent Guide versions are aligned.
+  See [1.0.0 notes](RELEASE_NOTES_V1.0.0.md) and the
+  [local Lite package receipt](validation/2026-10-19-v1.0.0-lite-package.md).
+  This is a local checkpoint; no public release was performed.
+- The [1.0 GUI](design/V1_GUI.md) was first implemented on the
+  0.9.2 source version and packaged as the
+  [GUI Lite trial](validation/2026-10-19-gui-lite-package.md) `gui-20261019.1`;
+  the user provided a favorable overall visual observation and requested
+  four-module convergence plus a compact Agent presence signal. The local
+  follow-up build is [`gui-20261019.2`](validation/2026-10-19-gui-lite-package-2.md);
+  the third local build [`gui-20261019.3`](validation/2026-10-19-gui-lite-package-3.md) adds concurrent Agent signatures and
+  source-preserving topic typography. The user reported the GUI substantially
+  improved, retained the Agent icon scheme, and approved a limited
+  [product brand refresh](design/V1_BRAND_REFRESH.md) for `gui-20261019.4`.
+  The user subsequently reported the result looked good and approved the
+  1.0.0 version. Detailed installed-window acceptance remains separate.
+
 - `main` is the working Desktop line.
 - `codex/v0.8.0-local-knowledge` is the current local development branch for
   the Knowledge collection, reading, retrieval, and recall work. See the
@@ -13,7 +31,8 @@
   checks; actual Host acceptance is pending. `0.7.0-preview.2` is a local unsigned
   Lite trial artifact, not the public release.
 - `package.json` is the product-version source through `core/version.js`.
-- Current source version: `0.8.4` (Shared Line receipts, paged InnerLife diagnostics and explicit Memory feedback; local trial, not publicly released).
+- Current source version: `1.0.0` (shared-understanding GUI and product brand refresh; local checkpoint, not publicly released). See [notes](RELEASE_NOTES_V1.0.0.md).
+- Version sequence confirmed by the user: this redesign is `0.9.0`, followed by the fix checkpoint `0.9.1`. Earlier understanding test DMGs accidentally retained `0.8.4`; their metadata and checksums remain historical evidence.
 - 0.7.2 retires stdio, keeps both HTTP protocol versions, and reserves CLI for internal maintenance. See [migration](HTTP_MCP_MIGRATION.md).
 - 0.7.7 adds bounded InnerLife state selection, output novelty and evidence review. See [plan](V0.7.7_INNERLIFE_PLAN.md) and [notes](RELEASE_NOTES_V0.7.7.md).
 - Current public release: `0.8.1`.
