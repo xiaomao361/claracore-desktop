@@ -2,6 +2,10 @@
 
 ## Current Truth
 
+- 2026-10-20: `1.0.0` is publicly released, tag `v1.0.0` at `252e258`.
+  macOS arm64 and Windows x64 Full/Lite installers and both platform checksum
+  manifests are published. See [release notes](RELEASE_NOTES_V1.0.0.md) and
+  [verification](validation/2026-10-20-v1.0.0-release.md).
 - 2026-10-19: the user approved promoting the GUI and brand checkpoint to
   `1.0.0`. Product, lockfile and reviewed Agent Guide versions are aligned.
   See [1.0.0 notes](RELEASE_NOTES_V1.0.0.md) and the
@@ -31,12 +35,13 @@
   checks; actual Host acceptance is pending. `0.7.0-preview.2` is a local unsigned
   Lite trial artifact, not the public release.
 - `package.json` is the product-version source through `core/version.js`.
-- Current source version: `1.0.0` (shared-understanding GUI and product brand refresh; local checkpoint, not publicly released). See [notes](RELEASE_NOTES_V1.0.0.md).
+- Current source version: `1.0.0` (shared-understanding GUI and product brand refresh; public release). See [notes](RELEASE_NOTES_V1.0.0.md).
 - Version sequence confirmed by the user: this redesign is `0.9.0`, followed by the fix checkpoint `0.9.1`. Earlier understanding test DMGs accidentally retained `0.8.4`; their metadata and checksums remain historical evidence.
 - 0.7.2 retires stdio, keeps both HTTP protocol versions, and reserves CLI for internal maintenance. See [migration](HTTP_MCP_MIGRATION.md).
 - 0.7.7 adds bounded InnerLife state selection, output novelty and evidence review. See [plan](V0.7.7_INNERLIFE_PLAN.md) and [notes](RELEASE_NOTES_V0.7.7.md).
-- Current public release: `0.8.1`.
-- Tag `v0.8.1` is the current stable GitHub Release at `c343e66`.
+- Current public release: `1.0.0`.
+- Tag `v1.0.0` is the current stable GitHub Release at `252e258`.
+- `0.8.1` at `c343e66` is the previous stable GitHub Release.
 
 `0.6.14` was the previous public Full/Lite release for verified safety-backup gates,
 full-catalog semantic retrieval with model isolation, accurate restore-preview
@@ -126,11 +131,19 @@ through to the daily-use Application Support directory.
 
 Current packaging commands and artifact checks live in
 [macOS Packaging](mac-packaging.md). Current public-release details live in
-[v0.8.1 Release Notes](RELEASE_NOTES_V0.8.1.md).
+[v1.0.0 Release Notes](RELEASE_NOTES_V1.0.0.md).
 
 ## Current Release
 
-`0.8.1` is the current public release, tagged `v0.8.1` at `c343e66`.
+`1.0.0` is the current public release, tagged `v1.0.0` at `252e258`.
+Published 2026-10-20 with macOS arm64 and Windows x64 Full/Lite installers
+and two platform SHA-256 manifests. macOS packages are signed, notarized,
+stapled and Gatekeeper accepted; Windows installers remain unsigned.
+See [release notes](RELEASE_NOTES_V1.0.0.md).
+
+### Previous 0.8.1 Release
+
+`0.8.1` was the previous public release, tagged `v0.8.1` at `c343e66`.
 Published 2026-09-29 with macOS arm64 and Windows x64 Full/Lite installers
 and two platform SHA-256 manifests. macOS applications and DMGs are signed,
 notarized, stapled and Gatekeeper accepted; Windows installers remain unsigned.

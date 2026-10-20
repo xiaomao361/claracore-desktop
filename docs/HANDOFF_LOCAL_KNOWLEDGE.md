@@ -2,10 +2,11 @@
 
 更新：2026-10-20（Asia/Shanghai）。这是当前交接入口；[初始讨论快照](HANDOFF_LOCAL_KNOWLEDGE_INITIAL.md)仅供查历史。
 
-## 当前工程位置：1.0.0 发布准备
+## 当前工程位置：1.0.0 已发布
 
 用户已确认 GUI／品牌效果，批准 1.0.0，并授权正式 release。当前源码、锁文件和
-Agent Guide 均为 1.0.0，按 macOS arm64 与 Windows x64 Full/Lite 矩阵准备发布。
+Agent Guide 均为 1.0.0，已按 macOS arm64 与 Windows x64 Full/Lite 矩阵发布，
+源码标签 `v1.0.0` 指向 `252e258`。
 实际发布状态、资产与验证边界以 [1.0.0 说明](RELEASE_NOTES_V1.0.0.md) 为准。
 以下各节保留为阶段历史，不再表示当前版本或尚未实现 GUI。
 

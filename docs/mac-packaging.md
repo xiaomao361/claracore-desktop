@@ -2,17 +2,26 @@
 
 ## Current Release Boundary
 
-The current public stable release is `0.8.1`, tagged `v0.8.1`. Treat
+The current public stable release is `1.0.0`, tagged `v1.0.0` at `252e258`. Treat
 [Version Branching](VERSION_BRANCHING.md) and the versioned release notes as
 the release truth.
 
-The current local source checkpoint is `1.0.0`, approved by the user on
-2026-10-19. The local arm64 Lite recipe is
+The 2026-10-19 local `1.0.0` trial preceded the public release. Its Lite recipe is
 `scripts/v1-lite-builder-config.js` (ad-hoc signature, no notarization or
-publication). See [1.0.0 notes](RELEASE_NOTES_V1.0.0.md) and the
-[package receipt](validation/2026-10-19-v1.0.0-lite-package.md).
+publication); it is not the public release artifact. See
+[1.0.0 notes](RELEASE_NOTES_V1.0.0.md), the
+[public package verification](validation/2026-10-20-v1.0.0-release.md) and the
+[historical local receipt](validation/2026-10-19-v1.0.0-lite-package.md).
 
-## 0.8.1 public release
+## 1.0.0 public release
+
+Full/Lite macOS arm64 Apps and DMGs are Developer ID signed, Apple-notarized,
+stapled, Gatekeeper accepted and DMG-verified. Both contain 407 product source
+files identical to the tag. Full's built-in embedding and both packaged
+SQLite/Gateway runtimes passed. Windows x64 Full/Lite builds and package checks
+passed in Actions; Windows installers remain unsigned.
+
+## Previous 0.8.1 public release
 
 Full and Lite macOS Apple Silicon DMGs are Developer ID signed, notarized,
 stapled and Gatekeeper accepted. Both pass DMG integrity checks and downloaded
@@ -86,9 +95,9 @@ Current App output and future DMG output:
 
 ```text
 dist/mac-arm64/ClaraCore Desktop.app
-dist/ClaraCore-Desktop-0.6.14-arm64.dmg
+dist/ClaraCore-Desktop-1.0.0-arm64.dmg
 dist-lite/mac-arm64/ClaraCore Desktop.app
-dist-lite/ClaraCore-Desktop-0.6.14-lite-arm64.dmg
+dist-lite/ClaraCore-Desktop-1.0.0-lite-arm64.dmg
 ```
 
 Only artifacts built with the signed release commands and accepted by the
@@ -163,7 +172,7 @@ not current transport support.
 ## Validation Status
 
 Current released-artifact evidence is recorded in
-[v0.6.12 Release Notes](RELEASE_NOTES_V0.6.12.md).
+[1.0.0 verification](validation/2026-10-20-v1.0.0-release.md).
 
 ### `0.6.12` Full/Lite release checkpoint
 

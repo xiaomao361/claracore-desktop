@@ -38,7 +38,8 @@ instructions.
 
 ## Build And Release
 
-- [v1.0.0 Release Notes](RELEASE_NOTES_V1.0.0.md): shared-understanding GUI, concurrent Agent presence and refreshed product identity; local Lite checkpoint.
+- [v1.0.0 Release Notes](RELEASE_NOTES_V1.0.0.md): current public Full/Lite release for the shared-understanding GUI, concurrent Agent presence and refreshed product identity.
+- [1.0.0 Release Verification](validation/2026-10-20-v1.0.0-release.md): frozen source, CI, notarization, package boundaries and public assets.
 - [v0.9.2 Release Notes](RELEASE_NOTES_V0.9.2.md): Home long-title wrapping and content-driven horizon layout.
 - [v0.9.1 Release Notes](RELEASE_NOTES_V0.9.1.md): shared-understanding local checkpoint and conversation-identity integration fix.
 

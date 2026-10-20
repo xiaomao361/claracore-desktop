@@ -37,9 +37,9 @@ Read these before adding new features:
   pagination, resource ownership, memory telemetry, and long-run checks.
 - [macOS Packaging](docs/mac-packaging.md): current local packaging and packaged
   Gateway validation notes.
-- [v1.0.0 release notes](docs/RELEASE_NOTES_V1.0.0.md): current local checkpoint for
+- [v1.0.0 release notes](docs/RELEASE_NOTES_V1.0.0.md): current public release for
   the shared-understanding GUI and refreshed product identity.
-- [v0.8.1 release notes](docs/RELEASE_NOTES_V0.8.1.md): latest documented public release.
+- [v0.8.1 release notes](docs/RELEASE_NOTES_V0.8.1.md): previous public release.
 - [v0.7.7 release notes](docs/RELEASE_NOTES_V0.7.7.md): previous public release covering vector
   retrieval, HTTP migration, verified backups and InnerLife grounding.
 - [v0.6.14 release notes](docs/RELEASE_NOTES_V0.6.14.md): previous public Full/Lite release
@@ -76,11 +76,13 @@ Read these before adding new features:
 
 ## Current Status
 
-The current source checkpoint is `1.0.0`, with the user-approved shared-understanding
-GUI and refreshed product identity. A local macOS Apple Silicon Lite installer is
-provided for review; this checkpoint has not been publicly released.
+The current public release is `1.0.0`, with the user-approved shared-understanding
+GUI and refreshed product identity. Tag `v1.0.0` points to `252e258`; macOS
+Apple Silicon and Windows x64 Full/Lite installers are published with platform
+SHA-256 manifests. macOS packages are signed and notarized; Windows installers
+are unsigned. See the [release verification](docs/validation/2026-10-20-v1.0.0-release.md).
 
-The latest documented public stable release is `0.8.1`, tagged `v0.8.1`. That release contains Developer ID signed and
+The previous public stable release is `0.8.1`, tagged `v0.8.1`. That release contains Developer ID signed and
 notarized macOS Apple Silicon Full/Lite builds plus Windows x64 Full/Lite
 installers. Intel macOS and Mac App Store packages are outside that release. It
 is a working desktop shell with a product-owned local data store,

@@ -54,6 +54,6 @@ light/dark header specimens and small-size variants. No app window was opened,
 no Dock or menu bar interaction was performed, and no installed app was replaced.
 The user subsequently reported that the result looked good and approved the
 `1.0.0` version. Actual installed header, Dock and installer behavior still
-requires the user's observation; this is not a public release. The refreshed
-assets are included in the [1.0.0 local Lite checkpoint](../RELEASE_NOTES_V1.0.0.md).
+requires the user's observation. Following the local checkpoint, the user
+authorized the [1.0.0 public release](../RELEASE_NOTES_V1.0.0.md) on October 20.
 Agent identity and activity code is byte-identical to the third GUI trial.
