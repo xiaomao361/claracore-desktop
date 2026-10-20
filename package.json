@@ -100,7 +100,7 @@
     "test:innerlife:grounding": "node core/tests/innerlife-grounding-smoke.js",
     "test:knowledge:semantic": "node core/tests/knowledge-search-smoke.js --builtin",
     "test:jev": "node core/tests/jev-recall-smoke.js && node core/tests/jev-routing-smoke.js && node core/tests/decision-model-smoke.js",
-    "test:understanding": "node core/tests/understanding-recall-smoke.js && node core/tests/understanding-material-smoke.js && node core/tests/understanding-lines-smoke.js && node core/tests/understanding-host-smoke.js && node core/tests/understanding-evaluation-smoke.js && node core/tests/understanding-smoke.js && node core/tests/understanding-http-smoke.js",
+    "test:understanding": "node core/tests/understanding-journal-smoke.js && node core/tests/understanding-recall-smoke.js && node core/tests/understanding-material-smoke.js && node core/tests/understanding-lines-smoke.js && node core/tests/understanding-host-smoke.js && node core/tests/understanding-evaluation-smoke.js && node core/tests/understanding-smoke.js && node core/tests/understanding-http-smoke.js",
     "evaluate:understanding": "node scripts/evaluate-understanding.mjs"
   },
   "build": {

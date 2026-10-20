@@ -33,8 +33,13 @@ function journal(dataRoot, owner, submissionId) {
       fs.writeFileSync(fd, serialized); fs.fsyncSync(fd);
       fs.closeSync(fd); fd = undefined;
       fs.renameSync(temporary, target);
-      const dir = fs.openSync(directory, "r");
-      try { fs.fsyncSync(dir); } finally { fs.closeSync(dir); }
+      // Windows does not support fsync on a read-only directory handle. The
+      // file is still flushed before replacement; directory crash durability
+      // is only additionally enforced on platforms that support it.
+      if (process.platform !== "win32") {
+        const dir = fs.openSync(directory, "r");
+        try { fs.fsyncSync(dir); } finally { fs.closeSync(dir); }
+      }
     } finally {
       if (fd !== undefined) fs.closeSync(fd);
       if (fs.existsSync(temporary)) fs.unlinkSync(temporary);

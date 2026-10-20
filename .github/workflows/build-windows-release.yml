@@ -53,8 +53,11 @@ jobs:
       - name: Run source checks
         run: |
           npm run check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm run test:builtin-embedding
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm run test:sqlite-vec:projection
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Build Windows Full installer
         run: npm run dist:win
@@ -71,7 +74,9 @@ jobs:
       - name: Verify packaged SQLite vector runtime without UI
         run: |
           node scripts/verify-sqlite-vec-package.js "${{ github.workspace }}/dist/win-unpacked"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/verify-sqlite-vec-package.js "${{ github.workspace }}/dist-lite/win-unpacked"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Write checksums
         shell: pwsh
