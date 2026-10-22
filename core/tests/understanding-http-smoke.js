@@ -18,7 +18,7 @@ async function main() {
     database.innerLifeGenerate = async () => { calls++; return JSON.stringify({ operations: [], coverage: [{ eventId: "u1", ...Object.fromEntries(["memory", "knowledge", "continuity", "innerlife"].map(domain => [domain, { status: "none", reason: "A transient question requires no durable update.", operations: [] }])) }] }); };
     await gateway.start();
     const endpoint = gateway.buildEndpoints().find(item => item.id === "streamable-http-mcp");
-    const headers = { Authorization: endpoint.authHeader.replace(/^Authorization:\s*/u, ""), "X-ClaraCore-Agent-ID": "codex", "X-ClaraCore-Conversation-ID": "understanding-http" };
+    const headers = { Authorization: endpoint.authHeader.replace(/^Authorization:\s*/u, ""), "X-ClaraCore-Agent-ID": "codex", "X-ClaraCore-Conversation-ID": "understanding-http", "X-ClaraCore-Tool-Profile": "core-compat" };
     client = new Client({ name: "understanding-http", version: "1" }, { versionNegotiation: { mode: "auto" } });
     await client.connect(new StreamableHTTPClientTransport(new URL(endpoint.url), { requestInit: { headers } }));
     const manifest = await client.listTools();

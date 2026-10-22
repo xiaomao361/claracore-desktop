@@ -17,7 +17,11 @@ const sharedLineToolDefinitions = [
         },
         "detail": {
           "type": "string",
-          "enum": ["resume", "context", "full"],
+          "enum": [
+            "resume",
+            "context",
+            "full"
+          ],
           "description": "resume (default) is the continuation packet. context adds relevant Shared Reality. full restores history, snapshots, agent state, arcs, and the stored text."
         },
         "fullArc": {
@@ -43,7 +47,11 @@ const sharedLineToolDefinitions = [
         },
         "status": {
           "type": "string",
-          "enum": ["active", "archived", "all"]
+          "enum": [
+            "active",
+            "archived",
+            "all"
+          ]
         },
         "limit": {
           "type": "integer",
@@ -70,7 +78,11 @@ const sharedLineToolDefinitions = [
       "properties": {
         "detail": {
           "type": "string",
-          "enum": ["resume", "context", "full"],
+          "enum": [
+            "resume",
+            "context",
+            "full"
+          ],
           "description": "Shape of the returned Shared Line acknowledgement. resume is the default."
         },
         "title": {
@@ -98,7 +110,11 @@ const sharedLineToolDefinitions = [
       "properties": {
         "detail": {
           "type": "string",
-          "enum": ["resume", "context", "full"],
+          "enum": [
+            "resume",
+            "context",
+            "full"
+          ],
           "description": "Shape of the returned Shared Line acknowledgement. resume is the default."
         },
         "lineId": {
@@ -178,7 +194,11 @@ const sharedLineToolDefinitions = [
       "properties": {
         "detail": {
           "type": "string",
-          "enum": ["resume", "context", "full"],
+          "enum": [
+            "resume",
+            "context",
+            "full"
+          ],
           "description": "Shape of the returned Shared Line acknowledgement. resume is the default."
         },
         "agentId": {
@@ -316,7 +336,11 @@ const sharedLineToolDefinitions = [
       "properties": {
         "detail": {
           "type": "string",
-          "enum": ["resume", "context", "full"],
+          "enum": [
+            "resume",
+            "context",
+            "full"
+          ],
           "description": "Shape of the returned Shared Line acknowledgement. resume is the default."
         },
         "lineId": {
@@ -392,42 +416,24 @@ const sharedLineToolDefinitions = [
     }
   },
   {
-    "name": "shared_line_model_adjustment_list",
-    "title": "List Shared Line Model Adjustments",
-    "description": "List model-specific negative adjustments used in Shared Line resume packets.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {},
-      "additionalProperties": false
-    }
-  },
-  {
-    "name": "shared_line_model_adjustment_get",
-    "title": "Get Shared Line Model Adjustment",
-    "description": "Read model-specific negative adjustments for one model.",
+    "name": "shared_line_model_adjustment",
+    "title": "Shared Line Model Adjustment",
+    "description": "Manage model-specific resume adjustments. Explicit action=list/get/set/delete; get/set/delete require model. Set preserves the existing adjustment policy; delete removes only that model configuration.",
     "inputSchema": {
       "type": "object",
       "required": [
-        "model"
+        "action"
       ],
       "properties": {
-        "model": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false
-    }
-  },
-  {
-    "name": "shared_line_model_adjustment_set",
-    "title": "Set Shared Line Model Adjustment",
-    "description": "Create or update model-specific negative adjustments used in Shared Line resume packets.",
-    "inputSchema": {
-      "type": "object",
-      "required": [
-        "model"
-      ],
-      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "list",
+            "get",
+            "set",
+            "delete"
+          ]
+        },
         "model": {
           "type": "string"
         },
@@ -450,23 +456,45 @@ const sharedLineToolDefinitions = [
           "type": "string"
         }
       },
-      "additionalProperties": false
-    }
-  },
-  {
-    "name": "shared_line_model_adjustment_delete",
-    "title": "Delete Shared Line Model Adjustment",
-    "description": "Delete model-specific negative adjustments.",
-    "inputSchema": {
-      "type": "object",
-      "required": [
-        "model"
-      ],
-      "properties": {
-        "model": {
-          "type": "string"
+      "oneOf": [
+        {
+          "properties": {
+            "action": {
+              "const": "list"
+            }
+          }
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "get"
+            }
+          },
+          "required": [
+            "model"
+          ]
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "set"
+            }
+          },
+          "required": [
+            "model"
+          ]
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "delete"
+            }
+          },
+          "required": [
+            "model"
+          ]
         }
-      },
+      ],
       "additionalProperties": false
     }
   },
@@ -496,6 +524,4 @@ const sharedLineToolDefinitions = [
   }
 ];
 
-module.exports = {
-  sharedLineToolDefinitions
-};
+module.exports = { sharedLineToolDefinitions };

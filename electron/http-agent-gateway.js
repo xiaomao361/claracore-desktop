@@ -1,3 +1,4 @@
+const { DEFAULT_PROFILE, PROFILE_NAMES } = require("../core/gateway/tool-profiles");
 const {
   PROTOCOL_ERAS, detectProtocolEra, validateModernRequest,
   validateModernProtocolHeader, validateModernMethodHeaders, createDiscoverResult,
@@ -713,7 +714,7 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
             gatewayLaunchConfig, runtimeAppForGateway: () => app, textResult,
             // Profiles bound discovery; existing handlers still own invocation authority.
             toolProfile: () => "full"
-          }).toolDefinitions();
+          }).callableToolDefinitions();
           if (!catalog.some(tool => tool.name === name)) throw invalidParams(`Unknown tool: ${name}`);
         }
         const concurrencyAgentId = currentHttpAgentId(request, requestUrl);
@@ -841,14 +842,14 @@ function createHttpAgentGateway({ app, ensureProductCore, getRuntimeSnapshot, ge
         },
         firstCalls: [
           "Call claracore_connection_test after installing or changing the MCP connection.",
-          "Call gateway_context with detail=brief and without lineId; if it returns SHARED_LINE_ID_REQUIRED, choose a returned candidate and retry with that explicit lineId.",
+          "Call shared_line_get without lineId; if it returns SHARED_LINE_ID_REQUIRED, choose a returned candidate and retry with that explicit lineId.",
           "Call gateway_docs only when you need the usage guide; it returns a short summary by default and takes a section argument."
         ],
         toolProfiles: {
-          default: "core",
-          available: ["core", "full"],
+          default: DEFAULT_PROFILE,
+          available: [...PROFILE_NAMES],
           httpHeader: "X-ClaraCore-Tool-Profile",
-          note: "core carries the normal connection, recall, continuation, and sharing surface. An unknown or missing value resolves to core."
+          note: "core advertises 25 daily tools; core-compat preserves the previous 38; full advertises all tools. Missing/unknown resolves to core. Profiles change discovery, not authority. Configure the header and reconnect; do not assume live catalog refresh."
         },
         contextStates: {
           connected: "The MCP handshake succeeded. This proves nothing about what the host injects per prompt.",

@@ -36,7 +36,7 @@ Authorization: Bearer <token>
 X-ClaraCore-Agent-ID: <stable-persona-id>
 X-ClaraCore-Client-ID: <host-client-id>
 X-ClaraCore-Conversation-ID: <current-host-conversation-id>
-X-ClaraCore-Tool-Profile: core|full
+X-ClaraCore-Tool-Profile: core|core-compat|full
 ```
 
 `X-ClaraCore-Session-ID` remains a compatibility alias for the caller
@@ -45,9 +45,9 @@ cannot be confused with an InnerLife `sessionId` tool argument.
 
 `X-ClaraCore-Tool-Profile` is optional. It selects which
 manifest `tools/list` returns. Omitting it, or sending an unknown value, gives
-the smaller `core` manifest; only an explicit `full` broadens the surface.
-Every tool still executes when called by name under either profile. Profiles
-control advertisement, not authorization. Select `full` only when needed.
+the 25-tool `core` manifest. Explicit `core-compat` preserves the previous 38 tools; `full` advertises 83 current tools. Sixteen retired names remain callable adapters; see [the consolidation map](design/2026-10-22-mcp-capability-consolidation.md). Configure the header and reconnect before using unadvertised tools; live catalog refresh is not assumed.
+Every tool still executes when called by name under every profile. Profiles
+control advertisement, not authorization. Use `gateway_docs(section=diagnostics)` to discover specialized/maintenance routes. See [the complete routing table and migration examples](design/2026-10-22-mcp-tool-surface.md).
 Stdio is retired; all clients use HTTP headers. See [migration](HTTP_MCP_MIGRATION.md).
 
 ## InnerLife Session Contract
@@ -133,7 +133,7 @@ line only by supplying its exact `lineId`. That explicit write records
 
 For a resume read:
 
-1. Call `gateway_context` with `detail: "brief"` and without `lineId`.
+1. Call `shared_line_get` without `lineId`.
 2. If `SHARED_LINE_ID_REQUIRED` is returned, select one of its candidates and
    retry with that explicit `lineId`.
 
@@ -166,18 +166,17 @@ it must change to keep its previous behavior.
 
 | Client / transport | Default tool manifest | Default payload shapes | Needs a client change? |
 | --- | --- | --- | --- |
-| **Codex** (HTTP MCP) | `core` (35 tools on the v0.8.0 development branch) | minimum-sufficient defaults | Use returned `detailRef` or one-object get tools when content is needed. Send `X-ClaraCore-Tool-Profile: full` only for advanced tools. |
-| **Claude Code** (HTTP MCP) | `core` (35 tools on the v0.8.0 development branch) | minimum-sufficient defaults | No change for ordinary recall/continuation; do not assume list rows contain bodies. |
-| **Hermes / Lara** (HTTP MCP) | `core` (35 tools on the v0.8.0 development branch) | minimum-sufficient defaults | Stop treating `shared_line_list` as resume content; select a line, then call `shared_line_get`. |
+| **Codex** (HTTP MCP) | `core` (25 tools in current source) | minimum-sufficient defaults | Use returned `detailRef` or one-object get tools when content is needed. Use `core-compat` for the previous catalog or `full` for all schemas; reconnect after a config change. |
+| **Claude Code** (HTTP MCP) | `core` (25 tools in current source) | minimum-sufficient defaults | No change for ordinary recall/continuation; do not assume list rows contain bodies. |
+| **Hermes / Lara** (HTTP MCP) | `core` (25 tools in current source) | minimum-sufficient defaults | Stop treating `shared_line_list` as resume content; select a line, then call `shared_line_get`. |
 | **HTTP `/agent/setup`** | reports `toolProfiles` and `contextStates` | `firstCalls` no longer requires `gateway_docs` | No. |
 | **HTTP `/gateway/context`** | unchanged endpoint | bounded ambiguity body with `candidateCount`, `totalCount`, `detailRef` | No, unless it assumed an unbounded `candidates` array. |
 | **Desktop UI / CLI** | not applicable | **unchanged — full records** | No. Shaping is a Gateway-boundary concern only. |
 
 Behavior that is identical on every client and transport:
 
-- an unknown or missing tool profile resolves to `core`; only an explicit `full`
-  broadens the surface;
-- every tool still executes when called by name under either profile, because
+- an unknown or missing tool profile resolves to `core`; only an explicit `core-compat` or `full` broadens the catalog;
+- every tool still executes when called by name under every profile, because
   Gateway tool input is not schema-validated;
 - `claracore_connection_test` reports the resolved profile in `toolProfile`;
 - ambiguity refusals, delivery evidence, sensitivity, time view, and same-Agent
@@ -221,14 +220,16 @@ single-object reads retain meaningful evidence up to the final safety ceiling.
   longer repeats the structured content.
 - Omitting `gateway_context.detail` now selects `brief`; `full` must be explicit.
 - InnerLife session/profile/activity lists and Gateway traces default to
-  bounded summaries. Use `innerlife_session_get`, `innerlife_profile_get`, or
+  bounded summaries. Use `innerlife_status(detail="full", section="sessions", recordId=...)`, `innerlife_profile_get`, or
   `gateway_trace_get` for one complete record.
 - `innerlife_share_check` returns the one selected share and compact timing
   evidence. It no longer repeats the pending-share catalog in a snapshot.
 - `claracore_status` never returns inline API keys. Read `connection` for the
   authenticated caller and `configuration.gateway` for stored defaults.
 - All Agent-facing InnerLife profile tools use `profileEnabled`; status keeps
-  the independent daemon scheduler state at `daemon.loopEnabled`.
+  the effective daemon scheduler state at `daemon.loopEnabled`. Since 1.0.1,
+  the per-Agent daemon choice is mirrored in the profile; the global gate can
+  pause scheduling without erasing that choice. Pausing one Agent is isolated.
 - Gateway trace request flags distinguish shortened text (`truncated`), a
   whole-request bounded preview (`previewOnly`), and JSON conversion failure
   (`serializationFailed`).
@@ -365,7 +366,7 @@ prompt shorter than the bound is still recorded in full.
 3. Send the current Codex conversation id through
    `X-ClaraCore-Conversation-ID` when the host exposes it.
 4. After changing caller configuration, reconnect and run
-   `claracore_connection_test` then `gateway_context(detail=brief)`.
+   `claracore_connection_test` then `shared_line_get` without `lineId`.
    `gateway_docs` is now an on-demand read, not a startup step.
 5. Codex maintenance workflows that need the import/export, graph, or retention
    tools advertised must send `X-ClaraCore-Tool-Profile: full`.

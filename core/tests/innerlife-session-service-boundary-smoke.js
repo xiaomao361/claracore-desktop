@@ -460,7 +460,7 @@ async function main() {
   assert(
     repositorySource.includes("sessionLifecycle.startInnerLifeSession(this, input)") &&
       repositorySource.includes("sessionLifecycle.endInnerLifeSession(this, sessionId, input)") &&
-      repositorySource.includes("sessionLifecycle.processPendingSessionAfterthoughts(this, limit)"),
+      repositorySource.includes("sessionLifecycle.processPendingSessionAfterthoughts(this, limit, options)"),
     "Public session lifecycle methods must delegate to the service layer."
   );
   assert(

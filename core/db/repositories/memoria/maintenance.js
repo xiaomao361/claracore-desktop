@@ -83,6 +83,12 @@ function createMemoriaMaintenanceRepository(helpers) {
              JOIN memory_embeddings e ON e.memory_id = m.id
              WHERE m.status = 'active'
                AND m.sensitivity != 'restricted'
+               AND e.status = 'pending') AS pending_embedding_count,
+            (SELECT COUNT(*)
+             FROM memories m
+             JOIN memory_embeddings e ON e.memory_id = m.id
+             WHERE m.status = 'active'
+               AND m.sensitivity != 'restricted'
                AND e.status = 'failed') AS failed_embedding_count,
             (SELECT COUNT(*)
              FROM memories m
@@ -109,10 +115,12 @@ function createMemoriaMaintenanceRepository(helpers) {
       addIssue("orphan_labels", rows.orphan_label_count || 0, "Labels not attached to an existing memory.");
       addIssue("alias_labels", rows.alias_label_count || 0, "Labels still using an alias instead of the canonical label.");
       return {
-        status: issues.length ? "needs_repair" : "ok",
+        // Pending is observable unfinished work, not proof of a failed job.
+        status: issues.length ? "needs_repair" : rows.pending_embedding_count > 0 ? "pending" : "ok",
         checkedAt: new Date().toISOString(),
         counts: {
           missingEmbeddings: rows.missing_embedding_count || 0,
+          pendingEmbeddings: rows.pending_embedding_count || 0,
           failedEmbeddings: rows.failed_embedding_count || 0,
           staleEmbeddings: rows.stale_embedding_count || 0,
           orphanLabels: rows.orphan_label_count || 0,

@@ -22,14 +22,15 @@ Use request-scoped caller headers and keep the current conversation id accurate.
 A caller conversation id never replaces an `inner_session_*` id.
 See [HTTP migration](HTTP_MCP_MIGRATION.md) when replacing old process configs.
 
-## Tool Profiles (v0.6.10)
+## Tool Profiles (2026-10-22 source contract)
 
 `tools/list` is served from a maintained profile.
 
 | Profile | Contents | Selection |
 | --- | --- | --- |
-| `core` (default) | 35 tools on the v0.8.0 development branch: Knowledge reading/intake/index rebuild, connection/context, Memory recall/write/supersede/link/structured-record detail, Shared Line continuation, InnerLife session and sharing | nothing to set |
-| `full` | every tool, including maintenance, import/export, graph, retention, identity, daemon, archive, and advanced editing | `X-ClaraCore-Tool-Profile: full` (HTTP) |
+| `core` (default) | 25 tools: Knowledge read/intake, connection/guide/host auto context, Memory search/read/write/supersede/links, Shared Line continuation and lifecycle, InnerLife sessions/inbox/sharing | nothing to set |
+| `core-compat` | Previous 38-tool core, including structured records, Understanding, aggregate context, status/pending shares, formal handoff and index rebuild | `X-ClaraCore-Tool-Profile: core-compat` (HTTP) |
+| `full` | 83 current tools, including maintenance, import/export, graph, retention, identity, daemon, archive, and advanced editing | `X-ClaraCore-Tool-Profile: full` (HTTP) |
 
 `core` covers complete everyday workflows, not just the write half of each: if a
 tool is in `core`, its natural counterpart is too — `memoria_create` with
@@ -43,7 +44,9 @@ in its `toolProfile` field.
 The `core` manifest advertises fewer tools and, for some tools, fewer
 arguments. Gateway tool input is not schema-validated, so every handler still
 accepts the full argument set and every tool still executes when called by
-name. Select `full` when you want those tools and arguments advertised.
+name. Configure the profile header and reconnect to load tools and schemas absent from your current catalog; do not assume Claude/Codex supports live `tools/list` refresh. This is discovery, not permission isolation. `full` advertises the current canonical schemas; 16 retired names remain callable compatibility adapters. See [the complete 97-item consolidation map and exit gates](design/2026-10-22-mcp-capability-consolidation.md).
+
+See [the routing manifest and verified client dependencies](design/2026-10-22-mcp-tool-surface.md) for the current catalog and migration examples; the capability map covers all 97 historical entries. These are source changes; the installed 1.0.1 remains on its previous catalog until explicitly replaced.
 
 ## Context Delivery Contract (v0.6.10)
 
@@ -97,7 +100,17 @@ Across `innerlife_status` and the `innerlife_profile_list`,
 `innerlife_profile_get`, and `innerlife_profile_set` tools, `profileEnabled`
 means the Agent profile may participate in InnerLife. `loopEnabled` in
 `innerlife_status` means the background daemon is scheduled. They are
-independent states and must not be interpreted as a health contradiction.
+distinct projections of one Agent choice: from 1.0.1, the per-Agent daemon row
+owns that choice and the profile mirrors it. The global switch can make
+`loopEnabled=false` while `profileEnabled=true`; reading this gate does not
+erase the Agent's choice. Upgrade preserves existing daemon choices and repairs
+stale profile flags. Pausing one Agent does not pause other Agents.
+
+The current candidate pool combines pending, deferred and approved shares:
+at most 10 per Agent, valid for seven days from creation. Approved shares have
+priority, followed by pending and deferred; within each class, newest wins.
+Deferral does not reset expiry. Retired candidates keep their original text
+and a recorded reason; the full history remains explicitly readable.
 
 In one Gateway trace request, `truncated` means a text field was shortened,
 `previewOnly` means the complete request object was replaced by a bounded
@@ -176,7 +189,7 @@ updated, its turn behavior is unchanged.
 After MCP is installed, connected, or restarted, run this sequence:
 
 1. `claracore_connection_test`
-2. `gateway_context` without `detail` and without `lineId` (`brief` is the server default)
+2. `shared_line_get` without `lineId`
 
 If the context call returns `SHARED_LINE_ID_REQUIRED`, choose one of the
 returned candidates and retry with its explicit `lineId`. Use
@@ -196,7 +209,7 @@ longer restates the tool manifest — tool names and argument schemas come from
 `tools/list`. Pass `query` instead of `section` to search maintained guide
 passages. Every response carries the Agent Guide version and update date.
 
-`gateway_context` returns the current working packet: Shared Line, recent
+In `core-compat`/`full`, `gateway_context` returns the aggregate working packet: Shared Line, recent
 Memory, InnerLife state, Doctor guidance, and recovery advice. Use
 the omitted-detail default or `detail: "brief"` for bounded startup and resume
 reads. Pass `detail: "full"` only when a specific task needs the complete,
@@ -222,7 +235,7 @@ form on both transports.
 
 ### Resume Work
 
-1. Call `gateway_context` with `detail: "brief"` and without `lineId`.
+1. Call `shared_line_get` without `lineId`.
 2. If it returns `SHARED_LINE_ID_REQUIRED`, choose the intended candidate and
    retry with its `lineId`.
 3. Read the selected Shared Line and recent Memory.
@@ -298,7 +311,7 @@ form on both transports.
 5. Call `innerlife_status` without arguments for the compact status packet.
    Pass `detail: true` only when you need full sessions, digest runs, or
    history.
-6. Call `innerlife_doctor` when InnerLife seems idle, paused, or misconfigured.
+6. With `full` discovery, call `innerlife_status(detail="full", section="doctor")` when InnerLife seems idle, paused, or misconfigured; section="daemon" reads scheduler state without initialization.
    For a terminal persisted afterthought, inspect its job id with
    `innerlife_status(detail=true)`, then use
    `innerlife_afterthought_resolve` explicitly: retry after repair, or

@@ -248,7 +248,12 @@ async function maintenanceRun(core, input = {}) {
 }
 
 async function maintenanceAudit(core, input = {}) {
-  return core.database.getMemoryAuditReport(input || {});
+  const section = input.section === undefined ? "overview" : input.section;
+  if (section === "overview") return core.database.getMemoryAuditReport(input);
+  if (section === "maintenance") return maintenance(core);
+  if (section === "merge-suggestions") return mergeSuggestions(core, input);
+  if (section === "archive-suggestions") return archiveSuggestions(core, input);
+  throw new Error("Memory audit section must be overview, maintenance, merge-suggestions or archive-suggestions.");
 }
 
 async function mergeSuggestions(core, input = {}) {

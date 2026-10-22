@@ -15,7 +15,7 @@ Gateway 组织显式读写，四模块保留原有业务数据所有权。
 | `understanding_submit` | 提交本轮证据增量，服务端规划四域处理并按授权执行 | 默认只规划；模型需 allowModel=true；执行需 execute=true |
 | `understanding_resume` | 查看计划、逐项回执、恢复未完成操作 | 原始证据、授权、计划和调用者身份保持不变 |
 
-三个入口均进入 core/full 清单。原分域工具继续支持深入读取与明确维护。
+三个专项入口进入 `core-compat`/`full` 清单；默认 `core` 保留日常分域工具。按需设置 profile header 后重连获取 schema，不依赖运行中目录刷新。原分域工具继续支持深入读取与明确维护。
 主实现位于 `core/gateway/understanding/`，没有新增第五个业务事实库。
 
 读取 query 最多 1500 UTF-8 字节；共同线采用 resume 投影，记忆/知识各最多

@@ -403,6 +403,14 @@ function actualMarkupAndReadingContracts() {
   assert.equal(dom.homeActionableIssue.getAttribute("role"), "alert");
   assert.match(dom.homeActionableIssue.textContent, /ACTIONABLE HEALTH ERROR/u);
   assert(dom.homeActionableIssue.querySelector('[data-view-target="logs"]'));
+  snapshot.health.checks = [];
+  snapshot.memoryStats = { pendingEmbeddingCount: 1 };
+  snapshot.memoryMaintenance = { status: "pending", counts: { pendingEmbeddings: 1 }, issues: [] };
+  home.renderHomeDashboard();
+  assert.equal(home.actionableAttentionCount(), 1, "Pending audit must not duplicate the existing queue reminder");
+  snapshot.memoryMaintenance = { status: "needs_repair", issues: [{ code: "orphan_labels", count: 1 }] };
+  home.renderHomeDashboard();
+  assert.equal(home.actionableAttentionCount(), 2, "An independent repair issue must remain visible beside pending work");
   home.renderLoadError();
   assert.equal(dom.homeActionableIssue.hidden, false);
   assert.equal(dom.homeActionableIssue.closest("details"), null);

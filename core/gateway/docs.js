@@ -4,8 +4,8 @@ const { BUILD_FLAVOR, HAS_BUILT_IN_EMBEDDING } = require("../build-flavor");
 // version bump must explicitly confirm that the Agent Guide still describes
 // the shipped product; context-budget-smoke enforces parity.
 const DOCS_RELEASE = Object.freeze({
-  version: "1.0.0",
-  updatedAt: "2026-10-19"
+  version: "1.0.3",
+  updatedAt: "2026-10-22"
 });
 
 const DOCS_SECTIONS = Object.freeze([
@@ -28,7 +28,7 @@ const FULL_SECTION_DOCS_BYTES = 20 * 1024;
 const SEARCH_DOCS_BYTES = 6144;
 
 const STARTUP_SEQUENCE =
-  "claracore_connection_test -> gateway_context(detail=brief, no lineId) -> retry with one candidate lineId only after SHARED_LINE_ID_REQUIRED";
+  "claracore_connection_test -> shared_line_get(no lineId) -> retry with one candidate lineId only after SHARED_LINE_ID_REQUIRED";
 
 function normalizeSection(value) {
   const section = String(value || "").trim().toLowerCase();
@@ -104,7 +104,7 @@ function defaultDocs({ toolProfile }) {
     "- memoria_search: 3 bounded summaries -> memoria_get, or detail=full",
     "- memoria_link_list and memoria_record_list: bounded catalogs -> memoria_get or memoria_record_get",
     "- writes: bounded acknowledgement -> returned detailRef",
-    "- understanding_context / understanding_submit: explicit cross-domain read and evidence-delta workflow; understanding_resume inspects plans and recovers receipts. See section=understanding. Host hooks are unchanged.",
+    "- Specialized tools (core-compat/full): records, aggregate context, Understanding, diagnostics; host hooks keep calling by name.",
     "- shared_line_list: bounded catalog -> shared_line_get",
     "- shared_line_get: a resume packet -> detail=context, detail=full",
     "- innerlife_status: operational state only -> detail=true",
@@ -126,7 +126,7 @@ function defaultDocs({ toolProfile }) {
     "- full: every section at once",
     "- query: search maintained passages across all sections",
     "",
-    "Tool names and argument schemas come from tools/list, not from this guide."
+    "Specialized tools: see section=diagnostics. Set the profile header and reconnect for schemas; do not assume live catalog refresh."
   ].join("\n");
 }
 
@@ -135,15 +135,19 @@ function startSection({ launch, toolProfile }) {
     "## First Connection",
     "",
     "1. Call claracore_connection_test once after installing or changing MCP config.",
-    "2. Call gateway_context with detail=brief and no lineId.",
+    "2. Call shared_line_get with no lineId.",
     "3. If it returns SHARED_LINE_ID_REQUIRED, choose one returned candidate and retry with that lineId.",
     "4. Tell the user, in their language, what ClaraCore enables and what resumable context you found.",
+    "",
+    "## Tool catalogs",
+    "",
+    "core: 25 daily tools. core-compat: previous 38-tool core. full: 83 current tools; 16 old names remain callable adapters. Set X-ClaraCore-Tool-Profile and reconnect before using tools absent from the loaded catalog. Profiles affect discovery only; handlers and authority are unchanged. No live tools/list refresh is assumed.",
     "",
     "## Identity",
     "",
     "Use a stable persona id per agent. Preferred ids: lara, clara, codex.",
     "Streamable HTTP: X-ClaraCore-Agent-ID, X-ClaraCore-Client-ID, X-ClaraCore-Conversation-ID, and optional X-ClaraCore-Tool-Profile.",
-    `Tool profile values are core or full; an unknown or missing value resolves to core. Current profile: ${toolProfile}.`,
+    `Tool profile values are core, core-compat or full; an unknown or missing value resolves to core. Current profile: ${toolProfile}.`,
     "Caller conversation ids never replace domain ids such as InnerLife sessionId.",
     "To consolidate an old tool-prefixed id, use agent_identity_merge instead of editing SQLite.",
     "",
@@ -208,7 +212,7 @@ function knowledgeSection() {
     "- knowledge_intake_commit uses that token within 30 minutes and before restart. Revisions and links are rechecked. Conflict means read current material and prepare a new preview. Routine authorized intake requires no extra approval dialog.",
     "- Inspect write, readback, links and index separately. Retry the SAME token on transport uncertainty. partial is not complete success; inspect the target and recoveryPath before any new write. On restart, expired tokens require reading existing anchors before preparing another draft.",
     "- inbox/ requires pendingReason and nextStep; its body is excluded from the index. Existing content is preserved; this stage only creates files or appends sections.",
-    "- knowledge_read(action=status) detects stale structural indexes; knowledge_index_rebuild repairs them explicitly. The index contains hashes and pointers. semantic=true builds local vectors in resumable batches (repeat status=building); hybrid reports partial when semantics fail.",
+    "- knowledge_read(action=status) detects stale structural indexes; knowledge_index_rebuild (core-compat/full) repairs them explicitly. The index contains hashes and pointers. semantic=true builds local vectors in resumable batches (repeat status=building); hybrid reports partial when semantics fail.",
     "- Return actual path#anchor receipts. Intake proves storage, not later use or factual validation. Markdown bodies stay out of Gateway trace storage."
   ].join("\n");
 }
@@ -216,6 +220,7 @@ function knowledgeSection() {
 function understandingSection() {
   return [
     "## Shared understanding (explicit understanding-v1)",
+    "These specialized tools require core-compat/full discovery; configure the profile header and reconnect first.",
     "- Use understanding_context(query, lineId when known). Without lineId it returns owned candidates; allowModel=true opts into semantic matching, ambiguity abstains. Catalogs default to 10 and accept lineLimit up to 50. Reads never create or activate. Ordinary questions may have no line. Private/pending shares are withheld; selection is not delivery/use.",
     "- At meaningful progress or conversation end, submit ONLY new evidence events through understanding_submit: stable submissionId, events{id,speaker,text,sourceRef}, grants and optional exact lineId. Do not preclassify the domains. Speaker/sourceRef and grants are caller attestations of actual evidence and existing authority, not independently authenticated human consent.",
     "- Gateway semantically extracts and routes through the existing configured chat model only with allowModel=true. Missing permission, disabled model, failed/invalid output and pending evidence remain distinct; no keyword confirmation or silent fallback. The model provides exact quotes, rationale and per-event coverage of all four domains; structural checks do not prove semantic quality.",
@@ -243,7 +248,7 @@ function memorySection() {
     "- memoria_link_create kinds: related, causes, evolved-from, contradicts, part-of. Use contradicts when the conflict is unresolved.",
     "- Add a short link note explaining why the connection exists. Call memoria_link_list before adding more links.",
     "- memoria_link_list is a bounded catalog; use memoria_get on one endpoint for its body.",
-    "- memoria_record_create is for structured recurring logs or metrics, not prose. Its acknowledgement omits value and metadata; use memoria_record_get for one complete record.",
+    "- In core-compat/full, memoria_record_create is for structured recurring logs or metrics, not prose. Its acknowledgement omits value and metadata; use memoria_record_get for one complete record.",
     "",
     "### Record a durable fact",
     "",
@@ -255,7 +260,7 @@ function memorySection() {
     "",
     "### Automatic recall",
     "",
-    "- memory_context runs the deterministic Memory Controller for the authenticated caller. Off is the default; observe returns bounded evidence with empty context.",
+    "- In core-compat/full, memory_context runs the deterministic Memory Controller for the authenticated caller. Off is the default; observe returns bounded evidence with empty context.",
     "- The trusted canary returns at most one current project-scoped Memory owned by the authenticated caller. Unidentified callers and historical/all views stay context-free.",
     "- Treat canary context as prior read-only evidence. Verify current code, runtime, data, and user statements before acting, and never mutate Memory because of that block.",
     "- recallReceipt.decisionId points to the Memory ledger; hostDelivery/used/outcome remain unknown without observation. Full-profile memory_context_feedback records evidenced delivered/used/ignored/wrong/corrected/outcome_unknown or inspects receipts. It never changes Memory and deduplicates identical acknowledgements.",
@@ -270,13 +275,13 @@ function sharedLineSection() {
     "- Shared Line is the current resumable working position, not long-term fact storage.",
     "- Rename/archive/restore acknowledgements return the exact target line, never the global current line. Explicit archived-line reads preserve history; writes still require an active line.",
     "- shared_line_get returns a resume packet: line, summary, interpretation status, facts used, next step, and at most one recent handoff. Use detail=context for relevant Shared Reality and detail=full for history, snapshots, arcs, and agent state.",
-    "- Start resume reads with gateway_context; omitted detail defaults to brief. shared_line_list is a bounded catalog and shared_line_get expands one selected line. In the catalog, status is lifecycle and isCurrent is only the globally selected fallback; an Agent-filtered page may have no current row.",
+    "- Start resume reads with shared_line_get and no lineId. core-compat/full also offer gateway_context; omitted detail defaults to brief. shared_line_list is a bounded catalog and shared_line_get expands one selected line. In the catalog, status is lifecycle and isCurrent is only the globally selected fallback; an Agent-filtered page may have no current row.",
     "- SHARED_LINE_ID_REQUIRED is a safe refusal: nothing was read or written. Pick a candidate and retry with lineId.",
     "- A request without lineId is allowed only when your agent owns zero or one active non-default line.",
     "- shared_line_update after meaningful progress, handoff, or changed interpretation. Keep summary concise and actionable.",
     "- When a dynamic line has no concrete resumable next step, record its verified final position, set interpretationStatus=closed, then shared_line_archive it. Archiving preserves history.",
     "- interpretationStatus=needs_review when the state is uncertain and the next agent should be cautious.",
-    "- shared_line_handoff_create when explicitly handing work to another agent or a future session.",
+    "- In core-compat/full, shared_line_handoff_create when explicitly handing work to another agent or a future session.",
     "- Agent-level state (style, preferences, boundaries, patterns) lives in shared_line_agent_state. Load it once per session, not once per line read.",
     "",
     "### Update the current line",
@@ -291,6 +296,7 @@ function sharedLineSection() {
 function innerLifeSection() {
   return [
     "## InnerLife",
+    "core includes sessions, share_check/mark_share and submit_inbox. Status/pending catalogs are in core-compat/full; other InnerLife maintenance requires full. Configure the profile header and reconnect to load those schemas.",
     "",
     "- innerlife_session_start at the beginning of a real work session; it returns the session id, a compact share_plan, and a Shared Line resume packet.",
     "- innerlife_session_end with a structured summary of the actual conversation. Do not invent an afterthought; InnerLife decides whether one exists.",
@@ -305,7 +311,7 @@ function innerLifeSection() {
     "- innerlife_submit_inbox, innerlife_submit_fact, and innerlife_submit_continuity are for material to digest later, not immediate factual recall.",
     "- Shared Line context is optional. Pass lineId when one line matters; when several are active and lineId is omitted, briefing, digest, daemon tick, and share checks continue with sharedLineContext.status=ambiguous.",
     "- New process/explore/converge shares require evidence and novelty review. Failed reviews do not publish; process inputs retry. Legacy shares remain unchanged. An AI thought is not evidence of a user fact.",
-    "- innerlife_doctor when InnerLife seems idle, paused, or misconfigured.",
+    "- In full, innerlife_status(detail=full, section=doctor) diagnoses idle, paused or misconfigured work; section=daemon reads scheduler state without initialization.",
     "- InnerLife may only open a topic inside a live session. It never authorizes out-of-session notifications."
   ].join("\n");
 }
@@ -313,6 +319,10 @@ function innerLifeSection() {
 function diagnosticsSection({ launch, paths }) {
   return [
     "## Gateway / Diagnostics",
+    "",
+    "Specialized discovery: set X-ClaraCore-Tool-Profile: core-compat for structured records (memoria_record_create/list/get), gateway_context, memory_context, Understanding (understanding_context/submit/resume), shared_line_handoff_create, status, pending shares and knowledge_index_rebuild. Set full for import/export, graph editing, identity, retention, daemon and other maintenance. Reconnect and read tools/list for schemas; never guess arguments or depend on live catalog refresh. The profile is not a permission grant.",
+    "",
+    "- Full catalog consolidation: submit_fact/submit_continuity use innerlife_submit_inbox(source=...). Sessions and doctor/daemon diagnostics use innerlife_status full sections/recordId. Memory checks and merge/archive suggestions use memoria_maintenance_audit(section=...). Configuration uses shared_line_model_adjustment(action=list/get/set/delete) and memoria_label_alias(action=list/upsert/delete). Sixteen old names are deprecated adapters; feedback metadata names the replacement. Old daemon/doctor initialization stays on compatibility calls only. Do not remove personal hook dependencies automatically.",
     "",
     "- claracore_status for product health, this authenticated connection, and secret-safe configuration. Inline API keys are reported only as inline; env references remain visible.",
     "- gateway_trace_list returns bounded recent summaries; gateway_trace_get opens one request record. The operator can see these traces.",

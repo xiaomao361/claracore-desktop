@@ -222,9 +222,9 @@ function createInnerLifeSessionLifecycleService(inputPorts = {}) {
     };
   }
 
-  async function processPendingSessionAfterthoughts(database, limit = 5) {
+  async function processPendingSessionAfterthoughts(database, limit = 5, options = {}) {
     const safeLimit = Math.max(1, Math.min(20, Number.parseInt(String(limit), 10) || 5));
-    const jobs = await ports.claimAfterthoughts(database, safeLimit);
+    const jobs = await ports.claimAfterthoughts(database, safeLimit, options);
     const results = [];
     for (const job of jobs) {
       const metadata = { ...(job.metadata || {}) };

@@ -72,8 +72,8 @@ function createInnerLifeSessionRepository(_helpers, dependencies = {}) {
       return sessionLifecycle.endInnerLifeSession(this, sessionId, input);
     },
 
-    async processPendingSessionAfterthoughts(limit = 5) {
-      return sessionLifecycle.processPendingSessionAfterthoughts(this, limit);
+    async processPendingSessionAfterthoughts(limit = 5, options = {}) {
+      return sessionLifecycle.processPendingSessionAfterthoughts(this, limit, options);
     },
 
     async resolveInnerLifeSessionAfterthoughtFailure(id, input = {}) {

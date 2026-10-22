@@ -20,7 +20,9 @@ CLI 保留为内部维护入口，不作为 Agent 的接入回退。
    会话动态发送，同会话重连/恢复保持一致，新会话使用不同 ID；不要在全局配置
    填一个跨会话共用的固定值。此身份头不授予模型/写入权限，也不启用自动采集。
 4. 重新连接，调用 `claracore_connection_test`，再调用
-   `gateway_context(detail="brief")`。多线歧义时选择明确 lineId 再试。
+   `shared_line_get`（先不传 lineId）。多线歧义时选择明确 lineId 再试。
+   默认 `core` 为 25 工具；`X-ClaraCore-Tool-Profile: core-compat` 保留旧 38 工具目录，
+   `full` 返回 83 项现行接口，另有 16 个旧名称兼容适配（不在现行目录展示）。设置后重连，不能假设客户端动态刷新目录。
 5. 不支持 Streamable HTTP 的客户端需要升级或更换；旧 HTTP 协议兼容
    不等于保留 stdio 传输。不要自动重试写入或悄悄启动另一个数据库进程。
 

@@ -78,19 +78,15 @@ async function handleSharedLineTool(name, args, context) {
     });
   }
 
-  if (name === "shared_line_model_adjustment_list") {
-    return textResult({ models: await continuity.modelAdjustments(core) });
-  }
-
-  if (name === "shared_line_model_adjustment_get") {
-    return textResult({ modelAdjustment: await continuity.modelAdjustment(core, args.model) });
-  }
-
-  if (name === "shared_line_model_adjustment_set") {
-    return textResult({ modelAdjustment: await continuity.setModelAdjustment(core, args) });
-  }
-
-  if (name === "shared_line_model_adjustment_delete") {
+  if (name === "shared_line_model_adjustment") {
+    const { action } = args;
+    if (!["list", "get", "set", "delete"].includes(action)) throw new Error("Model adjustment action must be list, get, set or delete.");
+    if (action !== "list" && typeof args.model !== "string") throw new Error("Model adjustment action requires model.");
+    if (action === "list" && args.model !== undefined) throw new Error("List adjustments does not accept model.");
+    if (action !== "set" && ["forbiddenPhrases", "forbiddenPatterns", "injectPrompt", "updatedBy"].some(key => args[key] !== undefined)) throw new Error("Adjustment writes require action=set.");
+    if (action === "list") return textResult({ models: await continuity.modelAdjustments(core) });
+    if (action === "get") return textResult({ modelAdjustment: await continuity.modelAdjustment(core, args.model) });
+    if (action === "set") return textResult({ modelAdjustment: await continuity.setModelAdjustment(core, args) });
     return textResult(await continuity.deleteModelAdjustment(core, args.model));
   }
 

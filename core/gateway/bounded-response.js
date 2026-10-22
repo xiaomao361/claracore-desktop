@@ -134,7 +134,7 @@ function shapeInnerLifeSessionCatalogEntry(session = {}) {
     startedAt: session.startedAt || null,
     endedAt: session.endedAt || null,
     summary: boundedText(session.summary, 600),
-    detailRef: { tool: "innerlife_session_get", arguments: { id: session.id || "" } }
+    detailRef: { tool: "innerlife_status", arguments: { detail: "full", section: "sessions", recordId: session.id || "" } }
   };
 }
 

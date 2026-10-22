@@ -26,7 +26,10 @@ const innerlifeSessionToolDefinitions = [
         },
         "detail": {
           "type": "string",
-          "enum": ["summary", "full"],
+          "enum": [
+            "summary",
+            "full"
+          ],
           "description": "Shape of the returned briefing and Shared Line resume packet. summary is the default."
         },
         "includeBriefing": {
@@ -48,10 +51,14 @@ const innerlifeSessionToolDefinitions = [
       "type": "object",
       "anyOf": [
         {
-          "required": ["sessionId"]
+          "required": [
+            "sessionId"
+          ]
         },
         {
-          "required": ["session_id"]
+          "required": [
+            "session_id"
+          ]
         }
       ],
       "properties": {
@@ -116,64 +123,53 @@ const innerlifeSessionToolDefinitions = [
     }
   },
   {
-    "name": "innerlife_sessions",
-    "title": "List InnerLife Sessions",
-    "description": "List bounded recent Desktop-owned InnerLife session summaries. Defaults to 10 rows; limit can explicitly request up to 50. Use innerlife_session_get for one complete session.",
+    "name": "innerlife_status",
+    "title": "InnerLife Status",
+    "description": "Read Desktop-owned InnerLife operational state: counts, daemon, doctor, and indicators that shares or Inbox work are waiting. It does not return share bodies or Inbox bodies. Pass detail=full for paged diagnostic catalogs, then follow detailRef for a complete selected record. Full sections doctor and daemon return selected diagnostics; daemon reads never initialize a profile or state row.",
     "inputSchema": {
       "type": "object",
       "properties": {
-        "agentId": {
-          "type": "string"
-        },
-        "agentTool": {
-          "type": "string"
-        },
-        "agentName": {
-          "type": "string"
+        "section": {
+          "type": "string",
+          "enum": [
+            "overview",
+            "sessions",
+            "inbox",
+            "digestRuns",
+            "shares",
+            "doctor",
+            "daemon"
+          ]
         },
         "limit": {
-          "type": "number",
+          "type": "integer",
           "minimum": 1,
           "maximum": 50
         },
-        "status": { "type": "string", "enum": ["all", "active", "ended"] },
         "offset": {
-          "type": "number",
+          "type": "integer",
           "minimum": 0
-        }
-      },
-      "additionalProperties": false
-    }
-  },
-  {
-    "name": "innerlife_session_get",
-    "title": "Get InnerLife Session",
-    "description": "Get one complete Desktop-owned InnerLife session by id.",
-    "inputSchema": {
-      "type": "object",
-      "required": ["id"],
-      "properties": {
-        "id": { "type": "string" }
-      },
-      "additionalProperties": false
-    }
-  },
-  {
-    "name": "innerlife_status",
-    "title": "InnerLife Status",
-    "description": "Read Desktop-owned InnerLife operational state: counts, daemon, doctor, and indicators that shares or Inbox work are waiting. It does not return share bodies or Inbox bodies. Pass detail=full for paged diagnostic catalogs, then follow detailRef for a complete selected record.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "section": { "type": "string", "enum": ["overview", "sessions", "inbox", "digestRuns", "shares"] },
-        "limit": { "type": "integer", "minimum": 1, "maximum": 50 },
-        "offset": { "type": "integer", "minimum": 0 },
-        "status": { "type": "string", "description": "Filter a sessions, inbox or shares section. Sessions: all, active or ended." },
-        "recordId": { "type": "string", "description": "Read one complete record in the selected section; restricted to the caller Agent." },
+        },
+        "status": {
+          "type": "string",
+          "description": "Filter a sessions, inbox or shares section. Sessions: all, active or ended."
+        },
+        "recordId": {
+          "type": "string",
+          "description": "Read one complete record in the selected section; restricted to the caller Agent."
+        },
         "detail": {
           "oneOf": [
-            { "type": "string", "enum": ["summary", "full"] },
-            { "type": "boolean" }
+            {
+              "type": "string",
+              "enum": [
+                "summary",
+                "full"
+              ]
+            },
+            {
+              "type": "boolean"
+            }
           ],
           "description": "summary (default) is operational state only; full returns bounded catalogs with section/limit/offset and explicit record reads. Boolean true is a compatibility alias for full. Responses report mode=status or mode=full; clients that branched on the pre-0.6.6 mode value must use detail instead."
         }
@@ -196,22 +192,11 @@ const innerlifeSessionToolDefinitions = [
         },
         "detail": {
           "type": "string",
-          "enum": ["summary", "full"],
+          "enum": [
+            "summary",
+            "full"
+          ],
           "description": "summary (default) is the decision synthesis. full returns the complete aggregate briefing."
-        }
-      },
-      "additionalProperties": false
-    }
-  },
-  {
-    "name": "innerlife_doctor",
-    "title": "InnerLife Doctor",
-    "description": "Diagnose Desktop-owned InnerLife health and recovery guidance.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "agentId": {
-          "type": "string"
         }
       },
       "additionalProperties": false
@@ -219,6 +204,4 @@ const innerlifeSessionToolDefinitions = [
   }
 ];
 
-module.exports = {
-  innerlifeSessionToolDefinitions
-};
+module.exports = { innerlifeSessionToolDefinitions };

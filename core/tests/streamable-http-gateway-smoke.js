@@ -155,16 +155,16 @@ async function main() {
     // v0.6.6: the guide is no longer a mandatory startup read, so the sequence
     // goes straight from the handshake to bounded context.
     assert.deepStrictEqual(
-      setup.firstCalls.map((item) => item.match(/claracore_connection_test|gateway_docs|shared_line_list|gateway_context/)?.[0]),
-      ["claracore_connection_test", "gateway_context", "gateway_docs"],
+      setup.firstCalls.map((item) => item.match(/claracore_connection_test|gateway_docs|shared_line_get|gateway_context/)?.[0]),
+      ["claracore_connection_test", "shared_line_get", "gateway_docs"],
       "Agent setup should expose the canonical first-connection sequence"
     );
     assert(
-      setup.firstCalls[1].includes("detail=brief"),
-      "Agent setup should request bounded Gateway context explicitly."
+      setup.firstCalls[1].includes("shared_line_get") && setup.firstCalls[1].includes("without lineId"),
+      "Agent setup must request the default Shared Line resume without guessing a line."
     );
     assert.strictEqual(setup.toolProfiles?.default, "core", "Agent setup should document the core default profile.");
-    assert.deepStrictEqual(setup.toolProfiles?.available, ["core", "full"]);
+    assert.deepStrictEqual(setup.toolProfiles?.available, ["core", "core-compat", "full"]);
     assert.strictEqual(setup.toolProfiles?.httpHeader, "X-ClaraCore-Tool-Profile");
     assert.strictEqual(setup.toolProfiles?.stdioEnv, undefined);
     assert.strictEqual(setup.connectionMode.current, "streamable-http");
@@ -235,7 +235,7 @@ async function main() {
     assert(initialized.result.instructions.includes("Write Memoria only"), "initialize should describe restrained Memory writes");
     const tools = await postMcp({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} });
     assert(tools.result.tools.some((tool) => tool.name === "claracore_connection_test"), "tools/list should include connection test");
-    assert(tools.result.tools.some((tool) => tool.name === "memory_context"), "tools/list should include observe-only memory_context");
+    assert(tools.result.tools.some((tool) => tool.name === "gateway_auto_context"), "tools/list must retain the host turn-context contract");
     const controllerPrompt = "还记得我们之前决定的 HTTP Gateway Controller smoke 吗";
     const controllerMemory = await database.createMemory({
       title: "HTTP Gateway Controller",
@@ -290,7 +290,7 @@ async function main() {
     });
     assert(called.result.content[0].text.includes("claracore-desktop"), "tool response should mention product");
     const connectionPacket = JSON.parse(called.result.content[0].text);
-    assert.deepStrictEqual(connectionPacket.nextCalls, ["gateway_context"]);
+    assert.deepStrictEqual(connectionPacket.nextCalls, ["shared_line_get"]);
     assert.strictEqual(connectionPacket.toolProfile, "core", "HTTP must report the resolved tool profile truthfully.");
     assert(connectionPacket.afterOnboarding.includes("Tell the user"));
     await database.updateSettings({ "innerlife.llm.api_key_ref": "HTTP_INLINE_SECRET_MUST_NOT_ESCAPE" });

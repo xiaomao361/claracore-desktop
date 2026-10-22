@@ -1,6 +1,7 @@
 const SHARE_TIMING_PORTS = [
   "ensureProfile",
   "findAvailableShareId",
+  "isAvailableShare",
   "getOptionalResumePacket",
   "getShare",
   "getShareCheck",
@@ -57,9 +58,10 @@ function createInnerLifeShareTimingService(inputPorts = {}) {
     if (requestedShareRecord && requestedShareRecord.agent_id !== agentId) {
       throw new Error("InnerLife share belongs to another agent.");
     }
-    const requestedShare = requestedShareRecord?.status === "drafting"
-      ? null
-      : requestedShareRecord;
+    const requestedShare = requestedShareRecord
+      && ["pending", "approved", "deferred"].includes(requestedShareRecord.status)
+      && await ports.isAvailableShare(database, requestedShareRecord.id)
+      ? requestedShareRecord : null;
     const profile = await ports.ensureProfile(database, agentId);
     const {
       resumePacket,
@@ -72,6 +74,7 @@ function createInnerLifeShareTimingService(inputPorts = {}) {
       const availableShareId = await ports.findAvailableShareId(database, profile.agent_id);
       if (availableShareId) {
         share = await ports.getShare(database, availableShareId);
+        if (!await ports.isAvailableShare(database, availableShareId)) share = null;
       }
     }
 
@@ -87,6 +90,8 @@ function createInnerLifeShareTimingService(inputPorts = {}) {
         decision: "none",
         reason: draftingRequested
           ? "The requested InnerLife thought is still being generated."
+          : requestedShareId
+            ? "The requested thought is outside the current candidate pool."
           : "No shareable InnerLife thought is available.",
         metadata: {
           contextSource: providedContext ? "provided" : "none",

@@ -1,10 +1,20 @@
 # Desktop v0.8 本地知识 — 下一 Session 交接
 
-更新：2026-10-20（Asia/Shanghai）。这是当前交接入口；[初始讨论快照](HANDOFF_LOCAL_KNOWLEDGE_INITIAL.md)仅供查历史。
+更新：2026-10-22（Asia/Shanghai）。这是当前交接入口；[初始讨论快照](HANDOFF_LOCAL_KNOWLEDGE_INITIAL.md)仅供查历史。
 
-## 当前工程位置：1.0.0 已发布
+## 当前工程位置：1.0.3 已安装试用，1.0.0 仍为公开版
 
-用户已确认 GUI／品牌效果，批准 1.0.0，并授权正式 release。当前源码、锁文件和
+用户已安装 macOS arm64 Lite 1.0.3（`v1.0.3-20261022.2`），实际安装包、运行进程、实时 Gateway 和只读日用审计已验证，见 [安装验证](validation/2026-10-22-v1.0.3-installed.md)。当前包含 1.0.1 的 InnerLife 候选池/生命周期修复、1.0.2 的 MCP 默认 25 / core-compat 38 / full 83 及 16 旧名适配，以及 1.0.3 的 pending 独立审计和补算后状态快照。594 条 active 非 restricted 记忆在观察时全部为当前模型 ready，维护各异常计数为零；这不是长期运行或视觉验收。
+
+2026-10-22 用户授权本轮收口，源码、文档及必要验证按当前 `codex/v0.8.0-local-knowledge` 分支提交推送；详情见 [收口记录](validation/2026-10-22-v1.0.3-closeout.md)。原有 `CLAUDE.md` 继续保留，不纳入。此后由用户持续试用；不自动升级、重打包、发布、重启或创建监控，按实际问题反馈继续。16 旧名兼容和历史会话结束证据门槛保持不变。
+
+## 1.0.1 历史工程与安装记录
+
+源码、锁文件与 Agent Guide 已更新为 1.0.1：InnerLife 候选池按 Agent 合计最多 10 条、创建后 7 天有效，退出候选保留原文和回执；统一 Agent 开关与全局门控，迁移保留已有 daemon 的实际选择。详见 [1.0.1 说明](RELEASE_NOTES_V1.0.1.md)。用户随后要求 Lite 包，已完成并验证 macOS arm64 本地试用 DMG（ad-hoc、未公证），见 [打包回执](validation/2026-10-21-v1.0.1-lite-package.md)。用户现已安装，实际 /Applications 包 hash 与打包回执一致、实时 Gateway=1.0.1、日用库012迁移已执行；候选10/10/8、开关一致、正文保留和完整性检查通过，见 [安装验证](validation/2026-10-21-v1.0.1-installed.md)。测试未操作UI或切换日用开关；下一次自然调度与长期体验待观察。未提交、打 tag 或公开发布。之前已安装的个人 Codex hook 修复继续有效，Desktop 包不会覆盖宿主配置。
+
+## 1.0.0 发布记录
+
+用户已确认 GUI／品牌效果，批准 1.0.0，并授权正式 release。当时源码、锁文件和
 Agent Guide 均为 1.0.0，已按 macOS arm64 与 Windows x64 Full/Lite 矩阵发布，
 源码标签 `v1.0.0` 指向 `252e258`。
 实际发布状态、资产与验证边界以 [1.0.0 说明](RELEASE_NOTES_V1.0.0.md) 为准。

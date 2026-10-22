@@ -1,0 +1,363 @@
+[
+  {
+    "name": "memoria_archive_suggestions",
+    "title": "Memory Archive Suggestions",
+    "description": "List dormant active non-restricted Memory records that are candidates for archive.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "olderThanDays": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 3650
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "memoria_maintenance_check",
+    "title": "Memory Maintenance Check",
+    "description": "Check ClaraCore Desktop Memory maintenance issues such as missing embeddings, failed embeddings, orphan labels, and alias labels.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "memoria_merge_suggestions",
+    "title": "Memory Merge Suggestions",
+    "description": "List conservative merge suggestions for active non-restricted ClaraCore Desktop Memory records.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 50
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "memoria_label_alias_list",
+    "title": "List Memory Label Aliases",
+    "description": "List ClaraCore Desktop Memory label aliases.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "memoria_label_alias_create",
+    "title": "Create Memory Label Alias",
+    "description": "Create or update a Memory label alias and merge existing alias labels into the canonical label.",
+    "inputSchema": {
+      "type": "object",
+      "required": [
+        "alias",
+        "canonicalLabel"
+      ],
+      "properties": {
+        "alias": {
+          "type": "string"
+        },
+        "canonicalLabel": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "memoria_label_alias_delete",
+    "title": "Delete Memory Label Alias",
+    "description": "Delete a Memory label alias without deleting existing Memory labels.",
+    "inputSchema": {
+      "type": "object",
+      "required": [
+        "alias"
+      ],
+      "properties": {
+        "alias": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "shared_line_model_adjustment_list",
+    "title": "List Shared Line Model Adjustments",
+    "description": "List model-specific negative adjustments used in Shared Line resume packets.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "shared_line_model_adjustment_get",
+    "title": "Get Shared Line Model Adjustment",
+    "description": "Read model-specific negative adjustments for one model.",
+    "inputSchema": {
+      "type": "object",
+      "required": [
+        "model"
+      ],
+      "properties": {
+        "model": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "shared_line_model_adjustment_set",
+    "title": "Set Shared Line Model Adjustment",
+    "description": "Create or update model-specific negative adjustments used in Shared Line resume packets.",
+    "inputSchema": {
+      "type": "object",
+      "required": [
+        "model"
+      ],
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "forbiddenPhrases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "forbiddenPatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "injectPrompt": {
+          "type": "string"
+        },
+        "updatedBy": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "shared_line_model_adjustment_delete",
+    "title": "Delete Shared Line Model Adjustment",
+    "description": "Delete model-specific negative adjustments.",
+    "inputSchema": {
+      "type": "object",
+      "required": [
+        "model"
+      ],
+      "properties": {
+        "model": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "innerlife_sessions",
+    "title": "List InnerLife Sessions",
+    "description": "List bounded recent Desktop-owned InnerLife session summaries. Defaults to 10 rows; limit can explicitly request up to 50. Use innerlife_session_get for one complete session.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "agentId": {
+          "type": "string"
+        },
+        "agentTool": {
+          "type": "string"
+        },
+        "agentName": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "all",
+            "active",
+            "ended"
+          ]
+        },
+        "offset": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "innerlife_session_get",
+    "title": "Get InnerLife Session",
+    "description": "Get one complete Desktop-owned InnerLife session by id.",
+    "inputSchema": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "innerlife_status",
+    "title": "InnerLife Status",
+    "description": "Read Desktop-owned InnerLife operational state: counts, daemon, doctor, and indicators that shares or Inbox work are waiting. It does not return share bodies or Inbox bodies. Pass detail=full for paged diagnostic catalogs, then follow detailRef for a complete selected record.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "section": {
+          "type": "string",
+          "enum": [
+            "overview",
+            "sessions",
+            "inbox",
+            "digestRuns",
+            "shares"
+          ]
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "status": {
+          "type": "string",
+          "description": "Filter a sessions, inbox or shares section. Sessions: all, active or ended."
+        },
+        "recordId": {
+          "type": "string",
+          "description": "Read one complete record in the selected section; restricted to the caller Agent."
+        },
+        "detail": {
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "summary",
+                "full"
+              ]
+            },
+            {
+              "type": "boolean"
+            }
+          ],
+          "description": "summary (default) is operational state only; full returns bounded catalogs with section/limit/offset and explicit record reads. Boolean true is a compatibility alias for full. Responses report mode=status or mode=full; clients that branched on the pre-0.6.6 mode value must use detail instead."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "innerlife_doctor",
+    "title": "InnerLife Doctor",
+    "description": "Diagnose Desktop-owned InnerLife health and recovery guidance.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "agentId": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "innerlife_submit_fact",
+    "title": "Submit InnerLife Fact",
+    "description": "Submit factual material into the Desktop-owned InnerLife inbox for later digestion.",
+    "inputSchema": {
+      "type": "object",
+      "required": [
+        "body"
+      ],
+      "properties": {
+        "agentId": {
+          "type": "string"
+        },
+        "agentTool": {
+          "type": "string"
+        },
+        "agentName": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "innerlife_submit_continuity",
+    "title": "Submit InnerLife Continuity",
+    "description": "Submit current Shared Line material into the Desktop-owned InnerLife inbox for later digestion.",
+    "inputSchema": {
+      "type": "object",
+      "required": [
+        "body"
+      ],
+      "properties": {
+        "agentId": {
+          "type": "string"
+        },
+        "agentTool": {
+          "type": "string"
+        },
+        "agentName": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "innerlife_daemon_status",
+    "title": "InnerLife Daemon Status",
+    "description": "Read the Desktop-owned InnerLife daemon state.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "agentId": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+]

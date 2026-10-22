@@ -86,7 +86,7 @@ function createInnerLifeReadModelRepository(helpers) {
             SELECT id FROM innerlife_events WHERE 1 = 1${agentClause}
           )) AS thoughts_count,
           (SELECT COUNT(*) FROM innerlife_shares WHERE status = 'drafting'${agentClause}) AS drafting_shares_count,
-          (SELECT COUNT(*) FROM innerlife_shares WHERE status = 'pending'${agentClause}) AS pending_shares_count,
+          (SELECT COUNT(*) FROM innerlife_share_candidates WHERE status = 'pending'${agentClause}) AS pending_shares_count,
           (SELECT COUNT(*) FROM innerlife_shares WHERE status = 'approved'${agentClause}) AS approved_shares_count,
           (SELECT COUNT(*) FROM innerlife_shares WHERE status = 'rejected'${agentClause}) AS rejected_shares_count,
           (SELECT COUNT(*) FROM innerlife_shares WHERE status = 'used'${agentClause}) AS used_shares_count,
@@ -339,7 +339,7 @@ function createInnerLifeReadModelRepository(helpers) {
       const resolvedCounts = context.counts || (await this.query(`
           SELECT
             (SELECT COUNT(*) FROM innerlife_inbox WHERE agent_id = ${sqlString(profile.agent_id)} AND status = 'pending' AND source != 'session_end_afterthought') AS pending_inbox_count,
-            (SELECT COUNT(*) FROM innerlife_shares WHERE agent_id = ${sqlString(profile.agent_id)} AND status = 'pending') AS pending_shares_count,
+            (SELECT COUNT(*) FROM innerlife_share_candidates WHERE agent_id = ${sqlString(profile.agent_id)} AND status = 'pending') AS pending_shares_count,
             (SELECT COUNT(*) FROM innerlife_sessions WHERE agent_id = ${sqlString(profile.agent_id)} AND status = 'active') AS active_sessions_count,
             (SELECT COUNT(*) FROM innerlife_inbox
               WHERE agent_id = ${sqlString(profile.agent_id)}

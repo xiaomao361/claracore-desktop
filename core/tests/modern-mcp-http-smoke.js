@@ -71,6 +71,15 @@ async function main() {
     const full=await raw('tools/list',{}, {'X-ClaraCore-Tool-Profile':'full'});
     assert(full.body.result.tools.length>list.tools.length);
     const core=await raw('tools/list');assert.equal(core.body.result.tools.length,list.tools.length);
+    for (const [profile, count] of [["core",25],["core-compat",38],["full",83],["invalid",25]]) {
+      const advertised=await raw('tools/list',{}, {'X-ClaraCore-Tool-Profile':profile});
+      assert.equal(advertised.body.result.tools.length,count);
+      const connection=await raw('tools/call',{name:'claracore_connection_test',arguments:{}},{'X-ClaraCore-Tool-Profile':profile});
+      assert.equal(JSON.parse(connection.body.result.content[0].text).toolProfile,profile==='invalid'?'core':profile);
+    }
+    const hiddenHook=await raw('tools/call',{name:'innerlife_pending_shares',arguments:{limit:10}});
+    assert.equal(hiddenHook.body.result.isError,undefined);
+
     console.log(JSON.stringify({suite:'modern-mcp-http',sdk:'2.0.0',modernRequests:observed.length,coreTools:list.tools.length,fullTools:full.body.result.tools.length,passed:true}));
     assert.equal(gateway.status().lastProtocolRequest.version, '2026-07-28');
     assert.equal(gateway.status().lastProtocolRequest.agentId, 'codex');

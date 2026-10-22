@@ -105,6 +105,7 @@ function createInnerLifeShareRepository(helpers, dependencies = {}) {
       const agentFilter = String(agentId || "all").trim();
       const filters = [];
       if (statusFilter !== "all") filters.push(`s.status = ${sqlString(statusFilter)}`);
+      if (["pending", "approved", "deferred"].includes(statusFilter)) filters.push("s.id IN (SELECT id FROM innerlife_share_candidates)");
       if (agentFilter !== "all") filters.push(`s.agent_id = ${sqlString(agentFilter)}`);
       const whereClause = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
       const rows = await this.query(`
@@ -143,6 +144,7 @@ function createInnerLifeShareRepository(helpers, dependencies = {}) {
       const offset = Math.max(0, Number.parseInt(String(input.offset || 0), 10) || 0);
       const filters = [];
       if (statusFilter !== "all") filters.push(`s.status = ${sqlString(statusFilter)}`);
+      if (["pending", "approved", "deferred"].includes(statusFilter)) filters.push("s.id IN (SELECT id FROM innerlife_share_candidates)");
       if (agentFilter !== "all") filters.push(`s.agent_id = ${sqlString(agentFilter)}`);
       const whereClause = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
       const [rows, totals] = await Promise.all([

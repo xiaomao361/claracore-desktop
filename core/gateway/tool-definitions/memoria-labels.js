@@ -1,25 +1,22 @@
 const memoriaLabelToolDefinitions = [
   {
-    "name": "memoria_label_alias_list",
-    "title": "List Memory Label Aliases",
-    "description": "List ClaraCore Desktop Memory label aliases.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {},
-      "additionalProperties": false
-    }
-  },
-  {
-    "name": "memoria_label_alias_create",
-    "title": "Create Memory Label Alias",
-    "description": "Create or update a Memory label alias and merge existing alias labels into the canonical label.",
+    "name": "memoria_label_alias",
+    "title": "Memory Label Alias",
+    "description": "Manage Memory label aliases with explicit action=list/upsert/delete. Upsert requires alias and canonicalLabel and merges existing alias labels into the canonical label. Delete removes the alias mapping only; Memory labels remain.",
     "inputSchema": {
       "type": "object",
       "required": [
-        "alias",
-        "canonicalLabel"
+        "action"
       ],
       "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "list",
+            "upsert",
+            "delete"
+          ]
+        },
         "alias": {
           "type": "string"
         },
@@ -27,28 +24,39 @@ const memoriaLabelToolDefinitions = [
           "type": "string"
         }
       },
-      "additionalProperties": false
-    }
-  },
-  {
-    "name": "memoria_label_alias_delete",
-    "title": "Delete Memory Label Alias",
-    "description": "Delete a Memory label alias without deleting existing Memory labels.",
-    "inputSchema": {
-      "type": "object",
-      "required": [
-        "alias"
-      ],
-      "properties": {
-        "alias": {
-          "type": "string"
+      "oneOf": [
+        {
+          "properties": {
+            "action": {
+              "const": "list"
+            }
+          }
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "upsert"
+            }
+          },
+          "required": [
+            "alias",
+            "canonicalLabel"
+          ]
+        },
+        {
+          "properties": {
+            "action": {
+              "const": "delete"
+            }
+          },
+          "required": [
+            "alias"
+          ]
         }
-      },
+      ],
       "additionalProperties": false
     }
   }
 ];
 
-module.exports = {
-  memoriaLabelToolDefinitions
-};
+module.exports = { memoriaLabelToolDefinitions };

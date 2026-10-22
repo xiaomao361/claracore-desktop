@@ -11,22 +11,11 @@
 // recorded here so later phases have a single source of truth, and are marked
 // pending until the phase that implements them lands.
 const CONTEXT_BUDGET_CEILINGS = Object.freeze({
-  // Track A: MCP interface context
-  // Raised from 12 KB to 14 KB on 2026-08-07 when three tools were added that
-  // the first-party Agent instructions treat as everyday work: memoria_supersede
-  // (the ghost-memory remedy), memoria_link_list (reading a neighbourhood before
-  // adding to it — core already had link_create, so it could write links it
-  // could not read), and memoria_record_list. Descriptions were compressed
-  // first, which recovered ~490 bytes; going further would have meant deleting
-  // the "when not to use this" clauses, which are what stop misuse. Better to
-  // spend 2 KB than to make every tool description shallower. core is still
-  // 31.7% of the full manifest and 65% below the 37,130-byte 0.6.5 baseline.
-  // v0.8.0 adds four knowledge tools: bounded read, preview, commit and index rebuild.
-  // understanding-v1 adds read/submit/resume; measured compact manifest: 21,250 B.
-  coreToolsList: 22 * 1024,
-  // v0.6.10 adds memoria_record_get so the bounded record catalog has an
-  // explicit one-object expansion path.
-  coreToolCount: 38,
+  // Track A: MCP interface context. The 2026-10-22 daily catalog keeps
+  // complete workflows in 25 tools; core-compat measures the old 38 separately.
+  // Byte ceilings are regression guards, not targets for semantic compression.
+  coreToolsList: 14 * 1024,
+  coreToolCount: 25,
   docsDefault: 4 * 1024,
   docsSection: 8 * 1024,
   // `full` concatenates every section, so it is bounded as the sum rather than

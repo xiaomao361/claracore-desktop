@@ -61,6 +61,7 @@ function createSharePorts(overrides = {}) {
   return {
     ensureProfile: async (_database, agentId) => ({ agent_id: agentId }),
     findAvailableShareId: async () => "",
+    isAvailableShare: async () => true,
     getOptionalResumePacket: async () => ({
       resumePacket: {
         lineId: "",
@@ -529,11 +530,11 @@ async function main() {
       `The bounded repository read path ${methodName} must remain installed.`
     );
   }
-  assert.strictEqual(installed.length, 190, "The repository API includes the Memoria embedding invalidation method.");
+  assert.strictEqual(installed.length, 191, "The repository API includes candidate maintenance.");
   assert(installed.some((entry) => entry.name === "invalidateMemoryEmbeddings" && entry.owner === "memoria"));
   assert.strictEqual(
     installed.filter((entry) => entry.owner === "innerlife").length,
-    72,
+    73,
     "The InnerLife public API count must remain stable."
   );
 

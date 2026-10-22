@@ -116,7 +116,10 @@ async function main() {
     const listedTools = tools.result?.tools || [];
     const toolNames = new Set(listedTools.map((tool) => tool.name));
     for (const tool of EXPECTED_TOOLS) {
-      if (!toolNames.has(tool)) throw new Error(`Gateway is missing expected tool: ${tool}`);
+      const route = require("../gateway/tool-compatibility-routes").LEGACY_TOOL_ROUTES[tool];
+      const current = route?.name || tool;
+      if (!toolNames.has(current)) throw new Error(`Gateway is missing expected replacement: ${current}`);
+      if (route && toolNames.has(tool)) throw new Error(`Gateway still advertises retired tool: ${tool}`);
     }
     const sessionEndSchema = listedTools.find((tool) => tool.name === "innerlife_session_end")?.inputSchema;
     if (
@@ -221,7 +224,7 @@ async function main() {
     // points straight at bounded context. The resolved profile is reported
     // truthfully so a host can tell which manifest it received.
     if (
-      JSON.stringify(connection.nextCalls) !== JSON.stringify(["gateway_context"]) ||
+      JSON.stringify(connection.nextCalls) !== JSON.stringify(["shared_line_get"]) ||
       connection.toolProfile !== "full" ||
       !connection.afterOnboarding?.includes("Tell the user")
     ) {

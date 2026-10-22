@@ -202,9 +202,10 @@ Repository ownership:
   projection used during onboarding and resume. Since 0.6.6 `brief` embeds the
   Shared Line resume packet and the InnerLife status shape rather than a second
   larger copy of each domain.
-- `core/gateway/tool-profiles.js`: the `core` and `full` tool manifests. `full`
+- `core/gateway/tool-profiles.js`: the `core` (25), `core-compat` (previous 38), and `full` tool manifests. `full`
   is the canonical definitions byte-for-byte; `core` narrows the tool list and
   the advertised schema properties. Profile resolution fails closed to `core`.
+- `core/gateway/tool-compatibility-routes.js` / `tool-compatibility.js`: 16 transitional names map to canonical operations and response adapters; no duplicate domain policy. `tool-definitions/legacy.json` retains only migration schemas (including the frozen old status schema).
 - `core/gateway/docs.js`: versioned progressive `gateway_docs` — a bounded
   default summary, independently bounded sections, and bounded passage search
   through `query`. The release gate requires its explicit guide version to

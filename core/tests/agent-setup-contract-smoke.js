@@ -15,6 +15,10 @@ async function main() {
   assert(await view.copy());
   assert(copied.includes('http://127.0.0.1:50668/mcp'));
   assert(copied.includes('X-ClaraCore-Agent-ID'));
+  assert(copied.includes('core-compat'));
+  assert(copied.includes('reconnect'));
+  assert(copied.includes('shared_line_get'));
+  assert(!copied.includes('gateway_context'));
   assert(!/stdio|mcp-server|CLARACORE_TOOL_PROFILE|fallback/i.test(copied));
   snapshot.connections.httpGateway = { ok: false, error: 'Port occupied' };
   view.render(); assert.equal(dom.copyAgentSetup.disabled, true);

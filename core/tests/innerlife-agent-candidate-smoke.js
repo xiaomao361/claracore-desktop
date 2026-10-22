@@ -7,7 +7,7 @@ const {initializeProductDatabase}=require('../db/database');
  try {
   await db.updateSettings({'innerlife.provider':'disabled'});
   await db.ensureInnerLifeProfile('quiet-agent');await db.ensureInnerLifeProfile('busy-agent');
-  await db.exec("INSERT INTO innerlife_shares(id,agent_id,status,body,created_at,updated_at) VALUES('own-share','quiet-agent','pending','Distinct own candidate','2026-01-01','2026-01-01');");
+  await db.exec("INSERT INTO innerlife_shares(id,agent_id,status,body,created_at,updated_at) VALUES('own-share','quiet-agent','pending','Distinct own candidate',datetime('now','-1 minute'),datetime('now','-1 minute'));");
   for(let i=0;i<30;i++)await db.exec(`INSERT INTO innerlife_shares(id,agent_id,status,body) VALUES('busy-${i}','busy-agent','pending','Other agent candidate');`);
   const briefing=await db.getInnerLifeBriefing({agentId:'quiet-agent'});
   assert(JSON.stringify(briefing).includes('own-share'));

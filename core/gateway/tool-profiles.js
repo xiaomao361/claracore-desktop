@@ -1,7 +1,7 @@
-const { toolDefinitions } = require("./tool-definitions");
+const { toolDefinitions, legacyDefinitions } = require("./tool-definitions");
 
 const DEFAULT_PROFILE = "core";
-const PROFILE_NAMES = Object.freeze(["core", "full"]);
+const PROFILE_NAMES = Object.freeze(["core", "core-compat", "full"]);
 
 // Core profile shaping.
 //
@@ -10,13 +10,14 @@ const PROFILE_NAMES = Object.freeze(["core", "full"]);
 // selective sharing work. Gateway tool input is not schema-validated, so a
 // narrowed `properties` allowlist only reduces what is advertised to the model;
 // handlers still accept every argument the full profile documents.
+// `core-compat` preserves the previous 38-tool core catalog exactly.
 //
 // Shape fields per tool:
 //   description  compact replacement for the canonical tool description
 //   properties   allowlist of advertised inputSchema properties (null = all)
 //   propertyDescriptions  short descriptions to keep; every other nested
 //                         `description` in the schema is stripped
-const CORE_TOOL_SHAPES = Object.freeze({
+const COMPAT_TOOL_SHAPES = Object.freeze({
   understanding_context: {},
   understanding_submit: {},
   understanding_resume: {},
@@ -170,7 +171,22 @@ const CORE_TOOL_SHAPES = Object.freeze({
   }
 });
 
-const CORE_TOOL_NAMES = Object.freeze(Object.keys(CORE_TOOL_SHAPES));
+// Preserve the pre-trim catalog (including order and shaped schemas) for
+// clients that need its advertised tools. This is discovery, not authorization.
+const COMPAT_TOOL_NAMES = Object.freeze(Object.keys(COMPAT_TOOL_SHAPES));
+const CORE_TOOL_NAMES = Object.freeze([
+  "knowledge_read", "knowledge_intake_preview", "knowledge_intake_commit",
+  "claracore_connection_test", "gateway_docs", "gateway_auto_context",
+  "memoria_search", "memoria_get", "memoria_create", "memoria_update",
+  "memoria_supersede", "memoria_link_create", "memoria_link_list",
+  "shared_line_list", "shared_line_get", "shared_line_create",
+  "shared_line_activate", "shared_line_update", "shared_line_archive",
+  "shared_line_agent_state", "innerlife_session_start", "innerlife_session_end",
+  "innerlife_share_check", "innerlife_mark_share", "innerlife_submit_inbox"
+]);
+const CORE_TOOL_SHAPES = Object.freeze(Object.fromEntries(
+  CORE_TOOL_NAMES.map((name) => [name, COMPAT_TOOL_SHAPES[name]])
+));
 
 function normalizeProfile(value) {
   const name = String(value || "").trim().toLowerCase();
@@ -210,7 +226,7 @@ function shapeSchema(schema, shape) {
 }
 
 function shapeCoreTool(definition) {
-  const shape = CORE_TOOL_SHAPES[definition.name];
+  const shape = COMPAT_TOOL_SHAPES[definition.name];
   return {
     name: definition.name,
     title: definition.title,
@@ -224,7 +240,10 @@ function profileToolDefinitions(profile) {
   const canonical = toolDefinitions();
   if (name === "full") return canonical;
   const byName = new Map(canonical.map((tool) => [tool.name, tool]));
-  return CORE_TOOL_NAMES.map((toolName) => {
+  // Explicit compatibility discovery retains its original schema, including
+  // the pre-consolidation InnerLife status sections.
+  if (name === "core-compat") for (const tool of legacyDefinitions) byName.set(tool.name, tool);
+  return (name === "core-compat" ? COMPAT_TOOL_NAMES : CORE_TOOL_NAMES).map((toolName) => {
     const definition = byName.get(toolName);
     if (!definition) throw new Error(`Core tool profile references unknown tool: ${toolName}`);
     return shapeCoreTool(definition);
@@ -239,6 +258,7 @@ function createProfileToolDefinitions(profile) {
 module.exports = {
   CORE_TOOL_NAMES,
   CORE_TOOL_SHAPES,
+  COMPAT_TOOL_NAMES,
   DEFAULT_PROFILE,
   PROFILE_NAMES,
   createProfileToolDefinitions,

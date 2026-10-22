@@ -350,7 +350,8 @@ function createClaraCoreHomeView(context) {
     if (maintenance.status && maintenance.status !== "ok") {
       const issue = (maintenance.issues || [])[0];
       const issueKey = issue?.code ? `memory.maintenance.${issue.code}` : "";
-      if (!hasVectorIssues || !["failed_embeddings", "pending_embeddings"].includes(issue?.code)) {
+      const pendingAlreadyShown = maintenance.status === "pending" && hasVectorIssues;
+      if (!pendingAlreadyShown && (!hasVectorIssues || !["failed_embeddings", "pending_embeddings"].includes(issue?.code))) {
         items.push({
           tone: "warn",
           title: issueKey ? t(issueKey) : t("module.memoria.maintenance"),

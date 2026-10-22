@@ -89,8 +89,8 @@ async function handleSystemTool(name, args, context) {
         innerlife: daemonState?.status || "paused"
       },
       timestamp: new Date().toISOString(),
-      next: "Call gateway_context with detail=brief and without lineId; retry with a returned candidate only after SHARED_LINE_ID_REQUIRED. Call gateway_docs only when you need the usage guide.",
-      nextCalls: ["gateway_context"],
+      next: "Call shared_line_get without lineId; retry with a returned candidate only after SHARED_LINE_ID_REQUIRED. Call gateway_docs only when you need the usage guide.",
+      nextCalls: ["shared_line_get"],
       afterOnboarding:
         "Tell the user what ClaraCore enables and summarize the current resumable context in the user's language."
     });

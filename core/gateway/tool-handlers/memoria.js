@@ -113,9 +113,6 @@ async function handleMemoriaTool(name, args, context) {
     });
   }
 
-  if (name === "memoria_archive_suggestions") {
-    return textResult(await memoria.archiveSuggestions(core, args));
-  }
 
   if (name === "memoria_archive_dormant") {
     return textResult(await memoria.archiveDormant(core, args));
@@ -142,9 +139,6 @@ async function handleMemoriaTool(name, args, context) {
     });
   }
 
-  if (name === "memoria_maintenance_check") {
-    return textResult(await memoria.maintenance(core));
-  }
 
   if (name === "memoria_maintenance_run") {
     return textResult(await memoria.maintenanceRun(core, args));
@@ -162,25 +156,22 @@ async function handleMemoriaTool(name, args, context) {
     return textResult(await importProductMemoryArchive(runtimeAppForGateway(), args));
   }
 
-  if (name === "memoria_merge_suggestions") {
-    return textResult(await memoria.mergeSuggestions(core, args));
-  }
 
   if (name === "memoria_merge") {
     return textResult(await memoria.merge(core, args));
   }
 
-  if (name === "memoria_label_alias_list") {
-    return textResult({
-      aliases: await memoria.labelAliases(core)
-    });
-  }
-
-  if (name === "memoria_label_alias_create") {
-    return textResult(await memoria.createLabelAlias(core, args));
-  }
-
-  if (name === "memoria_label_alias_delete") {
+  if (name === "memoria_label_alias") {
+    const { action } = args;
+    if (!["list", "upsert", "delete"].includes(action)) throw new Error("Label alias action must be list, upsert or delete.");
+    if (action !== "list" && (typeof args.alias !== "string" || !args.alias.trim())) throw new Error("Label alias action requires alias.");
+    if (action === "list" && (args.alias !== undefined || args.canonicalLabel !== undefined)) throw new Error("List aliases does not accept alias fields.");
+    if (action === "delete" && args.canonicalLabel !== undefined) throw new Error("Delete alias does not accept canonicalLabel.");
+    if (action === "list") return textResult({ aliases: await memoria.labelAliases(core) });
+    if (action === "upsert") {
+      if (typeof args.canonicalLabel !== "string" || !args.canonicalLabel.trim()) throw new Error("Label alias upsert requires canonicalLabel.");
+      return textResult(await memoria.createLabelAlias(core, args));
+    }
     return textResult(await memoria.deleteLabelAlias(core, args.alias));
   }
 

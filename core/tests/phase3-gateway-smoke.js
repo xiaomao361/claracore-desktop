@@ -35,7 +35,7 @@ async function main() {
       "shared_line_activate",
       "shared_line_update",
       "shared_line_archive",
-      "shared_line_handoff_create"
+      "shared_line_agent_state"
     ]) {
       if (!toolNames.has(tool)) throw new Error(`Core profile missing tool: ${tool}`);
     }

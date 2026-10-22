@@ -543,6 +543,7 @@ async function main() {
     app,
     ensureProductCore: async () => ({
       database: {
+        pruneInnerLifeShareCandidates: async () => {},
         processPendingSessionAfterthoughts: async () => { throw new Error("synthetic afterthought failure"); },
         listEnabledInnerLifeDaemonAgentIds: async () => ["codex", "lara"]
       }
@@ -571,6 +572,7 @@ async function main() {
     app,
     ensureProductCore: async () => ({
       database: {
+        pruneInnerLifeShareCandidates: async () => {},
         processPendingSessionAfterthoughts: async () => {
           afterthoughtStateIndex += 1;
           return afterthoughtStateIndex === 1

@@ -80,10 +80,12 @@ function sumOf(items, pick) {
 async function collect() {
   const core = profileToolDefinitions("core");
   const full = profileToolDefinitions("full");
+  const compat = profileToolDefinitions("core-compat");
   const docsArgs = { launch: gatewayLaunchFixture, paths: pathsFixture, toolProfile: "core" };
 
   const toolProfiles = [
     { ...measurement("tools/list core", core, CONTEXT_BUDGET_CEILINGS.coreToolsList), toolCount: core.length },
+    { ...measurement("tools/list core-compat", compat, null), toolCount: compat.length },
     { ...measurement("tools/list full", full, null), toolCount: full.length }
   ];
 

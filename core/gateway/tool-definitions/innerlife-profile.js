@@ -54,9 +54,13 @@ const innerlifeProfileToolDefinitions = [
     "description": "Get one complete Desktop-owned InnerLife profile and state without creating it.",
     "inputSchema": {
       "type": "object",
-      "required": ["agentId"],
+      "required": [
+        "agentId"
+      ],
       "properties": {
-        "agentId": { "type": "string" }
+        "agentId": {
+          "type": "string"
+        }
       },
       "additionalProperties": false
     }
@@ -81,6 +85,4 @@ const innerlifeProfileToolDefinitions = [
   }
 ];
 
-module.exports = {
-  innerlifeProfileToolDefinitions
-};
+module.exports = { innerlifeProfileToolDefinitions };

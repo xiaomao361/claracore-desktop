@@ -64,6 +64,7 @@ function createSchedulers({
     innerLifeSchedulerBusy = true;
     try {
       const { database } = await ensureProductCore(app);
+      await database.pruneInnerLifeShareCandidates();
       let afterthoughts = {
         processed: 0,
         retrying: 0,
@@ -72,7 +73,7 @@ function createSchedulers({
         results: []
       };
       try {
-        afterthoughts = await database.processPendingSessionAfterthoughts(5);
+        afterthoughts = await database.processPendingSessionAfterthoughts(5, { automated: true });
       } catch (error) {
         console.error("InnerLife afterthought processing failed:", error);
         notifyRuntimeChanged("innerlife-session-afterthought-error", {

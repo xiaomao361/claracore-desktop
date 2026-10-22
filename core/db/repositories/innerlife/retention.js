@@ -1,3 +1,5 @@
+const { candidateRetirementSql } = require("../../../innerlife/candidate-pool");
+
 const DEFAULT_INNERLIFE_RETENTION = Object.freeze({
   processedInboxMaxAgeDays: 30,
   processedInboxMaxRowsPerAgent: 500,
@@ -16,6 +18,10 @@ function boundedInteger(value, fallback, maximum) {
 
 function createInnerLifeRetentionRepository({ sqlString }) {
   return {
+    async pruneInnerLifeShareCandidates() {
+      await this.execAtomic(candidateRetirementSql());
+    },
+
     async getInnerLifeRetentionCounts() {
       const rows = await this.query(`
         SELECT
@@ -30,6 +36,7 @@ function createInnerLifeRetentionRepository({ sqlString }) {
     },
 
     async cleanupInnerLifeHistory(input = {}) {
+      await this.pruneInnerLifeShareCandidates();
       const policy = {
         processedInboxMaxAgeDays: boundedInteger(
           input.processedInboxMaxAgeDays || input.processed_inbox_max_age_days,

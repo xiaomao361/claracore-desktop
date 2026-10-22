@@ -5,6 +5,8 @@ const { memoryControllerToolDefinitions } = require("./tool-definitions/memory-c
 const { memoriaToolDefinitions } = require("./tool-definitions/memoria");
 const { sharedLineToolDefinitions } = require("./tool-definitions/shared-line");
 const { innerlifeToolDefinitions } = require("./tool-definitions/innerlife");
+const legacyDefinitions = require("./tool-definitions/legacy.json");
+const { LEGACY_TOOL_ROUTES } = require("./tool-compatibility-routes");
 
 function toolDefinitions() {
   return [
@@ -18,6 +20,14 @@ function toolDefinitions() {
   ];
 }
 
+// Callable compatibility aliases are deliberately absent from the current
+// full catalog. Protocol validation must still accept their known names.
+function callableToolDefinitions() {
+  return [...toolDefinitions(), ...legacyDefinitions.filter(tool => LEGACY_TOOL_ROUTES[tool.name])];
+}
+
 module.exports = {
-  toolDefinitions
+  toolDefinitions,
+  callableToolDefinitions,
+  legacyDefinitions
 };

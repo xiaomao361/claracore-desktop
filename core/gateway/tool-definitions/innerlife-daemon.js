@@ -1,22 +1,8 @@
 const innerlifeDaemonToolDefinitions = [
   {
-    "name": "innerlife_daemon_status",
-    "title": "InnerLife Daemon Status",
-    "description": "Read the Desktop-owned InnerLife daemon state.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "agentId": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false
-    }
-  },
-  {
     "name": "innerlife_daemon_set",
     "title": "Set InnerLife Daemon",
-    "description": "Enable or pause the Desktop-owned InnerLife daemon.",
+    "description": "Enable or pause this Agent's InnerLife daemon. Pausing does not pause other Agents. Enabling also opens the global InnerLife gate.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -71,6 +57,4 @@ const innerlifeDaemonToolDefinitions = [
   }
 ];
 
-module.exports = {
-  innerlifeDaemonToolDefinitions
-};
+module.exports = { innerlifeDaemonToolDefinitions };

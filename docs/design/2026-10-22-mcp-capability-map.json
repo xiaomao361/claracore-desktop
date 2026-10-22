@@ -1,0 +1,726 @@
+{
+  "sourceToolCount": 97,
+  "currentToolCount": 83,
+  "compatibilityAliasCount": 16,
+  "addedTools": [
+    "shared_line_model_adjustment",
+    "memoria_label_alias"
+  ],
+  "tools": [
+    {
+      "name": "understanding_context",
+      "decision": "retain",
+      "replacement": "understanding_context",
+      "fixedArguments": {},
+      "reason": "跨领域授权计划与持久化恢复，保留与直接读写的区别"
+    },
+    {
+      "name": "understanding_submit",
+      "decision": "retain",
+      "replacement": "understanding_submit",
+      "fixedArguments": {},
+      "reason": "跨领域授权计划与持久化恢复，保留与直接读写的区别"
+    },
+    {
+      "name": "understanding_resume",
+      "decision": "retain",
+      "replacement": "understanding_resume",
+      "fixedArguments": {},
+      "reason": "跨领域授权计划与持久化恢复，保留与直接读写的区别"
+    },
+    {
+      "name": "claracore_status",
+      "decision": "retain",
+      "replacement": "claracore_status",
+      "fixedArguments": {},
+      "reason": "连接、说明、诊断或检索反馈具有独立契约"
+    },
+    {
+      "name": "claracore_connection_test",
+      "decision": "retain",
+      "replacement": "claracore_connection_test",
+      "fixedArguments": {},
+      "reason": "连接、说明、诊断或检索反馈具有独立契约"
+    },
+    {
+      "name": "gateway_docs",
+      "decision": "retain",
+      "replacement": "gateway_docs",
+      "fixedArguments": {},
+      "reason": "连接、说明、诊断或检索反馈具有独立契约"
+    },
+    {
+      "name": "gateway_context",
+      "decision": "retain",
+      "replacement": "gateway_context",
+      "fixedArguments": {},
+      "reason": "触发、选择、隐私和预算契约不同，不视为等价替代"
+    },
+    {
+      "name": "gateway_auto_context",
+      "decision": "retain",
+      "replacement": "gateway_auto_context",
+      "fixedArguments": {},
+      "reason": "触发、选择、隐私和预算契约不同，不视为等价替代"
+    },
+    {
+      "name": "gateway_trace_list",
+      "decision": "retain",
+      "replacement": "gateway_trace_list",
+      "fixedArguments": {},
+      "reason": "连接、说明、诊断或检索反馈具有独立契约"
+    },
+    {
+      "name": "gateway_trace_get",
+      "decision": "retain",
+      "replacement": "gateway_trace_get",
+      "fixedArguments": {},
+      "reason": "连接、说明、诊断或检索反馈具有独立契约"
+    },
+    {
+      "name": "agent_identity_merge",
+      "decision": "retain",
+      "replacement": "agent_identity_merge",
+      "fixedArguments": {},
+      "reason": "跨记录或不可逆数据操作，保持明确目标和独立授权"
+    },
+    {
+      "name": "knowledge_index_rebuild",
+      "decision": "retain",
+      "replacement": "knowledge_index_rebuild",
+      "fixedArguments": {},
+      "reason": "阅读/预览/确认写入/索引维护职责明确，保持失败和重试语义"
+    },
+    {
+      "name": "knowledge_read",
+      "decision": "retain",
+      "replacement": "knowledge_read",
+      "fixedArguments": {},
+      "reason": "阅读/预览/确认写入/索引维护职责明确，保持失败和重试语义"
+    },
+    {
+      "name": "knowledge_intake_preview",
+      "decision": "retain",
+      "replacement": "knowledge_intake_preview",
+      "fixedArguments": {},
+      "reason": "阅读/预览/确认写入/索引维护职责明确，保持失败和重试语义"
+    },
+    {
+      "name": "knowledge_intake_commit",
+      "decision": "retain",
+      "replacement": "knowledge_intake_commit",
+      "fixedArguments": {},
+      "reason": "阅读/预览/确认写入/索引维护职责明确，保持失败和重试语义"
+    },
+    {
+      "name": "memory_context_feedback",
+      "decision": "retain",
+      "replacement": "memory_context_feedback",
+      "fixedArguments": {},
+      "reason": "连接、说明、诊断或检索反馈具有独立契约"
+    },
+    {
+      "name": "memory_context",
+      "decision": "retain",
+      "replacement": "memory_context",
+      "fixedArguments": {},
+      "reason": "触发、选择、隐私和预算契约不同，不视为等价替代"
+    },
+    {
+      "name": "memoria_list",
+      "decision": "retain",
+      "replacement": "memoria_list",
+      "fixedArguments": {},
+      "reason": "保留事实生命周期、明确读写或维护执行动作，未证实等价"
+    },
+    {
+      "name": "memoria_search",
+      "decision": "retain",
+      "replacement": "memoria_search",
+      "fixedArguments": {},
+      "reason": "保留事实生命周期、明确读写或维护执行动作，未证实等价"
+    },
+    {
+      "name": "memoria_get",
+      "decision": "retain",
+      "replacement": "memoria_get",
+      "fixedArguments": {},
+      "reason": "保留事实生命周期、明确读写或维护执行动作，未证实等价"
+    },
+    {
+      "name": "memoria_create",
+      "decision": "retain",
+      "replacement": "memoria_create",
+      "fixedArguments": {},
+      "reason": "保留事实生命周期、明确读写或维护执行动作，未证实等价"
+    },
+    {
+      "name": "memoria_update",
+      "decision": "retain",
+      "replacement": "memoria_update",
+      "fixedArguments": {},
+      "reason": "分别表示事实替代、同事实修正、记录去重，不互相替代"
+    },
+    {
+      "name": "memoria_tag",
+      "decision": "retain",
+      "replacement": "memoria_tag",
+      "fixedArguments": {},
+      "reason": "保留事实生命周期、明确读写或维护执行动作，未证实等价"
+    },
+    {
+      "name": "memoria_restricted_list",
+      "decision": "retain",
+      "replacement": "memoria_restricted_list",
+      "fixedArguments": {},
+      "reason": "受限内容必须显式访问，保留独立边界"
+    },
+    {
+      "name": "memoria_restrict",
+      "decision": "retain",
+      "replacement": "memoria_restrict",
+      "fixedArguments": {},
+      "reason": "受限内容必须显式访问，保留独立边界"
+    },
+    {
+      "name": "memoria_unrestrict",
+      "decision": "retain",
+      "replacement": "memoria_unrestrict",
+      "fixedArguments": {},
+      "reason": "受限内容必须显式访问，保留独立边界"
+    },
+    {
+      "name": "memoria_delete",
+      "decision": "retain",
+      "replacement": "memoria_delete",
+      "fixedArguments": {},
+      "reason": "保留事实生命周期、明确读写或维护执行动作，未证实等价"
+    },
+    {
+      "name": "memoria_restore",
+      "decision": "retain",
+      "replacement": "memoria_restore",
+      "fixedArguments": {},
+      "reason": "保留事实生命周期、明确读写或维护执行动作，未证实等价"
+    },
+    {
+      "name": "memoria_archive",
+      "decision": "retain",
+      "replacement": "memoria_archive",
+      "fixedArguments": {},
+      "reason": "保留事实生命周期、明确读写或维护执行动作，未证实等价"
+    },
+    {
+      "name": "memoria_archived_list",
+      "decision": "retain",
+      "replacement": "memoria_archived_list",
+      "fixedArguments": {},
+      "reason": "保留事实生命周期、明确读写或维护执行动作，未证实等价"
+    },
+    {
+      "name": "memoria_restore_archived",
+      "decision": "retain",
+      "replacement": "memoria_restore_archived",
+      "fixedArguments": {},
+      "reason": "保留事实生命周期、明确读写或维护执行动作，未证实等价"
+    },
+    {
+      "name": "memoria_archive_suggestions",
+      "decision": "merged-compatibility",
+      "replacement": "memoria_maintenance_audit",
+      "fixedArguments": {
+        "section": "archive-suggestions"
+      },
+      "reason": "维护报告的分区，执行修复/合并/归档仍分开"
+    },
+    {
+      "name": "memoria_archive_dormant",
+      "decision": "retain",
+      "replacement": "memoria_archive_dormant",
+      "fixedArguments": {},
+      "reason": "保留事实生命周期、明确读写或维护执行动作，未证实等价"
+    },
+    {
+      "name": "memoria_stats",
+      "decision": "retain",
+      "replacement": "memoria_stats",
+      "fixedArguments": {},
+      "reason": "保留事实生命周期、明确读写或维护执行动作，未证实等价"
+    },
+    {
+      "name": "memoria_graph",
+      "decision": "retain",
+      "replacement": "memoria_graph",
+      "fixedArguments": {},
+      "reason": "保留事实生命周期、明确读写或维护执行动作，未证实等价"
+    },
+    {
+      "name": "memoria_maintenance_check",
+      "decision": "merged-compatibility",
+      "replacement": "memoria_maintenance_audit",
+      "fixedArguments": {
+        "section": "maintenance"
+      },
+      "reason": "维护报告的分区，执行修复/合并/归档仍分开"
+    },
+    {
+      "name": "memoria_maintenance_run",
+      "decision": "retain",
+      "replacement": "memoria_maintenance_run",
+      "fixedArguments": {},
+      "reason": "保留事实生命周期、明确读写或维护执行动作，未证实等价"
+    },
+    {
+      "name": "memoria_maintenance_audit",
+      "decision": "retain",
+      "replacement": "memoria_maintenance_audit",
+      "fixedArguments": {},
+      "reason": "保留事实生命周期、明确读写或维护执行动作，未证实等价"
+    },
+    {
+      "name": "memoria_export",
+      "decision": "retain",
+      "replacement": "memoria_export",
+      "fixedArguments": {},
+      "reason": "保留事实生命周期、明确读写或维护执行动作，未证实等价"
+    },
+    {
+      "name": "memoria_import",
+      "decision": "retain",
+      "replacement": "memoria_import",
+      "fixedArguments": {},
+      "reason": "保留事实生命周期、明确读写或维护执行动作，未证实等价"
+    },
+    {
+      "name": "memoria_merge_suggestions",
+      "decision": "merged-compatibility",
+      "replacement": "memoria_maintenance_audit",
+      "fixedArguments": {
+        "section": "merge-suggestions"
+      },
+      "reason": "维护报告的分区，执行修复/合并/归档仍分开"
+    },
+    {
+      "name": "memoria_merge",
+      "decision": "retain",
+      "replacement": "memoria_merge",
+      "fixedArguments": {},
+      "reason": "分别表示事实替代、同事实修正、记录去重，不互相替代"
+    },
+    {
+      "name": "memoria_label_alias_list",
+      "decision": "merged-compatibility",
+      "replacement": "memoria_label_alias",
+      "fixedArguments": {
+        "action": "list"
+      },
+      "reason": "同一标签别名对象的显式管理动作"
+    },
+    {
+      "name": "memoria_label_alias_create",
+      "decision": "merged-compatibility",
+      "replacement": "memoria_label_alias",
+      "fixedArguments": {
+        "action": "upsert"
+      },
+      "reason": "同一标签别名对象的显式管理动作"
+    },
+    {
+      "name": "memoria_label_alias_delete",
+      "decision": "merged-compatibility",
+      "replacement": "memoria_label_alias",
+      "fixedArguments": {
+        "action": "delete"
+      },
+      "reason": "同一标签别名对象的显式管理动作"
+    },
+    {
+      "name": "memoria_link_create",
+      "decision": "retain",
+      "replacement": "memoria_link_create",
+      "fixedArguments": {},
+      "reason": "关系维护能力，保留与事实替代和正文修改的区别"
+    },
+    {
+      "name": "memoria_link_list",
+      "decision": "retain",
+      "replacement": "memoria_link_list",
+      "fixedArguments": {},
+      "reason": "关系维护能力，保留与事实替代和正文修改的区别"
+    },
+    {
+      "name": "memoria_supersede",
+      "decision": "retain",
+      "replacement": "memoria_supersede",
+      "fixedArguments": {},
+      "reason": "分别表示事实替代、同事实修正、记录去重，不互相替代"
+    },
+    {
+      "name": "memoria_link_delete",
+      "decision": "retain",
+      "replacement": "memoria_link_delete",
+      "fixedArguments": {},
+      "reason": "关系维护能力，保留与事实替代和正文修改的区别"
+    },
+    {
+      "name": "memoria_record_create",
+      "decision": "retain",
+      "replacement": "memoria_record_create",
+      "fixedArguments": {},
+      "reason": "结构化记录及领域汇总，不等同于事实正文或简单计数"
+    },
+    {
+      "name": "memoria_record_list",
+      "decision": "retain",
+      "replacement": "memoria_record_list",
+      "fixedArguments": {},
+      "reason": "结构化记录及领域汇总，不等同于事实正文或简单计数"
+    },
+    {
+      "name": "memoria_record_get",
+      "decision": "retain",
+      "replacement": "memoria_record_get",
+      "fixedArguments": {},
+      "reason": "结构化记录及领域汇总，不等同于事实正文或简单计数"
+    },
+    {
+      "name": "memoria_record_summary",
+      "decision": "retain",
+      "replacement": "memoria_record_summary",
+      "fixedArguments": {},
+      "reason": "结构化记录及领域汇总，不等同于事实正文或简单计数"
+    },
+    {
+      "name": "memoria_record_stats",
+      "decision": "retain",
+      "replacement": "memoria_record_stats",
+      "fixedArguments": {},
+      "reason": "结构化记录及领域汇总，不等同于事实正文或简单计数"
+    },
+    {
+      "name": "shared_line_get",
+      "decision": "retain",
+      "replacement": "shared_line_get",
+      "fixedArguments": {},
+      "reason": "保留工作线位置、生命周期、正式交接及 Agent 状态的区别"
+    },
+    {
+      "name": "shared_line_list",
+      "decision": "retain",
+      "replacement": "shared_line_list",
+      "fixedArguments": {},
+      "reason": "保留工作线位置、生命周期、正式交接及 Agent 状态的区别"
+    },
+    {
+      "name": "shared_line_create",
+      "decision": "retain",
+      "replacement": "shared_line_create",
+      "fixedArguments": {},
+      "reason": "保留工作线位置、生命周期、正式交接及 Agent 状态的区别"
+    },
+    {
+      "name": "shared_line_activate",
+      "decision": "retain",
+      "replacement": "shared_line_activate",
+      "fixedArguments": {},
+      "reason": "保留工作线位置、生命周期、正式交接及 Agent 状态的区别"
+    },
+    {
+      "name": "shared_line_rename",
+      "decision": "retain",
+      "replacement": "shared_line_rename",
+      "fixedArguments": {},
+      "reason": "保留工作线位置、生命周期、正式交接及 Agent 状态的区别"
+    },
+    {
+      "name": "shared_line_archive",
+      "decision": "retain",
+      "replacement": "shared_line_archive",
+      "fixedArguments": {},
+      "reason": "保留工作线位置、生命周期、正式交接及 Agent 状态的区别"
+    },
+    {
+      "name": "shared_line_restore",
+      "decision": "retain",
+      "replacement": "shared_line_restore",
+      "fixedArguments": {},
+      "reason": "保留工作线位置、生命周期、正式交接及 Agent 状态的区别"
+    },
+    {
+      "name": "shared_line_update",
+      "decision": "retain",
+      "replacement": "shared_line_update",
+      "fixedArguments": {},
+      "reason": "保留工作线位置、生命周期、正式交接及 Agent 状态的区别"
+    },
+    {
+      "name": "shared_line_handoff_create",
+      "decision": "retain",
+      "replacement": "shared_line_handoff_create",
+      "fixedArguments": {},
+      "reason": "保留工作线位置、生命周期、正式交接及 Agent 状态的区别"
+    },
+    {
+      "name": "shared_line_agent_state",
+      "decision": "retain",
+      "replacement": "shared_line_agent_state",
+      "fixedArguments": {},
+      "reason": "保留工作线位置、生命周期、正式交接及 Agent 状态的区别"
+    },
+    {
+      "name": "shared_line_model_adjustment_list",
+      "decision": "merged-compatibility",
+      "replacement": "shared_line_model_adjustment",
+      "fixedArguments": {
+        "action": "list"
+      },
+      "reason": "同一模型配置对象的显式管理动作"
+    },
+    {
+      "name": "shared_line_model_adjustment_get",
+      "decision": "merged-compatibility",
+      "replacement": "shared_line_model_adjustment",
+      "fixedArguments": {
+        "action": "get"
+      },
+      "reason": "同一模型配置对象的显式管理动作"
+    },
+    {
+      "name": "shared_line_model_adjustment_set",
+      "decision": "merged-compatibility",
+      "replacement": "shared_line_model_adjustment",
+      "fixedArguments": {
+        "action": "set"
+      },
+      "reason": "同一模型配置对象的显式管理动作"
+    },
+    {
+      "name": "shared_line_model_adjustment_delete",
+      "decision": "merged-compatibility",
+      "replacement": "shared_line_model_adjustment",
+      "fixedArguments": {
+        "action": "delete"
+      },
+      "reason": "同一模型配置对象的显式管理动作"
+    },
+    {
+      "name": "shared_line_compact",
+      "decision": "retain",
+      "replacement": "shared_line_compact",
+      "fixedArguments": {},
+      "reason": "保留工作线位置、生命周期、正式交接及 Agent 状态的区别"
+    },
+    {
+      "name": "innerlife_session_start",
+      "decision": "retain",
+      "replacement": "innerlife_session_start",
+      "fixedArguments": {},
+      "reason": "会话/生成阶段/投递/后台控制或不同记录类型，未证实为重复"
+    },
+    {
+      "name": "innerlife_session_end",
+      "decision": "retain",
+      "replacement": "innerlife_session_end",
+      "fixedArguments": {},
+      "reason": "会话/生成阶段/投递/后台控制或不同记录类型，未证实为重复"
+    },
+    {
+      "name": "innerlife_afterthought_resolve",
+      "decision": "retain",
+      "replacement": "innerlife_afterthought_resolve",
+      "fixedArguments": {},
+      "reason": "会话/生成阶段/投递/后台控制或不同记录类型，未证实为重复"
+    },
+    {
+      "name": "innerlife_sessions",
+      "decision": "merged-compatibility",
+      "replacement": "innerlife_status",
+      "fixedArguments": {
+        "detail": "full",
+        "section": "sessions"
+      },
+      "reason": "会话分页/详情已由 status 的 sessions 分区承接"
+    },
+    {
+      "name": "innerlife_session_get",
+      "decision": "merged-compatibility",
+      "replacement": "innerlife_status",
+      "fixedArguments": {
+        "detail": "full",
+        "section": "sessions"
+      },
+      "reason": "会话分页/详情已由 status 的 sessions 分区承接"
+    },
+    {
+      "name": "innerlife_status",
+      "decision": "retain",
+      "replacement": "innerlife_status",
+      "fixedArguments": {},
+      "reason": "会话/生成阶段/投递/后台控制或不同记录类型，未证实为重复"
+    },
+    {
+      "name": "innerlife_briefing",
+      "decision": "retain",
+      "replacement": "innerlife_briefing",
+      "fixedArguments": {},
+      "reason": "触发、选择、隐私和预算契约不同，不视为等价替代"
+    },
+    {
+      "name": "innerlife_doctor",
+      "decision": "merged-compatibility",
+      "replacement": "innerlife_status",
+      "fixedArguments": {
+        "detail": "full",
+        "section": "doctor"
+      },
+      "reason": "统一诊断读取；旧初始化副作用只留在适配层"
+    },
+    {
+      "name": "innerlife_profile_set",
+      "decision": "retain",
+      "replacement": "innerlife_profile_set",
+      "fixedArguments": {},
+      "reason": "会话/生成阶段/投递/后台控制或不同记录类型，未证实为重复"
+    },
+    {
+      "name": "innerlife_profile_list",
+      "decision": "retain",
+      "replacement": "innerlife_profile_list",
+      "fixedArguments": {},
+      "reason": "会话/生成阶段/投递/后台控制或不同记录类型，未证实为重复"
+    },
+    {
+      "name": "innerlife_profile_get",
+      "decision": "retain",
+      "replacement": "innerlife_profile_get",
+      "fixedArguments": {},
+      "reason": "会话/生成阶段/投递/后台控制或不同记录类型，未证实为重复"
+    },
+    {
+      "name": "innerlife_profile_delete",
+      "decision": "retain",
+      "replacement": "innerlife_profile_delete",
+      "fixedArguments": {},
+      "reason": "跨记录或不可逆数据操作，保持明确目标和独立授权"
+    },
+    {
+      "name": "innerlife_digest",
+      "decision": "retain",
+      "replacement": "innerlife_digest",
+      "fixedArguments": {},
+      "reason": "会话/生成阶段/投递/后台控制或不同记录类型，未证实为重复"
+    },
+    {
+      "name": "innerlife_share_check",
+      "decision": "retain",
+      "replacement": "innerlife_share_check",
+      "fixedArguments": {},
+      "reason": "会话/生成阶段/投递/后台控制或不同记录类型，未证实为重复"
+    },
+    {
+      "name": "innerlife_submit_inbox",
+      "decision": "retain",
+      "replacement": "innerlife_submit_inbox",
+      "fixedArguments": {},
+      "reason": "会话/生成阶段/投递/后台控制或不同记录类型，未证实为重复"
+    },
+    {
+      "name": "innerlife_submit_fact",
+      "decision": "merged-compatibility",
+      "replacement": "innerlife_submit_inbox",
+      "fixedArguments": {
+        "source": "fact"
+      },
+      "reason": "相同投料服务，仅来源类型不同"
+    },
+    {
+      "name": "innerlife_submit_continuity",
+      "decision": "merged-compatibility",
+      "replacement": "innerlife_submit_inbox",
+      "fixedArguments": {
+        "source": "continuity"
+      },
+      "reason": "相同投料服务，仅来源类型不同"
+    },
+    {
+      "name": "innerlife_pending_shares",
+      "decision": "retain",
+      "replacement": "innerlife_pending_shares",
+      "fixedArguments": {},
+      "reason": "会话/生成阶段/投递/后台控制或不同记录类型，未证实为重复"
+    },
+    {
+      "name": "innerlife_share_actions",
+      "decision": "retain",
+      "replacement": "innerlife_share_actions",
+      "fixedArguments": {},
+      "reason": "会话/生成阶段/投递/后台控制或不同记录类型，未证实为重复"
+    },
+    {
+      "name": "innerlife_mark_share",
+      "decision": "retain",
+      "replacement": "innerlife_mark_share",
+      "fixedArguments": {},
+      "reason": "会话/生成阶段/投递/后台控制或不同记录类型，未证实为重复"
+    },
+    {
+      "name": "innerlife_daemon_status",
+      "decision": "merged-compatibility",
+      "replacement": "innerlife_status",
+      "fixedArguments": {
+        "detail": "full",
+        "section": "daemon"
+      },
+      "reason": "统一诊断读取；旧初始化副作用只留在适配层"
+    },
+    {
+      "name": "innerlife_daemon_set",
+      "decision": "retain",
+      "replacement": "innerlife_daemon_set",
+      "fixedArguments": {},
+      "reason": "会话/生成阶段/投递/后台控制或不同记录类型，未证实为重复"
+    },
+    {
+      "name": "innerlife_daemon_tick",
+      "decision": "retain",
+      "replacement": "innerlife_daemon_tick",
+      "fixedArguments": {},
+      "reason": "会话/生成阶段/投递/后台控制或不同记录类型，未证实为重复"
+    },
+    {
+      "name": "innerlife_history",
+      "decision": "retain",
+      "replacement": "innerlife_history",
+      "fixedArguments": {},
+      "reason": "会话/生成阶段/投递/后台控制或不同记录类型，未证实为重复"
+    },
+    {
+      "name": "innerlife_experiences",
+      "decision": "retain",
+      "replacement": "innerlife_experiences",
+      "fixedArguments": {},
+      "reason": "会话/生成阶段/投递/后台控制或不同记录类型，未证实为重复"
+    },
+    {
+      "name": "innerlife_summaries",
+      "decision": "retain",
+      "replacement": "innerlife_summaries",
+      "fixedArguments": {},
+      "reason": "会话/生成阶段/投递/后台控制或不同记录类型，未证实为重复"
+    },
+    {
+      "name": "innerlife_explore",
+      "decision": "retain",
+      "replacement": "innerlife_explore",
+      "fixedArguments": {},
+      "reason": "会话/生成阶段/投递/后台控制或不同记录类型，未证实为重复"
+    },
+    {
+      "name": "innerlife_converge",
+      "decision": "retain",
+      "replacement": "innerlife_converge",
+      "fixedArguments": {},
+      "reason": "会话/生成阶段/投递/后台控制或不同记录类型，未证实为重复"
+    }
+  ]
+}

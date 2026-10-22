@@ -2,6 +2,28 @@
 
 ## Current Truth
 
+- 2026-10-22: local source is `1.0.3` for pending Memory embedding audit
+  visibility and post-processing maintenance snapshots. A local macOS arm64
+  Lite validation package is built, installed by the user and independently
+  verified through live runtime and real-data read-only audit. UI and natural
+  scheduling acceptance remain pending. No public release.
+  See [1.0.3 notes](RELEASE_NOTES_V1.0.3.md) and
+  [package evidence](validation/2026-10-22-v1.0.3-lite-package.md), plus
+  [installed verification](validation/2026-10-22-v1.0.3-installed.md).
+
+- 2026-10-22: local source is `1.0.2` for MCP catalog and full-capability
+  consolidation. Default/core-compat/full discovery is 25/38/83, with 16
+  transitional old-name adapters. The local macOS arm64 Lite validation package
+  is built and package-verified; installation and real-client acceptance remain
+  with the user. No tag/public release or installed-app replacement.
+  See [1.0.2 notes](RELEASE_NOTES_V1.0.2.md) and
+  [package evidence](validation/2026-10-22-v1.0.2-lite-package.md).
+
+- 2026-10-21: local source is `1.0.1` for InnerLife candidate retention and
+  per-Agent switch consistency. Package, lockfile and Agent Guide are aligned.
+  A local macOS arm64 Lite trial package is verified and installed by the user;
+  real upgrade and non-UI checks passed. It is not tagged or publicly released. See
+  [1.0.1 notes](RELEASE_NOTES_V1.0.1.md).
 - 2026-10-20: `1.0.0` is publicly released, tag `v1.0.0` at `252e258`.
   macOS arm64 and Windows x64 Full/Lite installers and both platform checksum
   manifests are published. See [release notes](RELEASE_NOTES_V1.0.0.md) and
@@ -35,7 +57,7 @@
   checks; actual Host acceptance is pending. `0.7.0-preview.2` is a local unsigned
   Lite trial artifact, not the public release.
 - `package.json` is the product-version source through `core/version.js`.
-- Current source version: `1.0.0` (shared-understanding GUI and product brand refresh; public release). See [notes](RELEASE_NOTES_V1.0.0.md).
+- Current source version: `1.0.3` (local pending audit fix). See [notes](RELEASE_NOTES_V1.0.3.md).
 - Version sequence confirmed by the user: this redesign is `0.9.0`, followed by the fix checkpoint `0.9.1`. Earlier understanding test DMGs accidentally retained `0.8.4`; their metadata and checksums remain historical evidence.
 - 0.7.2 retires stdio, keeps both HTTP protocol versions, and reserves CLI for internal maintenance. See [migration](HTTP_MCP_MIGRATION.md).
 - 0.7.7 adds bounded InnerLife state selection, output novelty and evidence review. See [plan](V0.7.7_INNERLIFE_PLAN.md) and [notes](RELEASE_NOTES_V0.7.7.md).

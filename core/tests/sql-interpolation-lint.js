@@ -66,6 +66,11 @@ const SAFE_IDENTIFIERS = new Set([
 // reviewed together. Keeping these exact prevents another repository from
 // gaining a same-named blanket escape hatch.
 const FILE_SAFE_EXPRESSIONS = new Map([
+  ["repositories/innerlife/session-store.js", new Set([
+    // Fixed literals only: the automated-worker switch selects an empty
+    // predicate or the global/per-Agent enabled predicate, with no user SQL.
+    "enabledFilter"
+  ])],
   ["database.js", new Set([
     // Internal projection SQL only; attachSql quotes a generated private path.
     "setupSql", "attachSql"

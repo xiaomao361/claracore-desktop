@@ -3,6 +3,22 @@ const { boundedText, catalogPage, shapeInnerLifeSessionCatalogEntry } = require(
 const { catalogInput } = require("./catalog-input");
 
 const SECTIONS = ["sessions", "inbox", "digestRuns", "shares"];
+const RECORD_READERS = {
+  sessions: "getInnerLifeSession", inbox: "getInnerLifeInboxItem",
+  digestRuns: "getInnerLifeDigestRun", shares: "getInnerLifeShare"
+};
+
+// Shared by canonical diagnostics and the old nullable session-get adapter.
+// A missing record and a foreign record must not become an empty success.
+async function readInnerLifeRecord(core, agentId, section, id) {
+  const reader = RECORD_READERS[section];
+  if (!reader) throw new Error("A record read requires a specific InnerLife section.");
+  const record = await core.database[reader](id);
+  if (record && (record.agentId || record.agent_id) !== agentId) {
+    throw new Error("InnerLife record not found for this Agent.");
+  }
+  return record || null;
+}
 
 function readRef(section, id) {
   return { tool: "innerlife_status", arguments: { detail: "full", section, recordId: id } };
@@ -12,7 +28,7 @@ function readRef(section, id) {
 // one-record expansion, not the union of every body and history collection.
 async function statusPage(core, agentId, input = {}) {
   const section = input.section || "overview";
-  if (!["overview", ...SECTIONS].includes(section)) throw new Error("Invalid InnerLife status section.");
+  if (!["overview", "doctor", "daemon", ...SECTIONS].includes(section)) throw new Error("Invalid InnerLife status section.");
   if (input.status && !["sessions", "inbox", "shares"].includes(section)) {
     throw new Error("Status filtering requires a sessions, inbox or shares section.");
   }
@@ -25,14 +41,18 @@ async function statusPage(core, agentId, input = {}) {
   if (input.recordId !== undefined && (typeof input.recordId !== "string" || !input.recordId.trim())) throw new Error("Record id must be a nonempty string.");
   if (input.recordId && ["status", "offset", "limit"].some(key => input[key] !== undefined)) throw new Error("Record reads cannot also request a catalog page or status filter.");
   const database = core.database;
+  if (["doctor", "daemon"].includes(section)) {
+    if (["recordId", "limit", "offset", "status"].some(key => input[key] !== undefined)) {
+      throw new Error("Doctor and daemon reads cannot request record or catalog arguments.");
+    }
+    const record = section === "doctor"
+      ? await database.getInnerLifeDoctor(agentId, { daemon: await database.getInnerLifeDaemonStateReadOnly(agentId) })
+      : await database.getInnerLifeDaemonStateReadOnly(agentId);
+    return { detail: "full", mode: "full", section, record };
+  }
   if (input.recordId) {
-    const readers = {
-      sessions: "getInnerLifeSession", inbox: "getInnerLifeInboxItem",
-      digestRuns: "getInnerLifeDigestRun", shares: "getInnerLifeShare"
-    };
-    if (!readers[section]) throw new Error("A record read requires a specific InnerLife section.");
-    const record = await database[readers[section]](input.recordId);
-    if (!record || (record.agentId || record.agent_id) !== agentId) {
+    const record = await readInnerLifeRecord(core, agentId, section, input.recordId);
+    if (!record) {
       throw new Error("InnerLife record not found for this Agent.");
     }
     return { detail: "full", mode: "full", section, record };
@@ -68,4 +88,4 @@ async function statusPage(core, agentId, input = {}) {
   return result;
 }
 
-module.exports = { statusPage };
+module.exports = { statusPage, readInnerLifeRecord };

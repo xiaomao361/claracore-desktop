@@ -7,13 +7,12 @@ function createInnerLifeShareTimingStore(helpers) {
   async function findAvailableShareId(database, agentId) {
     const rows = await database.query(`
       SELECT id
-      FROM innerlife_shares
+      FROM innerlife_share_candidates
       WHERE agent_id = ${sqlString(agentId)}
         AND status IN ('approved', 'pending', 'deferred')
       ORDER BY
         CASE status WHEN 'approved' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END,
-        updated_at DESC,
-        created_at DESC
+        datetime(created_at) DESC, id DESC
       LIMIT 1;
     `);
     return rows[0]?.id || "";
@@ -53,6 +52,10 @@ function createInnerLifeShareTimingStore(helpers) {
 
   return Object.freeze({
     findAvailableShareId,
+    async isAvailableShare(database, id) {
+      const rows = await database.query(`SELECT id FROM innerlife_share_candidates WHERE id = ${sqlString(id)};`);
+      return rows.length > 0;
+    },
     recordCheck
   });
 }

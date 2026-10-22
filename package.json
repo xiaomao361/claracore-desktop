@@ -1,6 +1,6 @@
 {
   "name": "claracore-desktop",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "buildFlavor": "full",
   "private": true,
   "description": "ClaraCore desktop manager for the local personal cognitive core",
@@ -14,8 +14,8 @@
     "seed:ux:clear": "node scripts/seed-ux-test-data.js --clear",
     "memoria": "node core/cli.js",
     "check:syntax": "node scripts/check-js-syntax.js",
-    "check": "npm run check:syntax && npm run test:sql-lint && node core/tests/ipc-contract-lint.js && npm run test:login-item && npm run test:architecture && npm run test:home:understanding && npm run test:context-budget && npm run test:turn-context && npm run test:understanding && npm run test:innerlife:grounding && npm run test:knowledge && npm run test:jev && npm run test:desktop-maintenance",
-    "test:desktop-maintenance": "node core/tests/desktop-maintenance-smoke.js",
+    "check": "npm run check:syntax && npm run test:sql-lint && node core/tests/ipc-contract-lint.js && npm run test:login-item && npm run test:architecture && npm run test:home:understanding && npm run test:context-budget && npm run test:turn-context && npm run test:understanding && npm run test:innerlife:grounding && npm run test:knowledge && npm run test:jev && npm run test:desktop-maintenance && npm run test:innerlife:pool",
+    "test:desktop-maintenance": "node core/tests/desktop-maintenance-smoke.js && node core/tests/memory-maintenance-pending-smoke.js && node -e \"process.env.CLARACORE_DESKTOP_DISABLE_NODE_SQLITE='1';require('./core/tests/memory-maintenance-pending-smoke.js')\"",
     "test:architecture": "node core/tests/product-core-owner-smoke.js && node core/tests/resource-refresh-loop-smoke.js && node core/tests/visible-data-refresh-smoke.js && node core/tests/agent-setup-contract-smoke.js && node core/tests/memory-hydration-smoke.js && node core/tests/repository-composition-smoke.js && node core/tests/innerlife-repository-boundary-smoke.js && node core/tests/innerlife-service-boundary-smoke.js && node core/tests/innerlife-session-service-boundary-smoke.js && node core/tests/innerlife-workflow-service-boundary-smoke.js && node core/tests/system-repository-boundary-smoke.js && node core/tests/continuity-repository-boundary-smoke.js && node core/tests/gateway-context-service-smoke.js",
     "test:shell": "node core/tests/run-ui-smoke.js core/tests/shell-window-smoke.js",
     "test:login-item": "node core/tests/login-item-settings-smoke.js",
@@ -53,7 +53,7 @@
     "test:phase4": "npm run test:system:boundaries && TZ=Asia/Shanghai node core/tests/agent-activity-performance-smoke.js && node core/tests/phase4-gateway-contract-smoke.js && node core/tests/gateway-trace-compatibility-smoke.js && node core/tests/gateway-trace-retention-smoke.js && node core/tests/memory-controller-retention-scheduler-smoke.js && node core/tests/logs-snapshot-performance-smoke.js && npm run test:phase4:trace-ui",
     "test:mcp:protocol": "node core/tests/modern-mcp-http-smoke.js && node core/tests/http-gateway-backpressure-smoke.js --modern",
     "test:gateway:http": "node core/tests/streamable-http-gateway-smoke.js && node core/tests/http-gateway-backpressure-smoke.js",
-    "test:context-budget": "node core/tests/context-budget-smoke.js",
+    "test:context-budget": "node core/tests/context-budget-smoke.js && node core/tests/mcp-tool-surface-smoke.js && node core/tests/mcp-capability-consolidation-smoke.js",
     "test:turn-context": "node core/tests/turn-context-smoke.js",
     "baseline:context-budget": "node scripts/context-budget-baseline.js",
     "test:phase4:trace-ui": "node core/tests/run-ui-smoke.js core/tests/phase4-gateway-trace-ui-smoke.js",
@@ -101,7 +101,8 @@
     "test:knowledge:semantic": "node core/tests/knowledge-search-smoke.js --builtin",
     "test:jev": "node core/tests/jev-recall-smoke.js && node core/tests/jev-routing-smoke.js && node core/tests/decision-model-smoke.js",
     "test:understanding": "node core/tests/understanding-journal-smoke.js && node core/tests/understanding-recall-smoke.js && node core/tests/understanding-material-smoke.js && node core/tests/understanding-lines-smoke.js && node core/tests/understanding-host-smoke.js && node core/tests/understanding-evaluation-smoke.js && node core/tests/understanding-smoke.js && node core/tests/understanding-http-smoke.js",
-    "evaluate:understanding": "node scripts/evaluate-understanding.mjs"
+    "evaluate:understanding": "node scripts/evaluate-understanding.mjs",
+    "test:innerlife:pool": "node core/tests/innerlife-candidate-pool-smoke.js && node core/tests/innerlife-candidate-pool-smoke.js --cli"
   },
   "build": {
     "beforePack": "scripts/stage-sqlite-vec.js",

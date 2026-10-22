@@ -218,8 +218,24 @@ node core/cli.js innerlife share-check --context "current conversation context"
 
 Session start, briefing, and convergence filter pending shares by Agent before
 applying catalog limits. Another Agent's newer candidates cannot hide the caller's
-older candidates. Pending shares and active sessions are not deleted or ended just
-because they are old; lifecycle completion requires a confirmed host end.
+older candidates. Since 1.0.1, pending, approved and deferred shares share one
+per-Agent candidate pool: at most ten, with seven days of validity from creation.
+Approval takes priority, then pending, then deferred; within each class, newest
+wins with an id tie-break. Deferral does not extend validity. Database write
+triggers enforce the cap, the existing scheduler retires expired candidates,
+and read-only candidate projections exclude expired records before the sweep.
+Retirement records `discarded` with an automatic capacity, expiry or invalid-date
+reason and action receipt; original text, thoughts and used records remain.
+Active sessions are not ended because they are old; they still require a
+confirmed host end.
+
+The daemon row owns the per-Agent enable choice and the profile mirrors it.
+The 1.0.1 migration preserves existing daemon choices and repairs stale profile
+flags. New profiles start paused. The global switch gates execution without
+erasing individual choices; enabling an Agent opens the gate, while pausing an
+Agent leaves the others alone. Automated afterthought workers obey the same
+gate and Agent switch, retaining paused jobs for later; explicit manual runs
+remain available. An in-flight completion cannot revive a paused daemon.
 
 ## 0.7.7 generation evidence boundary
 
@@ -232,3 +248,14 @@ inbox inputs for retry and the daemon exposes the retry failure. Original
 sources and actual bounded prompts are recorded with the event; prior AI
 thoughts are not factual evidence. See `docs/V0.7.7_INNERLIFE_PLAN.md` and
 `docs/RELEASE_NOTES_V0.7.7.md` for limits, checks and legacy-queue behavior.
+
+
+## MCP 能力整合（2026-10-22 源码）
+
+现行投料入口统一为 `innerlife_submit_inbox`，`source` 保留 fact/continuity 的区别。
+会话分页/详情统一走 `innerlife_status(detail=full, section=sessions, limit/offset 或 recordId)`；
+doctor/daemon 也是显式诊断分区。现行诊断读取不初始化 daemon，旧名称的历史行为仅在兼容适配层保留。
+原 `submit_fact`、`submit_continuity`、`sessions`、`session_get`、`doctor`、`daemon_status`
+不再出现在 full 现行目录；仍可调用，回执 `_meta` 给出替代工具名。
+会话开始/结束、分享判断/投递反馈、消化/探索/收敛保持原有业务语义。
+全量映射和退出条件见 [MCP 能力整合](../../docs/design/2026-10-22-mcp-capability-consolidation.md)。

@@ -73,13 +73,16 @@ function innerLifeShareSimilarity(left, right) {
   return overlap / Math.min(leftTokens.size, rightTokens.size);
 }
 
+const { CANDIDATE_LIMIT, CANDIDATE_MAX_AGE_DAYS } = require("./candidate-pool");
+
 const DEFAULT_SHARE_POLICY = {
   default_mode: "when_relevant",
   max_proactive_per_day: 3,
   proactive_after_hours: 2,
   repeat_cooldown_hours: 4,
   max_defer_count: 3,
-  stale_after_days: 7
+  stale_after_days: CANDIDATE_MAX_AGE_DAYS,
+  max_candidates_per_agent: CANDIDATE_LIMIT
 };
 
 function buildInnerLifeProfileContext(profile, options = {}) {
@@ -88,7 +91,8 @@ function buildInnerLifeProfileContext(profile, options = {}) {
   const pickProfile = {
     identity: profileJson.identity || null,
     boundaries: profileJson.boundaries || null,
-    share_policy: { ...DEFAULT_SHARE_POLICY, ...(profileJson.share_policy || profileJson.sharePolicy || {}) },
+    share_policy: { ...DEFAULT_SHARE_POLICY, ...(profileJson.share_policy || profileJson.sharePolicy || {}),
+      stale_after_days: CANDIDATE_MAX_AGE_DAYS, max_candidates_per_agent: CANDIDATE_LIMIT },
     autonomy: profileJson.autonomy || null,
     convergence: profileJson.convergence || null,
     autonomous_sources: Array.isArray(profileJson.autonomous_sources) ? profileJson.autonomous_sources.slice(0, 5) : undefined

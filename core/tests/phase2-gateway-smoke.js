@@ -44,13 +44,13 @@ async function main() {
     const toolNames = new Set((tools.result?.tools || []).map((tool) => tool.name));
     for (const tool of [
       "gateway_docs",
-      "memory_context",
+      "gateway_auto_context",
       "memoria_search",
       "memoria_get",
       "memoria_create",
       "memoria_update",
       "memoria_link_create",
-      "memoria_record_create"
+      "memoria_supersede"
     ]) {
       if (!toolNames.has(tool)) throw new Error(`Core profile missing tool: ${tool}`);
     }
@@ -94,7 +94,10 @@ async function main() {
         "memoria_record_summary",
         "memoria_record_stats"
       ]) {
-        if (!fullToolNames.has(tool)) throw new Error(`Full profile missing tool: ${tool}`);
+        const route = require("../gateway/tool-compatibility-routes").LEGACY_TOOL_ROUTES[tool];
+        const current = route?.name || tool;
+        if (!fullToolNames.has(current)) throw new Error(`Full profile missing replacement tool: ${current}`);
+        if (route && fullToolNames.has(tool)) throw new Error(`Full profile still advertises retired tool: ${tool}`);
       }
     } finally {
       await fullProfileClient.close();
@@ -210,7 +213,7 @@ async function main() {
       throw new Error(`Gateway memoria_graph did not include Memory-label edge: ${JSON.stringify(graph.edges)}`);
     }
     const maintenanceCheck = parseTextResult(await client.callTool("memoria_maintenance_check"));
-    if (!["ok", "needs_repair"].includes(maintenanceCheck.status) || !maintenanceCheck.counts) {
+    if (!["ok", "pending", "needs_repair"].includes(maintenanceCheck.status) || !maintenanceCheck.counts) {
       throw new Error(`Gateway memoria_maintenance_check returned invalid report: ${JSON.stringify(maintenanceCheck)}`);
     }
     const maintenanceDryRun = parseTextResult(await client.callTool("memoria_maintenance_run", { dryRun: true }));

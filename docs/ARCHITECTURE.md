@@ -37,7 +37,7 @@ The Desktop runtime is Node/Electron.
     Agent-scoped reads, and bounded `brief` projection. Omitted `detail`
     preserves the 0.6.4 full packet. Since 0.6.6 `brief` composes the other
     domains' default contracts instead of a second larger copy of each.
-  - `core/gateway/tool-profiles.js`: the `core` and `full` tool manifests.
+  - `core/gateway/tool-profiles.js`: the `core` (25 daily tools), `core-compat` (previous 38) and `full` tool manifests.
   - `core/gateway/docs.js`: progressive `gateway_docs`.
   - `core/gateway/auto-context.js`: the one-winner automatic-context arbiter.
 - Context shaping (0.6.6): `core/continuity/resume-detail.js` and

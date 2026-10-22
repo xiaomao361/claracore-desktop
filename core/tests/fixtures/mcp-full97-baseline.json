@@ -1,0 +1,393 @@
+{
+  "source": "Full 97-tool contract before capability consolidation, 2026-10-22",
+  "tools": [
+    {
+      "name": "understanding_context",
+      "sha256": "50fb4c01739b73f20352e89d228b33b34fc34f6736d3363be5311f0dba83a503"
+    },
+    {
+      "name": "understanding_submit",
+      "sha256": "e62a56ad8e3028363e66752537526f0574ceb16ea9d9644fc242e715b943b35e"
+    },
+    {
+      "name": "understanding_resume",
+      "sha256": "7fc8027e8e0443769a83cbd985e884e4d121737cdbf13b8dc5667718e7b9d163"
+    },
+    {
+      "name": "claracore_status",
+      "sha256": "0b5a4b3401d9779e79f38a68642987c33dd21d41687a9a70a1ea018f01db6a64"
+    },
+    {
+      "name": "claracore_connection_test",
+      "sha256": "c5b064cd89fcc1431bc6e7330bc21770df9fb8c7d89fef3496a0039ab10244bb"
+    },
+    {
+      "name": "gateway_docs",
+      "sha256": "f58e6c1a1ee5cee6cc9babd86bc4902688762e0fa1d20ed55b247f2e55195ea9"
+    },
+    {
+      "name": "gateway_context",
+      "sha256": "0354dc3fe77a92069eaaaebe044b4f5c0a71a061b47d7047162cf78d551eb811"
+    },
+    {
+      "name": "gateway_auto_context",
+      "sha256": "3d30aef2a3ff292e3217ca98ab6343db3a1d5b3b52822b2a2c9c45230f0807f8"
+    },
+    {
+      "name": "gateway_trace_list",
+      "sha256": "14ae18b84b8e45b8a56deb1fd2d5cad0b0153a8b8cc8e4a195b507b8a95bacac"
+    },
+    {
+      "name": "gateway_trace_get",
+      "sha256": "420704de344242fdf58e97e460c9a3e3f61abc9ca73828802350dd1dbe4544ef"
+    },
+    {
+      "name": "agent_identity_merge",
+      "sha256": "a3a4c4d601a9dca8be333c654239b84ab70e3ac17642ce79e1ed9220edd7bd34"
+    },
+    {
+      "name": "knowledge_index_rebuild",
+      "sha256": "3146a76e336ab534fd341a532dcec5f6873a943e9b0316d8233d90d04bdeaf62"
+    },
+    {
+      "name": "knowledge_read",
+      "sha256": "96cf60386bc86d8660f8a55cff4fae3d95a2b47021ed494298a65be8f1dea123"
+    },
+    {
+      "name": "knowledge_intake_preview",
+      "sha256": "f7b69c6715f7fc800b2df34c9945e116fadac357315688d68c7279727dd7a0ba"
+    },
+    {
+      "name": "knowledge_intake_commit",
+      "sha256": "a07e9bef80c84e13309bbf8684bb5768527cc099995f3ecea84ab26fe37ebf9d"
+    },
+    {
+      "name": "memory_context_feedback",
+      "sha256": "b5d439ff94640a58a7b879b15e4d5d2f7364cbe72eb24a576daac2b95f2e9074"
+    },
+    {
+      "name": "memory_context",
+      "sha256": "9437f33f6bbafa31d36c814c295e575be4951db129494ace3429292c9ab63ee5"
+    },
+    {
+      "name": "memoria_list",
+      "sha256": "50256621de67ca58bf36193296c9f304f5a93b3f8c415d5a76560b6016ae4980"
+    },
+    {
+      "name": "memoria_search",
+      "sha256": "d1df9a002005dcdbce376139b419db49f444c574b734392d77ad195e8eb6d94d"
+    },
+    {
+      "name": "memoria_get",
+      "sha256": "46a0f77eb200b51ee8ef57baba0170a3f513a2162eb4b37ecb16e5b5e75c9723"
+    },
+    {
+      "name": "memoria_create",
+      "sha256": "54e1cc07c6806bd5a13f831234f6661b5081ed8f2e9b30e8a2e40ddd2ceb1dd7"
+    },
+    {
+      "name": "memoria_update",
+      "sha256": "1bc9116f82be7125d9e864895c8adccee7110f59384f4ef0606e97c49aad02e2"
+    },
+    {
+      "name": "memoria_tag",
+      "sha256": "434a275ad85cc0ee3341bfd175d08d09180b57c4d097fa8b44c70767d57b7437"
+    },
+    {
+      "name": "memoria_restricted_list",
+      "sha256": "176002666f25807d4e8f0955cfcd2a8f32012c51d78cb29f326f0972f0933112"
+    },
+    {
+      "name": "memoria_restrict",
+      "sha256": "6d3ed7216e2df54baf9961c51e02767aa5ac0f981d238b097eb495267c8e7641"
+    },
+    {
+      "name": "memoria_unrestrict",
+      "sha256": "687c2df627accab0a1dbb2916ba9d3246cf066cc127fd2232bd9cf1f773fd68d"
+    },
+    {
+      "name": "memoria_delete",
+      "sha256": "6dda9ecb518c153df3b9be5da581807459aeb39d8e909c8a0c01afcfe1c8dd09"
+    },
+    {
+      "name": "memoria_restore",
+      "sha256": "8f1692b5cdaae84fb1c24055aba70b19640822dc9dd79f75a50c476ab3e48028"
+    },
+    {
+      "name": "memoria_archive",
+      "sha256": "5566776bcf8d14ecef437e7a392c408e1e2287f6097ef5eb2a84277cf927ce98"
+    },
+    {
+      "name": "memoria_archived_list",
+      "sha256": "cb935efbc6c37d383ac050923781b5a5b87aea502dbbe8ad24f9639e09198e27"
+    },
+    {
+      "name": "memoria_restore_archived",
+      "sha256": "f5d4e4df262e647dde34e9ccacaadd89ff143027cbce0b9262744c469c41ea7a"
+    },
+    {
+      "name": "memoria_archive_suggestions",
+      "sha256": "b41330d5d3d18e9be032fc61a5d8648657c0189444bad081cbfc5673378a9a93"
+    },
+    {
+      "name": "memoria_archive_dormant",
+      "sha256": "5b482411fa3f5fac247ce3f59edff042100bd28a7fb04c667316aa72ab990711"
+    },
+    {
+      "name": "memoria_stats",
+      "sha256": "2035fb3ad9e6b88f7ce459da0f3a5fb646d141ec6967eea43facfd770508477e"
+    },
+    {
+      "name": "memoria_graph",
+      "sha256": "2a5d01a186774a3a873238d4ce02fa3f92f77293b66473a98597f3ffa88f9f29"
+    },
+    {
+      "name": "memoria_maintenance_check",
+      "sha256": "165416a3f33376fe98083da15671e6d07e737495f46c84e665fe2ed1e763d8ff"
+    },
+    {
+      "name": "memoria_maintenance_run",
+      "sha256": "03ae35fb811ad416ec4c98c35e512cb0fb8bb8d4fec018f7bdcde1522daf063a"
+    },
+    {
+      "name": "memoria_maintenance_audit",
+      "sha256": "251adf1f22edc77444e5d66af4c4b81c4095936c81a98b1f6c9653f105de9ec1"
+    },
+    {
+      "name": "memoria_export",
+      "sha256": "8a0805f45a1120a0d3e5719bec6fecdd7f63af8841360d197693bd634f3960cd"
+    },
+    {
+      "name": "memoria_import",
+      "sha256": "bc86b88d555c650cede9560c704be83bb22c34c2ea3840678c9bf6ed519dc447"
+    },
+    {
+      "name": "memoria_merge_suggestions",
+      "sha256": "f2596fd78b0183291cabab5fd4640e6b78dab81779ceee92266c5fd689f34d52"
+    },
+    {
+      "name": "memoria_merge",
+      "sha256": "d5291b8e08ab25dcc7320135c64f375b2fc2f06a703f31627143916dab2dc44f"
+    },
+    {
+      "name": "memoria_label_alias_list",
+      "sha256": "b19dc0e160a8f70fbe45fb32b6fd901c8f024a6b92d4008bf5c83c2076838bb3"
+    },
+    {
+      "name": "memoria_label_alias_create",
+      "sha256": "b8b2f13660d200c7b945c5a3dfb13061c149a8a111606620993e08cd12540b34"
+    },
+    {
+      "name": "memoria_label_alias_delete",
+      "sha256": "25900bf47ccb0231e6e6f40b957a2a42ad61d2bc68845f09d10f7f14574b7887"
+    },
+    {
+      "name": "memoria_link_create",
+      "sha256": "e2152b146e8ad9d7ef96fa97135f63595b8b1e90deed086098d453455fd22d2d"
+    },
+    {
+      "name": "memoria_link_list",
+      "sha256": "59895c434266a8bc537e55da3d3c41bc5238e0dfd8d2b58214502d62f82bbfc7"
+    },
+    {
+      "name": "memoria_supersede",
+      "sha256": "b8606953cb5593353f4f00f145745b0f654c5e569a9ca86ea0ccaae8f99f0114"
+    },
+    {
+      "name": "memoria_link_delete",
+      "sha256": "387ce9a74cf02dcde174bb380c046b4a7fcf3957f8dcec218f3d47a53f98d01a"
+    },
+    {
+      "name": "memoria_record_create",
+      "sha256": "1f8f25827edc34a1438adef5eb33da0842d6987269cdf39741d6e79e2c91a934"
+    },
+    {
+      "name": "memoria_record_list",
+      "sha256": "8f122c164badf4d5436a06fccca425d6543f3c68876decc82f481ab477c2659e"
+    },
+    {
+      "name": "memoria_record_get",
+      "sha256": "279eb5cfe61160aa3efbeeef7aa46d3ee76e092c4b54200fd668cd8c77da62b4"
+    },
+    {
+      "name": "memoria_record_summary",
+      "sha256": "9935b888cc51a28bb7e8ffd67792fa4fb76ea322cf89085d5a0b3ca323f665f6"
+    },
+    {
+      "name": "memoria_record_stats",
+      "sha256": "d10a630f9df83f7acc34b31f3854baf779ef7d392227578d425a0e0ed9826daf"
+    },
+    {
+      "name": "shared_line_get",
+      "sha256": "f31c1bc6497f97dbda5e30b7c573b680e34b6aaede49273ed51de7d5e708b2b2"
+    },
+    {
+      "name": "shared_line_list",
+      "sha256": "662e913bf7928dcf98197e8c09e839b54f4cc35aa10568137756584eb9798820"
+    },
+    {
+      "name": "shared_line_create",
+      "sha256": "c809656c6c6e9e27f0e42d772e79ad78d14050c4f540c41f42df0844a105dd7e"
+    },
+    {
+      "name": "shared_line_activate",
+      "sha256": "eacb88208326352ff5f19a634db5172237a3493e4eab801cf7a8b66aad743a09"
+    },
+    {
+      "name": "shared_line_rename",
+      "sha256": "02a8329f11094531e4afd1160cc108688b9bd5693eee08f96ebb67e71d583de8"
+    },
+    {
+      "name": "shared_line_archive",
+      "sha256": "d3f0e99f9526d8e22854a9c0d2c421c43301f6e7e475d389a6bf62c6e707d531"
+    },
+    {
+      "name": "shared_line_restore",
+      "sha256": "219cd42b343765dd527a1174e1afc9a24474a9432819e90d41f7ffec98ce0b17"
+    },
+    {
+      "name": "shared_line_update",
+      "sha256": "54abdd564662fc91b419bd71a3c5aa6db668c62ee0cb66e2bdab75196610176d"
+    },
+    {
+      "name": "shared_line_handoff_create",
+      "sha256": "f2d383222b03cf1c04563ee067d571990e92adddc2e6acc12446d8839d7c413e"
+    },
+    {
+      "name": "shared_line_agent_state",
+      "sha256": "bcab0c8b3759993b259bb17edd7f99d511bf86125402b6a7ad0722ce1e81f749"
+    },
+    {
+      "name": "shared_line_model_adjustment_list",
+      "sha256": "1d08099b75e6e15452ecdfbd1ca679cdc90c6c3490d806c37a5c4b9de6bd4bb9"
+    },
+    {
+      "name": "shared_line_model_adjustment_get",
+      "sha256": "b268745eb4335c243d7276a17e05b415595620c79b210d93efc251478b6a661b"
+    },
+    {
+      "name": "shared_line_model_adjustment_set",
+      "sha256": "4bde9d781b6e304354f34d961ffe284ab3d43d7fa1be625a9fcdc37d69de8d96"
+    },
+    {
+      "name": "shared_line_model_adjustment_delete",
+      "sha256": "9a4542407e8bf2966dc29e75ca023f05c0cac0937fbc2c0ca278c1701401d8b7"
+    },
+    {
+      "name": "shared_line_compact",
+      "sha256": "4f6eff552072d91fe18a7951d1b101abe9ff6794597a848590f9691675785d5a"
+    },
+    {
+      "name": "innerlife_session_start",
+      "sha256": "ddebdd539e8296dfe77a511e731072884c75e87d5f93e808f4d026423e57b5a3"
+    },
+    {
+      "name": "innerlife_session_end",
+      "sha256": "cb5973d3ebe7e4b9f4b9db843ff9f3c35d9176c1df0dfb0e8284eafb7ebfe00d"
+    },
+    {
+      "name": "innerlife_afterthought_resolve",
+      "sha256": "ba8a41c9aea24e84ba8449b38b85a4ba41ad0da522e93c79b74be0382b1fbb8b"
+    },
+    {
+      "name": "innerlife_sessions",
+      "sha256": "d09e93d9ae7d7ec4940cdcec160d9ce9b6bc9d3754165cb2c23084113515a49f"
+    },
+    {
+      "name": "innerlife_session_get",
+      "sha256": "b941eb588a1d23f2642932f9a5994f8050a17539c923b81af45db16c30bdd6ec"
+    },
+    {
+      "name": "innerlife_status",
+      "sha256": "16159763c48ba8d7c89c5d62293d5b5f86744b4ef94713d479ca02ce310006cf"
+    },
+    {
+      "name": "innerlife_briefing",
+      "sha256": "9117b62656a24cbc6665a616b594c1ffb90c93e41885ebcb6ecf54d4ee6e62f6"
+    },
+    {
+      "name": "innerlife_doctor",
+      "sha256": "cfa8063df58bf63842f0aee3a7e31b293674dd0a7b04b6241bece1682b6cbf66"
+    },
+    {
+      "name": "innerlife_profile_set",
+      "sha256": "78b0abf039d1e5d8054279c798a8e21f691acad9ab0ee162c96a031ddacf9b19"
+    },
+    {
+      "name": "innerlife_profile_list",
+      "sha256": "ced96bf03e073162f8b786c57ddfe2e4b8b16492e20c5f3314e51c56379bee27"
+    },
+    {
+      "name": "innerlife_profile_get",
+      "sha256": "04d36361910091a999105f693f7bfd8e7549a402e03e25b869a4dff3da651a47"
+    },
+    {
+      "name": "innerlife_profile_delete",
+      "sha256": "c9355e3762690cbd1e87851312e7262f90ab6b0a1dc0b951771cdba5a67e4e57"
+    },
+    {
+      "name": "innerlife_digest",
+      "sha256": "656af2850870ad7429aa4379d0eee4331a6ab0879a986b25a2575bc595a55942"
+    },
+    {
+      "name": "innerlife_share_check",
+      "sha256": "8eafb7ee1c6a8d9628c2926c944c8f95058c4e5ddda65b6fde56477d26734935"
+    },
+    {
+      "name": "innerlife_submit_inbox",
+      "sha256": "a2edfd3921a67e0a0768651746441126804913e6eb924b7928d8de5acd389e07"
+    },
+    {
+      "name": "innerlife_submit_fact",
+      "sha256": "fe55df161a901ae96526e293f196d195c9428452d1171885e6a51ed28354b635"
+    },
+    {
+      "name": "innerlife_submit_continuity",
+      "sha256": "30493553624ace836d961c028c17ab30b334abb566e4745263f1486c140d8b19"
+    },
+    {
+      "name": "innerlife_pending_shares",
+      "sha256": "95a0250619d23ab8433fe8f64a72a67886ab1c15f6fe36a018eb77ae6cdd5eaf"
+    },
+    {
+      "name": "innerlife_share_actions",
+      "sha256": "39b736ebf78ee94ca1349a94efa4bc3bfeb71d09bb289f196cbb8cf3c99c0427"
+    },
+    {
+      "name": "innerlife_mark_share",
+      "sha256": "afa45befc34e9f8ac09bec42efb31a7e578b18c9a16891e4e0e22082d0a925b9"
+    },
+    {
+      "name": "innerlife_daemon_status",
+      "sha256": "e58ff14a6c6e97054cc720c3ccfbd186846d4ab51379916ee74250b19d7ad47a"
+    },
+    {
+      "name": "innerlife_daemon_set",
+      "sha256": "99b0ee1f05f4b62de16d5332fd805c9678b428f1a6d1e0f8ea7dad9640c43996"
+    },
+    {
+      "name": "innerlife_daemon_tick",
+      "sha256": "9a85ae7206627c6f8da50142938af60a496ba8e6a959a8fe1ec812349e114c4c"
+    },
+    {
+      "name": "innerlife_history",
+      "sha256": "ac7f82cda13ad521e424fa03257c887fb31a8b2ea0d84ebd22e69a0b1b4790b7"
+    },
+    {
+      "name": "innerlife_experiences",
+      "sha256": "c90c90599ba10756477af60ee8e7465c2f52e4dde129378df2c9e65eeb2b3a0d"
+    },
+    {
+      "name": "innerlife_summaries",
+      "sha256": "4ba69fc08b033de9c9c4db6912cf10bee85de4cf35775169f31cf12678db90f4"
+    },
+    {
+      "name": "innerlife_explore",
+      "sha256": "a0dc92d6a08e9ba311a2500f2ebed4ff74fa213d6bcec7f7a7b50731cfad5d9e"
+    },
+    {
+      "name": "innerlife_converge",
+      "sha256": "f589d1c91346563627ccbc0507504412a4298cc20be89c3afc48e7832c018769"
+    }
+  ]
+}

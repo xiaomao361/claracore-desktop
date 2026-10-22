@@ -1,26 +1,5 @@
 const memoriaMaintenanceToolDefinitions = [
   {
-    "name": "memoria_archive_suggestions",
-    "title": "Memory Archive Suggestions",
-    "description": "List dormant active non-restricted Memory records that are candidates for archive.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "limit": {
-          "type": "number",
-          "minimum": 1,
-          "maximum": 50
-        },
-        "olderThanDays": {
-          "type": "number",
-          "minimum": 1,
-          "maximum": 3650
-        }
-      },
-      "additionalProperties": false
-    }
-  },
-  {
     "name": "memoria_archive_dormant",
     "title": "Archive Dormant Memories",
     "description": "Archive dormant active non-restricted Memory records from the suggestion list.",
@@ -71,16 +50,6 @@ const memoriaMaintenanceToolDefinitions = [
     }
   },
   {
-    "name": "memoria_maintenance_check",
-    "title": "Memory Maintenance Check",
-    "description": "Check ClaraCore Desktop Memory maintenance issues such as missing embeddings, failed embeddings, orphan labels, and alias labels.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {},
-      "additionalProperties": false
-    }
-  },
-  {
     "name": "memoria_maintenance_run",
     "title": "Run Memory Maintenance",
     "description": "Repair ClaraCore Desktop Memory maintenance issues without touching old service data.",
@@ -97,7 +66,7 @@ const memoriaMaintenanceToolDefinitions = [
   {
     "name": "memoria_maintenance_audit",
     "title": "Memory Maintenance Audit",
-    "description": "Read a review-oriented Memory audit report with maintenance issues, merge/archive candidates, failed embeddings, duplicate titles, and label aliases.",
+    "description": "Read a bounded Memory maintenance report. Omitted section=overview preserves the combined audit. Select maintenance, merge-suggestions or archive-suggestions for one report; limit and olderThanDays keep their existing meaning. This tool never repairs, merges or archives records.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -110,6 +79,15 @@ const memoriaMaintenanceToolDefinitions = [
           "type": "number",
           "minimum": 1,
           "maximum": 3650
+        },
+        "section": {
+          "type": "string",
+          "enum": [
+            "overview",
+            "maintenance",
+            "merge-suggestions",
+            "archive-suggestions"
+          ]
         }
       },
       "additionalProperties": false
@@ -147,22 +125,6 @@ const memoriaMaintenanceToolDefinitions = [
     }
   },
   {
-    "name": "memoria_merge_suggestions",
-    "title": "Memory Merge Suggestions",
-    "description": "List conservative merge suggestions for active non-restricted ClaraCore Desktop Memory records.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "limit": {
-          "type": "number",
-          "minimum": 1,
-          "maximum": 50
-        }
-      },
-      "additionalProperties": false
-    }
-  },
-  {
     "name": "memoria_merge",
     "title": "Merge Memories",
     "description": "Merge a source Memory into a target Memory, keep the target, and soft-delete the source.",
@@ -185,6 +147,4 @@ const memoriaMaintenanceToolDefinitions = [
   }
 ];
 
-module.exports = {
-  memoriaMaintenanceToolDefinitions
-};
+module.exports = { memoriaMaintenanceToolDefinitions };

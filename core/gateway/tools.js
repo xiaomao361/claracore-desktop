@@ -6,6 +6,8 @@ const { handleMemoryControllerTool } = require("./tool-handlers/memory-controlle
 const { handleMemoriaTool } = require("./tool-handlers/memoria");
 const { handleSharedLineTool } = require("./tool-handlers/shared-line");
 const { handleInnerLifeTool } = require("./tool-handlers/innerlife");
+const { callLegacyTool } = require("./tool-compatibility");
+const { callableToolDefinitions } = require("./tool-definitions");
 
 const HANDLERS = [handleUnderstandingTool, handleKnowledgeTool, handleSystemTool, handleMemoryControllerTool, handleMemoriaTool, handleSharedLineTool, handleInnerLifeTool];
 
@@ -29,17 +31,24 @@ function createGatewayTools({ serverInfo, currentMcpAgentId, currentCallerContex
       core
     };
 
-    for (const handler of HANDLERS) {
-      const result = await handler(name, args, context);
-      if (result !== undefined) return result;
+    async function dispatch(toolName, input, project) {
+      // Adapt legacy wire shapes before serialization/budget enforcement, so
+      // compatibility does not parse and serialize the same result twice.
+      const handlerContext = project ? { ...context, textResult: value => textResult(project(value)) } : context;
+      for (const handler of HANDLERS) {
+        const result = await handler(toolName, input, handlerContext);
+        if (result !== undefined) return result;
+      }
+      throw new Error(`Unknown tool: ${toolName}`);
     }
-
-    throw new Error(`Unknown tool: ${name}`);
+    const legacy = await callLegacyTool(name, args, context, dispatch);
+    return legacy === undefined ? dispatch(name, args) : legacy;
   }
 
   return {
     toolDefinitions,
     toolProfile: profile,
+    callableToolDefinitions,
     callToolBody
   };
 }

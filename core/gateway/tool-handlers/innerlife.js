@@ -113,30 +113,7 @@ async function handleInnerLifeTool(name, args, context) {
     });
   }
 
-  if (name === "innerlife_sessions") {
-    const pageInput = catalogInput(args);
-    const page = await innerlife.recentSessionsPage(core, {
-      agentId: currentMcpAgentId(args),
-      ...pageInput,
-      status: args.status
-    });
-    return textResult({
-      sessions: page.items.map(shapeInnerLifeSessionCatalogEntry),
-      page: {
-        returned: page.items.length,
-        total: page.total,
-        limit: page.limit,
-        offset: page.offset,
-        hasMore: page.hasMore
-      }
-    });
-  }
 
-  if (name === "innerlife_session_get") {
-    const session = await innerlife.session(core, args.id);
-    if (session && session.agentId !== currentMcpAgentId(args)) throw new Error("InnerLife record not found for this Agent.");
-    return textResult(session ? { session } : { error: "not found", id: args.id });
-  }
 
   if (name === "innerlife_status") {
     const agentId = currentMcpAgentId(args);
@@ -153,9 +130,6 @@ async function handleInnerLifeTool(name, args, context) {
     return textResult(shapeInnerLifeBriefing(briefing, args.detail));
   }
 
-  if (name === "innerlife_doctor") {
-    return textResult(await innerlife.doctor(core, currentMcpAgentId(args)));
-  }
 
   if (name === "innerlife_profile_set") {
     return textResult(shapeInnerLifeProfile(await innerlife.updateProfile(core, args), args.agentId));
@@ -212,21 +186,7 @@ async function handleInnerLifeTool(name, args, context) {
     });
   }
 
-  if (name === "innerlife_submit_fact") {
-    const agentId = currentMcpAgentId(args);
-    return textResult({
-      inbox: await innerlife.submitInbox(core, { ...args, agentId, source: "fact", body: args.body }),
-      innerLife: await innerlife.snapshotLite(core, agentId)
-    });
-  }
 
-  if (name === "innerlife_submit_continuity") {
-    const agentId = currentMcpAgentId(args);
-    return textResult({
-      inbox: await innerlife.submitInbox(core, { ...args, agentId, source: "continuity", body: args.body }),
-      innerLife: await innerlife.snapshotLite(core, agentId)
-    });
-  }
 
   if (name === "innerlife_pending_shares") {
     // Summary reads project previews in SQL; full bodies require explicit
@@ -287,9 +247,6 @@ async function handleInnerLifeTool(name, args, context) {
     }
   }
 
-  if (name === "innerlife_daemon_status") {
-    return textResult(await innerlife.daemonStatus(core, currentMcpAgentId(args)));
-  }
 
   if (name === "innerlife_daemon_set") {
     return textResult(await innerlife.setDaemon(core, args));

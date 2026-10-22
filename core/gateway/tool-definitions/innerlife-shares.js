@@ -91,61 +91,9 @@ const innerlifeShareToolDefinitions = [
     }
   },
   {
-    "name": "innerlife_submit_fact",
-    "title": "Submit InnerLife Fact",
-    "description": "Submit factual material into the Desktop-owned InnerLife inbox for later digestion.",
-    "inputSchema": {
-      "type": "object",
-      "required": [
-        "body"
-      ],
-      "properties": {
-        "agentId": {
-          "type": "string"
-        },
-        "agentTool": {
-          "type": "string"
-        },
-        "agentName": {
-          "type": "string"
-        },
-        "body": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false
-    }
-  },
-  {
-    "name": "innerlife_submit_continuity",
-    "title": "Submit InnerLife Continuity",
-    "description": "Submit current Shared Line material into the Desktop-owned InnerLife inbox for later digestion.",
-    "inputSchema": {
-      "type": "object",
-      "required": [
-        "body"
-      ],
-      "properties": {
-        "agentId": {
-          "type": "string"
-        },
-        "agentTool": {
-          "type": "string"
-        },
-        "agentName": {
-          "type": "string"
-        },
-        "body": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false
-    }
-  },
-  {
     "name": "innerlife_pending_shares",
     "title": "List InnerLife Pending Shares",
-    "description": "List Desktop-owned InnerLife share candidates as bounded previews. Returns three by default. Reading candidates never marks delivery; a full body is earned by explicit inspection or by passing innerlife_share_check.",
+    "description": "List Desktop-owned InnerLife share candidates as bounded previews. Returns ten by default. Reading candidates never marks delivery; a full body is earned by explicit inspection or by passing innerlife_share_check.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -164,7 +112,10 @@ const innerlifeShareToolDefinitions = [
         },
         "detail": {
           "type": "string",
-          "enum": ["summary", "full"],
+          "enum": [
+            "summary",
+            "full"
+          ],
           "description": "summary (default) returns previews. full returns whole share bodies."
         }
       },
@@ -188,7 +139,10 @@ const innerlifeShareToolDefinitions = [
         },
         "detail": {
           "type": "string",
-          "enum": ["summary", "full"]
+          "enum": [
+            "summary",
+            "full"
+          ]
         }
       },
       "additionalProperties": false
@@ -254,6 +208,4 @@ const innerlifeShareToolDefinitions = [
   }
 ];
 
-module.exports = {
-  innerlifeShareToolDefinitions
-};
+module.exports = { innerlifeShareToolDefinitions };

@@ -18,6 +18,7 @@ async function main() {
   };
 
   await runtime.saveProductSettings(app, {
+    "memory.embedding.provider": "ollama",
     "memory.embedding.base_url": "http://127.0.0.1:9",
     "memory.embedding.model": "bge-m3-phase2-smoke"
   });
@@ -152,8 +153,8 @@ async function main() {
   if (!maintenanceResult.actions.some((action) => action.code === "canonicalized_alias_labels" && action.count >= 1)) {
     throw new Error(`Memory maintenance did not canonicalize alias labels: ${JSON.stringify(maintenanceResult)}`);
   }
-  if (maintenanceResult.after.status !== "ok") {
-    throw new Error(`Memory maintenance left issues behind: ${JSON.stringify(maintenanceResult.after)}`);
+  if (maintenanceResult.after.status !== "needs_repair" || maintenanceResult.after.counts.failedEmbeddings < 1) {
+    throw new Error(`Offline embedding failures were hidden by the maintenance result: ${JSON.stringify(maintenanceResult.after)}`);
   }
   const aliasMemoryAfterMaintenance = await database.getMemory(aliasMemory.id);
   if (aliasMemoryAfterMaintenance.labels.includes("ai") || !aliasMemoryAfterMaintenance.labels.includes("agent")) {

@@ -20,6 +20,24 @@ function createInnerLifeDaemonRepository(helpers, services = {}) {
     };
   }
 
+  // The per-Agent daemon row owns the desired setting. The global switch is
+  // a gate; reading a paused global gate must not erase any Agent's choice.
+  function shapeState(row, agentId, globalEnabled) {
+    const enabled = Boolean(globalEnabled && row.enabled && row.status !== "paused");
+    return {
+      agentId: row.agent_id || agentId,
+      status: enabled ? row.status || "enabled" : "paused",
+      enabled,
+      lastTickAt: row.last_tick_at || null,
+      nextRunAt: enabled ? row.next_run_at || null : null,
+      lastResult: row.last_result || "",
+      lastError: row.last_error || "",
+      tickCount: row.tick_count || 0,
+      updatedAt: row.updated_at || null,
+      metadata: parseJson(row.metadata_json, {})
+    };
+  }
+
   return {
     async getInnerLifeDaemonStateReadOnly(agentId = DEFAULT_AGENT_ID, settings = null) {
       const identity = resolveAgentIdentity(agentId || DEFAULT_AGENT_ID);
@@ -32,35 +50,18 @@ function createInnerLifeDaemonRepository(helpers, services = {}) {
         LIMIT 1;
       `);
       const row = rows[0] || {};
-      return {
-        agentId: row.agent_id || identity.id,
-        status: row.status || (enabled ? "enabled" : "paused"),
-        enabled: row.agent_id ? Boolean(row.enabled) : enabled,
-        lastTickAt: row.last_tick_at || null,
-        nextRunAt: row.next_run_at || null,
-        lastResult: row.last_result || "",
-        lastError: row.last_error || "",
-        tickCount: row.tick_count || 0,
-        updatedAt: row.updated_at || null,
-        metadata: parseJson(row.metadata_json, {})
-      };
+      return shapeState(row, identity.id, enabled);
     },
 
     async listEnabledInnerLifeDaemonAgentIds() {
       const settings = await this.getSettings();
       if (!settings["innerlife.enabled"]) return [];
-      let rows = await this.query(`
+      const rows = await this.query(`
         SELECT agent_id
         FROM innerlife_daemon_state
         WHERE enabled = 1 AND status != 'paused'
         ORDER BY agent_id ASC;
       `);
-      if (rows.length === 0) {
-        const defaultState = await this.ensureInnerLifeDaemonState(DEFAULT_AGENT_ID);
-        if (defaultState.enabled && defaultState.status !== "paused") {
-          rows = [{ agent_id: defaultState.agentId }];
-        }
-      }
       return rows.map((row) => String(row.agent_id || "").trim()).filter(Boolean);
     },
 
@@ -72,26 +73,13 @@ function createInnerLifeDaemonRepository(helpers, services = {}) {
         INSERT INTO innerlife_daemon_state (agent_id, status, enabled, last_result, metadata_json)
         VALUES (
           ${sqlString(profile.agent_id)},
-          ${enabled ? "'enabled'" : "'paused'"},
-          ${enabled ? 1 : 0},
+          ${profile.enabled ? "'enabled'" : "'paused'"},
+          ${profile.enabled ? 1 : 0},
           'initialized',
           '{}'
         )
         ON CONFLICT(agent_id) DO NOTHING;
       `);
-      if (!enabled) {
-        await this.exec(`
-          UPDATE innerlife_daemon_state
-          SET status = 'paused',
-              enabled = 0,
-              next_run_at = NULL,
-              last_result = 'paused',
-              last_error = '',
-              updated_at = CURRENT_TIMESTAMP,
-              metadata_json = ${jsonSql({ failureCount: 0, retrySeconds: 0 })}
-          WHERE agent_id = ${sqlString(profile.agent_id)};
-        `);
-      }
       const rows = await this.query(`
         SELECT agent_id, status, enabled, last_tick_at, next_run_at, last_result, last_error, tick_count, updated_at, metadata_json
         FROM innerlife_daemon_state
@@ -99,18 +87,7 @@ function createInnerLifeDaemonRepository(helpers, services = {}) {
         LIMIT 1;
       `);
       const row = rows[0] || {};
-      return {
-        agentId: row.agent_id || profile.agent_id,
-        status: row.status || (enabled ? "enabled" : "paused"),
-        enabled: Boolean(row.enabled),
-        lastTickAt: row.last_tick_at || null,
-        nextRunAt: row.next_run_at || null,
-        lastResult: row.last_result || "",
-        lastError: row.last_error || "",
-        tickCount: row.tick_count || 0,
-        updatedAt: row.updated_at || null,
-        metadata: parseJson(row.metadata_json, {})
-      };
+      return shapeState(row, profile.agent_id, enabled);
     },
 
     async setInnerLifeDaemonState(input = {}) {
@@ -120,12 +97,13 @@ function createInnerLifeDaemonRepository(helpers, services = {}) {
       const enable = action === "enable" || action === "start" || input.enabled === true;
       const pause = action === "pause" || action === "disable" || action === "stop" || input.enabled === false;
       if (!enable && !pause) throw new Error("InnerLife daemon action must be enable or pause.");
+      if (enable && pause) throw new Error("InnerLife daemon action conflicts with enabled.");
       const settings = await this.getSettings();
       const pollSeconds = Math.max(1, Number.parseInt(String(settings["innerlife.loop_seconds"] || 3600), 10) || 3600);
-      const pendingInbox = enable ? await this.listInnerLifeInbox("pending", 1) : [];
+      const pendingInbox = enable ? await this.listInnerLifeInboxForAgent(profile.agent_id, "pending", 1) : [];
       const nextRunSql = enable && pendingInbox.length > 0 ? "CURRENT_TIMESTAMP" : `datetime('now', '+${pollSeconds} seconds')`;
-      await this.updateSettings({ "innerlife.enabled": enable });
-      await this.exec(`
+      if (enable && !settings["innerlife.enabled"]) await this.updateSettings({ "innerlife.enabled": true });
+      await this.execAtomic(`
         INSERT INTO innerlife_daemon_state (agent_id, status, enabled, next_run_at, last_result, last_error, updated_at, metadata_json)
         VALUES (
           ${sqlString(profile.agent_id)},
@@ -175,7 +153,7 @@ function createInnerLifeDaemonRepository(helpers, services = {}) {
         UPDATE innerlife_daemon_state
         SET status = 'running',
             updated_at = CURRENT_TIMESTAMP
-        WHERE agent_id = ${sqlString(identity.id)};
+        WHERE agent_id = ${sqlString(identity.id)} AND enabled = 1 AND status != 'paused';
       `);
     },
 
@@ -198,7 +176,7 @@ function createInnerLifeDaemonRepository(helpers, services = {}) {
               failureCount: 0,
               retrySeconds: 0
             })}
-        WHERE agent_id = ${sqlString(identity.id)};
+        WHERE agent_id = ${sqlString(identity.id)} AND enabled = 1 AND status != 'paused';
       `);
     },
 
@@ -234,7 +212,7 @@ function createInnerLifeDaemonRepository(helpers, services = {}) {
               failureCount: 0,
               retrySeconds: 0
             })}
-        WHERE agent_id = ${sqlString(identity.id)};
+        WHERE agent_id = ${sqlString(identity.id)} AND enabled = 1 AND status != 'paused';
       `);
     },
 
@@ -264,7 +242,7 @@ function createInnerLifeDaemonRepository(helpers, services = {}) {
               retrySeconds,
               error
             })}
-        WHERE agent_id = ${sqlString(identity.id)};
+        WHERE agent_id = ${sqlString(identity.id)} AND enabled = 1 AND status != 'paused';
       `);
     },
 

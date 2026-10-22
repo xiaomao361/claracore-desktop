@@ -11,6 +11,7 @@ const memoryVectorRevision = require("./009_memory_vector_revision");
 const memoryEmbeddingSpaceIndex = require("./010_memory_embedding_space_index");
 
 const memoryVectorChanges = require("./011_memory_vector_changes");
+const innerLifeCandidatePool = require("./012_innerlife_candidate_pool");
 
 const MIGRATIONS = [
   gatewayTraceCompatibility,
@@ -23,7 +24,8 @@ const MIGRATIONS = [
   innerLifeAfterthoughtDrafting,
   memoryVectorRevision,
   memoryEmbeddingSpaceIndex,
-  memoryVectorChanges
+  memoryVectorChanges,
+  innerLifeCandidatePool
 ];
 
 async function ensureMigrationTable(database) {

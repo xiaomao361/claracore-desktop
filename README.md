@@ -37,6 +37,8 @@ Read these before adding new features:
   pagination, resource ownership, memory telemetry, and long-run checks.
 - [macOS Packaging](docs/mac-packaging.md): current local packaging and packaged
   Gateway validation notes.
+- [v1.0.1 notes](docs/RELEASE_NOTES_V1.0.1.md): local source update for bounded
+  InnerLife candidates and consistent per-Agent controls; local Lite trial only.
 - [v1.0.0 release notes](docs/RELEASE_NOTES_V1.0.0.md): current public release for
   the shared-understanding GUI and refreshed product identity.
 - [v0.8.1 release notes](docs/RELEASE_NOTES_V0.8.1.md): previous public release.
@@ -75,6 +77,12 @@ Read these before adding new features:
   - [Gateway](core/gateway/README.md)
 
 ## Current Status
+
+The local source version is `1.0.1`, adding an enforced InnerLife candidate
+limit/expiry and consistent per-Agent background controls. This source update
+has a verified local macOS arm64 Lite trial package. The user installed it and
+non-UI upgrade checks passed; it is not publicly released. See
+[1.0.1 notes](docs/RELEASE_NOTES_V1.0.1.md).
 
 The current public release is `1.0.0`, with the user-approved shared-understanding
 GUI and refreshed product identity. Tag `v1.0.0` points to `252e258`; macOS
@@ -125,9 +133,13 @@ Included:
   caller headers without duplicating a technical manual in the human UI.
 - Streamable HTTP MCP uses stable localhost port `50668` by default and persisted local token file; port/token edits, random token generation, and copyable agent config live in Settings > General > Agent Gateway
 - Desktop-owned Gateway Streamable HTTP endpoint for Gateway context, Memory Controller, Memoria, Shared Line, and InnerLife MCP tools
-- Gateway tool profiles keep everyday Agent workflows in the bounded `core`
+- Gateway tool profiles keep everyday Agent workflows in the bounded 25-tool `core`
   surface and expose maintenance, import/export, retention, archive, and other
-  advanced operations through the explicit `full` profile.
+  advanced operations through the explicit `full` profile; `core-compat` preserves
+  the previous 38-tool core catalog. Configure the profile and reconnect; see
+  [MCP tool routing](docs/design/2026-10-22-mcp-tool-surface.md). The full catalog
+  consolidates 97 historical entries into 83 current contracts; 16 old names
+  use transitional adapters. See [capability consolidation](docs/design/2026-10-22-mcp-capability-consolidation.md).
 - Memory Controller automatic recall is off by default. Settings > Advanced
   can enable observe-only decisions without injecting Memory, and Trace >
   Advanced data shows bounded raw counts plus the latest ten decisions.

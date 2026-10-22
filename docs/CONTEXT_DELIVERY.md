@@ -171,8 +171,13 @@ the Knowledge section. Default guide and individual-section ceilings are unchang
 
 The explicit `understanding-v1` workflow adds three tools for context, delta
 submission and plan/receipt recovery, while retaining all existing direct tools.
-The compact core manifest is 21,250 bytes; maintained ceilings are 38 tools and
-22 KiB. The full guide ceiling is 20 KiB to include evidence, authority and
+The pre-trim compact core manifest was about 21,250 bytes (38 tools, 22 KiB ceiling).
+The 2026-10-22 source contract moves these specialized tools into `core-compat`/`full`,
+retains all handlers, and bounds daily `core` at 25 tools and 14 KiB (13,653 bytes
+for the tool array; 13,663 for `{tools:[...]}`). `core-compat` preserves the previous
+38-tool manifest exactly. Full capability consolidation now exposes 83 current
+contracts; 16 retired names remain callable adapters rather than independent handlers
+([mapping and retirement gates](design/2026-10-22-mcp-capability-consolidation.md)). The full guide ceiling is 20 KiB to include evidence, authority and
 recovery guidance; default and individual-section ceilings stay unchanged.
 Context packets default to a 24 KiB safety ceiling; explicit candidate pages
 above 10 use a 64 KiB ceiling. They preserve source previews and detail refs.

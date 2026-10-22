@@ -1,6 +1,8 @@
 const assert = require("assert");
 const {
   CORE_TOOL_NAMES,
+  COMPAT_TOOL_NAMES,
+  PROFILE_NAMES,
   DEFAULT_PROFILE,
   normalizeProfile,
   profileToolDefinitions
@@ -70,13 +72,14 @@ function checkProfileResolution() {
   for (const input of ["", null, undefined, "FULL-ish", "admin", "core ", "  ", 42, {}]) {
     const resolved = normalizeProfile(input);
     assert.ok(
-      resolved === "core" || resolved === "full",
+      PROFILE_NAMES.includes(resolved),
       `Profile resolution must stay inside the maintained set, got ${resolved}.`
     );
   }
   // Only an explicit, valid selection may broaden the surface.
   assert.strictEqual(normalizeProfile("admin"), "core", "An invalid profile must fail closed to core.");
   assert.strictEqual(normalizeProfile(""), "core", "A missing profile must fail closed to core.");
+  assert.strictEqual(normalizeProfile(" CORE-COMPAT "), "core-compat");
   assert.strictEqual(normalizeProfile("FULL"), "full", "A valid profile must be accepted case-insensitively.");
 }
 
@@ -179,14 +182,20 @@ function checkCoreWorkflowsAreComplete() {
   }
 }
 
-function checkFullProfileUnchanged() {
+function checkFullProfileCanonical() {
+  const compat = profileToolDefinitions("core-compat");
+  const fixture = require("./fixtures/mcp-profile-compat.json");
+  assert.deepStrictEqual(compat.map(tool => tool.name), fixture.names);
+  assert.strictEqual(compat.length, COMPAT_TOOL_NAMES.length);
+  assert.strictEqual(require("crypto").createHash("sha256").update(JSON.stringify(compat)).digest("hex"), fixture.sha256,
+    "core-compat must preserve the complete pre-trim core catalog, including shaped schemas");
   const full = profileToolDefinitions("full");
   const canonical = toolDefinitions();
   assert.strictEqual(full.length, canonical.length, "The full profile must expose every canonical tool.");
   assert.deepStrictEqual(
     full.map((tool) => tool.name).sort(),
     canonical.map((tool) => tool.name).sort(),
-    "The full profile must preserve all existing tool names."
+    "The full profile must expose the current canonical names."
   );
   assert.deepStrictEqual(full, canonical, "The full profile must preserve canonical schemas byte-for-byte.");
 
@@ -905,7 +914,7 @@ const REQUIRED_BREAKDOWNS = Object.freeze({
 async function checkBaselineScript() {
   const report = await collect();
   assert.deepStrictEqual(report.failures, [], `Baseline reports surfaces over ceiling: ${report.failures.join(", ")}`);
-  assert.ok(report.groups.toolProfiles.length >= 2, "Baseline must measure both profiles.");
+  assert.ok(report.groups.toolProfiles.length === 3, "Baseline must measure all three profiles.");
   assert.ok(report.groups.docs.length >= DOCS_SECTIONS.length, "Baseline must measure every docs section.");
   const fullManifest = report.groups.toolProfiles.find((entry) => entry.name === "tools/list full");
   assert.strictEqual(fullManifest.ceiling, null, "Full-profile payloads must not share the normal-use ceiling.");
@@ -956,7 +965,7 @@ async function main() {
   checkSecretSafeStatusShape();
   checkCoreProfile();
   checkCoreWorkflowsAreComplete();
-  checkFullProfileUnchanged();
+  checkFullProfileCanonical();
   checkDocs();
   checkAmbiguityPayload();
   await checkMemorySummarySearch();

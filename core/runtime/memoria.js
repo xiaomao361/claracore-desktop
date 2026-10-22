@@ -180,6 +180,9 @@ async function runProductMemoryMaintenance(app, input = {}) {
   }
   return {
     ...maintenance,
+    // The repository queues repairs; processing happens afterward in runtime.
+    // Report the final queue/failure state rather than the pre-processing one.
+    after: input?.dryRun === true ? maintenance.after : await database.getMemoryMaintenanceReport(),
     embeddings,
     graphCache
   };

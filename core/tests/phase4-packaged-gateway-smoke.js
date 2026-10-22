@@ -92,7 +92,7 @@ async function main() {
     for (const name of [
       "memoria_supersede",
       "memoria_link_list",
-      "memoria_record_list",
+      "knowledge_read",
       "shared_line_archive"
     ]) {
       if (!packagedTools.some((tool) => tool.name === name)) {
@@ -181,7 +181,7 @@ async function main() {
       throw new Error(`Packaged Gateway memoria_graph did not include created Memory: ${JSON.stringify(graph)}`);
     }
     const maintenanceCheck = parseTextResult(await client.callTool("memoria_maintenance_check"));
-    if (!["ok", "needs_repair"].includes(maintenanceCheck.status) || !maintenanceCheck.counts) {
+    if (!["ok", "pending", "needs_repair"].includes(maintenanceCheck.status) || !maintenanceCheck.counts) {
       throw new Error(`Packaged Gateway memoria_maintenance_check returned invalid report: ${JSON.stringify(maintenanceCheck)}`);
     }
     const exportedArchive = parseTextResult(await client.callTool("memoria_export"));

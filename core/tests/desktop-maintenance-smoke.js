@@ -57,11 +57,14 @@ async function main() {
     }
     const sharePage = await call('innerlife_pending_shares');
     assert.equal(sharePage.shares.length, 10);
-    assert.equal(sharePage.page.total, 13);
-    const shareFullTail = await call('innerlife_pending_shares', { detail: 'full', offset: 10 });
+    assert.equal(sharePage.page.total, 10);
+    // Retired candidates remain available in the complete history catalog.
+    const shareFullTail = await call('innerlife_pending_shares', { status: 'all', detail: 'full', offset: 10 });
     assert.equal(shareFullTail.shares.length, 3);
     assert.equal(shareFullTail.page.hasMore, false);
-    assert(!shareFullTail.shares.some(s => sharePage.shares.some(p => p.id === s.id)));
+    const shareHistoryHead = await call('innerlife_pending_shares', { status: 'all' });
+    assert.equal(shareHistoryHead.page.total, 13);
+    assert(!shareFullTail.shares.some(s => shareHistoryHead.shares.some(p => p.id === s.id)));
     assert(shareFullTail.shares.every(s => s.body.length > 1000));
     const queries = [];
     const queryPort = database.query.bind(database);
@@ -184,9 +187,14 @@ if (eventName === "Stop") { console.log('STOP_UNCHANGED'); }
     assert(runHook('Stop', path.join(root, 'codex/memories_v2/jobs')).stdout.includes('STOP_UNCHANGED'));
     const manifest = require('../gateway/tool-profiles').profileToolDefinitions('core');
     const ceilings = require('./fixtures/context-budget-ceilings').CONTEXT_BUDGET_CEILINGS;
-    assert.equal(manifest.length, 38);
+    assert.equal(manifest.length, 25);
+    const compatibility = require('../gateway/tool-profiles').profileToolDefinitions('core-compat');
+    assert.equal(compatibility.length, 38);
     assert(Buffer.byteLength(JSON.stringify(manifest)) <= ceilings.coreToolsList);
-    for (const name of ['understanding_context', 'understanding_submit', 'understanding_resume']) assert(manifest.some(tool => tool.name === name));
+    for (const name of ['understanding_context', 'understanding_submit', 'understanding_resume']) {
+      assert(!manifest.some(tool => tool.name === name));
+      assert(compatibility.some(tool => tool.name === name));
+    }
     assert(!manifest.some(tool => tool.name === 'memory_context_feedback'));
     console.log('Desktop maintenance smoke passed: Agent isolation, archived history, bounded status pagination, lifecycle filters, evidenced feedback and host policy.');
   } finally {

@@ -26,6 +26,7 @@ function createInnerLifeWorkflowWiring(helpers) {
   const shareTimingService = createInnerLifeShareTimingService({
     ensureProfile: (database, agentId) => database.ensureInnerLifeProfile(agentId),
     findAvailableShareId: shareTimingStore.findAvailableShareId,
+    isAvailableShare: shareTimingStore.isAvailableShare,
     getOptionalResumePacket: (database, input, agentId) => (
       database.getOptionalInnerLifeResumePacket(input, agentId)
     ),

@@ -32,12 +32,12 @@ Use your own stable persona id and truthful client id. Never reuse another agent
 
 If you can update and reload your own MCP configuration, do so now. If you cannot, tell the human the exact client settings screen or file to open and give them the single exact config block to paste. Do not answer only "please configure MCP".
 
-Tools are advertised through a profile. \`core\` is the default and carries the normal connection, recall, continuation, and sharing surface. Send \`X-ClaraCore-Tool-Profile: full\` only if you need the maintenance, import/export, graph, or retention surface. An unknown value resolves to \`core\`.
+Tools are advertised through a profile. \`core\` is the default and carries the normal connection, recall, continuation, and sharing surface. Send \`X-ClaraCore-Tool-Profile: core-compat\` for the previous 38-tool catalog, or \`X-ClaraCore-Tool-Profile: full\` for specialized and maintenance tools. Configure the header and reconnect; live catalog refresh is not assumed. Profiles control discovery, not authority. An unknown value resolves to \`core\`.
 
 After tools appear, follow this sequence exactly:
 
 1. Call \`claracore_connection_test\`.
-2. Call \`gateway_context\` with \`detail="brief"\` and without \`lineId\`. If it returns \`SHARED_LINE_ID_REQUIRED\`, choose one of its candidates and retry with that explicit \`lineId\`.
+2. Call \`shared_line_get\` without \`lineId\`. If it returns \`SHARED_LINE_ID_REQUIRED\`, choose one of its candidates and retry with that explicit \`lineId\`.
 3. In the user's current language, proactively report the truthful connection result, explain ClaraCore's Memory, Shared Line, InnerLife, and Gateway/diagnostics capabilities, summarize only the useful current context you actually found, offer 3-5 natural-language example requests, and suggest one evidence-backed next action when appropriate.
 
 Call \`gateway_docs\` when you need the versioned usage guide. It returns a short summary by default; pass \`section\` (\`start\`, \`memory\`, \`shared-line\`, \`innerlife\`, \`diagnostics\`, \`full\`) for one topic, or pass \`query\` to search maintained guide passages. Tool names and argument schemas come from \`tools/list\`, not from the guide. Re-read both after a Desktop upgrade or MCP reconnect.

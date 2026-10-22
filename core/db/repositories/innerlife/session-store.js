@@ -237,7 +237,12 @@ function createInnerLifeSessionStore(helpers) {
     return get(database, session.id);
   }
 
-  async function claimAfterthoughts(database, limit) {
+  async function claimAfterthoughts(database, limit, options = {}) {
+    const enabledFilter = options.automated ? `
+      AND (SELECT value_json FROM app_settings WHERE key = 'innerlife.enabled') = 'true'
+      AND EXISTS (SELECT 1 FROM innerlife_daemon_state d
+        WHERE d.agent_id = innerlife_inbox.agent_id AND d.enabled = 1 AND d.status != 'paused')
+    ` : "";
     await database.exec(`
       UPDATE innerlife_inbox
       SET status = 'pending',
@@ -271,6 +276,7 @@ function createInnerLifeSessionStore(helpers) {
         FROM innerlife_inbox
         WHERE source = 'session_end_afterthought'
           AND status = 'pending'
+          ${enabledFilter}
           AND COALESCE(
             CASE
               WHEN json_valid(metadata_json) THEN json_extract(metadata_json, '$.retryState')
