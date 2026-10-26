@@ -1,15 +1,25 @@
-# ClaraCore Desktop 1.0.3 — Local Lite Validation
+# 1.0.3 — 更精简的工具，更准确的维护状态
 
-日期：2026-10-22（Asia/Shanghai）。本地 macOS Apple Silicon Lite 验证版本，未公开发布。
+2026-10-26（Asia/Shanghai）正式发行准备。用户持续试用本地 Lite 后报告暂未遇到问题，授权发布。版本沿用已试用的 1.0.3，不为发布重复升级版本号；此次不增加产品功能或更改日用配置。
 
-- 修复 Memory 维护审计漏掉已有 embedding 记录、状态为 pending 的记忆。
-- `counts.pendingEmbeddings` 独立统计 active 且非 restricted 的待处理记忆；与完全缺失、failed 和 stale 分开。
-- 维护报告状态为 `ok` / `pending` / `needs_repair`：仅有待处理任务时为 `pending`，综合审计为 `needs_review`，不再误报全部正常；已有修复问题优先为 `needs_repair`。
-- pending 表示尚未完成，不证明卡死；未增加超时阈值。provider disabled 时仍显示待处理，不伪造 failed。
-- 修复 runtime 维护结果的 `after`：完成实际补算后重新审计，保留批次未完成和失败状态。
-- 保留现有凌晨维护和每 15 秒后台队列处理；已有 pending 不被重复入队或重置时间戳。
-- 继承 1.0.2 的 core 25 / core-compat 38 / full 83 目录与 16 个过渡旧名适配。无新增数据迁移。
+## 相比公开版 1.0.0
 
-包内验证见 [1.0.3 Lite 验证记录](validation/2026-10-22-v1.0.3-lite-package.md)。
-沿用本地 ad-hoc hardened-runtime 签名，不申请 Apple 公证或公开发布。
-本轮不安装或重启日用应用；用户安装、真实客户端和视觉/交互验收仍待进行。
+- 日常 MCP 目录从 38 项收敛为 25 项，保留事实读取/修正/替代、共同线续接、知识收录和分享的完整工作流。`core-compat` 保留原 38 项契约，`full` 整合为 83 项；16 个旧名称继续通过过渡适配调用。
+- 统一 InnerLife 投料、会话/诊断读取、Memory 维护报告、模型配置和标签别名入口。诊断读取不再隐式初始化状态；兼容层保留旧调用语义。
+- InnerLife 候选池按 Agent 最多 10 条、创建后 7 天有效。退出候选仍保留正文与回执，修复每 Agent 开关与全局门控一致性，暂停一个 Agent 不再抹去其他 Agent 的选择。
+- Memory 维护审计独立显示 `pendingEmbeddings`。仅有待处理任务时为 `pending`，真正修复问题为 `needs_repair`，全部完成才为 `ok`；综合审计将待处理工作列为 `needs_review`。
+- 维护结果在实际补算后重新读取，保留部分完成与失败状态。修复同一待处理提醒重复计数的问题；正常排队不被宣称为卡死。
+
+## 升级与兼容
+
+普通连接继续使用默认目录，无须修改个人 MCP 配置。需要旧目录时使用 `core-compat`，需要完整维护能力时使用 `full` 并重连；不承诺客户端会自动热刷新目录。
+
+相对 1.0.0 包含既有 migration 012，用于候选池与运行选择一致性；相对本地 1.0.3 试用包不增加迁移。保留真实历史会话及其结束证据边界，安装包不会修改个人 hooks。
+
+## 发行与验证
+
+按既有矩阵提供 macOS Apple Silicon 与 Windows x64 的 Full/Lite 安装包及平台校验清单。macOS 正式资产须完成 Developer ID 签名与 Apple 公证；Windows 安装程序未签名。构建、CI、公证及公开资产证据见 [发行验证记录](validation/2026-10-26-v1.0.3-release.md)。
+
+10 月 22 日的 [Lite 试用包](validation/2026-10-22-v1.0.3-lite-package.md) 采用 ad-hoc 签名，仅保留为历史验证资产，不用于此次公开发行。此前的 [实际安装检查](validation/2026-10-22-v1.0.3-installed.md) 与 [源码收口](validation/2026-10-22-v1.0.3-closeout.md) 保留各自验证边界。
+
+用户的持续试用反馈属于本机体验观察，不代表所有平台、交互与长期行为均已验收。本次发行验证不操作窗口、不替换或重启日用 app，也不主动写入真实业务数据。

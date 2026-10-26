@@ -2,6 +2,12 @@
 
 ## Current Truth
 
+- 2026-10-26: the user reports no observed issue during continued local 1.0.3
+  Lite use and authorizes a public release. Prepare the existing 1.0.3 product
+  version with signed/notarized macOS arm64 Full/Lite and Windows x64 Full/Lite;
+  public release remains 1.0.0 until publication is independently verified.
+  See [1.0.3 notes](RELEASE_NOTES_V1.0.3.md).
+
 - 2026-10-22: local source is `1.0.3` for pending Memory embedding audit
   visibility and post-processing maintenance snapshots. A local macOS arm64
   Lite validation package is built, installed by the user and independently
