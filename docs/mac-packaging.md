@@ -2,7 +2,7 @@
 
 ## Current Release Boundary
 
-The current public stable release is `1.0.0`, tagged `v1.0.0` at `252e258`. Treat
+The current public stable release is `1.0.3`, tagged `v1.0.3` at `3f12e0b`. Treat
 [Version Branching](VERSION_BRANCHING.md) and the versioned release notes as
 the release truth.
 
@@ -13,7 +13,17 @@ publication); it is not the public release artifact. See
 [public package verification](validation/2026-10-20-v1.0.0-release.md) and the
 [historical local receipt](validation/2026-10-19-v1.0.0-lite-package.md).
 
-## 1.0.0 public release
+## 1.0.3 public release
+
+Full/Lite macOS arm64 Apps and DMGs are Developer ID signed, Apple-notarized,
+stapled, Gatekeeper accepted and DMG-verified. Both contain 418 source/asset/test
+files identical to the tag. Full's built-in model produces 512-dimensional
+embeddings; both flavors pass packaged SQLite and Gateway/pending checks.
+Windows x64 Full/Lite source/build/package/model checks passed in Actions;
+Windows installers remain unsigned. Four installers and two platform checksum
+manifests are published. See [1.0.3 verification](validation/2026-10-26-v1.0.3-release.md).
+
+## Previous 1.0.0 public release
 
 Full/Lite macOS arm64 Apps and DMGs are Developer ID signed, Apple-notarized,
 stapled, Gatekeeper accepted and DMG-verified. Both contain 407 product source
@@ -95,9 +105,9 @@ Current App output and future DMG output:
 
 ```text
 dist/mac-arm64/ClaraCore Desktop.app
-dist/ClaraCore-Desktop-1.0.0-arm64.dmg
+dist/ClaraCore-Desktop-1.0.3-arm64.dmg
 dist-lite/mac-arm64/ClaraCore Desktop.app
-dist-lite/ClaraCore-Desktop-1.0.0-lite-arm64.dmg
+dist-lite/ClaraCore-Desktop-1.0.3-lite-arm64.dmg
 ```
 
 Only artifacts built with the signed release commands and accepted by the
@@ -172,7 +182,7 @@ not current transport support.
 ## Validation Status
 
 Current released-artifact evidence is recorded in
-[1.0.0 verification](validation/2026-10-20-v1.0.0-release.md).
+[1.0.3 verification](validation/2026-10-26-v1.0.3-release.md).
 
 ### `0.6.12` Full/Lite release checkpoint
 

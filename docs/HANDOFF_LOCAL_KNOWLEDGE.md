@@ -1,8 +1,10 @@
 # Desktop v0.8 本地知识 — 下一 Session 交接
 
-更新：2026-10-22（Asia/Shanghai）。这是当前交接入口；[初始讨论快照](HANDOFF_LOCAL_KNOWLEDGE_INITIAL.md)仅供查历史。
+更新：2026-10-26（Asia/Shanghai）。这是当前交接入口；[初始讨论快照](HANDOFF_LOCAL_KNOWLEDGE_INITIAL.md)仅供查历史。
 
-## 当前工程位置：1.0.3 已安装试用，1.0.0 仍为公开版
+## 当前工程位置：1.0.3 已正式发布
+
+用户持续试用暂未反馈问题，并于 10 月 26 日授权 Release。17:41:04（Asia/Shanghai）已公开为 Latest、非预发布，`v1.0.3` 指向 `3f12e0b`。macOS arm64 与 Windows x64 Full/Lite 四安装包、两平台校验清单已发布；macOS 已签名公证，Windows 未签名。见[正式发布记录](validation/2026-10-26-v1.0.3-release.md)。用户的日用安装不被此次发布替换或重启；后续按实际反馈继续，不创建自动监控或扩展功能。下方保留 10 月 22 日试用与源码收口的历史边界。
 
 用户已安装 macOS arm64 Lite 1.0.3（`v1.0.3-20261022.2`），实际安装包、运行进程、实时 Gateway 和只读日用审计已验证，见 [安装验证](validation/2026-10-22-v1.0.3-installed.md)。当前包含 1.0.1 的 InnerLife 候选池/生命周期修复、1.0.2 的 MCP 默认 25 / core-compat 38 / full 83 及 16 旧名适配，以及 1.0.3 的 pending 独立审计和补算后状态快照。594 条 active 非 restricted 记忆在观察时全部为当前模型 ready，维护各异常计数为零；这不是长期运行或视觉验收。
 

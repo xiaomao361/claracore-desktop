@@ -2,11 +2,13 @@
 
 ## Current Truth
 
-- 2026-10-26: the user reports no observed issue during continued local 1.0.3
-  Lite use and authorizes a public release. Prepare the existing 1.0.3 product
-  version with signed/notarized macOS arm64 Full/Lite and Windows x64 Full/Lite;
-  public release remains 1.0.0 until publication is independently verified.
-  See [1.0.3 notes](RELEASE_NOTES_V1.0.3.md).
+- 2026-10-26: `1.0.3` is publicly released as Latest, non-prerelease at
+  17:41:04 Asia/Shanghai. Tag `v1.0.3` points to `3f12e0b`; the four macOS arm64 /
+  Windows x64 Full/Lite installers and two platform manifests are published.
+  macOS packages are Developer ID signed and Apple-notarized; Windows installers
+  are unsigned. The user reports no observed issue during continued local Lite
+  use. See [notes](RELEASE_NOTES_V1.0.3.md) and
+  [release verification](validation/2026-10-26-v1.0.3-release.md).
 
 - 2026-10-22: local source is `1.0.3` for pending Memory embedding audit
   visibility and post-processing maintenance snapshots. A local macOS arm64
@@ -63,12 +65,13 @@
   checks; actual Host acceptance is pending. `0.7.0-preview.2` is a local unsigned
   Lite trial artifact, not the public release.
 - `package.json` is the product-version source through `core/version.js`.
-- Current source version: `1.0.3` (local pending audit fix). See [notes](RELEASE_NOTES_V1.0.3.md).
+- Current source version: `1.0.3` (public release). See [notes](RELEASE_NOTES_V1.0.3.md).
 - Version sequence confirmed by the user: this redesign is `0.9.0`, followed by the fix checkpoint `0.9.1`. Earlier understanding test DMGs accidentally retained `0.8.4`; their metadata and checksums remain historical evidence.
 - 0.7.2 retires stdio, keeps both HTTP protocol versions, and reserves CLI for internal maintenance. See [migration](HTTP_MCP_MIGRATION.md).
 - 0.7.7 adds bounded InnerLife state selection, output novelty and evidence review. See [plan](V0.7.7_INNERLIFE_PLAN.md) and [notes](RELEASE_NOTES_V0.7.7.md).
-- Current public release: `1.0.0`.
-- Tag `v1.0.0` is the current stable GitHub Release at `252e258`.
+- Current public release: `1.0.3`.
+- Tag `v1.0.3` is the current stable GitHub Release at `3f12e0b`.
+- Previous public release: `1.0.0` at `252e258`.
 - `0.8.1` at `c343e66` is the previous stable GitHub Release.
 
 `0.6.14` was the previous public Full/Lite release for verified safety-backup gates,

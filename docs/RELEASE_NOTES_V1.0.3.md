@@ -1,6 +1,6 @@
 # 1.0.3 — 更精简的工具，更准确的维护状态
 
-2026-10-26（Asia/Shanghai）正式发行准备。用户持续试用本地 Lite 后报告暂未遇到问题，授权发布。版本沿用已试用的 1.0.3，不为发布重复升级版本号；此次不增加产品功能或更改日用配置。
+2026-10-26 17:41:04（Asia/Shanghai）正式发布为 Latest、非预发布：[GitHub Release v1.0.3](https://github.com/xiaomao361/claracore-desktop/releases/tag/v1.0.3)，标签指向 `3f12e0bdadd5e11c7ae7ef6f9f94941855b8802b`。用户持续试用本地 Lite 后报告暂未遇到问题，授权发布。版本沿用已试用的 1.0.3，不为发布重复升级版本号；此次不增加产品功能或更改日用配置。
 
 ## 相比公开版 1.0.0
 
@@ -18,8 +18,8 @@
 
 ## 发行与验证
 
-按既有矩阵提供 macOS Apple Silicon 与 Windows x64 的 Full/Lite 安装包及平台校验清单。macOS 正式资产须完成 Developer ID 签名与 Apple 公证；Windows 安装程序未签名。构建、CI、公证及公开资产证据见 [发行验证记录](validation/2026-10-26-v1.0.3-release.md)。
+按既有矩阵提供 macOS Apple Silicon 与 Windows x64 的 Full/Lite 安装包及平台校验清单。macOS 正式资产已完成 Developer ID 签名与 Apple 公证；Windows 安装程序未签名。构建、CI、公证及公开资产证据见 [发行验证记录](validation/2026-10-26-v1.0.3-release.md)。
 
 10 月 22 日的 [Lite 试用包](validation/2026-10-22-v1.0.3-lite-package.md) 采用 ad-hoc 签名，仅保留为历史验证资产，不用于此次公开发行。此前的 [实际安装检查](validation/2026-10-22-v1.0.3-installed.md) 与 [源码收口](validation/2026-10-22-v1.0.3-closeout.md) 保留各自验证边界。
 
-用户的持续试用反馈属于本机体验观察，不代表所有平台、交互与长期行为均已验收。本次发行验证不操作窗口、不替换或重启日用 app，也不主动写入真实业务数据。
+用户的持续试用反馈属于本机体验观察，不代表所有平台、交互与长期行为均已验收。本次发行验证不操作窗口、不替换或重启日用 app；测试写入使用临时数据根，不对日用记忆补算或清理。
