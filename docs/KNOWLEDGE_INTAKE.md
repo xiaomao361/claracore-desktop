@@ -1,12 +1,12 @@
-# Knowledge 收录契约（v0.8.0 开发中）
+# Knowledge intake
 
-## 已实现的闭环
+## Workflow
 
 用户在设置中选定一个目录。Agent 通过 `knowledge_read` 列目录、按字面检索、读取小节及正反向链接，在核对来源和两端内容后整理草稿。`knowledge_intake_preview` 返回实际新增内容和 token；`knowledge_intake_commit` 提交同一个 token，软件校验、写入、读回并返回实际段落指针。主动材料与选择性收集共用此流程，不监听聊天。
 
-支持 `notes/`、`topics/`、`inbox/` 中的新建文档，以及向现有文档追加完整小节。当前通道不提供替换全文、删除或原位修改小节；已有字节和锚点保留。[知识页面](KNOWLEDGE_PAGE.md)已接入阅读、草稿/回执查看和待整理材料保存；当前状态为源码与自动化验证通过，实际交互待验收。
+支持 `notes/`、`topics/`、`inbox/` 中的新建文档，以及向现有文档追加完整小节。当前通道不提供替换全文、删除或原位修改小节；已有字节和锚点保留。[知识页面](KNOWLEDGE_PAGE.md)已接入阅读、草稿/回执查看和待整理材料保存。
 
-2026-09-22 已将 Desktop 所选目录指向现有 `/Volumes/E61/Knowledge`，直接使用原 Markdown，不复制正文。`notes/` 新建时由预览生成唯一 `kb_id` 并写入文首元数据；`topics/` 和 `inbox/` 保持现有无 `kb_id` 约定。原有 `sources/` 与根目录说明文件仍保留在同一目录，目录列表与正文索引只覆盖 `notes/`、`topics/`，`inbox/` 可单独浏览；已知路径可读取来源文件。Desktop 的结构索引与原有 `kb.py` 的语义索引是两套可重建缓存，写入后应分别检查需要使用的检索与阅读副本。
+Markdown 正文留在用户选择的目录。`notes/` 新建时由预览生成唯一 `kb_id` 并写入文首元数据；`topics/` 和 `inbox/` 不要求 `kb_id`。目录列表和正文索引覆盖 `notes/` 与 `topics/`，`inbox/` 单独浏览；已知路径可读取来源文件。外部工具的索引与 Desktop 缓存需要分别维护。
 
 ## 输入示例
 
@@ -60,9 +60,3 @@
 结构索引只保存文件哈希和锚点，数据可从 MD 重建。`knowledge_read(action=status)` 区分 missing/current/stale/corrupt；`knowledge_index_rebuild` 显式重建，Markdown 不变。索引失败的历史回执保留当时状态；修复后读取当前 index status。语义缓存单独返回 not_built/current/stale/corrupt/unavailable；current 仅说明正文哈希一致，实际查询还校验模型身份、维度与向量完整性。详见 [显式检索](KNOWLEDGE_SEARCH.md)。
 
 知识草稿和读取正文不进入 Gateway trace 数据库；trace 仅保留操作类型和状态。详细失败与收录回执由调用返回值和本地 receipt 检查。
-
-## 验证
-
-`npm run test:knowledge` 覆盖目录/读取、偏好、收录闭环以及临时端口的 HTTP MCP 集成。样例使用本次讨论的“Agent 与软件分工”“回执不等于后续有效使用”，在临时知识库完成来源归属、字面检索、读两端、关联、提交、读回及反向链接。测试副本结束后清理，真实 E61 库没有写入。
-
-HCT-2026-09-08-01：模拟结构索引失败，确认 partial 和正文已保存可区分，重试不重复追加；没有把部分完成转为普通成功。HCT-2026-09-08-02：正文唯一权威、来源归属、inbox 排除及恢复副本均按产品约定验证；这些检查不等于长期使用可靠性已证明。

@@ -1,395 +1,111 @@
-# ClaraCore Desktop
+<p align="center">
+  <img src="assets/brand/claracore-wordmark.svg" alt="ClaraCore" width="360">
+</p>
 
-## Agent-First Principle
+<h1 align="center">Keep the thread. Across conversations.</h1>
 
-ClaraCore Desktop is software
-for agents to use and for humans to inspect. Human-facing UI exists to make
-agent state, data, runtime health, backups, and recovery understandable and
-controllable; the primary operational path should be friendly to connected
-agents. Agent Access is therefore a first-class product surface, not a
-secondary settings page.
+<p align="center">A local memory and continuity workspace for your AI agents.</p>
 
-Agent Access exposes Streamable HTTP MCP with modern `2026-07-28` and legacy
-`2025-06-18` protocols. Desktop must be running. Stdio MCP is retired; the local
-CLI remains an internal operator maintenance tool.
+<p align="center">
+  <a href="https://xiaomao361.github.io/claracore-desktop/">Website</a> ·
+  <a href="https://github.com/xiaomao361/claracore-desktop/releases/latest">Download</a> ·
+  <a href="docs/README.md">Documentation</a> ·
+  <a href="README.zh-CN.md">简体中文</a>
+</p>
 
-ClaraCore Desktop is the local desktop manager for the first ClaraCore core package:
+<p align="center">
+  <img src="website/assets/continuity-art.webp" alt="A continuous lavender ribbon connects two blue nodes, representing continuity between conversations." width="760">
+</p>
 
-- Gateway
-- Memoria
-- Continuity
-- InnerLife
+ClaraCore Desktop gives the agents you use a shared place to remember what
+matters and pick up where work left off. It runs on your computer, stores
+structured data in SQLite, and connects to MCP clients through a local Gateway.
 
-It is not a chat client and does not include a primary chat model. The desktop app is meant to make the local core visible, configurable, and eventually manageable without starting every service by hand.
+It is a companion to your existing AI clients. Bring the agent and model you
+prefer; keep memories, project context, and source material in a workspace you
+control.
 
-## Active Development Docs
+## What it keeps
 
-Read these before adding new features:
+| Area | Purpose |
+| --- | --- |
+| **Memoria** | Confirmed facts, preferences, decisions, and relationships between memories. |
+| **Continuity** | Shared Lines: the current position, evidence, and next step of a resumable goal. |
+| **InnerLife** | Optional reflections and suggestions, reviewed separately from confirmed facts. |
+| **Knowledge** | Your Markdown source material, with section links, attribution, and explicit search. |
 
-- [Architecture](docs/ARCHITECTURE.md): current runtime, renderer, core, database,
-  Gateway, and documentation boundaries.
-- [Context Delivery](docs/CONTEXT_DELIVERY.md): minimum-sufficient defaults,
-  progressive disclosure, bounded explicit reads, and response budgets.
-- [Code Map](docs/CODE_MAP.md): shortest source-reading paths by task.
-- [Version and Branching](docs/VERSION_BRANCHING.md): current development,
-  isolation, checkpoint, and release rules.
-- [Runtime Memory Policy](docs/RUNTIME_MEMORY_POLICY.md): small snapshot,
-  pagination, resource ownership, memory telemetry, and long-run checks.
-- [macOS Packaging](docs/mac-packaging.md): current local packaging and packaged
-  Gateway validation notes.
-- [v1.0.3 release notes](docs/RELEASE_NOTES_V1.0.3.md): current public release for
-  consolidated MCP capabilities, InnerLife governance and truthful maintenance.
-- [v1.0.1 notes](docs/RELEASE_NOTES_V1.0.1.md): historical local trial for bounded
-  InnerLife candidates and consistent per-Agent controls.
-- [v1.0.0 release notes](docs/RELEASE_NOTES_V1.0.0.md): previous public release for
-  the shared-understanding GUI and refreshed product identity.
-- [v0.8.1 release notes](docs/RELEASE_NOTES_V0.8.1.md): previous public release.
-- [v0.7.7 release notes](docs/RELEASE_NOTES_V0.7.7.md): previous public release covering vector
-  retrieval, HTTP migration, verified backups and InnerLife grounding.
-- [v0.6.14 release notes](docs/RELEASE_NOTES_V0.6.14.md): previous public Full/Lite release
-  for recovery safety, complete semantic retrieval, and source CI.
-- [v0.6.13 release notes](docs/RELEASE_NOTES_V0.6.13.md): previous local trial
-  checkpoint for reliable memory search and readable Memoria graph modes.
-- [v0.6.12 release notes](docs/RELEASE_NOTES_V0.6.12.md): previous public macOS Apple
-  Silicon and Windows x64 Full/Lite release, including the Shared Line refresh
-  fix, InnerLife share integrity, and installed-app login startup.
-- [v0.6.11 release notes](docs/RELEASE_NOTES_V0.6.11.md): previous unpublished
-  login-startup development checkpoint.
-- [v0.6.10 release notes](docs/RELEASE_NOTES_V0.6.10.md): previous macOS Apple
-  Silicon and Windows x64 Full/Lite release with minimum-sufficient context
-  delivery.
-- [v0.6.9 release notes](docs/RELEASE_NOTES_V0.6.9.md): previous Full/Lite
-  release.
-- [Home Shared Horizon](docs/HOME_SHARED_HORIZON.md): current Home presence,
-  performance, and test-isolation contract.
-- [Trace page](docs/TRACE_PAGE.md): read-only narrative, metric definitions,
-  milestones, and Agent participation contract.
-- [Multi-Agent Clients](docs/MULTI_AGENT_CLIENTS.md):
-  Codex, Claude, and Hermes identity, conversation, InnerLife session, and
-  Shared Line integration rules.
-- [Docs index](docs/README.md): current contracts versus archived historical
-  material.
-- Module boundary notes:
-  - [Renderer modules](app/README.md)
-  - [Runtime](core/runtime/README.md)
-  - [Database repositories](core/db/repositories/README.md)
-  - [Memoria](core/memoria/README.md)
-  - [Continuity / Shared Line](core/continuity/README.md)
-  - [InnerLife](core/innerlife/README.md)
-  - [Gateway](core/gateway/README.md)
+The Gateway gives agents bounded context by default. They can request a
+specific memory, line, or source section when they need more detail.
 
-## Current Status
+<img src="docs/images/how-it-works.svg" alt="AI clients connect through the local MCP Gateway to Memoria, Continuity, InnerLife, and Knowledge. Structured data stays in SQLite; source material stays in your selected Markdown directory." width="900">
 
-The source and current public version is `1.0.3`, released after the user's
-local Lite trial. It consolidates MCP discovery to core 25 / core-compat 38 /
-full 83, retains 16 callable legacy adapters, governs InnerLife candidates and
-reports pending embedding work distinctly. See [1.0.3 notes](docs/RELEASE_NOTES_V1.0.3.md).
+## Download
 
-Tag `v1.0.3` points to `3f12e0b`; macOS
-Apple Silicon and Windows x64 Full/Lite installers are published with platform
-SHA-256 manifests. macOS packages are signed and notarized; Windows installers
-are unsigned. See the [release verification](docs/validation/2026-10-26-v1.0.3-release.md).
+The current release is **1.0.3**. Choose **Full** for an included local embedding
+model, or **Lite** to use a local Ollama model or work without embeddings.
 
-The previous public release is `1.0.0`, with the shared-understanding GUI and
-refreshed product identity. Its tag and verification remain historical records.
+| Build | macOS Apple Silicon | Windows x64 |
+| --- | --- | --- |
+| Full | [Download DMG](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.3/ClaraCore-Desktop-1.0.3-arm64.dmg) | [Download installer](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.3/ClaraCore-Desktop-1.0.3-x64-Setup.exe) |
+| Lite | [Download DMG](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.3/ClaraCore-Desktop-1.0.3-lite-arm64.dmg) | [Download installer](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.3/ClaraCore-Desktop-1.0.3-lite-x64-Setup.exe) |
 
-An earlier public stable release is `0.8.1`, tagged `v0.8.1`. That release contains Developer ID signed and
-notarized macOS Apple Silicon Full/Lite builds plus Windows x64 Full/Lite
-installers. Intel macOS and Mac App Store packages are outside that release. It
-is a working desktop shell with a product-owned local data store,
-Desktop-native Memoria, Shared Line, InnerLife, a Desktop-owned Gateway, with
-model configuration merged into the Settings surface.
+macOS packages are signed and notarized. Windows installers are unsigned.
+Checksums and changes are available on the [release page](https://github.com/xiaomao361/claracore-desktop/releases/tag/v1.0.3).
+Prebuilt Linux and Intel Mac installers are not currently provided.
 
-Visible timestamps follow the current system time zone. Database audit fields
-remain stored as UTC, while structured records preserve their event time zone.
+## Get started
 
-Included:
+1. Install and open ClaraCore Desktop.
+2. Open **Agent Access** and copy the connection configuration for your client.
+3. Connect your MCP client and call `claracore_connection_test`.
+4. Ask your agent to recall a memory or resume a specific Shared Line.
 
-- Electron desktop app
-- Memoria search ranks explicit keyword matches first, admits semantic matches
-  only above a relevance floor, returns at most 10 semantic candidates, and
-  reports when no result is reliable instead of filling a 50-item page.
-- Memoria graph reading is split into three distinct views: the memory map
-  shows overall memory/label structure with Agent colors, the relationship
-  network focuses explicit-link clusters, and state chains open with an
-  all-chain overview before showing one current-to-history replacement path.
-- InnerLife session afterthoughts remain unavailable while their generated
-  content is still drafting, preventing placeholder previews from entering
-  Agent share decisions.
-- Settings-owned login-startup preference for installed macOS and Windows
-  builds. Login launches stay in the tray; direct launches show the main
-  window. Development and test instances never modify system login items.
-- Empty-data Home with a quiet shared-understanding reading surface and a direct Agent
-  Access entry; configured-only Agents are never presented as recently active.
-- ClaraCore root detection
-- Product-owned SQLite data root under Desktop user data
-- Home, Memoria, Shared Line, InnerLife, Trace, Agent Access, Logs, and Settings pages (model and data management live inside Settings tabs)
-- Home brings four module entrances into one topic reading surface, with up to
-  four concurrent Agent signatures and a bounded activity catalog. Stable
-  shapes and colors, observable request states, pause and reduced-motion support
-  keep presence readable. The selected Shared Line is the primary content;
-  recent Gateway activity is supporting evidence. Pending
-  InnerLife content never appears on Home before its sharing decision.
-- Agent Access page with connected-agent/recent-activity evidence and one
-  primary `复制给智能体` / `Copy for agent` action. The copied brief carries
-  the current Streamable HTTP endpoint, bearer authorization, setup order, and
-  caller headers without duplicating a technical manual in the human UI.
-- Streamable HTTP MCP uses stable localhost port `50668` by default and persisted local token file; port/token edits, random token generation, and copyable agent config live in Settings > General > Agent Gateway
-- Desktop-owned Gateway Streamable HTTP endpoint for Gateway context, Memory Controller, Memoria, Shared Line, and InnerLife MCP tools
-- Gateway tool profiles keep everyday Agent workflows in the bounded 25-tool `core`
-  surface and expose maintenance, import/export, retention, archive, and other
-  advanced operations through the explicit `full` profile; `core-compat` preserves
-  the previous 38-tool core catalog. Configure the profile and reconnect; see
-  [MCP tool routing](docs/design/2026-10-22-mcp-tool-surface.md). The full catalog
-  consolidates 97 historical entries into 83 current contracts; 16 old names
-  use transitional adapters. See [capability consolidation](docs/design/2026-10-22-mcp-capability-consolidation.md).
-- Memory Controller automatic recall is off by default. Settings > Advanced
-  can enable observe-only decisions without injecting Memory, and Trace >
-  Advanced data shows bounded raw counts plus the latest ten decisions.
-- `gateway_auto_context` is the single automatic per-prompt entry point. It
-  may return one bounded eligible Memory block; it never automatically
-  delivers InnerLife. Agents review waiting thoughts separately with
-  `innerlife_share_check` when the conversational register is appropriate.
-- Gateway `memoria_update` requires `id` and `body`; omitted `title`, `labels`,
-  and `sensitivity` preserve their current values, while explicitly supplied
-  fields replace them.
-- Shared Line defaults are agent-scoped for Gateway callers: without an explicit `lineId`, `X-ClaraCore-Agent-ID` / `CLARACORE_AGENT_ID` reads and writes the agent's own line only when that choice is unambiguous. Multiple active lines fail closed with `SHARED_LINE_ID_REQUIRED`; the agent must list lines and retry with an explicit `lineId`. InnerLife shared-line context follows the same agent scope.
-- The Full build's built-in Memory embedding model stays lazy-loaded; Ollama and OpenAI-compatible providers do not load it. Lite excludes that runtime entirely.
-- Memoria CLI for store, recall, get, update, tag, delete, restore, archive, import/export, records, and maintenance audit/run
-- Read-only human Memoria path: a bounded long-term knowledge shelf, search and
-  full-record reader, visible write-to-recall process, and recent recall
-  evidence that distinguishes need, retrieval, relevance, observation, and
-  actual context return. Labels and the relationship graph open in the same
-  reading layer; mutations and maintenance stay Agent/runtime owned.
-- Full defaults to the bundled ClaraCore built-in `Xenova/bge-small-zh-v1.5` Memory embedding model with 512-dimensional vectors. Fresh Lite starts with Ollama and requires the user to fetch and select an installed embedding model.
-- Shared Line CLI and Desktop-owned Gateway MCP tools for agent-driven line create/list/get/activate/rename/archive/restore/update/handoff, agent state, model adjustments, and arc compaction
-- Shared-reality and affective fields as first-class inputs, with a managed arc lifecycle: momentary readings stay transient, duplicates are de-duplicated, persisted arcs are capped, resume packets truncate by default (fullArc for the complete arc), and needs-review nodes are always protected
-- Read-only, line-first Shared Line UI: active lines on the left and selected
-  `过去 -> 现在 -> 下一步`, shared understanding, and unresolved material on
-  the right. Selecting a line only changes reviewed detail, never Agent-active
-  state or ordering. The visible continuity process explains how progress
-  becomes shared understanding, a current position, and the next resume point;
-  full line lists, Agent context, evidence, and archives share one reader.
-- Desktop-owned InnerLife storage, agent profiles, inbox, sessions, events, thoughts, shares, digest runs, exploration, convergence, and daemon state
-- Model-backed InnerLife generation for digest, process-once, exploration,
-  convergence, and session afterthoughts. No-provider paths use deterministic
-  templates. A failed persisted session-afterthought model call uses durable
-  exponential backoff instead of silently accepting a fallback as success;
-  stale workers cannot overwrite a replacement lease, and terminal failures
-  require an explicit authenticated retry or acknowledged closure.
-- Fresh installs enable InnerLife by default with the bundled DeepSeek-compatible model/key settings
-- Agent-managed InnerLife access through HTTP MCP; CLI is reserved for operator maintenance; the Desktop UI is primarily for inspection and runtime control
-- InnerLife share timing checks connect against the current Shared Line context
-  by default and record explicit/context/line overlap metadata before an agent
-  chooses whether to use or defer a share
-- Settings > Models keeps provider flows explicit: Full exposes ClaraCore
-  built-in, Ollama, or Disabled for Memory embedding; Lite exposes only Ollama
-  or Disabled. Selecting the Full built-in provider hides endpoint, model, key,
-  fetch, and connection-test controls because no external wiring is required.
-  InnerLife exposes Disabled, Ollama, or OpenAI-compatible in both.
-- Read-only human InnerLife view organized by selected profile, current focus,
-  full unshared thoughts, and verified shared history. A thought appears as
-  shared only after a `used` action with conversational delivery evidence;
-  daemon/pipeline controls and raw diagnostics are not primary human UI.
-- Read-only Trace page that first tells the accumulated story in plain language,
-  then shows recent confirmed milestones, non-ranked Agent participation, and
-  detailed Memoria, Shared Line, and InnerLife statistics. Advanced raw counts
-  remain collapsed by default.
-- Verified SQLite product backups with restore preview and safety-backup restore
-- Full product JSON export/import for portable ClaraCore Desktop data
-- Agent identity is stable per calling agent: Streamable HTTP uses `X-ClaraCore-Agent-ID`; preferred stable ids are `lara`, `clara`, and `codex`, while legacy tool-prefixed ids can be consolidated with `agent_identity_merge`
-- Gateway caller context separates the stable persona (`agentId`), client host (`clientId`), and host conversation (`conversationId`) from domain ids such as `inner_session_*` and `line_*`; caller metadata is traced without overwriting tool arguments
-- Shared Line `agent_id` is the stable owner. An explicit cross-agent update records `writerAgentId` provenance and never transfers ownership implicitly
-- Agent-facing InnerLife status, pending shares, and share actions are scoped to the calling agent; Desktop UI snapshots may still request the all-agent view
-- Settings with Common / Capabilities / Advanced hierarchy: appearance,
-  window behavior, version/privacy/update checks, intentionally collapsed
-  Memory and InnerLife provider controls, Agent Gateway access, storage,
-  backup/import/export, and diagnostic paths.
-- Manual GitHub Release update check for macOS arm64 DMG and Windows x64 EXE installers, with user-directed download and installation
-- Read-only Logs with one recent-error status, local filters, terminal stream,
-  Refresh/Follow controls, and closed Advanced Diagnostics containing Decay
-  Audit and technical Time Flow evidence.
-- Read-only decay audit that flags dormant Memory, Shared Line review items,
-  old waiting InnerLife shares/inbox items, and InnerLife daemon errors without
-  mutating product state
-- Chinese and English UI switching
-- macOS menu bar / Windows tray entry
-- Unified ClaraCore app, tray, favicon, README, and packaging icon assets
-- Warning-only resource bar that appears when non-reclaimable RAM exceeds 85%
-  or disk exceeds 90%; on macOS, Electron-reported file-backed and purgeable
-  pages count as reclaimable instead of creating a permanent false warning
+Keep Desktop running while your agents are connected. The default MCP endpoint
+is `http://127.0.0.1:50668/mcp`; use the URL and token shown in your installation.
+See [Getting started](docs/GETTING_STARTED.md) for setup and troubleshooting.
 
-Not included yet:
+## Local data, explicit connections
 
-- LAN Agent Gateway mode and HTTP management console for the Desktop-owned Gateway
-- Signed public Windows release artifact
-- Old Memoria REST API compatibility
+Memories and project state live in a Desktop-owned SQLite database. Knowledge
+files remain in the Markdown directory you select. Embeddings can run locally;
+optional model providers receive the requests you configure. MCP clients also
+receive the context they request. See [Privacy and data](docs/PRIVACY.md) before
+connecting a provider or sharing a backup.
 
-## Development Mode
+Automatic context depends on the host client's integration. Connecting MCP
+alone does not install hooks or capture all conversations. InnerLife is
+optional and does not automatically turn generated thoughts into memories.
 
-From this directory:
+## Develop
 
-```bash
-npm install
+Use Node.js 22 and npm:
+
+```sh
+npm ci
+npm run check
 npm run start:next
 ```
 
-`start:next` isolates both product data and Electron user data from the
-daily-use Desktop app. Use `npm run start:product` only when intentionally
-opening the normal product instance.
+`start:next` opens an isolated development instance. For non-interactive work,
+`npm run check` runs source and isolated core checks. Some other test commands
+open Electron windows; see [Contributing](CONTRIBUTING.md) before running them.
 
-During development the app detects the existing ClaraCore checkout two directories above this app:
+The desktop renderer uses plain JavaScript, HTML, and CSS. The core is Node.js
+with SQLite; packaging uses Electron Builder. The website is static HTML/CSS/JS
+and deploys through GitHub Pages.
 
-```text
-../../
-```
+## Contribute and learn more
 
-You can override that with:
+- [Contributing](CONTRIBUTING.md): development, tests, and pull requests.
+- [Architecture](docs/ARCHITECTURE.md) and [code map](docs/CODE_MAP.md): where changes belong.
+- [Agent integration](docs/AGENT_MCP_PLAYBOOK.md): identity, context, and tool profiles.
+- [Changelog](CHANGELOG.md): release highlights.
+- [Security](SECURITY.md): reporting a vulnerability without exposing private data.
 
-```bash
-CLARACORE_ROOT=/path/to/ClaraCore npm run start
-```
+Bug reports and focused pull requests are welcome through
+[GitHub Issues](https://github.com/xiaomao361/claracore-desktop/issues) and
+[Pull Requests](https://github.com/xiaomao361/claracore-desktop/pulls).
 
-## Commands
+## License
 
-Check JavaScript syntax:
-
-```bash
-npm run check
-```
-
-Run the repository composition and ownership gates alone:
-
-```bash
-npm run test:architecture
-```
-
-Run the full smoke suite:
-
-```bash
-npm run test:smoke
-```
-
-Useful narrower smoke gates:
-
-```bash
-npm run test:phase5
-npm run test:backup
-npm run test:import-preview
-npm run test:lite
-```
-
-## Full And Lite Builds
-
-Full keeps the bundled local Memory embedding runtime. Lite removes its model,
-Xenova, ONNX, Sharp, and transitive production packages, while retaining Ollama
-embedding and all other Desktop domains.
-
-```bash
-npm run pack:mac          # Full unpacked app under dist/
-npm run pack:mac:lite     # Lite unpacked app under dist-lite/
-npm run test:package:lite # compare and inspect both packages
-npm run dist:mac:lite     # Lite DMG under dist-lite/
-npm run pack:win:lite     # Lite unpacked Windows app under dist-lite/
-npm run dist:win:lite     # Lite Windows installer under dist-lite/
-npm run test:package:win:lite # inspect Full/Lite Windows package contents
-```
-
-`npm run test:lite:ollama` is an opt-in real-runtime gate and requires Ollama at
-`http://127.0.0.1:11434` with `bge-m3` available.
-
-Run the opt-in long-run memory stability check:
-
-```bash
-npm run test:memory-long-run
-```
-
-Start the desktop app:
-
-```bash
-npm run start
-```
-
-Desktop starts its HTTP MCP Gateway as part of the application. There is no
-separate MCP process command. See [HTTP migration](docs/HTTP_MCP_MIGRATION.md).
-
-For authorized local maintenance, use the CLI (set the intended Desktop user-data directory first):
-
-```bash
-node core/cli.js --help
-```
-
-## Data Directory
-
-ClaraCore product data lives under one data root. By default, Desktop stores
-product files under the Electron user data `data/` subdirectory:
-
-```text
-~/Library/Application Support/claracore-desktop/data
-```
-
-The product database is `claracore.db`; backups, exports, logs, and runtime
-cache files live beside it under that data root. Electron/Chromium cache files
-remain in the user data root outside `data/`.
-
-You can change the product data root from `Settings -> Data paths`. The path is
-saved in `desktop-settings.json` and takes effect after restarting the app.
-`CLARACORE_DESKTOP_DATA_DIR` remains available as the highest-priority override
-for tests and scripted launches.
-
-## Current Code Layout
-
-The app has no renderer build step. `index.html` loads classic scripts.
-
-- `app.js`: renderer orchestration, refresh flow, and event wiring
-- `app/`: DOM bindings, i18n, view registry, pure helpers, and focused view modules
-- `styles.css`: CSS import entry
-- `styles/`: shared and view-specific CSS
-- `electron/`: Electron main process, preload bridge, IPC, tray, and schedulers
-- `core/runtime/`: public runtime facade, paths, backup/restore, import
-  workflows, bounded snapshots, and read-only decay audit
-- `core/version.js`: single product-version source shared by Desktop runtime, resource snapshots, and Gateway metadata
-- `core/db/`: schema, migrations, database adapter, settings, events, traces, and repositories
-- `core/memoria/`: Desktop Memoria domain facade
-- `core/continuity/`: Shared Line domain facade
-- `core/innerlife/`: InnerLife domain facade
-- `core/gateway/`: MCP protocol definitions, tool schemas, handlers, and response budgets
-- `core/tests/`: smoke and UI smoke coverage
-
-## Current Gateway Direction
-
-The Desktop-owned HTTP Gateway is the only Agent connection. It serves multiple
-agents using per-request identity and supports both MCP 2026-07-28 and 2025-06-18.
-The default endpoint is `http://127.0.0.1:50668/mcp`; Settings > General > Agent
-Gateway supplies the current endpoint and Bearer token. Keep Desktop running.
-
-Clients must support Streamable HTTP. Remove old process command/args/env
-entries, configure HTTP, reconnect, and run `claracore_connection_test` followed
-by `gateway_context(detail=brief)`. Unsupported clients must be upgraded;
-there is no automatic transport fallback. See [migration](docs/HTTP_MCP_MIGRATION.md).
-
-The old ClaraCore Gateway web console remains a reference for useful overview
-ideas, but its service Web UI launcher/supervisor model is not the Desktop
-product target. Product-visible summaries now belong on the Desktop Home page,
-and repeatable operations should be exposed through the Desktop-owned Gateway.
-
-## Development Rules
-
-- Keep `Memoria`, `Shared Line`, and `InnerLife` as separate product domains.
-- New renderer work goes under `app/views/` or another focused `app/` module.
-- New product behavior goes through a domain facade before it reaches runtime.
-- New persistence work belongs in a repository or explicit migration.
-- Old Python services are reference implementations and import sources, not
-  the normal Desktop runtime.
-- Before pushing architecture or runtime changes, run `npm run test:smoke`.
-
-Automatic backups can be configured in Settings → App and data → Data and recovery.
-The default is manual backup with no additional directory. Daily backups can keep
-1–365 calendar days (default 7, including today) and optionally copy to a chosen
-directory. Retention only removes backups created by the managed automatic policy;
-manual and older unmarked backups are preserved. No external drive is required.
-
-- [0.7.5：运行状态与恢复验证](docs/RELEASE_NOTES_V0.7.5.md)
-
-- [0.7.7：InnerLife 旧念头重复与事实边界](docs/RELEASE_NOTES_V0.7.7.md)
-- [0.7.6：紧凑运行状态](docs/RELEASE_NOTES_V0.7.6.md)
+[MIT](LICENSE). Third-party dependencies and bundled models retain their own licenses.

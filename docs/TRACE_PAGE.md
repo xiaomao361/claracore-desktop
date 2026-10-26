@@ -68,8 +68,7 @@ the Trace detail layer.
   rendered semantics, read-only boundary, advanced disclosure, and wide/narrow
   overflow.
 
-This checkpoint adds no schema or Gateway operation. Validate focused changes
-with:
+Validate focused page changes with the isolated UI suite (opens Electron):
 
 ```bash
 npm run test:trace

@@ -37,7 +37,7 @@ async function main() {
       if (LEGACY_TOOL_ROUTES[previous.name]) assert.equal(digest(legacy.get(previous.name)), previous.sha256, "Preserved legacy schema");
       else if (!extended.has(previous.name)) assert.equal(digest(canonical.get(previous.name)), previous.sha256, `Unrelated schema changed: ${previous.name}`);
     }
-    const map = require("../../docs/design/2026-10-22-mcp-capability-map.json");
+    const map = require("./fixtures/mcp-capability-map.json");
     assert.deepEqual(map.tools.map(tool => tool.name), baseline.tools.map(tool => tool.name));
     for (const entry of map.tools) assert.equal(entry.replacement, LEGACY_TOOL_ROUTES[entry.name]?.name || entry.name);
     for (const [old, route] of Object.entries(LEGACY_TOOL_ROUTES)) {

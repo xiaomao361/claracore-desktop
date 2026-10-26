@@ -1,623 +1,67 @@
-# ClaraCore Desktop Architecture
+# Architecture
 
-This app is the Desktop-owned ClaraCore product surface. It does not run the old
-Python Memoria, Continuity, or InnerLife services during normal product use.
-Those services are reference implementations and import sources.
+ClaraCore Desktop is a standalone Electron application. The renderer displays
+state; the main process owns privileged operations and the local MCP listener;
+the product core owns domain behavior and persistence.
 
-## Runtime Boundary
+![Client and domain flow](images/how-it-works.svg)
 
-The Desktop runtime is Node/Electron.
+## Runtime ownership
 
-- Renderer UI: `index.html`, `app.js`, `app/`, `styles.css`
-- Electron host and IPC: `electron/`
-  - `electron/main.js`: app lifecycle, window/tray ownership, runtime snapshots,
-    quit handling, and module wiring
-  - `electron/ipc-handlers.js`: renderer IPC channel registration
-  - `electron/ipc-contracts.js`: main-process IPC channel registry; the
-    sandboxed preload uses a dependency-free mapper and contract lint keeps the
-    two surfaces aligned
-  - `electron/http-agent-gateway.js`: token-protected localhost HTTP Agent
-    Gateway lifecycle and request handling
-  - `electron/resource-sampling.js`: warning policy and cross-platform memory
-    normalization; macOS reclaimable file-backed/purgeable pages are excluded
-    from pressure before optional process diagnostics
-  - `electron/schedulers.js`: InnerLife and Memoria maintenance timers
-- Product runtime facade: `core/runtime/index.js`
-- Memoria runtime workflows: `core/runtime/memoria.js`
-- Read-only decay audit: `core/runtime/decay.js`
-- Runtime snapshot assembly: `core/runtime/snapshot.js`
-- Runtime path helpers: `core/runtime/paths.js`
-- Backup and restore workflows: `core/runtime/backup.js`
-- Archive import/export and old-service copy imports: `core/runtime/imports.js`
-  and `core/runtime/imports/`
-- Product database: `core/db/`
-- Domain modules: `core/memoria`, `core/continuity`, `core/innerlife`
-- Agent Gateway: `core/gateway`
-  - `core/gateway/context.js`: cross-domain Gateway context composition,
-    Agent-scoped reads, and bounded `brief` projection. Omitted `detail`
-    preserves the 0.6.4 full packet. Since 0.6.6 `brief` composes the other
-    domains' default contracts instead of a second larger copy of each.
-  - `core/gateway/tool-profiles.js`: the `core` (25 daily tools), `core-compat` (previous 38) and `full` tool manifests.
-  - `core/gateway/docs.js`: progressive `gateway_docs`.
-  - `core/gateway/auto-context.js`: the one-winner automatic-context arbiter.
-- Context shaping (0.6.6): `core/continuity/resume-detail.js` and
-  `core/innerlife/selective.js`
-- Internal maintenance CLI: `core/cli.js`
+`electron/main.js` manages application lifecycle, windows, tray integration,
+IPC registration, and runtime services. `core/runtime/product-core-owner.js`
+owns the shared product-core connection and generation-safe reset path.
+Restore, import, and root changes release the replaced resources rather than
+leaving a second live database owner.
 
-## Context Budget Boundary (0.6.6)
+The Streamable HTTP Gateway shares this product core. It does not start a
+separate database process per client. Its normal loopback port is `50668`.
+Background schedulers have explicit stop paths; see [Runtime memory policy](RUNTIME_MEMORY_POLICY.md).
 
-Storage richness is not delivery richness. The product keeps complete stored
-state and separates it from the packet an Agent needs for one decision.
+## Renderer and IPC
 
-- **Shaping is a Gateway-boundary concern.** Repository read models and domain
-  facades return the complete record. Every default-size reduction lives in a
-  shaping module called from `core/gateway/tool-handlers/*`, so the Desktop UI,
-  CLI, and internal ports keep full detail.
-- **`inputSchema` is advertisement, not validation.** Gateway tool input is not
-  schema-validated anywhere. The `core` profile therefore narrows which tools
-  and which arguments are *advertised*; every handler still accepts the full
-  argument set and every tool still executes when called by name.
-- **Every removed field names its replacement.** A shaped payload carries a
-  `detailRef` or an `omitted` block identifying the explicit call that returns
-  what was left out, plus the true size or count of what was omitted.
-- **Shaping never mutates.** Removing `agentState` from a default line read does
-  not delete or change it; reads must create no product state at all.
-- **Ceilings are the testable metric.** `core/tests/fixtures/context-budget-ceilings.js`
-  is the single source of every default-surface bound, enforced by
-  `core/tests/context-budget-smoke.js` inside `npm run check`. Token estimates
-  stay diagnostic because tokenization belongs to the receiving host.
-- **Automatic context has one winner.** Memory and InnerLife compete for one
-  bounded delivery slot through `core/gateway/auto-context.js` rather than
-  stacking independently. Selection is not delivery and not use.
+`index.html`, `app.js`, `app/`, `styles.css`, and `styles/` provide the desktop
+interface without a frontend bundler. The preload exposes focused IPC methods;
+renderers do not directly read SQLite or arbitrary files. Domain pages load
+bounded data when needed instead of hydrating the entire database on refresh.
+Knowledge HTML is escaped and links use scoped resolution.
 
-Agents use HTTP MCP. CLI is reserved for operator maintenance.
-When the Desktop app is running, Agent Access may also expose a
-token-protected localhost HTTP Agent Gateway for setup JSON and the first
-Gateway context packet. This HTTP surface binds to `127.0.0.1` by default and
-uses stable default port `50668` so long-lived MCP clients can reconnect after app
-restart without manual reconfiguration. The bearer token is persisted in a
-local token file with `0600` permissions and changes only when explicitly
-rotated from Agent Access or Settings. If the configured port is occupied, Desktop should
-surface that conflict instead of silently moving MCP clients to a different
-port.
-On packaged macOS builds, Desktop also synchronizes the current token into the
-user launch environment expected by Codex. Codex must be restarted after a
-rotation so a new MCP connection inherits the synchronized value. MCP
-`initialize` returns a selective-use protocol: read prior context when relevant,
-check waiting InnerLife shares per user message, and keep Memoria writes
-explicit and restrained.
+## Domains and storage
 
-The HTTP Agent Gateway is a localhost setup surface, not a browser API. It does
-not emit permissive CORS headers, and token checks use the same comparison path
-for bearer and setup-query tokens. Query tokens are retained only for the
-browser-open setup flow; normal agent calls should prefer bearer tokens.
+| Domain | Ownership |
+| --- | --- |
+| Memoria | Memories, status, embeddings, labels, links, and retention. |
+| Continuity | Agent state, Shared Lines, positions, history, and handoffs. |
+| InnerLife | Sessions, inbox, candidate review, generation, sharing, and daemon choices. |
+| Knowledge | Selected-directory Markdown, attribution, intake, and rebuildable indexes. |
+| Memory Controller | Bounded recall selection, delivery policy, and its evaluation ledger. |
 
-Do not show or bind a LAN URL by default. A LAN Agent Gateway must be an
-explicit product mode with visible bind address, bearer token, token
-regeneration, and disable controls because Gateway context includes product
-state such as Shared Line, Memory, and InnerLife status.
+SQLite access and migrations live in `core/db/`. Domain facades compose focused
+repositories and services. Structured data uses the Desktop-owned database;
+Knowledge source Markdown remains the authority for source bodies.
 
-Old Python services are not started by the Desktop app during normal product
-use. They are reference implementations and read-only import sources. Product
-state lives in the Desktop-owned SQLite database selected by
-`CLARACORE_DESKTOP_DATA_DIR` or the default Electron user data `data/`
-subdirectory. The product database and product-owned files live under
-`<userData>/data` by default so Electron cache files stay outside the
-ClaraCore data root.
+## Gateway contracts
 
-The Settings page can save a custom data root to `<userData>/desktop-settings.json`.
-That file is read on app startup, before opening `claracore.db`; changing the
-path requires restarting the app. `CLARACORE_DESKTOP_DATA_DIR` remains the
-highest-priority override for test and scripted launches.
+`core/gateway/` defines tools, profiles, handlers, projection budgets, and
+explicit understanding planning/recovery. Handlers call domain facades rather
+than duplicating storage policy. Profiles control advertised schemas, not
+permissions. Identity separates agent persona, host client, and conversation.
 
-## Renderer Boundary
+The optional understanding journal records execution evidence. It is not a
+fifth source of business facts and does not provide a cross-domain atomic
+transaction. See [Understanding](UNDERSTANDING_CONTRACT.md).
 
-The renderer currently uses plain script tags and no frontend build step.
-It runs with Electron renderer sandboxing enabled. `index.html` also owns the
-renderer CSP, which currently allows local scripts, local/data images, and
-inline styles for the existing stylesheet-free HTML attributes.
+## Failure and recovery
 
-`app.js` is orchestration:
+Preserve no-results, unavailable, partial, conflict, and failed as distinct
+outcomes. A write with uncertain acknowledgement must be inspected before
+retrying. Recovery relies on stable references, hashes, operation IDs, and the
+original authorization. Backups and Markdown recovery copies have separate
+coverage; see [Configuration](CONFIGURATION.md).
 
-- load and refresh product snapshots
-- coordinate active view state
-- call focused view modules
-- bind cross-view event handlers
+## Packaging
 
-Focused renderer modules live under `app/`:
-
-- `app/dom.js`: DOM bindings only
-- `app/appearance.js`: theme, motion, and window preference state
-- `app/i18n.js`: translation aggregation only
-- `app/i18n/`: locale dictionaries
-- `app/memoria-actions.js`: Memoria search, tab, graph, and list action wiring
-- `app/shared-line-actions.js`: Shared Line tab, filter, line action, and resume copy wiring
-- `app/innerlife-actions.js`: InnerLife agent filter, daemon, profile save, and paginated load-more actions
-- `app/model-options.js`: provider model-list loading
-- `app/resource-refresh.js`: single-flight 30-second resource sampling,
-  visibility pause/resume, and explicit disposal
-- `app/view-registry.js`: view metadata only
-- `app/utils.js`: pure formatting and HTML helpers
-- `app/views/agent-setup.js`: Agent Access view
-- `app/views/data.js`: Data, backup, import, export, and restore view
-- `app/views/home.js`: code-native Home presence copy, Shared Line and InnerLife
-  text, recent Agent markers, and one actionable issue
-- `app/views/home-vision.js`: bounded Shared Horizon Canvas renderer and
-  animation lifecycle
-- `app/views/home-trace.js`: Home Gateway trace and agent activity helpers
-- `app/views/logs.js`: Logs view, read-only decay audit, and time flow
-- `app/views/memoria.js`: Memoria workbench, tabs, graph, labels, and embedding
-- `app/views/memoria-list.js`: Memoria list, label overview, agent filter, and
-  memory item render helpers
-- `app/views/settings.js`: model configuration collection plus Settings-page appearance, window, data-path, and about rendering
-- `app/views/shared-innerlife.js`: Shared Line and InnerLife views
-- `app/views/trace.js`: read-only Trace narrative, milestones, Agent
-  participation, and cross-domain detail counts
-
-New renderer work should go into a focused module, not into `app.js`.
-
-Runtime-change events carry bounded scopes such as `memory`, `shared-line`,
-`innerlife`, `logs`, and `data`. Every event refreshes the compact snapshot,
-but only owning views and derived consumers lose their hydrated detail.
-Unaffected pagination, graphs, full InnerLife, Trace, Logs, and backup state
-survive the merge. Snapshot-only or unknown events invalidate all views.
-Memory lists reload only for Memory-scoped events and Memory plus Agent Access
-avoid the generic empty view-detail IPC entirely.
-
-`styles.css` is an import entry. Shared and view-specific styles live under
-`styles/`; add new CSS near the view or component it serves instead of growing a
-single stylesheet again.
-`styles/views/home.css` is a Home style entry that imports focused Home files;
-`styles/views/home-presence.css` owns the current Shared Horizon presence field.
-`styles/views/innerlife.css` is an InnerLife style entry that imports focused
-layout, runtime, profile, and record/share styling.
-`styles/views/memoria-detail.css` is a Memoria detail style entry that imports
-focused base, graph, label, and result styling.
-
-The Home page is a quiet presence surface, not an operational dashboard:
-
-- one Shared Horizon represents the current shared world and continuity;
-- up to three Agent ripples come only from recent Gateway traces, never saved
-  configuration or an inferred permanent online state;
-- the current Shared Line position and one eligible InnerLife thought remain
-  readable DOM text rather than Canvas text;
-- one actionable issue may be disclosed, while normal runtime diagnostics and
-  trace inspection remain in Logs, Agent Access, and Settings;
-- Canvas work is bounded to 720,000 pixels, zero particles, three horizon
-  layers, 12 FPS quiet cadence, 24 FPS active cap, and zero continuous frames
-  under reduced motion, hidden documents, or inactive Home;
-- the empty state retains the same horizon without Agent signals and offers one
-  direct Agent Access action.
-
-Home must not reintroduce the old brain core, particle field, statistics,
-module cards, runtime board, Agent administration, or permanent onboarding.
-Motion must respect both the Settings preference and system reduced-motion.
-- Chinese UI copy should stay Chinese except for protocol, format, runtime, or
-  actual tool names such as MCP, CLI, HTTP, JSON, SQLite, localhost, token,
-  Electron, Node, Chrome, and real agent/tool identifiers.
-
-## Core Boundary
-
-`core/runtime/index.js` is the public runtime facade used by Electron, CLI,
-Gateway-facing workflows, and tests. It stays small by delegating focused
-workflows to sibling runtime modules.
-
-`core/version.js` is the single product-version source. It reads
-`package.json` and is used by runtime snapshots, resource snapshots, Gateway
-metadata, and renderer display.
-
-Runtime should coordinate cross-module workflows:
-
-- resolve paths
-- delegate single-flight product database initialization, path switches, and
-  reset invalidation to `core/runtime/product-core-owner.js`
-- delegate Home/status snapshot assembly to `core/runtime/snapshot.js`
-- delegate Memoria runtime workflows, graph cache refresh, maintenance, and
-  embedding batch processing to `core/runtime/memoria.js`
-- delegate read-only stale/dormant/waiting-state inspection to
-  `core/runtime/decay.js`
-- delegate backup and restore to `core/runtime/backup.js`
-- delegate archive import/export and old-service imports through
-  `core/runtime/imports.js`; focused implementation modules live under
-  `core/runtime/imports/`
-- delegate domain behavior
-
-Product data portability is the normal Data page contract: use verified SQLite
-database backups for exact restore points, and full product JSON for portable
-inspection/import. Old-service imports are migration helpers for explicit
-one-off tasks, not the default user-facing flow.
-
-Domain behavior belongs in:
-
-- `core/memoria`: facts, labels, search, records, maintenance, archive
-- `core/continuity`: Shared Line, position history, handoff, agent state, model
-  adjustments, shared-reality/affective arc lifecycle (cap, truncation, compaction)
-- `core/innerlife`: sessions, inbox, digest, exploration, convergence,
-  model-backed generation, share timing, daemon state
-
-Domain policy should live with the domain module even when persistence still
-uses repository methods. For example, InnerLife prompts, share policy defaults,
-compact response shaping, and model-generation fallback live in
-`core/innerlife/policy.js`. Daemon tick orchestration lives in
-`core/innerlife/services/daemon-tick.js` and reaches persistence, source
-ingest, reflection, and snapshots only through explicit ports. Session start,
-end, and persisted afterthought orchestration live in
-`core/innerlife/services/session-lifecycle.js`; session SQL is isolated in a
-private store and the public repository is a thin compatibility adapter.
-Afterthought failure metadata and due times are durable, retries use bounded
-exponential backoff, attempt eight is a Doctor-visible protected terminal
-failure, and scheduler retry/terminal transitions emit runtime evidence. The
-authenticated Agent must explicitly resolve a terminal job: retry requeues the
-preserved input, while acknowledge records a reason and closes it without
-claiming generation succeeded. Each processing claim also carries an owner
-token, so a worker whose stale lease was recovered cannot overwrite the
-replacement worker's thought, share, or job receipt.
-Post-persistence convergence failure is a warning rather than a reason to
-regenerate an already-durable thought/share.
-Digest execution and share-timing decisions live in the focused
-`digest-run.js` and `share-timing.js` services. Their private stores own
-compound SQL, while `workflow-wiring.js` connects read-model, policy, and
-persistence ports without reverse calls between repositories.
-`core/db/repositories/innerlife.js` is a composition-only entry: focused
-repository modules own read models, digest runs, source intake, reflection
-workflows, sessions, shares, retention, and daemon-state transitions.
-`core/tests/innerlife-repository-boundary-smoke.js` prevents SQL or query
-orchestration from growing back into that entry.
-
-Runtime modules may compose multiple domains for product workflows, such as
-snapshots, backup-gated imports, archive export, or read-only decay audits. They
-should not become the home for new domain rules.
-
-Runtime snapshots must stay bounded. `buildProductOverviewSnapshot()` owns the
-shell/Home startup contract; Logs has a two-query snapshot. Shared Line keeps
-its bounded catalog in that overview and hydrates the exact human-selected line
-through one `getSharedLine` IPC. Selection and snapshot generations reject
-stale asynchronous detail, while the compatibility
-`buildProductViewSnapshot("shared-line")` entry remains available outside the
-renderer path. InnerLife, Trace, and Data detail uses focused view IPC. The
-full `buildProductSnapshot()` remains for compatibility tests and explicit
-tools, not renderer polling. Full Memory lists, InnerLife history, Gateway
-trace browsing, and graph data must be fetched through focused paged or
-lazy-loaded IPC calls. The detailed resource rules live in
-[Runtime Memory Policy](RUNTIME_MEMORY_POLICY.md).
-
-Database implementation belongs in `core/db`. Product persistence is split into
-repositories under `core/db/repositories/`.
-
-## Database Boundary
-
-SQLite through Node is acceptable for this Desktop product.
-
-The current problem is not JavaScript using SQLite. SQLite is the product
-database for this Desktop runtime.
-
-Current shape:
-
-- `core/db/database.js`: connection and initialization
-- `core/db/agent-identity-references.js`: exhaustive registry of direct Agent
-  identity columns; its smoke test compares the registry with the live schema
-- `core/db/helpers.js`: shared repository/database helpers for SQL escaping,
-  JSON parsing, agent identity normalization, label/date/value normalization,
-  vector math, and JSON HTTP calls
-- `core/db/repository-installer.js`: collision-safe repository method
-  composition and installation; duplicate method ownership fails before a
-  repository can overwrite `ProductDatabase.prototype`
-- `core/db/migrations/`: explicit migrations
-- `core/db/repositories/system.js`: composition plus settings, configuration,
-  runtime events, backup records, LLM calls, and database summary
-- `core/db/repositories/system/gateway-traces.js`: Gateway trace
-  compatibility, bounded request persistence, lookup, and retention
-- `core/db/repositories/system/agent-activity.js`: bounded cross-domain Agent
-  activity summaries derived from Gateway, Memoria, Shared Line, and InnerLife;
-  its four periods share five 30-day source scans instead of rerunning one
-  query per source and period
-- `core/db/repositories/system/agent-identity.js`: transactional Agent identity
-  merge across registered columns, typed live JSON/config references, and
-  canonically owned Memory labels; source-only singleton state is moved,
-  semantically equivalent dual-sided state is deduplicated, and conflicting
-  profile, daemon, or Continuity state blocks before mutation with field-level
-  resolution details; historical provenance snapshots are intentionally
-  preserved
-- `core/db/repositories/memoria.js`: Memoria persistence
-- `core/db/repositories/memoria/`: focused Memoria repository submodules,
-  including label alias, canonicalization, structured record, and
-  embedding/search/maintenance persistence
-- `core/db/repositories/continuity.js`: composition plus current position,
-  history, snapshots, handoffs, arc policy, and resume packet persistence
-- `core/db/repositories/continuity/`: focused Shared Line repository
-  submodules
-- `core/db/repositories/continuity/lines.js`: line lifecycle, active-line
-  selection, agent-owned line resolution, and bounded line listing
-- `core/db/repositories/continuity/agents.js`: agent state and model
-  adjustment persistence
-- `core/db/repositories/innerlife.js`: composition-only InnerLife repository
-  installer
-- `core/db/repositories/innerlife/`: focused InnerLife repository submodules,
-  including profile, inbox, daemon, history, session, and share persistence
-- `core/innerlife/services/daemon-tick.js`: daemon tick orchestration with
-  explicit ports for scheduling state, source ingest, reflection, and snapshots
-- `core/db/repositories/innerlife/daemon.js`: daemon state, due checks, and
-  idle/running/success/failure transition persistence; the public tick method
-  delegates to the domain service
-- `core/innerlife/services/session-lifecycle.js`: session start/end and
-  persisted afterthought orchestration through explicit ports
-- `core/db/repositories/innerlife/session-store.js`: private session reads,
-  writes, lifecycle transitions, and atomic afterthought job claiming
-- `core/db/repositories/innerlife/sessions.js`: stable eight-method public
-  session API delegating to the store and lifecycle service
-- `core/innerlife/services/digest-run.js`: digest context, generation,
-  persistence ordering, retention dispatch, and response composition through
-  explicit ports
-- `core/db/repositories/innerlife/digest-run-store.js`: private compound
-  digest/event/thought, inbox completion, and per-Agent prune SQL
-- `core/innerlife/services/share-timing.js`: Agent/share selection, provided
-  plus Shared Line context matching, and timing-decision policy through explicit
-  ports
-- `core/db/repositories/innerlife/share-timing-store.js`: private eligible-share
-  selection and timing-check receipt SQL
-- `core/db/repositories/innerlife/workflow-wiring.js`: focused composition for
-  digest-run and share-timing ports
-- `core/db/repositories/innerlife/read-models.js`: bounded snapshots, counts,
-  Doctor status, briefing, and optional Shared Line resume context
-- `core/db/repositories/innerlife/digests.js`: digest run list/page/get plus
-  thin execution and retention adapters
-- `core/db/repositories/innerlife/shares.js`: share queries and lifecycle
-  actions plus a thin timing-service adapter
-- `core/db/repositories/innerlife/source-inbox.js`: external source candidate
-  deduplication and inbox persistence
-- `core/db/repositories/innerlife/reflection.js`: process-once, exploration,
-  and convergence workflows using policy from `core/innerlife/policy.js`
-- `core/db/repositories/innerlife/retention.js`: age and per-Agent capacity
-  retention for processed inbox, ended sessions, share checks, and digest runs
-
-`core/tests/system-repository-boundary-smoke.js` keeps Gateway Trace and Agent
-activity ownership out of the remaining system repository aggregator.
-`core/tests/continuity-repository-boundary-smoke.js` keeps line lifecycle,
-agent state, and model adjustment ownership in focused Continuity modules.
-`core/tests/gateway-context-service-smoke.js` keeps cross-domain context
-composition out of repositories, verifies full-payload compatibility, and
-proves the brief projection remains Agent-scoped and below 32 KiB under
-adversarial long-text input.
-`core/tests/repository-composition-smoke.js` verifies that every repository
-domain uses the shared installer, all installed methods are globally unique,
-and local factory groups reject duplicate ownership before installation.
-`core/tests/innerlife-service-boundary-smoke.js` verifies the daemon service
-port contract, transition behavior, SQL-free service boundary, and stable
-public database API.
-`core/tests/innerlife-session-service-boundary-smoke.js` verifies session
-lifecycle ports and behavior, keeps SQL in the private store, preserves the
-public API, and prevents sessions/reflection from re-entering repository
-cycles.
-`core/tests/innerlife-workflow-service-boundary-smoke.js` verifies digest and
-share-timing port contracts, behavior and write ordering, SQL/store ownership,
-stable public method counts, and an empty repository SCC set.
-
-`core/db/migrations/index.js` runs ordered, idempotent migration modules in
-`before-schema` or `after-schema` phases and records each successful id in
-`schema_migrations`. Future schema changes should add a migration module and
-keep using repositories instead of growing `core/db/database.js` again.
-
-SQLite access is serialized through the product database helper. Long-running
-or scheduler-driven workflows should still protect their own product semantics;
-for example InnerLife daemon ticks are guarded so background scheduler ticks and
-manual UI ticks do not create duplicate share candidates.
-
-Desktop schedulers should match the product cadence they represent. Memoria
-database maintenance is a once-per-local-day cleanup job, not a high-frequency
-poll: the Electron host computes the next scheduled local hour from product
-settings, sets a single timer, runs a missed same-day job immediately if the app
-starts after the scheduled hour, then schedules the following day after
-completion. The same daily tick always applies Memory Controller ledger
-retention and records its policy, deletion counts, reasons, and before/after
-totals as a runtime event. Controller retention remains system-owned when the
-operator disables optional Memoria repair. Use short polling only for loops
-that are genuinely interactive, such as InnerLife daemon due checks. The
-InnerLife scheduler must enumerate
-every enabled agent and tick each one with an explicit `agentId`; a single
-identity-free tick would otherwise fall back to the default agent and starve
-other agents. Idle due checks still advance `last_tick_at`, `next_run_at`, and
-`tick_count` so scheduler health remains observable.
-
-The Node runtime uses a cached `ProductDatabase` connection per process. In
-packaged mode, `node:sqlite` may be unavailable, so the database helper can
-fall back to the `sqlite3` CLI. Both paths must set WAL mode and a non-zero busy
-timeout; otherwise short write contention between Desktop and multiple Gateway
-processes can surface as immediate `database is locked` failures. The Node
-connection sets `busy_timeout` before confirming WAL mode because WAL setup can
-itself contend when independent maintenance processes open together.
-
-Multi-statement writes that must be atomic must wrap their SQL in an explicit
-`BEGIN; ... COMMIT;` block. The `exec()` helper runs multiple statements in
-one call but does not add an implicit transaction; partial writes will persist
-if an intermediate statement fails without a transaction boundary. The CLI
-fallback runs with `-bail`, so its first SQL error stops before a later
-`COMMIT` and the closing CLI connection rolls the open transaction back.
-
-`ensureProductCore` delegates to the Product Core owner. Concurrent cold calls
-for one resolved database path share one initialization; a warm call returns
-the adopted connection without directory creation or summary SQL. Reset and
-path changes invalidate stale initialization generations and close replaced
-connections. Do not call `initializeProductDatabase` directly from code that
-runs on every request or IPC handler; route through `ensureProductCore`
-instead.
-
-Repositories build SQL by string interpolation and escape values by
-convention (`sqlString()`/`jsonSql()` from `core/db/helpers.js`), not by
-parameter binding. This is a direct consequence of the dual execution path
-above: the `node:sqlite` path could bind parameters, but the `sqlite3` CLI
-fallback pipes a full SQL text blob over stdin and has no bind-parameter
-protocol, so both paths have to go through the same string-built `query(sql)`/
-`exec(sql)` interface. `core/tests/sql-interpolation-lint.js` (part of
-`npm run check`) recursively discovers every JavaScript file under
-`core/db/**/*.js`, statically checks each SQL template literal, and fails the build if a
-`${}` interpolation is not provably escaped, numeric, or an explicitly
-verified pre-built SQL fragment. Extend its allowlist only after reading
-where the flagged identifier is declared and confirming it cannot carry
-unescaped external input.
-
-## Gateway Boundary
-
-The Desktop-owned Gateway is the agent-facing MCP surface. Streamable HTTP MCP
-is served by `electron/http-agent-gateway.js` at the current localhost `/mcp`
-endpoint. HTTP supports MCP 2026-07-28 and 2025-06-18 through shared tool
-definitions and handlers. Stdio is retired.
-
-Gateway behavior is split by responsibility:
-
-- `core/gateway/tool-definitions.js`: MCP tool schema aggregation only
-- `core/gateway/tool-definitions/`: MCP tool schemas grouped by domain
-- `core/gateway/tool-definitions/memoria-*.js`: Memoria schemas grouped by
-  core operations, maintenance/import/export/merge, label aliases, and records
-- `core/gateway/tool-definitions/innerlife-*.js`: InnerLife schemas grouped by
-  sessions/status, profiles, shares/inbox, daemon, and history/exploration
-- `core/gateway/tools.js`: handler dispatch only
-- `core/gateway/tool-handlers/system.js`: Gateway/system tools
-- `core/gateway/tool-handlers/memoria.js`: Memoria tools through
-  `core/memoria`
-- `core/gateway/tool-handlers/shared-line.js`: Shared Line tools through
-  `core/continuity`
-- `core/gateway/tool-handlers/innerlife.js`: InnerLife tools through
-  `core/innerlife`
-
-Gateway should expose stable product tools and call domain/runtime facades. New
-Gateway behavior should not bypass a domain facade into database internals.
-
-`memoria_update` is partial at the MCP boundary. `id` and `body` are required;
-omitted `title`, `labels`, and `sensitivity` are read from the existing Memory
-before the domain update, while explicitly supplied fields retain replacement
-semantics. This prevents a body-only refinement from clearing metadata without
-changing the lower-level full-record update used by Desktop UI and CLI paths.
-
-Agent Setup shows the current HTTP endpoint and request identity headers.
-Gateway trace tables remain the inspection surface for Agent activity.
-
-Claude Desktop is a client of this MCP contract, not a special Gateway mode. If
-Claude Desktop moves local MCP setup between Developer and Extensions settings,
-the product architecture does not change: Agent Setup remains the source for
-the current endpoint/config, agent identity rules, active data root, and
-first-call order.
-
-Streamable HTTP uses the Desktop main process and the product-core owner.
-CLI maintenance can still open SQLite independently, so WAL and busy-timeout
-behavior remains required. Quit stops HTTP and releases the product core;
-there are no sibling MCP helper processes to discover or terminate.
-
-Streamable HTTP tool execution has a fair bounded admission queue. The default
-contract allows eight active tool calls and 64 queued calls with a two-second
-maximum wait; overflow is an explicit retryable HTTP 429 / JSON-RPC busy
-response. Health and MCP discovery methods bypass this queue so overload stays
-observable instead of turning into main-process silence.
-
-Test instances must isolate both product data and Electron user data. When
-`CLARACORE_DESKTOP_TEST_INSTANCE=1`, `electron/main.js` requires
-`CLARACORE_DESKTOP_USER_DATA_DIR`; random-port HTTP Gateway tests require it as
-well so `agent-gateway.json` cannot fall through to the daily-use Application
-Support directory. `npm run start:next` supplies both isolated roots.
-
-Agent identity belongs to the caller. Streamable HTTP treats
-`X-ClaraCore-Agent-ID` as authoritative for the request; body-supplied
-`agentId` or `agent_id` cannot override it. After an identity rename,
-`agent_identity_merge` is the supported repair path; it updates agent-owned
-tables and stored Gateway trace request JSON.
-
-Gateway caller context has three independent identities. `agentId` is the
-stable persona and data subject, `clientId` is the host application, and
-`conversationId` is one host conversation. Transport metadata stays in Gateway
-context and trace records; it is never merged into domain tool arguments. In
-particular, `X-ClaraCore-Session-ID` is a legacy conversation-header alias and
-must not overwrite `innerlife_session_end.sessionId`.
-
-HTTP caller identity comes from `X-ClaraCore-Agent-ID`, `X-ClaraCore-Client-ID`,
-and `X-ClaraCore-Conversation-ID`. Historical stdio trace records keep their
-original meaning; removing the transport does not rewrite stored evidence.
-
-Shared Line `continuity_lines.agent_id` is its stable owner. A caller may update
-another agent's line by naming the exact `lineId`; the write records
-`current_positions.metadata_json.writerAgentId` but does not transfer ownership.
-
-Gateway tool responses must describe the actual record a write changed. For
-example `shared_line_update` saves one current position and then reads the
-resume packet for that exact `lineId`; it must not re-infer a line from agent
-identity after the write.
-
-Shared Line selection is fail-closed for identified agents. A missing `lineId`
-may default only when that agent owns zero or one active non-default line. If it
-owns more than one, read/context/update calls return
-`SHARED_LINE_ID_REQUIRED` with candidate ids and perform no write. The caller
-can choose a returned candidate and retry with an explicit `lineId`;
-`shared_line_list` is only required when the full catalog is needed or before a
-write. The Gateway does not guess from recency or summary text. Gateway Context
-resolves Shared Line before starting Memory or InnerLife reads, so an ambiguous
-request fails after the candidate lookup without doing unrelated domain work.
-
-InnerLife treats Shared Line as optional context rather than a runtime
-prerequisite. Briefing, digest, process/daemon ticks, and share timing with
-provided context accept an explicit `lineId`; when it is omitted and selection
-is ambiguous, they continue without line context and return
-`sharedLineContext.status = "ambiguous"` plus candidate ids. Operations that
-actually write a Shared Line remain fail-closed and require an exact target.
-
-## Import And Backup Boundary
-
-Old Memoria, Continuity, and InnerLife imports are copy-based and backup-gated.
-
-- Import preview is read-only.
-- Product backup is created before import.
-- Source databases and source files must not be mutated.
-- Old Memoria `memories` rows import as product memories.
-- Old Memoria text `records` rows import as searchable product memories while
-  preserving the `records` import count.
-- Structured Memoria records continue to import into product record tables.
-- Old Continuity data maps into Shared Line lines, positions, history,
-  snapshots, and handoffs.
-- Old InnerLife data maps into Desktop-owned profiles, events, thoughts, and
-  shares.
-
-## Packaging Resource Boundary
-
-Packaged builds must not depend on a user-installed `sqlite3` binary. When
-`node:sqlite` is unavailable, Desktop falls back to bundled SQLite tools under
-`resources/sqlite/`, copied outside `app.asar` through `build.extraResources`.
-
-The bundled tools are part of the release contract. `npm run test:sqlite-binary`
-checks that every target binary exists, matches the recorded SHA-256, has an
-executable bit where relevant, and is discoverable through
-`core/sqlite-binary.js`.
-
-## Validation Boundary
-
-Use these gates for current development:
-
-- `npm run check`: automatically discovers JavaScript under `app/`, `core/`,
-  `electron/`, and `scripts/`, checks it with bounded parallel Node workers,
-  then runs SQL interpolation, IPC contract, and repository architecture
-  gates. New source and test files do not require a manual syntax-check list.
-- `npm run test:architecture`: repository composition plus focused InnerLife,
-  System, Continuity, and Gateway-context ownership boundaries.
-- `npm run test:sqlite-binary`: packaged SQLite resource integrity and resolver
-  check.
-- `npm run test:phase5`: InnerLife runtime, UI, and scheduler coverage.
-- `npm run test:backup`: backup and restore coverage.
-- `npm run test:import-preview`: read-only preview and copy import coverage for
-  old services.
-- `npm run test:smoke`: full project smoke suite before pushing structural or
-  runtime changes.
-
-## Documentation Boundary
-
-Keep current, build-relevant docs in `docs/`. Move completed handoffs,
-superseded plans, old release notes, and unapproved research to `docs/archive/`
-so agents do not treat historical phase material as active instructions.
-
-Current docs should answer:
-
-- what the app is
-- how it runs
-- where data lives
-- how agents connect
-- how to continue development safely
-
-See `docs/README.md` for the current docs index. Completed bugfix notes and
-single-run polish logs belong in `docs/archive/`. Product UI/source-map links
-must resolve to active docs; archive paths must never be presented as the next
-development plan.
+Electron Builder packages the app, renderer, core, and brand assets. Full
+includes the local embedding model; Lite omits it. Platform resources include
+SQLite and sqlite-vec support. Website files and project documents are not
+application runtime dependencies. See [Packaging](mac-packaging.md).

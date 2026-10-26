@@ -1,436 +1,103 @@
-# Multi-Agent Client Contract
+# Multi-client identity
 
-This guide is for Codex, Claude, and Hermes clients that connect to ClaraCore
-Desktop through MCP. Since version 0.5.0, the contract separates the stable
-agent persona, the host client, the host conversation, and domain object ids.
-The goal is to let several agents use one Desktop database without overwriting
-each other's identity, Shared Line ownership, or InnerLife lifecycle.
+Several agents can use the same Desktop workspace. Keep the agent persona,
+host application, host conversation, and domain object IDs separate.
 
-## Identity Contract
-
-Use three independent caller fields:
-
-| Field | Meaning | Examples |
-| --- | --- | --- |
-| `agentId` | Stable persona and data subject | `codex`, `clara`, `lara` |
-| `clientId` | Host application | `codex-app`, `claude-code`, `hermes` |
-| `conversationId` | One host conversation | Claude UUID, Hermes session id |
-
-Recommended assignments:
-
-| Client | `agentId` | `clientId` |
-| --- | --- | --- |
-| Codex | `codex` | `codex-app` |
-| Claude | `clara` | `claude-code` |
-| Hermes | `lara` | `hermes` |
-
-`agentId` belongs to the persona, not the host tool. If Lara later moves from
-Hermes to another client, her stable agent id remains `lara`.
-
-## Streamable HTTP Headers
-
-New clients should send:
+## Caller headers
 
 ```text
 Authorization: Bearer <token>
 X-ClaraCore-Agent-ID: <stable-persona-id>
 X-ClaraCore-Client-ID: <host-client-id>
-X-ClaraCore-Conversation-ID: <current-host-conversation-id>
-X-ClaraCore-Tool-Profile: core|core-compat|full
+X-ClaraCore-Conversation-ID: <current-conversation-id>
+X-ClaraCore-Tool-Profile: core
 ```
 
-`X-ClaraCore-Session-ID` remains a compatibility alias for the caller
-conversation. New integrations should use `X-ClaraCore-Conversation-ID` so it
-cannot be confused with an InnerLife `sessionId` tool argument.
-
-`X-ClaraCore-Tool-Profile` is optional. It selects which
-manifest `tools/list` returns. Omitting it, or sending an unknown value, gives
-the 25-tool `core` manifest. Explicit `core-compat` preserves the previous 38 tools; `full` advertises 83 current tools. Sixteen retired names remain callable adapters; see [the consolidation map](design/2026-10-22-mcp-capability-consolidation.md). Configure the header and reconnect before using unadvertised tools; live catalog refresh is not assumed.
-Every tool still executes when called by name under every profile. Profiles
-control advertisement, not authorization. Use `gateway_docs(section=diagnostics)` to discover specialized/maintenance routes. See [the complete routing table and migration examples](design/2026-10-22-mcp-tool-surface.md).
-Stdio is retired; all clients use HTTP headers. See [migration](HTTP_MCP_MIGRATION.md).
-
-## InnerLife Session Contract
-
-Keep these identifiers separate:
-
-| Identifier | Owner | Purpose |
+| Field | Meaning | Example |
 | --- | --- | --- |
-| `conversationId` | Host client | Gateway tracing and caller correlation |
-| `externalSessionId` | Calling client | Optional host-to-InnerLife correlation |
-| `inner_session_*` | ClaraCore Desktop | Canonical InnerLife lifecycle handle |
+| Agent ID | Stable persona and data subject | `assistant-a` |
+| Client ID | Host application | `codex-app`, `claude-code`, `hermes` |
+| Conversation ID | One real host conversation | Host-provided conversation UUID |
 
-Start a session with the current host conversation as the external correlation:
+A persona can move between clients without changing its agent ID. Send caller
+headers per request or through a conversation-isolated connection. Do not mutate
+one globally shared connection's conversation header during concurrent chats.
+Use the same conversation identity for reconnect/recovery and a different one
+for a new chat.
 
-```json
-{
-  "externalSessionId": "<current-host-conversation-id>",
-  "host": "claude-code-or-hermes"
-}
-```
+`X-ClaraCore-Session-ID` remains a legacy alias for the conversation header.
+It is not an InnerLife session handle. Understanding submit/resume require a
+real conversation ID; ordinary context reads do not. Supplying identity grants
+neither write authority nor model-call permission.
 
-Save the returned internal id:
+Profiles select the advertised catalog: `core` 25, `core-compat` 38, and `full`
+83 canonical tools. Unknown/missing profiles resolve to `core`. Reconnect after
+changing the profile. Profiles are discovery settings, not authorization.
+See [MCP compatibility](MCP_COMPATIBILITY.md).
 
-```json
-{
-  "session": {
-    "id": "inner_session_xxx"
-  }
-}
-```
+## InnerLife lifecycle
 
-End the session with that returned id:
-
-```json
-{
-  "sessionId": "inner_session_xxx",
-  "summary": "Short session summary"
-}
-```
-
-`sessionId` remains the canonical argument name. Desktop also accepts
-`session_id` as a compatibility alias for callers that use snake_case domain
-arguments. `summary` may be a short string or a structured JSON object; objects
-are persisted as readable JSON text in the session, inbox, and event records.
-
-Rules:
-
-- Do not pass the current Claude or Hermes conversation id as
-  `innerlife_session_end.sessionId` unless it is the exact `externalSessionId`
-  registered at start.
-- Do not invent ids such as `session_lara_xxx`.
-- Prefer the returned `inner_session_*` id. The registered external id remains
-  a compatibility lookup.
-- One agent cannot end another agent's InnerLife session.
-- Desktop does not automatically end an arbitrary previous active session when
-  a new one starts.
-
-Lifecycle hooks that intentionally tolerate a missing start may use:
+Start with the real host conversation as `externalSessionId` and retain the
+returned `inner_session_*` ID. End with that exact internal ID:
 
 ```json
 {
-  "sessionId": "<saved-session-reference>",
-  "bestEffort": true,
-  "summary": "<summary-if-available>"
+  "sessionId": "<returned-inner-session-id>",
+  "summary": "A short factual summary of this session."
 }
 ```
 
-`bestEffort` is for host lifecycle hooks. Normal model calls should keep strict
-errors so invalid ids remain visible.
+The registered external ID remains a compatibility lookup. Do not invent an
+ID or pass an unrelated conversation ID. One agent cannot end another agent's
+session. Desktop does not automatically end a previous active session merely
+because a new one starts.
 
-Desktop also recognizes one legacy fallback: if `transcript` starts with the
-literal `"[SessionEnd hook"`, a missing session is treated as best-effort even
-without `bestEffort: true`. This exists only for Claude's existing SessionEnd
-hook transcript convention. Codex and Hermes hooks do not share that
-transcript prefix and must pass `bestEffort: true` explicitly, or a missing
-session throws.
+Host lifecycle hooks can pass `bestEffort: true` when a missing saved session
+reference should produce a diagnostic no-op. Ordinary model calls should keep
+strict errors. Do not infer a conversation ended from silence or elapsed time.
 
-## Shared Line Contract
+InnerLife session/share/action reads are caller-scoped. The Desktop UI may
+request an all-agent inspection snapshot; this does not grant clients the same
+write scope.
 
-`continuity_lines.agent_id` is the stable owner. A different agent may update a
-line only by supplying its exact `lineId`. That explicit write records
-`writerAgentId` but does not transfer ownership.
+## Shared Lines
 
-For a resume read:
+A line retains its stable owner. An explicitly selected cross-agent update uses
+an exact `lineId`, records the writer, and does not transfer ownership.
 
-1. Call `shared_line_get` without `lineId`.
-2. If `SHARED_LINE_ID_REQUIRED` is returned, select one of its candidates and
-   retry with that explicit `lineId`.
+List bounded candidates with `shared_line_list`, read the selected line with
+`shared_line_get(lineId)`, and pass the same ID to updates. A no-ID read can
+return `SHARED_LINE_ID_REQUIRED`; choose a relevant candidate before retrying.
+Do not select a goal from recency alone. Line lifecycle (`active`/`archived`) and
+the global fallback selection (`isCurrent`) are distinct.
 
-Before a write, call `shared_line_list` with `status: "active"`, select the
-intended line when more than one is present, and pass its `lineId` to
-`shared_line_update`. `shared_line_list` is a bounded summary catalog;
-`shared_line_get(lineId)` is the content read.
+Agent-level state is read separately with `shared_line_agent_state`; it is not
+repeated in every line packet. See [Context delivery](CONTEXT_DELIVERY.md).
 
-Do not guess the line from recency or summary text.
+## Automatic context and sharing
 
-## Agent-Scoped InnerLife Data
+An automatic host adapter calls `gateway_auto_context` once per user turn.
+Under the default Memory contract it consumes only a returned eligible
+`block.body`, or abstains. Hosts should not add a second independent automatic
+Memory retrieval path. With no new human message, use
+`turnKind: goal_continuation`, which skips collection.
 
-The following agent-facing tools are scoped to the authenticated caller:
+Knowledge-aware hosts explicitly negotiate
+[`memory-knowledge-v1`](KNOWLEDGE_CONTEXT.md). The host must consume the correct
+shape and preserve source attribution; connecting to Desktop does not install
+this integration automatically.
 
-- `innerlife_status`
-- `innerlife_sessions`
-- `innerlife_pending_shares`
-- `innerlife_share_actions`
-- `innerlife_mark_share`
-- `innerlife_afterthought_resolve`
+InnerLife remains separate. A pending count contains no thought content.
+The agent chooses whether the conversational register makes review appropriate,
+then calls `innerlife_share_check` with the actual context. Selection, delivery,
+and actual use have separate evidence; none should be inferred from a count or
+successful read.
 
-Claude operating as `clara` cannot act on Lara's shares or sessions. Hermes
-operating as `lara` cannot act on Clara's or Codex's data. The Desktop UI may
-still request an all-agent inspection snapshot.
+## Validate an integration
 
-## v0.6.10 Compatibility Matrix
-
-Read this as: what each client gets by default after upgrading Desktop, and what
-it must change to keep its previous behavior.
-
-| Client / transport | Default tool manifest | Default payload shapes | Needs a client change? |
-| --- | --- | --- | --- |
-| **Codex** (HTTP MCP) | `core` (25 tools in current source) | minimum-sufficient defaults | Use returned `detailRef` or one-object get tools when content is needed. Use `core-compat` for the previous catalog or `full` for all schemas; reconnect after a config change. |
-| **Claude Code** (HTTP MCP) | `core` (25 tools in current source) | minimum-sufficient defaults | No change for ordinary recall/continuation; do not assume list rows contain bodies. |
-| **Hermes / Lara** (HTTP MCP) | `core` (25 tools in current source) | minimum-sufficient defaults | Stop treating `shared_line_list` as resume content; select a line, then call `shared_line_get`. |
-| **HTTP `/agent/setup`** | reports `toolProfiles` and `contextStates` | `firstCalls` no longer requires `gateway_docs` | No. |
-| **HTTP `/gateway/context`** | unchanged endpoint | bounded ambiguity body with `candidateCount`, `totalCount`, `detailRef` | No, unless it assumed an unbounded `candidates` array. |
-| **Desktop UI / CLI** | not applicable | **unchanged — full records** | No. Shaping is a Gateway-boundary concern only. |
-
-Behavior that is identical on every client and transport:
-
-- an unknown or missing tool profile resolves to `core`; only an explicit `core-compat` or `full` broadens the catalog;
-- every tool still executes when called by name under every profile, because
-  Gateway tool input is not schema-validated;
-- `claracore_connection_test` reports the resolved profile in `toolProfile`;
-- ambiguity refusals, delivery evidence, sensitivity, time view, and same-Agent
-  filtering remain fail-closed.
-
-
-## Default Payload Contract
-
-Every domain default read is smaller. Clients that parsed the old shapes must
-adapt or pass the explicit detail argument during the compatibility window:
-
-General catalogs default to 10 rows and accept an explicit `limit` up to 50.
-This is a useful browsing range, not a promise to make every response tiny;
-single-object reads retain meaningful evidence up to the final safety ceiling.
-
-- `memoria_search` returns 3 bounded summaries with `bodyPreview`, not whole
-  bodies; pass `detail: "full"` for the previous shape.
-- `memoria_list`, restricted/archived lists, `memoria_link_list`, and
-  `memoria_record_list` are paged catalogs. Use `memoria_get` or
-  `memoria_record_get` for one complete object.
-- Memory and structured-record writes return bounded acknowledgements; follow
-  `detailRef` instead of reading a body/value from the write response.
-- `shared_line_list` returns line summaries only. It never carries position
-  history, affective trace, or raw position metadata.
-- `shared_line_get` and the Shared Line write acknowledgements return a resume
-  packet with top-level `summary` / `interpretationStatus` / `factsUsed`, not a
-  nested `currentPosition`. Pass `detail: "full"` for the previous shape.
-- `agentState` is absent from every line packet. Read it once per session with
-  `shared_line_agent_state`.
-- `innerlife_status` returns operational state only; pass `detail: "full"` (or
-  the boolean `true` alias) for paged diagnostic catalogs (`section`, `limit`, `offset`) and explicit caller-owned record reads. **Its `mode` value
-  changed**: the default read now reports `mode: "status"` and the full read
-  reports `mode: "full"`. The pre-0.6.6 `mode: "lite"` is retired — branch on
-  `detail`, not on `mode`.
-- `innerlife_pending_shares` returns 10 previews; pass `detail: "full"` for whole
-  bodies.
-- `innerlife_briefing` returns a decision synthesis with `counts` and no `text`
-  block; pass `detail: "full"` for the previous aggregate.
-- `gateway_context(detail=brief)` embeds the resume packet and the InnerLife
-  status shape. Its `text` field is now a short orientation summary and no
-  longer repeats the structured content.
-- Omitting `gateway_context.detail` now selects `brief`; `full` must be explicit.
-- InnerLife session/profile/activity lists and Gateway traces default to
-  bounded summaries. Use `innerlife_status(detail="full", section="sessions", recordId=...)`, `innerlife_profile_get`, or
-  `gateway_trace_get` for one complete record.
-- `innerlife_share_check` returns the one selected share and compact timing
-  evidence. It no longer repeats the pending-share catalog in a snapshot.
-- `claracore_status` never returns inline API keys. Read `connection` for the
-  authenticated caller and `configuration.gateway` for stored defaults.
-- All Agent-facing InnerLife profile tools use `profileEnabled`; status keeps
-  the effective daemon scheduler state at `daemon.loopEnabled`. Since 1.0.1,
-  the per-Agent daemon choice is mirrored in the profile; the global gate can
-  pause scheduling without erasing that choice. Pausing one Agent is isolated.
-- Gateway trace request flags distinguish shortened text (`truncated`), a
-  whole-request bounded preview (`previewOnly`), and JSON conversion failure
-  (`serializationFailed`).
-- Shared Line catalog and mutation descriptors rename `active` to `isCurrent`.
-  `status` remains lifecycle; `isCurrent` is only the global fallback
-  selection and may be false for every row in an Agent-filtered page.
-- Both transports return `GATEWAY_RESPONSE_TOO_LARGE` when a final serialized
-  tool result exceeds 128 KiB. Narrow the page or select one object; `full`
-  does not mean an unlimited bulk dump.
-
-Hosts that inject context per prompt should route Memory and InnerLife
-candidates through `gateway_auto_context` so at most one bounded block enters a
-turn. That hook change is client-side work and is not done by upgrading Desktop.
-
-
-## Automatic Turn Context: Host Adapter Contract
-
-A host prompt hook makes **one** call per user turn and injects at most one
-block. It must not retrieve Memory itself — that policy lives in ClaraCore so it
-cannot drift between hosts.
-
-**Automatic context is Memory only.** InnerLife shares are never delivered
-automatically, and this is a product decision rather than a missing feature. A
-waiting thought does not need to be about the current topic: an off-topic
-engineering thought during engineering work is fine. What makes a share wrong is
-the **register** — that same thought dropped into an intimate conversation. A
-server can match topics; it cannot read register. So the model owns the
-decision, through `innerlife_share_check`, and the hook carries only the pending
-**count** as a signal that something is waiting.
-
-This was measured, not assumed. Lexical relevance over real shares ranked three
-unrelated Chinese shares above the English one that actually matched: Chinese
-bigrams tie on function words, and cross-language overlap is structurally zero.
-The Memory Controller earned automatic injection by having embeddings and a
-measured 0.72 vector gate. If InnerLife ever gets share embeddings, automatic
-delivery can be revisited — but topic matching would still be the wrong gate.
-
-### Request
-
-```json
-{
-  "prompt": "the current user message",
-  "turnKind": "user",
-  "sessionId": "optional InnerLife session id"
-}
-```
-
-`turnKind` defaults to `user`. Set it to `goal_continuation` only when the host
-is continuing a persistent goal and no person supplied a new message. The
-Gateway does not infer this state from the prompt text. A labeled continuation
-skips Memory collection; it does not eliminate the outer MCP call.
-
-`prompt` and the `memoryCandidates` / `shareCandidates` arrays are **mutually
-exclusive**. Sending both is rejected, not merged. The arrays are the
-compatibility/test path and are only advertised under the `full` tool profile.
-
-Identity comes from the authenticated caller headers, never from the body.
-
-### Response
-
-```json
-{
-  "decision": "deliver_one" | "abstain",
-  "domainStatus": { "memory": "ok|timeout|error|skipped", "innerlife": "not_collected" },
-  "selected": { "domain": "memory|innerlife", "id": "...", "evidenceState": "selected" },
-  "block": { "domain": "...", "id": "...", "body": "...", "bytes": 0, "truncated": false },
-  "candidates": [ { "domain": "...", "id": "...", "eligible": false, "discardReason": "..." } ],
-  "reason": "single_winner | no_eligible_candidate | no_eligible_candidate_degraded | non_user_goal_continuation",
-  "turnKind": "user | goal_continuation",
-  "collectionSkipped": false,
-  "latencyMs": 0
-}
-```
-
-Inject `block.body` only when `decision === "deliver_one"`. Nothing else.
-For `goal_continuation`, expect `decision=abstain`,
-`reason=non_user_goal_continuation`, `collectionSkipped=true`,
-`domainStatus.memory=skipped`, and `latencyMs=0`.
-
-### Failure rules
-
-Branch on `domainStatus`, not on `decision`. **`domainStatus` is the marker that
-this desktop actually arbitrated.**
-
-| Response | Adapter does |
-| --- | --- |
-| `deliver_one` with a block | inject that one block (always Memory) |
-| anything carrying `domainStatus` | nothing — the desktop looked and abstained |
-| RPC error, including `Unknown tool` | inject nothing; report or log incompatibility |
-| any other shape | inject nothing; report or log incompatibility |
-
-Automatic Memory has one host entry point: `gateway_auto_context`. Every error,
-timeout, authentication failure, unknown tool, or unrecognised response shape
-must inject nothing rather than starting a second retrieval through
-`memory_context`. Explicit `memory_context` remains a separate product tool; it
-is not an adapter fallback.
-
-This deliberately drops automatic compatibility with Desktop builds that do
-not expose `gateway_auto_context`. A host must make that incompatibility visible
-without silently widening the automatic-context contract.
-
-### Evidence
-
-`selected` is not `delivered` and not `used`. An InnerLife block must carry its
-share id into the injected text so the model can report the outcome through
-`innerlife_mark_share`, which still requires real `deliveryEvidence` for
-`action="used"`. The arbiter never marks anything.
-
-### Counts are not blocks
-
-A pending-share **count** carries no product content and does not compete for
-the delivery slot. Fetching it separately (throttled) is fine. Fetching share
-**bodies** separately is not — that is a second uncoordinated injection.
-
-### When the prompt event does not fire
-
-On a host where the per-prompt hook is not reliably emitted, automatic context
-is **unavailable**. A session-level instruction telling the model to call the
-tool each turn is model-driven, must be labelled best-effort, and must not be
-counted as acceptance. Gateway traces show whether the call actually happened;
-a missing call is never reported as success.
-
-### Traces
-
-The prompt is not stored verbatim: `gateway_traces` keeps a hash plus an
-80-byte preview, with `truncated` reporting whether anything was withheld. A
-prompt shorter than the bound is still recorded in full.
-
-
-## Codex Migration Checklist
-
-1. Keep `agentId=codex` stable.
-2. Send `X-ClaraCore-Client-ID: codex-app` for HTTP MCP.
-3. Send the current Codex conversation id through
-   `X-ClaraCore-Conversation-ID` when the host exposes it.
-4. After changing caller configuration, reconnect and run
-   `claracore_connection_test` then `shared_line_get` without `lineId`.
-   `gateway_docs` is now an on-demand read, not a startup step.
-5. Codex maintenance workflows that need the import/export, graph, or retention
-   tools advertised must send `X-ClaraCore-Tool-Profile: full`.
-
-## Claude Migration Checklist
-
-1. Keep `agentId=clara` stable.
-2. Send `X-ClaraCore-Client-ID: claude-code` for HTTP MCP.
-3. Send the current Claude conversation UUID through
-   `X-ClaraCore-Conversation-ID` when available.
-4. Save the `inner_session_*` id returned by `innerlife_session_start`.
-5. Pass that saved id to `innerlife_session_end`.
-6. Add `bestEffort: true` to lifecycle-hook fallback calls. The existing
-   SessionEnd hook transcript (`"[SessionEnd hook..."`) already gets this
-   behavior automatically as a legacy fallback, but pass the flag explicitly
-   for any new hook call.
-7. Reconnect Claude after changing HTTP caller headers.
-
-## Hermes Migration Checklist
-
-1. Keep `agentId=lara` stable.
-2. Send `X-ClaraCore-Client-ID: hermes` for HTTP MCP.
-3. Send the current Hermes session id through
-   `X-ClaraCore-Conversation-ID`.
-4. Stop replacing `innerlife_session_end.sessionId` with the current Hermes
-   session id.
-5. Persist the `inner_session_*` id returned at start and pass it back at end.
-6. Before `/new`, end the current InnerLife session when a saved handle exists.
-7. Use `bestEffort: true` when a lifecycle hook has no confirmed successful
-   start. Hermes has no legacy transcript-prefix fallback, so this must be
-   explicit or a missing session throws.
-8. Do not implement client-side `autoEndPrevious`; v0.5.0 intentionally does
-   not use that lifecycle rule.
-9. After upgrading Desktop, restart the Hermes MCP connection, run
-    `claracore_connection_test`, and read the live `tools/list`. Read
-    `gateway_docs` only when the usage guide is actually needed; it now returns
-    a bounded summary and takes a `section` argument.
-10. Treat `memory_context` as observe-only. Call it per non-empty prompt only
-    when Hermes has a verified per-prompt hook; never inject its empty context.
-11. Without that hook, keep explicit `memoria_search` for real recall requests
-    and report automatic Controller routing as unavailable instead of implied.
-12. On HTTP `429` / JSON-RPC `-32001`, honor `Retry-After`, use bounded retries,
-    and do not fan out more concurrent calls.
-
-The current copy-ready Hermes upgrade message and verification receipt live in
-[Hermes v0.6.2 Update](archive/HERMES_V0.6.2_UPDATE.md).
-
-## Compatibility And Verification
-
-Existing integrations are not immediately broken:
-
-- `X-ClaraCore-Session-ID` still works as a conversation-header alias.
-- `innerlife_session_end` accepts the internal id or the exact external id
-  registered at start.
-- The legacy Claude SessionEnd transcript fallback remains available.
-
-After reconnecting, verify:
-
-1. `claracore_connection_test` reports server version `0.5.0`.
-2. The response contains the expected `agentId`, `clientId`, and transport.
-3. `shared_line_list(status="active")` returns only the caller's owned lines.
-4. `innerlife_status` returns only the caller's profile and counts.
-5. `gateway_trace_list` records the correct agent, client, and conversation.
-
-## 2026-10-12 maintenance
-
-Shared Line mutation receipts stay on the exact target, including archived-line history reads. The Codex hook skips SessionStart registration only for the host-owned `.codex/memories` and `.codex/memories_v2` job directories; existing sessions still require actual Stop/terminal evidence. See [Desktop Maintenance](DESKTOP_MAINTENANCE.md).
+Confirm the resolved identity/profile with `claracore_connection_test`. Test
+resume ambiguity, exact-line updates, and the same-session end path using
+isolated data. For an understanding bridge, also verify real host event payloads,
+stable IDs, recovery, and permitted evidence through the
+[host contract](UNDERSTANDING_HOST.md). A working MCP connection alone does not
+prove that hooks, context delivery, or conversation capture are installed.

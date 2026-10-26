@@ -237,7 +237,7 @@ Agent leaves the others alone. Automated afterthought workers obey the same
 gate and Agent switch, retaining paused jobs for later; explicit manual runs
 remain available. An in-flight completion cannot revive a paused daemon.
 
-## 0.7.7 generation evidence boundary
+## Generation evidence
 
 Generation projects only recent, relevant, individually dated open questions;
 legacy undated state is retained in storage but omitted from generation. A
@@ -246,11 +246,10 @@ paths require model output plus an independent evidence/temporal/novelty review.
 Unavailable or malformed review is not permission to publish. Process retains
 inbox inputs for retry and the daemon exposes the retry failure. Original
 sources and actual bounded prompts are recorded with the event; prior AI
-thoughts are not factual evidence. See `docs/V0.7.7_INNERLIFE_PLAN.md` and
-`docs/RELEASE_NOTES_V0.7.7.md` for limits, checks and legacy-queue behavior.
+thoughts are not factual evidence. See [Maintenance](../../docs/DESKTOP_MAINTENANCE.md) for candidate and queue behavior.
 
 
-## MCP 能力整合（2026-10-22 源码）
+## MCP compatibility
 
 现行投料入口统一为 `innerlife_submit_inbox`，`source` 保留 fact/continuity 的区别。
 会话分页/详情统一走 `innerlife_status(detail=full, section=sessions, limit/offset 或 recordId)`；
@@ -258,4 +257,4 @@ doctor/daemon 也是显式诊断分区。现行诊断读取不初始化 daemon�
 原 `submit_fact`、`submit_continuity`、`sessions`、`session_get`、`doctor`、`daemon_status`
 不再出现在 full 现行目录；仍可调用，回执 `_meta` 给出替代工具名。
 会话开始/结束、分享判断/投递反馈、消化/探索/收敛保持原有业务语义。
-全量映射和退出条件见 [MCP 能力整合](../../docs/design/2026-10-22-mcp-capability-consolidation.md)。
+全量映射和退出条件见 [MCP 能力整合](../../docs/MCP_COMPATIBILITY.md)。

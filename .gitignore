@@ -30,3 +30,6 @@ resources/sqlite-vec/
 # Local real-corpus evaluation material is not public source or release content.
 core/tests/fixtures/knowledge-quality-cases.json
 docs/KNOWLEDGE_QUALITY_BASELINE_0.8.1.json
+
+# Generated project website
+site-dist/

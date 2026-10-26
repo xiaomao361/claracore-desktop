@@ -102,7 +102,9 @@
     "test:jev": "node core/tests/jev-recall-smoke.js && node core/tests/jev-routing-smoke.js && node core/tests/decision-model-smoke.js",
     "test:understanding": "node core/tests/understanding-journal-smoke.js && node core/tests/understanding-recall-smoke.js && node core/tests/understanding-material-smoke.js && node core/tests/understanding-lines-smoke.js && node core/tests/understanding-host-smoke.js && node core/tests/understanding-evaluation-smoke.js && node core/tests/understanding-smoke.js && node core/tests/understanding-http-smoke.js",
     "evaluate:understanding": "node scripts/evaluate-understanding.mjs",
-    "test:innerlife:pool": "node core/tests/innerlife-candidate-pool-smoke.js && node core/tests/innerlife-candidate-pool-smoke.js --cli"
+    "test:innerlife:pool": "node core/tests/innerlife-candidate-pool-smoke.js && node core/tests/innerlife-candidate-pool-smoke.js --cli",
+    "build:website": "node scripts/build-website.js",
+    "test:website": "node scripts/check-public-docs.js && node scripts/website-smoke.js"
   },
   "build": {
     "beforePack": "scripts/stage-sqlite-vec.js",
@@ -179,5 +181,6 @@
   },
   "dependencies": {
     "@xenova/transformers": "^2.17.2"
-  }
+  },
+  "license": "MIT"
 }

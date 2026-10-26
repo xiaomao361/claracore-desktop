@@ -1,340 +1,48 @@
-# ClaraCore Desktop macOS Packaging
+# Packaging
 
-## Current Release Boundary
+Electron Builder produces Full and Lite variants. Full includes the local
+embedding model; Lite omits it. Release installers currently target macOS
+Apple Silicon and Windows x64. Source checks also run on Linux.
 
-The current public stable release is `1.0.3`, tagged `v1.0.3` at `3f12e0b`. Treat
-[Version Branching](VERSION_BRANCHING.md) and the versioned release notes as
-the release truth.
+## Build commands
 
-The 2026-10-19 local `1.0.0` trial preceded the public release. Its Lite recipe is
-`scripts/v1-lite-builder-config.js` (ad-hoc signature, no notarization or
-publication); it is not the public release artifact. See
-[1.0.0 notes](RELEASE_NOTES_V1.0.0.md), the
-[public package verification](validation/2026-10-20-v1.0.0-release.md) and the
-[historical local receipt](validation/2026-10-19-v1.0.0-lite-package.md).
-
-## 1.0.3 public release
-
-Full/Lite macOS arm64 Apps and DMGs are Developer ID signed, Apple-notarized,
-stapled, Gatekeeper accepted and DMG-verified. Both contain 418 source/asset/test
-files identical to the tag. Full's built-in model produces 512-dimensional
-embeddings; both flavors pass packaged SQLite and Gateway/pending checks.
-Windows x64 Full/Lite source/build/package/model checks passed in Actions;
-Windows installers remain unsigned. Four installers and two platform checksum
-manifests are published. See [1.0.3 verification](validation/2026-10-26-v1.0.3-release.md).
-
-## Previous 1.0.0 public release
-
-Full/Lite macOS arm64 Apps and DMGs are Developer ID signed, Apple-notarized,
-stapled, Gatekeeper accepted and DMG-verified. Both contain 407 product source
-files identical to the tag. Full's built-in embedding and both packaged
-SQLite/Gateway runtimes passed. Windows x64 Full/Lite builds and package checks
-passed in Actions; Windows installers remain unsigned.
-
-## Previous 0.8.1 public release
-
-Full and Lite macOS Apple Silicon DMGs are Developer ID signed, notarized,
-stapled and Gatekeeper accepted. Both pass DMG integrity checks and downloaded
-SHA-256 comparison. Each package contains 334 implementation files identical
-to tag `v0.8.1` at `c343e66`. Packaged Full built-in knowledge embeddings and
-both SQLite Node/CLI paths passed. See [release notes](RELEASE_NOTES_V0.8.1.md)
-for the four-platform-variant asset list, checksums and CI evidence.
-
-## Previous 0.7.7 public release
-
-Full and Lite macOS Apple Silicon DMGs are Developer ID signed, notarized,
-stapled and Gatekeeper accepted. Both DMGs pass `hdiutil verify`; GitHub asset
-SHA-256 values match local files and the published manifest. Full/Lite sizes
-are approximately 532.9/293.2 MiB unpacked. Both contain the frozen source at
-`745addc`; packaged Node/CLI vector, HTTP Gateway and grounding checks pass,
-and Full produces real 512-dimensional built-in embeddings.
-
-Notarization IDs:
-
-- Full App: `ab062448-f165-43c2-94c8-9d905a844d65`
-- Full DMG: `f9d2fa9f-91eb-438f-9f6d-a12fab1bdfe5`
-- Lite App: `3040770b-6133-459f-8320-31d244430227`
-- Lite DMG: `cd278c3c-f92b-4604-9800-17618275c22d`
-
-All four are Accepted. Windows x64 Full/Lite are built and package-verified in
-Actions run `34816656613`; installers remain unsigned. The public release is
-https://github.com/xiaomao361/claracore-desktop/releases/tag/v0.7.7.
-Real installation and long-running user experience remain separate acceptance.
-
-## Historical Pre-Release Checkpoint
-
-The paths and validation notes below preserve the earlier local unsigned
-`0.6.4` Lite checkpoint that preceded the public release. That checkpoint was
-enough for:
-
-- Opening the Desktop app on the local Mac.
-- Verifying the Desktop-owned SQLite data directory.
-- Verifying the packaged Gateway MCP entry.
-- Testing agent setup before code signing and notarization.
-
-Those historical unsigned checkpoint packages were suitable only for the
-small tester group at that time, not for general-public distribution.
-
-## Commands
-
-Create an unpacked Lite `.app`:
-
-```bash
+```sh
+npm ci
+npm run pack:mac
 npm run pack:mac:lite
-```
-
-Create a Lite `.dmg`:
-
-```bash
+npm run dist:mac
 npm run dist:mac:lite
+npm run dist:win
+npm run dist:win:lite
 ```
 
-Create the explicit Developer ID signed, notarized, and stapled Full/Lite
-release DMGs:
+`pack:*` creates an unpacked application directory; `dist:*` creates installers
+without publishing. Use native platform tooling or the Windows Actions workflow
+for platform-specific packaging. Verify required model and SQLite resources
+before a public build. `test:package:lite` and `test:package:win:lite` inspect
+Lite package contents.
 
-```bash
+## Signed macOS release
+
+```sh
 npm run release:mac
 npm run release:mac:lite
 ```
 
-The release command requires the `Developer ID Application` identity and the
-`claracore-notary` notarytool keychain profile. Local `pack`/`dist` commands do
-not submit test packages to Apple.
+These commands require a configured Developer ID Application signing identity
+and the Keychain notarization profile used by the release scripts. Configure
+credentials locally; never put them in source. The scripts sign, notarize,
+and staple the appropriate artifacts. Verify code signature, notarization,
+Gatekeeper assessment, DMG integrity, and checksums for the actual release.
 
-Current App output and future DMG output:
+Ordinary local `dist:mac` output is not equivalent to a signed, notarized release.
+Published 1.0.3 macOS packages are signed and notarized. Its Windows installers
+are unsigned; do not label a successful Windows build as signed.
 
-```text
-dist/mac-arm64/ClaraCore Desktop.app
-dist/ClaraCore-Desktop-1.0.3-arm64.dmg
-dist-lite/mac-arm64/ClaraCore Desktop.app
-dist-lite/ClaraCore-Desktop-1.0.3-lite-arm64.dmg
-```
+## Freeze and publish
 
-Only artifacts built with the signed release commands and accepted by the
-validation contract below may be uploaded to a public release. Packages built
-with the unsigned local `dist` commands remain test artifacts.
-
-Run `npm run test:package:lite` after creating the unpacked Lite App. The check
-validates the Lite package independently; when a matching unpacked Full App is
-also present, it additionally verifies the Full runtime boundary and the
-Full-to-Lite size saving.
-
-The previous `0.5.8` Full/Lite arm64 DMGs and Windows x64 NSIS installers remain
-available in GitHub Release `v0.5.8`.
-
-## Manual Release Update Channel
-
-The manual update check reads the latest public stable GitHub Release, then
-opens or copies the generic Release page so the user chooses an available
-flavor and platform. Local matrix builds use `npm run dist:mac`, `npm run
-dist:mac:lite`, `npm run dist:win`, and `npm run dist:win:lite`. A public signed
-macOS Lite asset must use `npm run release:mac:lite`; do not upload the ad-hoc
-local `dist:mac:lite` artifact. Use these names when a release includes the
-corresponding platform/flavor:
-
-```text
-ClaraCore-Desktop-<version>-arm64.dmg
-ClaraCore-Desktop-<version>-lite-arm64.dmg
-ClaraCore-Desktop-<version>-x64-Setup.exe
-ClaraCore-Desktop-<version>-lite-x64-Setup.exe
-```
-
-All four distribution scripts pass `--publish never` to electron-builder.
-Creating the tag and GitHub Release is explicit. The Windows workflow may
-publish its verified installers only when manually dispatched with an existing
-`publish_tag`; pull-request builds and ordinary dispatches never publish.
-
-macOS artifacts are built and validated locally. Windows Full and Lite
-artifacts are built by the manually triggered
-`.github/workflows/build-windows-release.yml` workflow on `windows-latest`. The workflow
-must run the packaged Full built-in embedding smoke before its installers are
-accepted, so incomplete `sharp`/libvips native DLL packaging fails in CI instead
-of on a tester's machine.
-
-The app opens the validated GitHub Release URL in the system browser. If the API
-check fails, the fixed `releases/latest` address remains available to open or
-copy. It does not download, execute, mount, replace, relaunch, or silently
-install anything.
-Run `npm run test:update` for mocked release and Settings UI coverage before
-performing a live published-Release check.
-
-Earlier release assets and checksums remain documented in their versioned
-release notes. The `v0.6.14` release publishes macOS Apple Silicon and Windows
-x64 Full/Lite artifacts plus portable per-platform checksum files.
-
-## Gateway In Packaged Mode
-
-The running app exposes Streamable HTTP MCP at the configured localhost port.
-It supports MCP 2026-07-28 and 2025-06-18. Agent Access supplies the URL, Bearer
-token, and caller headers. Stdio and the old process launch configuration are
-retired; `--gateway` exits with a migration error before opening windows or data.
-
-The internal maintenance CLI remains packaged at `app.asar/core/cli.js`. Run it
-with the bundled executable in `ELECTRON_RUN_AS_NODE=1` mode, and explicitly set
-`CLARACORE_DESKTOP_USER_DATA_DIR` to the intended user-data directory. It is not
-an Agent transport or a reason to stop the running Desktop.
-
-Default macOS data: `~/Library/Application Support/claracore-desktop/data`.
-The HTTP packaged smoke runs an isolated, no-window test host using the actual
-ASAR Gateway code. Old release evidence below describes its original version,
-not current transport support.
-
-## Validation Status
-
-Current released-artifact evidence is recorded in
-[1.0.3 verification](validation/2026-10-26-v1.0.3-release.md).
-
-### `0.6.12` Full/Lite release checkpoint
-
-Validated locally, in Windows CI, and from freshly downloaded public GitHub
-assets:
-
-- source, lockfile, bundle, Agent Guide, and packaged Gateway versions are
-  `0.6.12`;
-- source, Gateway, Memory Controller, Lite, update, responsive-layout, and UI
-  checks pass;
-- macOS Full built-in embedding, Full/Lite package boundaries, packaged
-  settings, update UI, and both isolated packaged Gateway smokes pass;
-- both Apps and DMGs are Developer ID signed, Apple-notarized, stapled,
-  Gatekeeper accepted, and DMG-verified;
-- Windows workflow `32946450594` validates both installers, a real packaged
-  Full embedding, package boundaries, and portable LF checksums;
-- all six public release assets were downloaded again and their sizes and
-  SHA-256 hashes matched the published manifests and GitHub metadata.
-
-### `0.6.10` Full/Lite release checkpoint
-
-Validated locally, in Windows CI, and from downloaded GitHub assets:
-
-- source, lockfile, bundle, Agent Guide, and packaged Gateway versions are
-  `0.6.10`;
-- source, context-budget, Gateway, update, responsive-layout, and UI checks
-  pass;
-- macOS Full built-in embedding, Full/Lite package boundaries, and both
-  isolated packaged Gateway smokes pass;
-- both Apps and DMGs are Developer ID signed, Apple-notarized, stapled,
-  Gatekeeper accepted, and DMG-verified;
-- Windows workflow `31687116961` validates both installers, a real packaged
-  Full embedding, package boundaries, and portable LF checksums;
-- all six release assets were downloaded again and their sizes and SHA-256
-  hashes matched the published manifests and GitHub metadata.
-
-### `0.6.9` Full/Lite release checkpoint
-
-Validated locally and after publication:
-
-- source, lockfile, bundle, and packaged Gateway versions are `0.6.9`;
-- source smoke, Gateway, Memory Controller, Lite, update, responsive-layout,
-  and UI polish checks pass;
-- macOS Full built-in embedding, Full/Lite package boundaries, and packaged
-  Gateway smokes pass;
-- App and DMG notarization submissions are accepted, both tickets validate,
-  and Gatekeeper reports `Notarized Developer ID`;
-- the Windows workflow builds and validates Full/Lite installers, including a
-  real packaged Full embedding generation;
-- `hdiutil verify` and published-platform checksum verification pass.
-
-### `0.6.7` Lite release checkpoint
-
-Validated locally and after publication:
-
-- source, lockfile, bundle, and packaged Gateway versions are `0.6.7`;
-- the source smoke, Gateway, Memory Controller, Lite, and update checks pass;
-- the 292.5 MiB Lite package boundary and packaged Gateway smoke pass;
-- App and DMG notarization submissions are accepted, both tickets validate,
-  and Gatekeeper reports `Notarized Developer ID`;
-- `hdiutil verify` passes and the published DMG matches `SHA256SUMS.txt`.
-
-### `0.6.5` Lite release checkpoint
-
-Validated locally for installation testing:
-
-- source version, lockfile version, bundle version, and packaged Gateway version
-  are `0.6.5`;
-- `npm run check`, `npm run test:home`, `npm run test:lite`, and `npm run
-  test:update` pass;
-- the Lite package boundary check passes at 293.3 MiB and confirms the package
-  does not contain the Full built-in embedding dependency closure;
-- the arm64 DMG passes `hdiutil verify`, and the mounted application reports
-  version `0.6.5`;
-- the mounted packaged Gateway smoke passes with the Memory Controller off by
-  default, and the mounted Lite settings UI covers fresh and migrated data;
-- the final release artifact is Developer ID signed, Apple-notarized, stapled,
-  Gatekeeper accepted, checksum-verified after upload, and published as
-  `v0.6.5`.
-
-### Historical unpacked `0.6.4` Lite checkpoint
-
-Validated locally before the public release:
-
-- bundle version and packaged metadata are `0.6.4` and `lite`;
-- the executable is arm64 and the App is 293.0 MiB;
-- built-in model resources, Xenova, ONNX Runtime, Sharp, and unpacked production
-  dependencies are absent;
-- packaged Lite settings and Trace UI smokes pass;
-- Trace shows the persisted Memory Controller observe mode as `仅观察`;
-- packaged stdio Gateway smoke passes and reports version `0.6.4`;
-- no DMG, signing, notarization, tag, GitHub Release, update publication, or
-  installation was performed.
-
-Validated locally for the packaged `0.6.3` Lite checkpoint:
-
-- bundle version and build flavor are `0.6.3` and `lite`;
-- the unpacked application is 293.0 MiB;
-- the executable is arm64 and the package excludes built-in model resources
-  and the Full embedding dependency closure;
-- packaged Lite settings and update UI smokes pass;
-- source Memory Controller, Gateway, overview, InnerLife, and repository checks
-  pass;
-- the DMG passes `hdiutil verify`, and its mounted Gateway opens an online
-  backup copy of the 45 MiB product database with all six migrations present
-  and `quick_check=ok`;
-- the generic Full-vs-Lite package-size comparator was not run because no
-  `0.6.3` Full artifact was built.
-
-Validated for `0.5.8`:
-
-- source checks pass: `npm run check`, `npm run test:smoke`, `npm run
-  test:trace`, `npm run test:home`, `npm run test:home:performance`, `npm run
-  test:agent-access`, `npm run test:ux:polish`, `npm run test:update`, and `npm
-  run test:lite`
-- packaged macOS Full and Lite applications report version `0.5.8`
-- both macOS DMGs pass `hdiutil verify`
-- macOS Full built-in Memory embedding generates a real 512-dimensional vector
-- macOS package boundary: Full `532.1 MiB`, Lite `292.7 MiB`, saving `239.4
-  MiB`
-- packaged macOS Full Gateway and update UI smokes pass; packaged Lite Trace UI
-  smoke passes
-- GitHub Actions run
-  [29558439711](https://github.com/xiaomao361/claracore-desktop/actions/runs/29558439711)
-  builds both Windows NSIS installers from a clean Windows dependency install
-- packaged Windows Full built-in Memory embedding generates a real
-  512-dimensional vector
-- Windows package boundary: Full `654.2 MiB`, Lite `372.0 MiB`, saving `282.1
-  MiB`
-- downloaded Windows artifacts match the SHA-256 checksums generated by the
-  Windows runner
-
-Previously validated packaging behavior retained by this build:
-
-- packaged `.app` starts as a Gateway with `--gateway`
-- packaged Desktop UI opens and shows Agent Setup with `--gateway`
-- packaged Desktop UI shows the Home page first-run check
-- packaged app includes `assets/icon.icns` as the macOS app icon, with matching SVG/PNG sources under `assets/`
-- packaged Desktop UI can create and list a product database backup
-- packaged Desktop backup creates both a `.db` file and a sidecar `.json` manifest
-- packaged Desktop backup shows `verified` and `quick_check: ok` after export
-- packaged Desktop can restore a verified backup after confirmation and the `RESTORE` phrase
-- packaged Desktop shows a current-vs-target restore preview before execution
-- packaged Desktop restore preview shows Memory records that will return and records that will be removed
-- `npm run dist:mac` for `0.5.1`
-- `hdiutil verify` reports the v0.5.1 DMG checksum as valid
-- the last installed Streamable HTTP MCP validation used v0.5.0 and recorded separated
-  `agentId`, `clientId`, and `conversationId` trace context
-
-Known remaining distribution work:
-
-- Complete real Windows x64 installation acceptance.
-- Validate the real installed Windows Full build against a local Ollama model.
-- Consider automatic update installation only after per-platform signing and
-  the release workflow are stable.
+Freeze a source commit and version before packaging. Compare packaged source
+and assets with that commit, check Full/Lite resource differences, run isolated
+packaged runtime checks, and publish the matching installers and SHA-256
+manifests together. Never move an existing release tag to cover later docs.
+See [Release process](VERSION_BRANCHING.md).

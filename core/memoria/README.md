@@ -96,12 +96,12 @@ retained and only participate when they match the query model.
 Embedding completion writes check the saved configuration in SQL, so a delayed
 success or failure from an old configuration cannot overwrite queued rebuild work.
 
-### Experimental SQLite vector projection (0.7.0 branch)
+### SQLite vector projection
 
-`sqlite-vec` is the default engine in the personal 0.7.0 Lite package.
-`CLARACORE_DESKTOP_VECTOR_ENGINE=legacy` explicitly selects the old engine.
-The environment switch is not a saved user setting. Large-corpus performance
-acceptance remains incomplete; this default is approved for personal small-corpus use.
+`sqlite-vec` is the default projection engine. The explicit environment override
+`CLARACORE_DESKTOP_VECTOR_ENGINE=legacy` selects the older engine; it is not a
+saved setting. Large-corpus cold rebuild cost should be measured for the actual
+workload before making performance claims.
 
 The authoritative `memory_embeddings.vector_json` rows stay in the main DB.
 Migration 009 adds ordinary SQLite revision triggers, which also observe writes
@@ -121,7 +121,7 @@ limit. Source JSON scores are refined in double precision near the cutoff; the e
 Invalid ready vectors produce classified issues; pending embeddings are excluded.
 Extension, rebuild and source errors preserve keyword results with `error` and
 `vectorSearch.status=failed`; Agent summary search continues to expose `degraded`.
-No automatic legacy fallback hides an experimental-engine failure.
+No automatic legacy fallback hides a projection-engine failure.
 
 Rebuild validation stages only IDs and classified issues in its temporary table;
 valid vectors are read from the locked source when inserting the projection.
@@ -129,8 +129,7 @@ Migration 011 records the latest revision per memory ID (including deletion
 tombstones), and synchronizes only changed IDs after the first build. Tombstones
 are retained so independent process caches cannot miss deletions; storage grows
 with distinct IDs ever changed, not with every update. Reopening still starts
-with an empty cache. Large-space cold rebuild cost remains unresolved; local
-trial readiness is measured separately against the actual small corpus.
+with an empty cache. Measure large-space cold rebuild cost separately from warm-query latency.
 
 Run `npm run test:sqlite-vec:projection` for Node/CLI integration checks.
 `npm run baseline:sqlite-vec` writes a synthetic 1k/10k/50k report to

@@ -1,0 +1,44 @@
+name: Project Website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - website/**
+      - docs/images/**
+      - assets/brand/**
+      - scripts/build-website.js
+      - package.json
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Build static website
+        run: node scripts/build-website.js
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site-dist
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

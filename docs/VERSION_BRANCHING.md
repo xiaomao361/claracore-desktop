@@ -1,237 +1,30 @@
-# Version And Branching
+# Versions and releases
 
-## Current Truth
+`package.json` is the application version source. Stable releases use a matching
+`vX.Y.Z` tag and a GitHub Release with platform/flavor installers and checksums.
+The current stable release is [1.0.3](https://github.com/xiaomao361/claracore-desktop/releases/tag/v1.0.3).
 
-- 2026-10-26: `1.0.3` is publicly released as Latest, non-prerelease at
-  17:41:04 Asia/Shanghai. Tag `v1.0.3` points to `3f12e0b`; the four macOS arm64 /
-  Windows x64 Full/Lite installers and two platform manifests are published.
-  macOS packages are Developer ID signed and Apple-notarized; Windows installers
-  are unsigned. The user reports no observed issue during continued local Lite
-  use. See [notes](RELEASE_NOTES_V1.0.3.md) and
-  [release verification](validation/2026-10-26-v1.0.3-release.md).
+## Source and branch policy
 
-- 2026-10-22: local source is `1.0.3` for pending Memory embedding audit
-  visibility and post-processing maintenance snapshots. A local macOS arm64
-  Lite validation package is built, installed by the user and independently
-  verified through live runtime and real-data read-only audit. UI and natural
-  scheduling acceptance remain pending. No public release.
-  See [1.0.3 notes](RELEASE_NOTES_V1.0.3.md) and
-  [package evidence](validation/2026-10-22-v1.0.3-lite-package.md), plus
-  [installed verification](validation/2026-10-22-v1.0.3-installed.md).
+`main` is the public default branch. Work on a focused branch, run required
+checks, and integrate the intended change. Local branches are development
+state, not release channels. Documentation and website changes do not require
+an application version bump.
 
-- 2026-10-22: local source is `1.0.2` for MCP catalog and full-capability
-  consolidation. Default/core-compat/full discovery is 25/38/83, with 16
-  transitional old-name adapters. The local macOS arm64 Lite validation package
-  is built and package-verified; installation and real-client acceptance remain
-  with the user. No tag/public release or installed-app replacement.
-  See [1.0.2 notes](RELEASE_NOTES_V1.0.2.md) and
-  [package evidence](validation/2026-10-22-v1.0.2-lite-package.md).
+## Release checklist
 
-- 2026-10-21: local source is `1.0.1` for InnerLife candidate retention and
-  per-Agent switch consistency. Package, lockfile and Agent Guide are aligned.
-  A local macOS arm64 Lite trial package is verified and installed by the user;
-  real upgrade and non-UI checks passed. It is not tagged or publicly released. See
-  [1.0.1 notes](RELEASE_NOTES_V1.0.1.md).
-- 2026-10-20: `1.0.0` is publicly released, tag `v1.0.0` at `252e258`.
-  macOS arm64 and Windows x64 Full/Lite installers and both platform checksum
-  manifests are published. See [release notes](RELEASE_NOTES_V1.0.0.md) and
-  [verification](validation/2026-10-20-v1.0.0-release.md).
-- 2026-10-19: the user approved promoting the GUI and brand checkpoint to
-  `1.0.0`. Product, lockfile and reviewed Agent Guide versions are aligned.
-  See [1.0.0 notes](RELEASE_NOTES_V1.0.0.md) and the
-  [local Lite package receipt](validation/2026-10-19-v1.0.0-lite-package.md).
-  This is a local checkpoint; no public release was performed.
-- The [1.0 GUI](design/V1_GUI.md) was first implemented on the
-  0.9.2 source version and packaged as the
-  [GUI Lite trial](validation/2026-10-19-gui-lite-package.md) `gui-20261019.1`;
-  the user provided a favorable overall visual observation and requested
-  four-module convergence plus a compact Agent presence signal. The local
-  follow-up build is [`gui-20261019.2`](validation/2026-10-19-gui-lite-package-2.md);
-  the third local build [`gui-20261019.3`](validation/2026-10-19-gui-lite-package-3.md) adds concurrent Agent signatures and
-  source-preserving topic typography. The user reported the GUI substantially
-  improved, retained the Agent icon scheme, and approved a limited
-  [product brand refresh](design/V1_BRAND_REFRESH.md) for `gui-20261019.4`.
-  The user subsequently reported the result looked good and approved the
-  1.0.0 version. Detailed installed-window acceptance remains separate.
+1. Review the final scope and update version, changelog, and user-facing notes.
+2. Run source, relevant domain, and platform checks against the frozen commit.
+3. Build Full/Lite installers; verify package contents, signatures where
+   supported, runtime boundaries, and checksums.
+4. Tag the exact source commit. Publish installers, SHA-256 manifests, and
+   concise release notes describing behavior and material platform limitations.
+5. Read back the public release, tag, and asset metadata; verify downloads
+   against the published checksums.
 
-- `main` is the working Desktop line.
-- `codex/v0.8.0-local-knowledge` is the current local development branch for
-  the Knowledge collection, reading, retrieval, and recall work. See the
-  [v0.8.0 plan](V0.8.0_LOCAL_KNOWLEDGE_PLAN.md). This work shipped as 0.8.1; see [release notes](RELEASE_NOTES_V0.8.1.md).
-- `codex/v0.7.0` was the development branch for the sqlite-vec
-  feasibility and MCP compatibility work. See [the implementation plan](V0.7.0_DEVELOPMENT_PLAN.md).
-  It corrects legacy version negotiation and adds a gated SQLite vector
-  projection with native-resource packaging. The personal 0.7.0 Lite package defaults to sqlite-vec. Modern HTTP MCP now passes official SDK 2.0.0 and isolated package
-  checks; actual Host acceptance is pending. `0.7.0-preview.2` is a local unsigned
-  Lite trial artifact, not the public release.
-- `package.json` is the product-version source through `core/version.js`.
-- Current source version: `1.0.3` (public release). See [notes](RELEASE_NOTES_V1.0.3.md).
-- Version sequence confirmed by the user: this redesign is `0.9.0`, followed by the fix checkpoint `0.9.1`. Earlier understanding test DMGs accidentally retained `0.8.4`; their metadata and checksums remain historical evidence.
-- 0.7.2 retires stdio, keeps both HTTP protocol versions, and reserves CLI for internal maintenance. See [migration](HTTP_MCP_MIGRATION.md).
-- 0.7.7 adds bounded InnerLife state selection, output novelty and evidence review. See [plan](V0.7.7_INNERLIFE_PLAN.md) and [notes](RELEASE_NOTES_V0.7.7.md).
-- Current public release: `1.0.3`.
-- Tag `v1.0.3` is the current stable GitHub Release at `3f12e0b`.
-- Previous public release: `1.0.0` at `252e258`.
-- `0.8.1` at `c343e66` is the previous stable GitHub Release.
+Keep previously published tags immutable. A later documentation commit need
+not equal the packaged-source tag. Build success, installation, visual
+acceptance, and long-running user experience are distinct verification layers.
 
-`0.6.14` was the previous public Full/Lite release for verified safety-backup gates,
-full-catalog semantic retrieval with model isolation, accurate restore-preview
-counts, and routine source CI. macOS Apple Silicon DMGs are signed and notarized;
-Windows x64 installers are CI/package-verified and unsigned.
-See [v0.6.14 Release Notes](RELEASE_NOTES_V0.6.14.md).
-
-`0.6.13` is a previous local trial checkpoint for Memoria search quality and graph
-readability. It prioritizes explicit keyword hits, applies a semantic relevance
-floor and 10-result cap, distinguishes the memory map from explicit-link
-relationship clusters, and turns state chains into an overview-first vertical
-replacement history. See
-[v0.6.13 Release Notes](RELEASE_NOTES_V0.6.13.md).
-
-`0.6.12` was the previous public release. It preserves hydrated Shared Line
-catalogs across unrelated scoped refreshes, keeps session afterthoughts out of
-the shareable queue until generated content is complete, preserves retry and
-terminal-failure audit behavior, and includes the installed-app-only
-login-startup preference. See
-[v0.6.12 Release Notes](RELEASE_NOTES_V0.6.12.md).
-
-`0.6.11` was an unpublished login-startup development checkpoint. See
-[v0.6.11 Release Notes](RELEASE_NOTES_V0.6.11.md).
-
-`0.6.10` was the previous public release. It makes context delivery
-minimum-sufficient by default, adds server-enforced catalog projections and
-one-object expansion paths, light write acknowledgements, bounded InnerLife
-and trace reads, and a final Gateway response ceiling. It ships Developer ID
-signed and Apple-notarized macOS Apple Silicon Full/Lite DMGs plus verified
-Windows x64 Full/Lite installers. See
-[v0.6.10 Release Notes](RELEASE_NOTES_V0.6.10.md).
-
-`0.6.9` publishes the unified Desktop design language, direct human-facing
-copy, versioned searchable Agent Guide, single-model InnerLife settings, and
-clearer Memory/Trace/Logs evidence boundaries. It is a Developer ID signed and
-Apple-notarized macOS Apple Silicon Full/Lite release with Windows x64
-Full/Lite installers. Intel macOS and Mac App Store packages are outside this
-release. See
-[v0.6.9 Release Notes](RELEASE_NOTES_V0.6.9.md).
-
-`0.6.8` was a local design checkpoint and was never published.
-
-Older release notes, completed plans, and checkpoint-specific handoffs are
-historical evidence under [archive](archive/README.md). They are not current
-implementation or release instructions.
-
-## Isolated Development
-
-Use:
-
-```bash
-npm run start:next
-```
-
-The launcher sets separate product-data and Electron user-data roots:
-
-```text
-CLARACORE_DESKTOP_DATA_DIR=~/Library/Application Support/claracore-desktop-next/data
-CLARACORE_DESKTOP_USER_DATA_DIR=~/Library/Application Support/claracore-desktop-next
-CLARACORE_DESKTOP_TEST_INSTANCE=1
-```
-
-Desktop rejects a test instance without an explicit user-data root. Random-port
-Gateway tests enforce the same boundary so `agent-gateway.json` cannot fall
-through to the daily-use Application Support directory.
-
-## Checkpoint Rules
-
-- Keep a small validated fix at the existing development version unless the
-  accumulated change set is worth a new test checkpoint.
-- A local checkpoint may update code, tests, and docs without creating a tag,
-  release, package, or remote push.
-- Record current behavior in maintained contracts, not a new session handoff.
-- Move completed plans and one-off research to `docs/archive/`.
-
-## Release Rules
-
-- Version changes update `package.json` and `package-lock.json` together.
-- Every version change also reviews the Agent Guide and explicitly updates
-  `DOCS_RELEASE` in `core/gateway/docs.js`. `npm run test:context-budget`
-  rejects a product/guide version mismatch.
-- A public release requires release notes, focused tests, the relevant package
-  checks, a tag/release entry, and explicit authorization to push/publish.
-- `收口` means docs, validation, commit, push, and local/remote parity; explicit
-  boundaries such as “不提交远程” override that shortcut.
-- Packaging and deployment are separate from a local code checkpoint.
-
-Current packaging commands and artifact checks live in
-[macOS Packaging](mac-packaging.md). Current public-release details live in
-[v1.0.0 Release Notes](RELEASE_NOTES_V1.0.0.md).
-
-## Current Release
-
-`1.0.0` is the current public release, tagged `v1.0.0` at `252e258`.
-Published 2026-10-20 with macOS arm64 and Windows x64 Full/Lite installers
-and two platform SHA-256 manifests. macOS packages are signed, notarized,
-stapled and Gatekeeper accepted; Windows installers remain unsigned.
-See [release notes](RELEASE_NOTES_V1.0.0.md).
-
-### Previous 0.8.1 Release
-
-`0.8.1` was the previous public release, tagged `v0.8.1` at `c343e66`.
-Published 2026-09-29 with macOS arm64 and Windows x64 Full/Lite installers
-and two platform SHA-256 manifests. macOS applications and DMGs are signed,
-notarized, stapled and Gatekeeper accepted; Windows installers remain unsigned.
-All four downloaded assets match their manifests. Linux source CI `36545676475`
-and Windows build/package CI `36545686722` passed. See [release notes](RELEASE_NOTES_V0.8.1.md).
-
-### Previous 0.7.7 Release
-
-`0.7.7` was the previous public release, tagged `v0.7.7` at `745addc`.
-Published 2026-09-14 with all four installers and two verified checksum manifests.
-Linux source CI: `34816511183`; Windows build/package CI: `34816656613`.
-`0.6.14` is the previous public release at `db03c42`.
-`0.6.13` remains an unpublished local Lite trial checkpoint.
-Its macOS Apple Silicon Full/Lite DMGs are Developer ID signed,
-Apple-notarized, stapled, and Gatekeeper accepted. Its Windows x64 Full/Lite
-installers are built and package-verified on `windows-latest`. All four assets
-are published with portable per-platform SHA-256 manifests.
-
-- 2026-08-12: the complete human UI adopts one design language; the Agent Guide
-  is versioned and searchable; InnerLife settings use one migrated model.
-- 2026-08-13: Agent context delivery adopts minimum-sufficient defaults,
-  progressive one-object expansion, server-side projections, and byte guards.
-- 2026-08-13: Agent-facing boolean names, secret-safe status, trace evidence,
-  core-module filters, dialogs, Memoria paging, and compact responsive layouts
-  are aligned under the same contract and visual language.
-- 2026-08-14: Settings adds an operating-system-backed login-startup preference
-  for installed macOS and Windows builds.
-- 2026-08-25: Session afterthoughts stay drafting until generated content is
-  ready, and legacy unfinished placeholders are removed from share candidates.
-- 2026-08-26: Unrelated scoped refreshes preserve hydrated Shared Line Agent
-  context and archived-line catalogs; the Full/Lite matrix is published as
-  `v0.6.12`.
-- 2026-08-28: Local `0.6.13` trial checkpoint tightens memory search quality and
-  separates the memory map, relationship-network, and state-chain reading
-  models.
-- 2026-09-07: `v0.6.14` publishes the Full/Lite macOS and Windows matrix with
-  recovery safety, semantic retrieval, restore-preview fixes, and source CI.
-  All six assets were downloaded and checksum-verified after upload.
-- See [v0.6.14 Release Notes](RELEASE_NOTES_V0.6.14.md).
-- See [v0.6.13 Release Notes](RELEASE_NOTES_V0.6.13.md).
-- See [v0.6.12 Release Notes](RELEASE_NOTES_V0.6.12.md).
-- See [v0.6.11 Release Notes](RELEASE_NOTES_V0.6.11.md).
-- See [v0.6.10 Release Notes](RELEASE_NOTES_V0.6.10.md).
-- See [v0.6.9 Release Notes](RELEASE_NOTES_V0.6.9.md).
-
-### Previous checkpoints
-
-- `v0.6.10` was the previous signed, notarized Full/Lite public release.
-- `v0.6.9` was an earlier signed, notarized Full/Lite public release.
-- `0.6.8` was a local design checkpoint and was never published.
-- `v0.6.7` was the newest signed, notarized public release before `v0.6.9`.
-- `0.6.6` was an unpublished source and local-package checkpoint for the
-  context-budget work later released in `0.6.7`.
-
-## History
-
-Detailed checkpoint history through the start of `0.5.7` is preserved in
-[archive/VERSION_HISTORY_PRE_V0.5.7.md](archive/VERSION_HISTORY_PRE_V0.5.7.md).
-Older release notes and completed release/build handoffs are indexed from
-[archive/README.md](archive/README.md).
+See [Packaging](mac-packaging.md), [Changelog](../CHANGELOG.md), and
+[GitHub Releases](https://github.com/xiaomao361/claracore-desktop/releases).

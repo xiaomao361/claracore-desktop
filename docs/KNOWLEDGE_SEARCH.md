@@ -26,17 +26,5 @@ Ollama 使用 `/api/tags` 的模型 digest 识别版本，`/api/embed` 设置 `t
 
 `index_missing`、`index_stale`、`index_corrupt`、`model_changed`、`model_unavailable`、`model_disabled`、`local_model_required`、`invalid_embedding` 与正常 `no_results` 分开。结构状态中的 semantic=current 仅表示缓存对应当前正文；实际查询还验证模型与向量。
 
-HCT-2026-09-08-01：混合失败显式 partial，不能静默当作成功或无结果；构建失败不能覆盖活动索引。
-HCT-2026-09-08-02：长文尾段完整参与编码，小节仍以当前 MD 为准，来源不跨小节挪用。
 
 `npm run test:knowledge` 包括确定性向量、临时 Ollama 协议服务和内存 DOM 检查；`npm run test:knowledge:semantic` 另跑真实包内模型概念排序。测试使用临时目录并清理服务；这些证据不替代真实语料质量、窗口交互及安装包验收。
-
-## 0.8.1 真实语料基准
-
-`node scripts/knowledge-quality-baseline.js --root /path/to/knowledge --cases /path/to/private-cases.json --model bge-m3:latest`
-
-可选 `--seed-index /path/to/semantic.json` 只复制既有向量到临时目录复用；所有构建写入均在临时目录，结束清理，不修改知识正文或运行中索引。模型固定为显式指定的已安装本机 Ollama 模型，不下载或请求外网。
-
-样例依据当前库内容人工选定，包含 10 条文字检索、6 条自然语言语义检索、4 条无结果查询。正例检查期望小节是否进入前三项，负例要求正常 no_results；模型失败、partial、源变化均不计通过。不是独立盲测或总体准确率，也不证明对话已采用知识。首次结果见 [0.8.1 说明](RELEASE_NOTES_V0.8.1.md)。
-
-案例 JSON 为数组，每项包含 `id`、`query`、`mode`、`expected`（期望小节指针数组；空数组表示应无结果），可选 `textMatch`。真实库案例和逐项结果保留在本地，不随公开源码或安装包分发。

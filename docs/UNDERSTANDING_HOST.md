@@ -1,12 +1,6 @@
-# 共同理解宿主事件桥与验收
+# Understanding host bridge
 
-本仓库已提供可运行的事件适配器与命令行桥。**尚未安装到当前 Codex/其他宿主**，
-也没有替换 Memory-only 自动上下文。接入真实宿主必须先确认真实事件载荷、原文
-出处和稳定 ID，再单独授权安装/配置；仓库 fixture 不能证明宿主会发这些事件。
-
-用户后续已授权制作本地 Lite 安装测试包，由用户安装、Agent 做只读运行验证。
-这不安装宿主事件桥；产物和验证边界见
-[2026-10-15 本地包回执](validation/2026-10-15-understanding-lite-package.md)。
+The explicit adapter is disabled by default. A host integration must supply real events, permitted source evidence, and stable IDs. Installing or enabling a bridge is a separate host configuration step; an MCP connection alone does not enable capture.
 
 ## 会话身份、授权和增量提交
 
@@ -55,7 +49,7 @@ JSON 事件。配置示例中的路径和身份应由宿主设置；默认 disab
 
 endpoint 只允许字面 loopback `/mcp`，无 URL 凭据/query/hash。token 只从显式
 环境变量读取，不自动发现凭据或读取全局配置，不支持把明文 token 写进配置。
-桥会检查新工具是否已在目标服务中提供；本轮没有重启或替换运行中的旧服务。
+桥会检查新工具是否已在目标服务中提供；目标服务必须实际提供所需工具。
 
 宿主按实际能力接入：
 
@@ -63,7 +57,6 @@ endpoint 只允许字面 loopback `/mcp`，无 URL 凭据/query/hash。token 只
 | --- | --- | --- |
 | turn_started | 准备有界上下文；allowModel 显式允许语义选线 | 不声称宿主已注入/使用 |
 | checkpoint | 按稳定 turnId/checkpointId 保存新增证据并提交 | 先写 outbox；失败保留可恢复位置 |
-| turn_completed | 提交本轮增量，不等整个聊天结束 | 没有真实原文或稳定 ID 则 unsupported |
 | conversation_ended | 有可靠回调时补最后增量；空增量不重复保存 | 无回调明确报告，绝不按空闲推断结束 |
 | goal_continuation | 跳过无新增人类消息的自动继续事件 | 不重复收集或伪造用户原文 |
 
@@ -121,19 +114,3 @@ node scripts/evaluate-understanding.mjs --existing-data-root /absolute/existing/
 确认决定，已验证会被验收器检出。通过不代表通用语义可靠、真实宿主调用完整或
 业务验收完成。应继续人工检查“提炼范围是否扩大、资料是否被当作用户立场、
 是否漏掉未决项、子任务完成是否错误关闭父目标”等实际输出。
-
-2026-10-15 经用户授权已执行现有 `deepseek-v4-flash` 的首批 8 次合成调用：
-自动检查 7/8 通过，1 次请求失败；审阅还识别了 2 份输出的正文/理由缺陷并修正
-规划引导。预算已用完，没有追加调用；修正后模型行为尚未复验。详见
-[逐例审阅与原始回执](validation/2026-10-15-understanding-model-review.md)。
-验收器现区分超时、HTTP、空响应、连接、响应 JSON 与通用失败，保留安全类别，
-不记录 provider 错误正文；该改动不能恢复旧回执丢失的具体失败原因。
-
-## 已验证的层次
-
-`npm run test:understanding` 运行真实临时 SQLite/Markdown、认证本地 HTTP、
-宿主 outbox 重启/发送前后失败、三条材料消费路径、共同线匹配与目录竞争，以及
-替身模型的验收器测试。现有配置只读加载器在临时数据库上检查前后字节一致，
-私有业务记忆标记未进入请求或报告。Native SQLite 与 CLI 回退分开检查。
-这些本地测试不安装宿主、不调用真实外部模型，不操作用户 UI 或运行中的应用。
-另行授权的首批真实模型调用及其有限结论见上方验收回执。

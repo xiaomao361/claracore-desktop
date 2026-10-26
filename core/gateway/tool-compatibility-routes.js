@@ -1,6 +1,6 @@
 // Only wire adapters live here. Domain policies and state transitions belong
 // to the canonical handlers. Removal requires the migration gates documented
-// in docs/design/2026-10-22-mcp-capability-consolidation.md, never a timer.
+// in docs/MCP_COMPATIBILITY.md, never a timer.
 const LEGACY_TOOL_ROUTES = Object.freeze({
   innerlife_submit_fact: { name: "innerlife_submit_inbox", fixed: { source: "fact" } },
   innerlife_submit_continuity: { name: "innerlife_submit_inbox", fixed: { source: "continuity" } },

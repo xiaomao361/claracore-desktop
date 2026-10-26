@@ -28,6 +28,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y sqlite3
+      - name: Public docs and website checks
+        run: npm run test:website
       - name: Source and isolated core regression
         run: npm run test:core
       - name: Gateway, InnerLife and maintenance regression

@@ -1,8 +1,4 @@
-// v0.6.6 default-surface byte ceilings.
-//
-// These began as the acceptance numbers in
-// docs/archive/V0.6.6_CONTEXT_BUDGET_PLAN.md and are now enforced by the
-// maintained docs/CONTEXT_DELIVERY.md contract.
+// Default-surface byte ceilings maintained by docs/CONTEXT_DELIVERY.md.
 // They bound DEFAULT reads only. Full-profile manifests, explicit detail reads,
 // and diagnostic payloads are measured and reported but never share these
 // ceilings; storage richness is not delivery richness.
