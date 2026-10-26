@@ -76,6 +76,8 @@ async function main() {
   };
   const { toolDefinitions, callToolBody } = createGatewayTools({
     serverInfo: { name: "claracore-desktop", version: "test" },
+    // Controller tools belong to the explicit specialist catalog.
+    toolProfile: () => "full",
     currentMcpAgentId: () => caller.agentId,
     currentCallerContext: () => caller,
     gatewayLaunchConfig: () => ({ displayCommand: "test", source: "test" }),
