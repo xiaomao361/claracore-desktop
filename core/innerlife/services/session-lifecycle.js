@@ -65,27 +65,24 @@ function createInnerLifeSessionLifecycleService(inputPorts = {}) {
   const ports = Object.freeze({ ...inputPorts });
 
   async function buildStartPacket(database, profile, session, briefing, options = {}) {
-    const [pendingShares, approvedShares] = await Promise.all([
-      ports.listShares(database, "pending", 20, profile.agent_id),
-      ports.listShares(database, "approved", 20, profile.agent_id)
-    ]);
+    const hasLivePendingSnapshot = Array.isArray(briefing.pendingShares) && Number.isSafeInteger(briefing.pendingSharesTotal);
+    const pendingShares = hasLivePendingSnapshot ? briefing.pendingShares
+      : await ports.listShares(database, "pending", 100, profile.agent_id);
+    const pendingSharesTotal = hasLivePendingSnapshot ? briefing.pendingSharesTotal : pendingShares.length;
+    const approvedShares = pendingShares.length ? [] : await ports.listShares(database, "approved", 100, profile.agent_id);
     const selected = pendingShares.find((share) => share.agent_id === profile.agent_id)
       || approvedShares.find((share) => share.agent_id === profile.agent_id)
       || null;
     const sharePlan = selected
       ? {
           selected: true,
-          decision: "share_now",
+          decision: "review_first",
           reason: selected.status === "pending"
-            ? "A thought is waiting for a fitting moment to be shared."
-            : "A previously approved thought is available for this agent.",
+            ? "A thought is waiting. Review the real conversational register before sharing; selection is not a timing decision."
+            : "An approved thought is available. Review the real conversational register before sharing; approval is not a timing decision.",
           delivery_style: "natural",
           share: compactShare(selected),
-          suggested_opening: String(selected.body || "")
-            .split("\n")
-            .map((line) => line.trim())
-            .filter(Boolean)[0]
-            ?.slice(0, 180) || ""
+          suggested_opening: ""
         }
       : {
           selected: false,
@@ -106,7 +103,10 @@ function createInnerLifeSessionLifecycleService(inputPorts = {}) {
       instruction: options.existing
         ? "Existing session. Use share_plan first; fetch full briefing lazily only if needed."
         : "Use share_plan first. Do not mechanically read briefing aloud; fetch full briefing lazily only if needed.",
-      ...(options.includeBriefing ? { briefing } : {})
+      ...(options.includeBriefing ? {
+        briefing: { ...briefing, pendingShares: pendingShares.slice(0, 5), pendingSharesTotal },
+        briefingFresh: true
+      } : {})
     };
   }
 
@@ -120,7 +120,10 @@ function createInnerLifeSessionLifecycleService(inputPorts = {}) {
       externalSessionId
     });
     if (existing) {
-      return buildStartPacket(database, profile, existing, existing.briefing || {}, {
+      const briefing = input.includeBriefing ? await ports.getBriefing(database, {
+        agentId: profile.agent_id, lineId: input.lineId || input.line_id || ""
+      }) : {};
+      return buildStartPacket(database, profile, existing, briefing, {
         existing: true,
         includeBriefing: Boolean(input.includeBriefing)
       });

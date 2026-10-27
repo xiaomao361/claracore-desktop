@@ -3,11 +3,11 @@ const { searchKnowledge } = require("../../knowledge/search");
 const { collectWithJev, recallReceipt } = require("../../jev/recall-route");
 const { getGatewayContext } = require("../context");
 const { buildGatewayDocs } = require("../docs");
-const { arbitrateAutomaticContext } = require("../auto-context");
+const { arbitrateAutomaticContext, shapeAutomaticContext } = require("../auto-context");
 const { shapeGatewayTraceCatalogEntry } = require("../bounded-response");
 const { createTurnContextService } = require("../turn-context");
 const { shapeAgentConfiguration, shapeCallerConnection } = require("../status-shape");
-const { runMemoryContext } = require("./memory-controller");
+const { runMemoryContext, handleMemoryControllerTool } = require("./memory-controller");
 
 // Memory retrieval reuses the Memory Controller handler's own gate logic rather
 // than re-deriving eligibility. InnerLife is not collected: it stays
@@ -102,8 +102,23 @@ async function handleSystemTool(name, args, context) {
 
   if (name === "gateway_auto_context") {
     const input = args || {};
+    if (input.diagnosticsFor !== undefined) {
+      if (Object.keys(input).some(key => !["diagnosticsFor", "agentId", "agent_id"].includes(key))) {
+        throw new Error("diagnosticsFor cannot be combined with recall arguments.");
+      }
+      // An exact read reuses the ledger's caller/client/conversation checks.
+      // It never recollects context, invokes a model, or records a new decision.
+      return handleMemoryControllerTool("memory_context_feedback", {
+        action: "inspect", decisionId: input.diagnosticsFor
+      }, context);
+    }
     if (input.deliveryContract && !["memory-v1", CONTRACT].includes(input.deliveryContract)) throw new Error("unsupported_delivery_contract");
     const prompt = String(input.prompt || "").trim();
+    // Preserve the explicit candidate compatibility path. Normal prompt calls
+    // default to the compact delivery envelope; full is an explicit request.
+    const detail = input.detail === undefined ? (prompt ? "summary" : "full") : input.detail;
+    if (!["summary", "full"].includes(detail)) throw new Error("Automatic context detail must be summary or full.");
+    const respond = value => textResult(shapeAutomaticContext(value, detail));
     const turnKind = String(input.turnKind || "user").trim();
     const hasCandidates = Array.isArray(input.memoryCandidates) || Array.isArray(input.shareCandidates);
     // Never merge the two paths silently. A precedence rule would just hide the
@@ -117,7 +132,9 @@ async function handleSystemTool(name, args, context) {
     const agentId = currentMcpAgentId(args);
     if (!prompt) {
       if (input.deliveryContract === CONTRACT) throw new Error("dual_context_requires_prompt");
-      return textResult(arbitrateAutomaticContext({ ...input, agentId }));
+      return input.detail === undefined
+        ? textResult(arbitrateAutomaticContext({ ...input, agentId }))
+        : respond(arbitrateAutomaticContext({ ...input, agentId }));
     }
 
     // Persistent hosts may represent an automatic goal continuation as a user-
@@ -126,10 +143,10 @@ async function handleSystemTool(name, args, context) {
     // it only repeats the same lookup and ledger work. The caller must label
     // this case explicitly so ordinary user turns never enter this fast path.
     if (turnKind === "goal_continuation") {
-      if (input.deliveryContract === CONTRACT) return textResult({ contract: CONTRACT, decision: "abstain", blocks: [], selected: [],
+      if (input.deliveryContract === CONTRACT) return respond({ contract: CONTRACT, decision: "abstain", blocks: [], selected: [],
         turnKind, collectionSkipped: true, reason: "non_user_goal_continuation", latencyMs: 0,
         domainStatus: { memory: "skipped", knowledge: "skipped", innerlife: "not_collected" } });
-      return textResult({
+      return respond({
         ...arbitrateAutomaticContext({
           agentId,
           domainStatus: { memory: "skipped", innerlife: "not_collected" }
@@ -154,9 +171,9 @@ async function handleSystemTool(name, args, context) {
         ...await createKnowledgeContext(context.runtimeAppForGateway(), memoryResult, collected.knowledgeSearch),
         turnKind, collectionSkipped: false, jev: collected.jev, latencyMs: collected.latencyMs
       };
-      return textResult({ ...result, recallReceipt: recallReceipt(result, collected) });
+      return respond({ ...result, recallReceipt: recallReceipt(result, collected) });
     }
-    return textResult({
+    return respond({
       ...memoryResult,
       turnKind,
       collectionSkipped: false,

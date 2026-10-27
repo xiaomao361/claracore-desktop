@@ -15,6 +15,14 @@ function boundedText(value, maxBytes) {
   return characters.slice(0, low).join("");
 }
 
+function withTruncation(source, shaped, fields) {
+  const clipped = (original, preview) => Array.isArray(original)
+    ? original.length > preview.length || original.some((item, index) => index < preview.length && clipped(item, preview[index]))
+    : String(original || "").length > String(preview || "").length;
+  const truncatedFields = fields.filter(field => clipped(source[field], shaped[field]));
+  return truncatedFields.length ? { ...shaped, truncatedFields } : shaped;
+}
+
 function normalizeCatalogPaging(input = {}, options = {}) {
   const defaultLimit = Number(options.defaultLimit || DEFAULT_CATALOG_LIMIT);
   const maxLimit = Number(options.maxLimit || MAX_CATALOG_LIMIT);
@@ -39,12 +47,13 @@ function catalogPage(items, total, paging, extra = {}) {
 }
 
 function shapeSharedLineCatalogEntry(line = {}) {
-  return {
+  return withTruncation(line, {
     id: line.id || "",
     agentId: line.agentId || "",
     title: boundedText(line.title, 160),
     status: line.status || "active",
     isCurrent: Boolean(line.active),
+    isGlobalFallback: Boolean(line.active),
     summary: boundedText(line.summary, 360),
     interpretationStatus: line.interpretationStatus || "draft",
     nextStep: boundedText(line.nextStep, 240),
@@ -52,7 +61,7 @@ function shapeSharedLineCatalogEntry(line = {}) {
     updatedAt: line.updatedAt || null,
     positionUpdatedAt: line.positionUpdatedAt || null,
     detailRef: { tool: "shared_line_get", arguments: { lineId: line.id || "" } }
-  };
+  }, ["title", "summary", "nextStep"]);
 }
 
 function shapeMemoryLinkCatalogEntry(link = {}) {
@@ -78,7 +87,7 @@ function shapeMemoryLinkCatalogEntry(link = {}) {
 }
 
 function shapeMemoryAck(memory = {}) {
-  return {
+  return withTruncation(memory, {
     id: memory.id || "",
     title: boundedText(memory.title, 160),
     status: memory.status || "active",
@@ -88,11 +97,11 @@ function shapeMemoryAck(memory = {}) {
     createdAt: memory.created_at || memory.createdAt || null,
     updatedAt: memory.updated_at || memory.updatedAt || null,
     detailRef: { tool: "memoria_get", arguments: { id: memory.id || "" } }
-  };
+  }, ["title", "labels"]);
 }
 
 function shapeMemoryCatalogEntry(memory = {}) {
-  return {
+  return withTruncation(memory, {
     id: memory.id || "",
     title: boundedText(memory.title, 240),
     status: memory.status || "active",
@@ -101,7 +110,7 @@ function shapeMemoryCatalogEntry(memory = {}) {
     createdAt: memory.createdAt || memory.created_at || null,
     updatedAt: memory.updatedAt || memory.updated_at || null,
     detailRef: { tool: "memoria_get", arguments: { id: memory.id || "" } }
-  };
+  }, ["title", "labels"]);
 }
 
 function shapeMemoryRecordCatalogEntry(record = {}) {
@@ -156,17 +165,18 @@ function shapeGatewayTraceCatalogEntry(trace = {}) {
 }
 
 function shapeSharedLineDescriptor(line = {}) {
-  return {
+  return withTruncation(line, {
     id: line.id || "",
     agentId: line.agentId || "",
     title: boundedText(line.title, 240),
     status: line.status || "active",
     isCurrent: Boolean(line.active),
+    isGlobalFallback: Boolean(line.active),
     summary: boundedText(line.summary, 600),
     interpretationStatus: line.interpretationStatus || "draft",
     updatedAt: line.updatedAt || null,
     detailRef: { tool: "shared_line_get", arguments: { lineId: line.id || "" } }
-  };
+  }, ["title", "summary"]);
 }
 
 function shapeHandoffAck(handoff = {}) {

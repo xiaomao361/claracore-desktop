@@ -46,7 +46,7 @@ function createContinuityLineRepository(helpers) {
       l.updated_at,
       p.summary,
       p.interpretation_status,
-      substr(json_extract(p.metadata_json, '$.nextStep'), 1, 240) AS next_step,
+      json_extract(p.metadata_json, '$.nextStep') AS next_step,
       p.updated_at AS position_updated_at
     FROM continuity_lines l
     LEFT JOIN current_positions p ON p.rowid = (
@@ -61,6 +61,15 @@ function createContinuityLineRepository(helpers) {
     )
   `;
 
+  // SQLite CURRENT_TIMESTAMP is UTC. Normalize only the read representation;
+  // keep imported fractional precision and leave stored history untouched.
+  function lineTimestamp(value) {
+    if (!value) return value;
+    const text = String(value);
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/u.test(text)) return text.replace(" ", "T") + "Z";
+    return text.replace(/\+00:00$/u, "Z");
+  }
+
   function mapContinuityLineRow(row, activeLineId) {
     return {
       id: row.id,
@@ -71,9 +80,9 @@ function createContinuityLineRepository(helpers) {
       summary: row.summary || "",
       interpretationStatus: row.interpretation_status || "draft",
       metadata: parseJson(row.metadata_json, {}),
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      positionUpdatedAt: row.position_updated_at
+      createdAt: lineTimestamp(row.created_at),
+      updatedAt: lineTimestamp(row.updated_at),
+      positionUpdatedAt: lineTimestamp(row.position_updated_at)
     };
   }
 
@@ -87,9 +96,9 @@ function createContinuityLineRepository(helpers) {
       summary: row.summary || "",
       interpretationStatus: row.interpretation_status || "draft",
       nextStep: row.next_step || "",
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      positionUpdatedAt: row.position_updated_at
+      createdAt: lineTimestamp(row.created_at),
+      updatedAt: lineTimestamp(row.updated_at),
+      positionUpdatedAt: lineTimestamp(row.position_updated_at)
     };
   }
 
@@ -180,7 +189,7 @@ function createContinuityLineRepository(helpers) {
       const rows = await this.query(`
         ${CONTINUITY_LINE_SELECT}
         WHERE l.agent_id = ${sqlString(agentId)} AND l.status = 'active' AND l.id != 'line_default'
-        ORDER BY l.updated_at DESC, l.created_at DESC
+        ORDER BY datetime(l.updated_at) DESC, datetime(l.created_at) DESC, l.id ASC
         LIMIT 20;
       `);
       const lines = rows.map((row) => mapContinuityLineRow(row, null));
@@ -241,8 +250,13 @@ function createContinuityLineRepository(helpers) {
     },
 
     async listContinuityLineSummaries(input = {}) {
-      const activeLineId = await this.getActiveContinuityLineIdReadOnly();
       const options = typeof input === "object" && input !== null ? input : { limit: input };
+      if (options.query !== undefined && typeof options.query !== "string") {
+        throw new Error("Shared Line query must be a string.");
+      }
+      const query = (options.query || "").trim();
+      if (Array.from(query).length > 200) throw new Error("Shared Line query must be at most 200 characters.");
+      const activeLineId = await this.getActiveContinuityLineIdReadOnly();
       const requestedLimit = Number.parseInt(String(options.limit ?? 10), 10);
       const limit = Math.max(1, Math.min(Number.isFinite(requestedLimit) ? requestedLimit : 10, 50));
       const offset = Math.max(0, Number.parseInt(String(options.offset || 0), 10) || 0);
@@ -252,18 +266,31 @@ function createContinuityLineRepository(helpers) {
       if (status === "active") filters.push("l.status = 'active'");
       if (status === "archived") filters.push("l.status = 'archived'");
       if (agentId && !options.allAgents) filters.push(`l.agent_id = ${sqlString(agentId)}`);
+      // Search the same latest position used for the preview, never an old
+      // checkpoint. instr treats % and _ literally rather than as wildcards.
+      if (query) filters.push(`(
+        instr(lower(l.title), lower(${sqlString(query)})) > 0
+        OR instr(lower(COALESCE(p.summary, '')), lower(${sqlString(query)})) > 0
+        OR instr(lower(COALESCE(json_extract(p.metadata_json, '$.nextStep'), '')), lower(${sqlString(query)})) > 0
+      )`);
       const where = filters.join(" AND ");
+      // A global fallback changed by another session is not this Agent's line
+      // selection. Match the ambiguity resolver's order for Agent catalogs.
+      const activeSortId = agentId && !options.allAgents ? "" : activeLineId;
       const [rows, totals] = await Promise.all([
         this.query(`
           ${CONTINUITY_LINE_SUMMARY_SELECT}
           WHERE ${where}
           ORDER BY
-            CASE WHEN l.id = ${sqlString(activeLineId)} THEN 0 ELSE 1 END,
-            l.updated_at DESC,
-            l.created_at DESC
+            CASE WHEN l.id = ${sqlString(activeSortId)} THEN 0 ELSE 1 END,
+            datetime(l.updated_at) DESC,
+            datetime(l.created_at) DESC,
+            l.id ASC
           LIMIT ${limit} OFFSET ${offset};
         `),
-        this.query(`SELECT COUNT(*) AS total FROM continuity_lines l WHERE ${where};`)
+        this.query(query
+          ? `SELECT COUNT(*) AS total FROM (${CONTINUITY_LINE_SUMMARY_SELECT} WHERE ${where});`
+          : `SELECT COUNT(*) AS total FROM continuity_lines l WHERE ${where};`)
       ]);
       return {
         items: rows.map((row) => mapContinuityLineSummaryRow(row, activeLineId)),

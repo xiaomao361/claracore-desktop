@@ -24,7 +24,7 @@ async function main() {
   result=await createKnowledgeContext(app,empty,{status:'no_results',items:[]}); assert.equal(result.decision,'abstain');
   const timeout=await createKnowledgeContext(app,{...empty,domainStatus:{knowledge:'timeout'}},null); assert.equal(timeout.domainStatus.knowledge,'timeout');
   const context={core:{database:{getSettings:async()=>({})}},currentMcpAgentId:()=> 'a',runtimeAppForGateway:()=>app,textResult:x=>x};
-  const old=await handleSystemTool('gateway_auto_context',{prompt:'modified',domain:'knowledge',mode:'exact'},context); assert.equal(old.decision,'abstain'); assert.equal(old.block,null); assert(old.knowledgeObservation.items.length);
+  const old=await handleSystemTool('gateway_auto_context',{prompt:'modified',domain:'knowledge',mode:'exact',detail:'full'},context); assert.equal(old.decision,'abstain'); assert.equal(old.block,null); assert(old.knowledgeObservation.items.length);
   const modern=await handleSystemTool('gateway_auto_context',{prompt:'modified',domain:'knowledge',mode:'exact',deliveryContract:'memory-knowledge-v1'},context); assert.equal(modern.decision,'deliver_context'); assert.equal(modern.blocks[0].domain,'knowledge');
   const skipped=await handleSystemTool('gateway_auto_context',{prompt:'continue',turnKind:'goal_continuation',deliveryContract:'memory-knowledge-v1'},{currentMcpAgentId:()=> 'a',textResult:x=>x}); assert.deepEqual(skipped.blocks,[]); assert(skipped.collectionSkipped);
   console.log('Knowledge context: complete sections, shared serialized budget, matching tail excerpt, stale-source refusal, legacy compatibility, dual/empty/goal paths passed');

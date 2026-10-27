@@ -1,6 +1,6 @@
 {
   "name": "claracore-desktop",
-  "version": "1.0.3",
+  "version": "1.0.6",
   "buildFlavor": "full",
   "private": true,
   "description": "ClaraCore desktop manager for the local personal cognitive core",
@@ -14,7 +14,7 @@
     "seed:ux:clear": "node scripts/seed-ux-test-data.js --clear",
     "memoria": "node core/cli.js",
     "check:syntax": "node scripts/check-js-syntax.js",
-    "check": "npm run check:syntax && npm run test:sql-lint && node core/tests/ipc-contract-lint.js && npm run test:login-item && npm run test:architecture && npm run test:home:understanding && npm run test:context-budget && npm run test:turn-context && npm run test:understanding && npm run test:innerlife:grounding && npm run test:knowledge && npm run test:jev && npm run test:desktop-maintenance && npm run test:innerlife:pool",
+    "check": "npm run check:syntax && npm run test:sql-lint && node core/tests/ipc-contract-lint.js && npm run test:login-item && npm run test:architecture && npm run test:home:understanding && npm run test:continuity:search && npm run test:agent-experience && npm run test:context-budget && npm run test:turn-context && npm run test:understanding && npm run test:innerlife:grounding && npm run test:knowledge && npm run test:jev && npm run test:desktop-maintenance && npm run test:innerlife:pool",
     "test:desktop-maintenance": "node core/tests/desktop-maintenance-smoke.js && node core/tests/memory-maintenance-pending-smoke.js && node -e \"process.env.CLARACORE_DESKTOP_DISABLE_NODE_SQLITE='1';require('./core/tests/memory-maintenance-pending-smoke.js')\"",
     "test:architecture": "node core/tests/product-core-owner-smoke.js && node core/tests/resource-refresh-loop-smoke.js && node core/tests/visible-data-refresh-smoke.js && node core/tests/agent-setup-contract-smoke.js && node core/tests/memory-hydration-smoke.js && node core/tests/repository-composition-smoke.js && node core/tests/innerlife-repository-boundary-smoke.js && node core/tests/innerlife-service-boundary-smoke.js && node core/tests/innerlife-session-service-boundary-smoke.js && node core/tests/innerlife-workflow-service-boundary-smoke.js && node core/tests/system-repository-boundary-smoke.js && node core/tests/continuity-repository-boundary-smoke.js && node core/tests/gateway-context-service-smoke.js",
     "test:shell": "node core/tests/run-ui-smoke.js core/tests/shell-window-smoke.js",
@@ -46,6 +46,7 @@
     "test:phase2": "npm run test:memoria:search && node core/tests/phase2-memory-smoke.js && node core/tests/phase2-gateway-smoke.js && npm run test:phase2:ui",
     "test:phase2:ui": "node core/tests/run-ui-smoke.js core/tests/phase2-memory-ui-smoke.js",
     "test:continuity:boundaries": "node --check core/db/repositories/continuity/agents.js && node --check core/db/repositories/continuity/lines.js && node --check core/tests/continuity-repository-boundary-smoke.js && node core/tests/continuity-repository-boundary-smoke.js",
+    "test:continuity:search": "node core/tests/shared-line-search-smoke.js && CLARACORE_DESKTOP_DISABLE_NODE_SQLITE=1 node core/tests/shared-line-search-smoke.js",
     "test:phase3": "npm run test:continuity:boundaries && node core/tests/shared-line-hydration-smoke.js && node core/tests/phase3-shared-line-smoke.js && node core/tests/phase3-gateway-smoke.js && npm run test:phase3:ui",
     "test:phase3:ui": "node core/tests/run-ui-smoke.js core/tests/phase3-shared-line-ui-smoke.js",
     "test:system:boundaries": "node --check core/db/agent-identity-references.js && node --check core/db/repositories/system/agent-activity.js && node --check core/db/repositories/system/agent-identity.js && node --check core/db/repositories/system/gateway-traces.js && node --check core/tests/system-repository-boundary-smoke.js && node --check core/tests/agent-identity-merge-smoke.js && node core/tests/system-repository-boundary-smoke.js && npm run test:agent-identity",
@@ -104,7 +105,8 @@
     "evaluate:understanding": "node scripts/evaluate-understanding.mjs",
     "test:innerlife:pool": "node core/tests/innerlife-candidate-pool-smoke.js && node core/tests/innerlife-candidate-pool-smoke.js --cli",
     "build:website": "node scripts/build-website.js",
-    "test:website": "node scripts/check-public-docs.js && node scripts/website-smoke.js"
+    "test:website": "node scripts/check-public-docs.js && node scripts/website-smoke.js",
+    "test:agent-experience": "node core/tests/agent-experience-smoke.js && CLARACORE_DESKTOP_DISABLE_NODE_SQLITE=1 node core/tests/agent-experience-smoke.js"
   },
   "build": {
     "beforePack": "scripts/stage-sqlite-vec.js",

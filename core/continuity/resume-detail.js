@@ -103,7 +103,7 @@ function shapeSharedLinePacket(packet, detailInput, options = {}) {
       handoffs: (packet?.handoffs || []).length,
       detailRef: {
         tool: "shared_line_get",
-        arguments: { ...(packet?.lineId ? { lineId: packet.lineId } : {}), detail: "full" }
+        arguments: { ...((packet?.lineId || current.lineId) ? { lineId: packet?.lineId || current.lineId } : {}), detail: "full" }
       }
     }
   };
@@ -115,6 +115,28 @@ function shapeSharedLinePacket(packet, detailInput, options = {}) {
   // A model adjustment is only relevant when a model was explicitly requested.
   if (options.model && packet?.modelAdjustment) {
     shaped.modelAdjustment = packet.modelAdjustment;
+  }
+
+  const truncatedFields = [];
+  const track = (field, original, preview) => {
+    if (String(original || "").length > String(preview || "").length) truncatedFields.push(field);
+  };
+  track("lineTitle", packet?.lineTitle || current.lineTitle, shaped.lineTitle);
+  track("summary", current.summary, shaped.summary);
+  track("nextStep", packet?.nextStep, shaped.nextStep);
+  if ((current.factsUsed || []).length > shaped.factsUsed.length
+    || shaped.factsUsed.some((fact, index) => String(current.factsUsed[index]).length > fact.length)) {
+    truncatedFields.push("factsUsed");
+  }
+  if (handoff) for (const field of ["objective", "nextStep"]) {
+    track(`recentHandoff.${field}`, packet.handoffs[0][field], handoff[field]);
+  }
+  if (detail === "context") for (const [field, value] of Object.entries(shaped.sharedReality)) {
+    track(`sharedReality.${field}`, packet.sharedReality[field], value);
+  }
+  if (truncatedFields.length) {
+    shaped.truncatedFields = truncatedFields;
+    shaped.detailRef = shaped.omitted.detailRef;
   }
 
   return shaped;

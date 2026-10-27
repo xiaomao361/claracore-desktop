@@ -516,7 +516,10 @@ function createInnerLifeReadModelRepository(helpers) {
             status: "ambiguous",
             lineId: "",
             errorCode: error.code,
-            candidateLineIds: (error.candidates || []).map((candidate) => candidate.lineId).filter(Boolean)
+            candidateLineIds: (error.candidates || []).map((candidate) => candidate.lineId).filter(Boolean),
+            candidateLines: (error.candidates || []).slice(0, 5),
+            totalCount: error.totalCount ?? (error.candidates || []).length,
+            detailRef: error.detailRef
           }
         };
       }
@@ -530,12 +533,17 @@ function createInnerLifeReadModelRepository(helpers) {
       const profile = await this.getInnerLifeProfileReadOnly(agentId);
       const { resumePacket, sharedLineContext } = await this.getOptionalInnerLifeResumePacket(options, profile.agent_id);
       const memories = await this.listMemories(5);
-      const pendingShares = (await this.listInnerLifeShares("pending", 20, profile.agent_id)).slice(0, 5);
+      // The candidate view is capped at ten per Agent. Count the full live
+      // candidate batch, then cap only the delivered preview collection.
+      const livePendingShares = await this.listInnerLifeShares("pending", 100, profile.agent_id);
+      const pendingShares = livePendingShares.slice(0, 5);
       const pendingInbox = await this.listInnerLifeInboxForAgent(profile.agent_id, "pending", 5, {
         excludeSources: ["session_end_afterthought"]
       });
       const rows = await this.query(`
-        SELECT t.body, t.created_at
+        SELECT t.body, t.created_at,
+          EXISTS (SELECT 1 FROM innerlife_shares s WHERE s.thought_id = t.id
+            AND s.agent_id = e.agent_id AND s.status IN ('used', 'rejected', 'discarded')) AS closed_share
         FROM innerlife_thoughts t
         JOIN innerlife_events e ON e.id = t.event_id
         WHERE e.agent_id = ${sqlString(profile.agent_id)}
@@ -555,16 +563,18 @@ function createInnerLifeReadModelRepository(helpers) {
           labels: memory.labels || []
         })),
         pendingShares,
+        pendingSharesTotal: livePendingShares.length,
         pendingInbox,
         recentThoughts: rows.map((row) => ({
           body: row.body || "",
-          createdAt: row.created_at
+          createdAt: row.created_at,
+          closedShare: Boolean(row.closed_share)
         })),
         text: [
           `Agent: ${profile.agent_id}`,
           summarizeInnerLifeProfile(profile),
           `Current position: ${resumePacket.currentPosition.summary || (sharedLineContext.status === "ambiguous" ? "(not selected: multiple active Shared Lines)" : "(empty)")}`,
-          `Pending shares: ${pendingShares.length}`,
+          `Pending shares: ${livePendingShares.length}`,
           `Pending inbox: ${pendingInbox.length}`,
           `Recent memories: ${memories.length}`,
           `Recent thoughts: ${rows.length}`

@@ -94,6 +94,8 @@ const systemToolDefinitions = [
     "inputSchema": {
       "type": "object",
       "properties": {
+        "detail": { "type": "string", "enum": ["summary", "full"], "description": "Prompt calls default to summary. full includes routing and candidate diagnostics for this call. diagnosticsRef reads the existing Memory decision without rerunning recall." },
+        "diagnosticsFor": { "type": "string", "maxLength": 160, "description": "Read an existing Memory decision for this caller/client/conversation without recall. Exclusive with recall arguments; follow diagnosticsRef." },
         "deliveryContract": { "type": "string", "enum": ["memory-v1", "memory-knowledge-v1"], "description": "Opt in to deliver_context/blocks for Knowledge-aware hosts. Default keeps legacy Memory block." },
         "domain": { "type": "string", "enum": ["none", "memory", "knowledge", "both"], "description": "Explicit scope wins; otherwise both or opted-in Jev advice. Knowledge stays observation-only for current Memory-only hosts." },
         "query": { "type": "string", "maxLength": 500, "description": "Optional bounded retrieval query; only this query (or bounded prompt) may reach enabled Jev." },

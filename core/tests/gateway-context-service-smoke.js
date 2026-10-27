@@ -198,7 +198,8 @@ async function main() {
   assert(Buffer.byteLength(brief.memories[0].bodyPreview, "utf8") > 400);
   assert.strictEqual(brief.memories[0].bodyTruncated, true);
   assert(Buffer.byteLength(brief.text, "utf8") <= 1024);
-  assert(Buffer.byteLength(JSON.stringify(brief), "utf8") <= 8 * 1024);
+  const briefBytes = Buffer.byteLength(JSON.stringify(brief), "utf8");
+  assert(briefBytes <= 8 * 1024, `Brief context is ${briefBytes} bytes, over its 8192-byte guard.`);
   assert.deepStrictEqual(brief.sharedLine.omitted.detailRef, {
     tool: "shared_line_get",
     arguments: { lineId: "line-alpha", detail: "full" }

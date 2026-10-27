@@ -71,7 +71,7 @@ async function main() {
     fs.writeFileSync(path.join(corpus, 'notes/example.md'), '# Example\nExact retrieval fixture\n');
     await require('../knowledge/preferences').saveKnowledgeRootPreference(app, corpus);
     const gatewayContext = { core: { database: { getSettings: async () => ({}) } }, currentMcpAgentId: () => 'codex', runtimeAppForGateway: () => app, textResult: value => value };
-    const gateway = await require('../gateway/tool-handlers/system').handleSystemTool('gateway_auto_context', { prompt: 'Exact', domain: 'knowledge', mode: 'exact' }, gatewayContext);
+    const gateway = await require('../gateway/tool-handlers/system').handleSystemTool('gateway_auto_context', { prompt: 'Exact', domain: 'knowledge', mode: 'exact', detail: 'full' }, gatewayContext);
     assert.equal(gateway.knowledgeObservation.status, 'ok'); assert.equal(gateway.knowledgeObservation.items.length, 1);
     assert.equal(gateway.knowledgeObservation.requestedMode, 'exact');
     assert.equal(gateway.knowledgeObservation.applied, false); assert.equal(gateway.jev.status, 'disabled'); assert.equal(gateway.domainStatus.memory, 'skipped');

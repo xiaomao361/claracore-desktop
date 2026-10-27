@@ -19,9 +19,9 @@ const BRIEF_DOCTOR_ISSUE_LIMIT = 2;
 const BRIEF_DOCTOR_ISSUE_BYTES = 200;
 
 const GUIDANCE = Object.freeze({
-  useSharedLine: "Treat Shared Line as the current resumable position.",
-  useMemory: "Treat Memory as durable reviewed facts.",
-  useInnerLife: "Use this agent's InnerLife waiting shares only when they fit the current moment.",
+  useSharedLine: "Shared Line: current resumable position.",
+  useMemory: "Memory: durable reviewed facts.",
+  useInnerLife: "InnerLife: review conversational fit before sharing.",
   oldServices: "Do not read or mutate old ClaraCore service databases from this Gateway context."
 });
 
@@ -226,7 +226,7 @@ function briefText({ agentId, doctor, innerLife, memories, sharedLine, generated
     `Doctor: ${doctor.status}`,
     `Shared Line: ${sharedLine.lineTitle || sharedLine.lineId || "(none selected)"}`,
     `Memory summaries: ${memories.length} | InnerLife share candidates: ${innerLife.pendingShares.length}`,
-    "Read the structured fields above. Use detailRef entries for a full record; detail=full is a compatibility payload."
+    "Follow detailRef for complete records."
   ].join("\n");
   return boundedText(text, BRIEF_TEXT_BYTES);
 }
@@ -256,6 +256,9 @@ function createGatewayContextService(ports) {
         // One Shared Line resume packet, up to three Memory summaries, and
         // InnerLife status with at most one candidate preview.
         const resumeLine = shapeSharedLinePacket(sharedLine, "resume", { bounds: BRIEF_LINE_BOUNDS });
+        // The aggregate already exposes this exact full-read pointer under
+        // omitted.detailRef. Keep truncation evidence without repeating it.
+        delete resumeLine.detailRef;
         const memories = rawMemories
           .slice(0, BRIEF_MEMORY_LIMIT)
           .map((memory) => compactMemory(memory, BRIEF_MEMORY_BODY_BYTES));

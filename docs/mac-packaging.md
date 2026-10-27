@@ -22,6 +22,19 @@ for platform-specific packaging. Verify required model and SQLite resources
 before a public build. `test:package:lite` and `test:package:win:lite` inspect
 Lite package contents.
 
+## Local Lite test builds
+
+For rapid local testing, build without Developer ID signing or notarization:
+
+```sh
+CSC_IDENTITY_AUTO_DISCOVERY=false ./node_modules/.bin/electron-builder --mac --arm64 --config scripts/lite-builder-config.js --config.mac.identity=null --config.mac.notarize=false --publish never
+```
+
+Keep test output separate from previous packages. Validate package contents and
+isolated runtime behavior, then let the user install and test. Reserve signing
+and notarization for the final release. A local unsigned test build is not a
+public release.
+
 ## Signed macOS release
 
 ```sh

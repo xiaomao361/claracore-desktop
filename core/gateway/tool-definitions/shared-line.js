@@ -45,6 +45,11 @@ const sharedLineToolDefinitions = [
         "allAgents": {
           "type": "boolean"
         },
+        "query": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Literal substring in title, latest position, or next step. ASCII case-insensitive; % and _ are literal. Does not search history or automatically select a line."
+        },
         "status": {
           "type": "string",
           "enum": [

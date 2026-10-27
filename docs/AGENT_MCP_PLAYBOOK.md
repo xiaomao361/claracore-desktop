@@ -25,6 +25,21 @@ parent goal. Record the final position before archiving a line whose own
 objective is complete or explicitly discontinued. Do not infer completion from
 age, silence, or an empty next step.
 
+When the objective is known, use `shared_line_list` with `query` and
+`status: active` to find it without paging through unrelated work. Query is a
+literal substring in the title, latest position, or next step (ASCII
+case-insensitive, at most 200 characters); it does not search old checkpoints.
+The returned total and pages count only matches within the requested Agent and
+lifecycle scope. Read the selected exact `lineId`; a match never activates it.
+
+`isGlobalFallback` is the global pointer; `isCurrent` remains its legacy alias.
+Neither identifies the selected line of your conversation. Other sessions,
+including startup with an explicit line ID, can move that global pointer.
+Keep the exact line ID selected for the current task. Agent-filtered catalogs
+and ambiguity hints use the same timestamp order without promoting the global
+fallback. Timestamps in the line catalog are timezone-explicit ISO 8601; this
+normalizes reads without modifying stored history.
+
 ## Context and evidence
 
 Default catalogs are bounded summaries. Explicit reads remain scoped and
@@ -36,10 +51,53 @@ actually inject that block; selection is not delivery or use. Knowledge-aware
 hosts explicitly negotiate [the additional contract](KNOWLEDGE_CONTEXT.md).
 Connecting MCP alone does not install host hooks or collect every chat.
 
+Automatic-context prompt calls return a compact summary by default. Follow
+`diagnosticsRef` to inspect the same stored Memory decision without a second
+recall; use `detail: full` when requesting a new call's routing diagnostics.
+Prepared context does not become delivered or used through either read.
+
+`truncatedFields` marks incomplete fields in key previews and continuation
+packets; use their `detailRef` for the stored object. A successful
+`shared_line_update` returns `persisted: true` and `receipt.readBack` for the
+exact target. If a response is lost, read that line before retrying: the update
+API does not promise idempotent retries. Presentation arguments are validated
+before line mutations so invalid detail cannot save and then fail to respond.
+
 InnerLife selection, delivery, and actual use are recorded separately. Do not
 mark a selected thought as delivered or used without evidence. Conversation
 IDs and InnerLife session IDs are separate; retain the internal session ID
 returned at start and use it to end the same session.
+
+Session startup returns `share_plan.decision=review_first` for a selected
+candidate: startup has no real conversational context to decide that it should
+be spoken now. Read the thought with `innerlife_share_check` when the register
+fits; lexical overlap is evidence, not a requirement for sharing.
+
+Repeating a session start with `includeBriefing=true` keeps the same session
+but reads current state (`briefingFresh=true`). The saved opening snapshot is
+historical, not a response cache. Startup has one recommendation in
+`share_plan`; its summary briefing omits the duplicate `selectedShare` and
+recommendation `nextRead`. Closed-share thoughts are excluded from summary
+open loops. `counts.pendingShares` is the live total, while
+`counts.pendingSharePreviews` is the bounded preview count.
+
+An ambiguous briefing includes up to five `candidateLines` with line ID, title,
+position preview, and update time. `totalCount`, `hasMore`, and `detailRef`
+preserve the route to remaining active lines. The briefing does not select or
+activate a candidate. Session startup also bundles a ten-row catalog page with
+each line's `nextStep`;
+hooks should use that one candidate source, or recover the same catalog page
+from `shared_line_list`, and follow page offsets for more. Do not inject the
+briefing's five hints as another competing set. An unmapped working directory
+alone cannot identify the conversation's objective or disqualify a project.
+The personal creflex integration separately configures an exact home-directory
+candidate filter for four project lines. It changes only opening suggestions,
+retains the Desktop line, and never changes line ownership or lifecycle. The
+opening list shows recorded next steps; missing steps remain visibly missing.
+Legacy Desktop responses are refreshed through `innerlife_briefing`, with the
+pending total read separately. Refresh failures remain unavailable, and
+compact does not inject share recommendations. Per-turn counts have no local
+time-based cache.
 
 ## Optional understanding workflow
 

@@ -18,7 +18,7 @@ const CONTEXT_BUDGET_CEILINGS = Object.freeze({
   // as one more independent section.
   // v0.8.0 includes the new Knowledge section in explicit full-guide reads.
   // Includes the explicit cross-domain workflow and authority/recovery limits.
-  docsFullSection: 20 * 1024,
+  docsFullSection: 22 * 1024, // Explicit full guide includes diagnostic/recovery contracts; default/section ceilings stay unchanged.
   ambiguityPayload: 4 * 1024,
   ambiguityCandidatePreview: 240,
   ambiguityCandidateLimit: 5,

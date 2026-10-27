@@ -660,6 +660,24 @@ function checkInnerLifeSelective() {
   assert.strictEqual(ambiguous.sharedLineContext.status, "ambiguous");
   assert.strictEqual(ambiguous.sharedLineContext.candidateCount, 3);
 
+  const candidateBriefing = innerLifeBriefingFixture({ ambiguous: true });
+  candidateBriefing.sharedLineContext.candidateLines = ambiguousLines().slice(0, 5).map((line) => ({
+    lineId: line.id, title: line.title, summaryPreview: line.summary, updatedAt: line.updatedAt
+  }));
+  candidateBriefing.sharedLineContext.totalCount = 23;
+  const recovery = shapeInnerLifeBriefing(candidateBriefing);
+  assertWithin("ambiguous briefing with identifiable candidates", recovery, CONTEXT_BUDGET_CEILINGS.innerlifeBriefingDefault);
+  assert.strictEqual(recovery.sharedLineContext.candidateCount, 5);
+  assert.strictEqual(recovery.sharedLineContext.totalCount, 23);
+  assert.strictEqual(recovery.sharedLineContext.hasMore, true);
+  assert.strictEqual(recovery.sharedLineContext.detailRef.tool, "shared_line_list");
+  assert.ok(!recovery.sharedLine, "Recovery hints must never select a line.");
+  for (const line of recovery.sharedLineContext.candidateLines) {
+    assert.ok(line.lineId && line.title && line.preview, "An ambiguity hint must identify the candidate and its current work.");
+    assertWithin("candidate title", line.title, 80);
+    assertWithin("candidate preview", line.preview, 160);
+  }
+
   // detail=full recovers the whole aggregate.
   const fullBriefing = shapeInnerLifeBriefing(stored, "full");
   assert.strictEqual(fullBriefing.detail, "full");

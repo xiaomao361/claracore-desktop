@@ -521,6 +521,13 @@ async function main() {
     if (briefing.sharedLineContext?.status !== "ambiguous" || "sharedLine" in briefing) {
       throw new Error("Ambiguous innerlife_briefing must not select a Shared Line.");
     }
+    assert.ok(briefing.sharedLineContext.candidateLines.length > 0, "The real repository/Gateway path must retain candidate information.");
+    for (const candidate of briefing.sharedLineContext.candidateLines) {
+      assert.ok(candidate.lineId && candidate.title);
+      assert.equal(typeof candidate.preview, "string");
+      assert.ok("updatedAt" in candidate);
+    }
+    assert.ok(briefing.sharedLineContext.totalCount >= briefing.sharedLineContext.candidateLines.length);
     if ("text" in briefing || Array.isArray(briefing.pendingShares) || Array.isArray(briefing.pendingInbox)) {
       throw new Error("Default innerlife_briefing must not return the aggregate dump.");
     }

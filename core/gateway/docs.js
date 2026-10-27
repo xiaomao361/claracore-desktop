@@ -4,8 +4,8 @@ const { BUILD_FLAVOR, HAS_BUILT_IN_EMBEDDING } = require("../build-flavor");
 // version bump must explicitly confirm that the Agent Guide still describes
 // the shipped product; context-budget-smoke enforces parity.
 const DOCS_RELEASE = Object.freeze({
-  version: "1.0.3",
-  updatedAt: "2026-10-22"
+  version: "1.0.6",
+  updatedAt: "2026-10-27"
 });
 
 const DOCS_SECTIONS = Object.freeze([
@@ -24,7 +24,7 @@ const SECTION_DOCS_BYTES = 8192;
 // `full` is the concatenation of every section, not an independent one, so the
 // 8 KB per-section bound does not apply to it. Truncating it would silently
 // drop guidance; give it room for the sum instead.
-const FULL_SECTION_DOCS_BYTES = 20 * 1024;
+const FULL_SECTION_DOCS_BYTES = 22 * 1024;
 const SEARCH_DOCS_BYTES = 6144;
 
 const STARTUP_SEQUENCE =
@@ -260,6 +260,7 @@ function memorySection() {
     "",
     "### Automatic recall",
     "",
+    "- gateway_auto_context prompt calls default to detail=summary: prepared blocks and truthful domain/evidence states without candidate dumps. Use detail=full for this call's routing diagnostics. Follow diagnosticsRef (diagnosticsFor) to read the stored Memory decision for the same caller/client/conversation without recall or model calls; it is not a stored Knowledge/routing trace.",
     "- In core-compat/full, memory_context runs the deterministic Memory Controller for the authenticated caller. Off is the default; observe returns bounded evidence with empty context.",
     "- The trusted canary returns at most one current project-scoped Memory owned by the authenticated caller. Unidentified callers and historical/all views stay context-free.",
     "- Treat canary context as prior read-only evidence. Verify current code, runtime, data, and user statements before acting, and never mutate Memory because of that block.",
@@ -275,11 +276,14 @@ function sharedLineSection() {
     "- Shared Line is the current resumable working position, not long-term fact storage.",
     "- Rename/archive/restore acknowledgements return the exact target line, never the global current line. Explicit archived-line reads preserve history; writes still require an active line.",
     "- shared_line_get returns a resume packet: line, summary, interpretation status, facts used, next step, and at most one recent handoff. Use detail=context for relevant Shared Reality and detail=full for history, snapshots, arcs, and agent state.",
+    "- truncatedFields identifies clipped fields; detailRef reads the complete stored line. shared_line_update returns persisted=true plus receipt.lineId/positionId/readBack only after saving. Invalid detail is rejected before writing. After a timeout or lost response, read the exact target before retrying; these receipts do not make writes idempotent.",
     "- Start resume reads with shared_line_get and no lineId. core-compat/full also offer gateway_context; omitted detail defaults to brief. shared_line_list is a bounded catalog and shared_line_get expands one selected line. In the catalog, status is lifecycle and isCurrent is only the globally selected fallback; an Agent-filtered page may have no current row.",
+    "- To find a known objective, shared_line_list accepts query (up to 200 characters): literal substring in title, latest position or next step, ASCII case-insensitive. It does not search history. Agent/status filters still apply; page.total is the matching count. A match does not select or activate a line.",
     "- SHARED_LINE_ID_REQUIRED is a safe refusal: nothing was read or written. Pick a candidate and retry with lineId.",
+    "- Agent-filtered catalogs and ambiguity hints use the same chronological order, independent of the global pointer. isGlobalFallback names that pointer; isCurrent is its legacy alias, never this session's selection. Another session or session_start(lineId) can move the global pointer. This does not choose a line for an identified Agent with several active lines. Catalog timestamps are timezone-explicit ISO 8601; stored history is unchanged.",
     "- A request without lineId is allowed only when your agent owns zero or one active non-default line.",
     "- shared_line_update after meaningful progress, handoff, or changed interpretation. Keep summary concise and actionable.",
-    "- When a dynamic line has no concrete resumable next step, record its verified final position, set interpretationStatus=closed, then shared_line_archive it. Archiving preserves history.",
+    "- Archive only when the line's own objective is complete or explicitly discontinued, after recording its final position. A missing next step alone is not completion. Archiving preserves history.",
     "- interpretationStatus=needs_review when the state is uncertain and the next agent should be cautious.",
     "- In core-compat/full, shared_line_handoff_create when explicitly handing work to another agent or a future session.",
     "- Agent-level state (style, preferences, boundaries, patterns) lives in shared_line_agent_state. Load it once per session, not once per line read.",

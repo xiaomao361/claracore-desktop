@@ -19,6 +19,7 @@
 - [MCP compatibility](MCP_COMPATIBILITY.md): profiles and legacy adapters.
 - [HTTP migration](HTTP_MCP_MIGRATION.md): replacing retired stdio configurations.
 - [Context delivery](CONTEXT_DELIVERY.md): projections, pagination, and response budgets.
+- [Agent experience test baseline](AGENT_EXPERIENCE_TESTING.md): local 1.0.6 delivery and pending field checks.
 - [Knowledge context](KNOWLEDGE_CONTEXT.md): explicit host negotiation.
 - [Understanding contract](UNDERSTANDING_CONTRACT.md) and [host integration](UNDERSTANDING_HOST.md): optional evidence-based planning and recovery.
 

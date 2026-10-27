@@ -273,9 +273,10 @@ async function main() {
     id: "share-register-only",
     agent_id: "codex",
     status: "pending",
-    body: "release trace evidence"
+    body: "写我的脊梁是拒绝"
   };
   const registerOnlyTiming = createInnerLifeShareTimingService(createSharePorts({
+    meaningfulTokens: require("../db/helpers").meaningfulTokens,
     findAvailableShareId: async () => registerOnlyShare.id,
     getShare: async (_database, id) => id === registerOnlyShare.id ? registerOnlyShare : null,
     getShareCheck: async (_database, id) => ({
@@ -299,6 +300,13 @@ async function main() {
   assert.strictEqual(registerOnlyCheck.metadata.contextSource, "provided");
   assert.match(registerOnlyCheck.reason, /Topic overlap is only evidence/);
   assert.strictEqual(registerOnlyResult.share.id, registerOnlyShare.id);
+
+  const chineseRegisterResult = await registerOnlyTiming({}, {
+    agentId: "codex", context: "我们进学习线"
+  });
+  assert.strictEqual(chineseRegisterResult.check.decision, "review_first");
+  assert.deepStrictEqual(registerOnlyCheck.metadata.overlap, []);
+  assert.strictEqual(chineseRegisterResult.share.body, "写我的脊梁是拒绝", "Zero lexical overlap must still return the whole thought for register review.");
 
   for (const status of ["approved", "deferred"]) {
     let statusCheck = null;

@@ -69,7 +69,7 @@ async function main() {
    delete require.cache[routeModule]; delete require.cache[systemModule];
    const {handleSystemTool}=require('../gateway/tool-handlers/system');
    const context={core:{database:{getSettings:async()=>({})}},currentMcpAgentId:()=> 'a',runtimeAppForGateway:()=>app,textResult:x=>x};
-   const modern=await handleSystemTool('gateway_auto_context',input,context);
+   const modern=await handleSystemTool('gateway_auto_context',{...input,detail:'full'},context);
    assert(modern.jev.applied); assert(modern.jev.domainApplied);
    assert.equal(modern.decision,'deliver_context'); assert(modern.blocks[0].body.includes('Water tomatoes'));
    assert.equal(modern.recallReceipt.used,'unknown'); assert(modern.recallReceipt.selected.length);

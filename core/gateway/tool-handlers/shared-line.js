@@ -1,5 +1,5 @@
 const continuity = require("../../continuity");
-const { shapeSharedLinePacket } = require("../../continuity/resume-detail");
+const { shapeSharedLinePacket, normalizeSharedLineDetail } = require("../../continuity/resume-detail");
 const {
   catalogPage,
   shapeHandoffAck,
@@ -18,6 +18,12 @@ function shapeSharedLineMutation(result, detail) {
 
 async function handleSharedLineTool(name, args, context) {
   const { core, currentMcpAgentId, textResult } = context;
+  if (["shared_line_create", "shared_line_activate", "shared_line_rename", "shared_line_archive",
+    "shared_line_restore", "shared_line_update", "shared_line_handoff_create", "shared_line_compact"].includes(name)) {
+    // Validate presentation arguments before any write. Otherwise an invalid
+    // detail could save successfully and then throw while shaping its receipt.
+    normalizeSharedLineDetail(args?.detail);
+  }
 
   if (name === "shared_line_get") {
     // A single-line read should not repeat every active/archived line and
@@ -63,7 +69,16 @@ async function handleSharedLineTool(name, args, context) {
 
   if (name === "shared_line_update") {
     const packet = await continuity.save(core, args, { lite: true });
-    return textResult(shapeSharedLinePacket(packet, args?.detail, { model: args?.model }));
+    return textResult({
+      ...shapeSharedLinePacket(packet, args?.detail, { model: args?.model }),
+      persisted: true,
+      receipt: {
+        operation: "shared_line_update",
+        lineId: packet.lineId,
+        positionId: packet.currentPosition?.positionId || "",
+        readBack: { tool: "shared_line_get", arguments: { lineId: packet.lineId, detail: "full" } }
+      }
+    });
   }
 
   if (name === "shared_line_handoff_create") {

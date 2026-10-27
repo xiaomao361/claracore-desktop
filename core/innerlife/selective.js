@@ -204,6 +204,14 @@ function shapeInnerLifeBriefing(briefing, detailInput) {
   if (detail === "full") return { detail, ...briefing };
 
   const sharedLineContext = briefing?.sharedLineContext || {};
+  const candidateLines = (sharedLineContext.candidateLines || []).slice(0, 5).map((line) => ({
+    lineId: line.lineId,
+    title: bounded(line.title, 80),
+    updatedAt: line.updatedAt || null,
+    preview: bounded(line.preview || line.summaryPreview, 160)
+  }));
+  const candidateCount = candidateLines.length || (sharedLineContext.candidateLineIds || []).length;
+  const totalCount = sharedLineContext.totalCount ?? candidateCount;
   const unambiguous = sharedLineContext.status !== "ambiguous" && Boolean(briefing?.sharedLine?.lineId);
   const pendingShares = briefing?.pendingShares || [];
   const pendingInbox = briefing?.pendingInbox || [];
@@ -214,7 +222,7 @@ function shapeInnerLifeBriefing(briefing, detailInput) {
   // an identical thought body is the same material twice.
   const shareBodies = new Set(pendingShares.map((share) => normalizedBody(share.body || share.preview)));
   const openLoops = recentThoughts
-    .filter((thought) => !shareBodies.has(normalizedBody(thought.body)))
+    .filter((thought) => !thought.closedShare && !shareBodies.has(normalizedBody(thought.body)))
     .slice(0, BRIEFING_LOOP_LIMIT)
     .map((thought) => ({ preview: bounded(thought.body, BRIEFING_LOOP_BYTES), createdAt: thought.createdAt || null }));
 
@@ -232,13 +240,25 @@ function shapeInnerLifeBriefing(briefing, detailInput) {
     sharedLineContext: {
       status: sharedLineContext.status || "",
       ...(sharedLineContext.errorCode ? { errorCode: sharedLineContext.errorCode } : {}),
-      candidateCount: (sharedLineContext.candidateLineIds || []).length
+      candidateCount,
+      ...(sharedLineContext.status === "ambiguous" ? {
+        candidateLines,
+        totalCount,
+        hasMore: totalCount > candidateLines.length,
+        detailRef: sharedLineContext.detailRef || {
+          tool: "shared_line_list", arguments: { agentId: briefing?.agentId || "", status: "active" }
+        }
+      } : {})
     },
     ...(unambiguous
       ? {
           sharedLine: {
             lineId: briefing.sharedLine.lineId,
             summary: bounded(briefing.sharedLine.summary, BRIEFING_SUMMARY_BYTES),
+            ...(Buffer.byteLength(String(briefing.sharedLine.summary || "").replace(/\s+/g, " ").trim(), "utf8") > BRIEFING_SUMMARY_BYTES ? {
+              truncatedFields: ["summary"],
+              detailRef: { tool: "shared_line_get", arguments: { lineId: briefing.sharedLine.lineId, detail: "full" } }
+            } : {}),
             interpretationStatus: briefing.sharedLine.interpretationStatus || "",
             updatedAt: briefing.sharedLine.updatedAt || null
           }
@@ -251,7 +271,8 @@ function shapeInnerLifeBriefing(briefing, detailInput) {
       preview: bounded(memory.body, BRIEFING_MEMORY_BYTES)
     })),
     counts: {
-      pendingShares: pendingShares.length,
+      pendingShares: briefing?.pendingSharesTotal ?? pendingShares.length,
+      pendingSharePreviews: pendingShares.length,
       pendingInbox: pendingInbox.length,
       recentMemories: recentMemories.length,
       recentThoughts: recentThoughts.length,

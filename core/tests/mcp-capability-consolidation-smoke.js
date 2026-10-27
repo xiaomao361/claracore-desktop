@@ -35,6 +35,23 @@ async function main() {
     assert.equal(baseline.tools.length, 97);
     for (const previous of baseline.tools) {
       if (LEGACY_TOOL_ROUTES[previous.name]) assert.equal(digest(legacy.get(previous.name)), previous.sha256, "Preserved legacy schema");
+      else if (previous.name === "gateway_auto_context") {
+        const previousShape = JSON.parse(JSON.stringify(canonical.get(previous.name)));
+        assert.deepEqual(previousShape.inputSchema.properties.detail.enum, ["summary", "full"]);
+        assert.equal(previousShape.inputSchema.properties.diagnosticsFor.maxLength, 160);
+        delete previousShape.inputSchema.properties.detail;
+        delete previousShape.inputSchema.properties.diagnosticsFor;
+        assert.equal(digest(previousShape), previous.sha256, "Automatic context adds only optional diagnostic arguments");
+      }
+      else if (previous.name === "shared_line_list") {
+        // 1.0.4 adds only an optional query. Verify the entire old contract
+        // still hashes identically after removing that one additive field.
+        const previousShape = JSON.parse(JSON.stringify(canonical.get(previous.name)));
+        assert.equal(previousShape.inputSchema.properties.query.type, "string");
+        assert.equal(previousShape.inputSchema.properties.query.maxLength, 200);
+        delete previousShape.inputSchema.properties.query;
+        assert.equal(digest(previousShape), previous.sha256, "Shared Line search must preserve every pre-existing schema field");
+      }
       else if (!extended.has(previous.name)) assert.equal(digest(canonical.get(previous.name)), previous.sha256, `Unrelated schema changed: ${previous.name}`);
     }
     const map = require("./fixtures/mcp-capability-map.json");

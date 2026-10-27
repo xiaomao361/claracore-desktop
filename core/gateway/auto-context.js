@@ -170,6 +170,9 @@ function arbitrateAutomaticContext(input = {}) {
     bytes: bytesOf(body),
     truncated: bytesOf(winner.body) > bytesOf(body)
   };
+  if (block.truncated && winner.domain === "memory") {
+    block.detailRef = { tool: "memoria_get", arguments: { id: winner.id } };
+  }
 
   if (block.bytes > AUTO_CONTEXT_HARD_LIMIT_BYTES) {
     return { ...base, decision: "abstain", selected: null, block: null, reason: "over_hard_limit" };
@@ -189,6 +192,38 @@ function arbitrateAutomaticContext(input = {}) {
   };
 }
 
+// Keep the prepared block/contract and truthful outcome intact. Candidate
+// scoring and routing diagnostics are opt-in; this projection does no lookup.
+function shapeAutomaticContext(result, detail = "summary") {
+  if (!["summary", "full"].includes(detail)) throw new Error("Automatic context detail must be summary or full.");
+  if (detail === "full") return { ...result, detail };
+  const { candidates, evidenceStates, note, suppressed, jev, recallReceipt, knowledgeObservation, ...delivery } = result;
+  return {
+    ...delivery,
+    detail,
+    ...(jev ? { jev: {
+      status: jev.status, applied: Boolean(jev.applied), domainApplied: Boolean(jev.domainApplied),
+      ...(jev.knowledgeMode ? { knowledgeMode: { status: jev.knowledgeMode.status, applied: Boolean(jev.knowledgeMode.applied) } } : {}),
+      ...(jev.httpStatus ? { httpStatus: jev.httpStatus } : {})
+    } } : {}),
+    ...(recallReceipt ? { recallReceipt: {
+      decisionId: recallReceipt.decisionId,
+      ...(recallReceipt.feedbackRef ? { feedbackRef: recallReceipt.feedbackRef } : {}),
+      preparedBytes: recallReceipt.preparedBytes,
+      hostDelivery: recallReceipt.hostDelivery,
+      used: recallReceipt.used,
+      outcome: recallReceipt.outcome
+    } } : {}),
+    ...(recallReceipt?.decisionId ? { diagnosticsRef: {
+      tool: "gateway_auto_context", arguments: { diagnosticsFor: recallReceipt.decisionId }
+    } } : {}),
+    ...(knowledgeObservation ? { knowledgeObservation: {
+      status: knowledgeObservation.status, applied: false,
+      requestedMode: knowledgeObservation.requestedMode, itemCount: (knowledgeObservation.items || []).length
+    } } : {})
+  };
+}
+
 module.exports = {
   AUTO_CONTEXT_HARD_LIMIT_BYTES,
   AUTO_CONTEXT_HARD_LIMIT_TOKENS,
@@ -197,5 +232,6 @@ module.exports = {
   EVIDENCE_STATES,
   MIN_MEMORY_RELEVANCE,
   MIN_SHARE_RELEVANCE,
-  arbitrateAutomaticContext
+  arbitrateAutomaticContext,
+  shapeAutomaticContext
 };

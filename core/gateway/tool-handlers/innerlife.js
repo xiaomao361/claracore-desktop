@@ -16,10 +16,16 @@ function compactLineSummary(line) {
   return {
     id: line.id,
     agentId: line.agentId,
-    title: line.title,
+    title: boundedText(line.title, 160),
+    preview: boundedText(line.summary, 160),
+    nextStep: boundedText(line.nextStep, 240),
+    status: line.status,
     isCurrent: Boolean(line.active),
+    isGlobalFallback: Boolean(line.active),
     interpretationStatus: line.interpretationStatus,
-    updatedAt: line.updatedAt
+    updatedAt: line.updatedAt,
+    positionUpdatedAt: line.positionUpdatedAt,
+    createdAt: line.createdAt
   };
 }
 
@@ -74,9 +80,14 @@ async function handleInnerLifeTool(name, args, context) {
     // must carry the same bounded contracts as the individual tools. Shaping
     // only innerlife_briefing and shared_line_get would leave the largest
     // per-session payload unshaped.
+    let briefing;
+    if (startPacket.briefing) {
+      const { selectedShare, nextRead, ...state } = shapeInnerLifeBriefing(startPacket.briefing, args.detail);
+      briefing = state; // share_plan is the sole startup recommendation.
+    }
     return textResult({
       ...startPacket,
-      ...(startPacket.briefing ? { briefing: shapeInnerLifeBriefing(startPacket.briefing, args.detail) } : {}),
+      ...(briefing ? { briefing } : {}),
       shared_line: sharedLine ? shapeSharedLinePacket(sharedLine, args.detail === "full" ? "full" : "resume") : sharedLine,
       shared_lines: linePage.items.map(compactLineSummary),
       shared_line_page: {

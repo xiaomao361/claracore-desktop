@@ -113,6 +113,12 @@ async function handleMemoryControllerTool(name, args, context) {
       const feedback = await context.database.listMemoryControlFeedback({ decisionId: event.id, limit, offset });
       return context.textResult({
         decisionId: event.id, resultStatus: event.resultStatus, policyMode: event.policyMode,
+        decisionDetails: {
+          stageA: event.stageA, stageB: event.stageB, cacheStatus: event.cacheStatus,
+          searchLatencyMs: event.searchLatencyMs, totalLatencyMs: event.totalLatencyMs,
+          error: event.error, createdAt: event.createdAt,
+          candidates: (event.candidates || []).map(item => ({ id: item.id, score: item.score, stateRole: item.stateRole }))
+        },
         preparedMemoryIds: event.injectedIds, feedback,
         page: { limit, offset, returned: feedback.length, total: event.feedbackCount, hasMore: offset + feedback.length < event.feedbackCount,
           ...(offset + feedback.length < event.feedbackCount ? { nextRead: { tool: "memory_context_feedback", arguments: { action: "inspect", decisionId: event.id, limit, offset: offset + feedback.length } } } : {}) },

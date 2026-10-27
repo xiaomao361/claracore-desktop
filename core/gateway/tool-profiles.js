@@ -184,9 +184,19 @@ const CORE_TOOL_NAMES = Object.freeze([
   "shared_line_agent_state", "innerlife_session_start", "innerlife_session_end",
   "innerlife_share_check", "innerlife_mark_share", "innerlife_submit_inbox"
 ]);
-const CORE_TOOL_SHAPES = Object.freeze(Object.fromEntries(
-  CORE_TOOL_NAMES.map((name) => [name, COMPAT_TOOL_SHAPES[name]])
-));
+const CORE_TOOL_SHAPES = Object.freeze({
+  ...Object.fromEntries(CORE_TOOL_NAMES.map((name) => [name, COMPAT_TOOL_SHAPES[name]])),
+  gateway_auto_context: {
+    ...COMPAT_TOOL_SHAPES.gateway_auto_context,
+    properties: [...COMPAT_TOOL_SHAPES.gateway_auto_context.properties, "detail", "diagnosticsFor"],
+    propertyDescriptions: { detail: "summary by default; full adds diagnostics. diagnosticsFor reads the stored Memory decision without recall." }
+  },
+  shared_line_list: {
+    ...COMPAT_TOOL_SHAPES.shared_line_list,
+    description: "Find Shared Lines by query in title, latest position or next step (literal substring, ASCII case-insensitive). Bounded summaries. isGlobalFallback (legacy isCurrent) is global, not session selection. Read an exact lineId with shared_line_get.",
+    properties: [...COMPAT_TOOL_SHAPES.shared_line_list.properties, "query"]
+  }
+});
 
 function normalizeProfile(value) {
   const name = String(value || "").trim().toLowerCase();
@@ -225,8 +235,7 @@ function shapeSchema(schema, shape) {
   return shaped;
 }
 
-function shapeCoreTool(definition) {
-  const shape = COMPAT_TOOL_SHAPES[definition.name];
+function shapeCoreTool(definition, shape) {
   return {
     name: definition.name,
     title: definition.title,
@@ -246,7 +255,7 @@ function profileToolDefinitions(profile) {
   return (name === "core-compat" ? COMPAT_TOOL_NAMES : CORE_TOOL_NAMES).map((toolName) => {
     const definition = byName.get(toolName);
     if (!definition) throw new Error(`Core tool profile references unknown tool: ${toolName}`);
-    return shapeCoreTool(definition);
+    return shapeCoreTool(definition, (name === "core-compat" ? COMPAT_TOOL_SHAPES : CORE_TOOL_SHAPES)[toolName]);
   });
 }
 

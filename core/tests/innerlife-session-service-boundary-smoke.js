@@ -101,7 +101,27 @@ async function main() {
   assert.strictEqual(createdSessionInput.externalSessionId, "external-1");
   assert.strictEqual(started.session.status, "active");
   assert.strictEqual(started.share_plan.share.id, "share-1");
+  assert.strictEqual(started.share_plan.decision, "review_first", "Session startup has no conversational context to authorize sharing now.");
+  assert.strictEqual(started.share_plan.suggested_opening, "");
   assert.strictEqual(started.briefing.agentId, "codex");
+
+  const cachedSession = { id: "same-session", status: "active", briefing: { generatedAt: "2000-01-01T00:00:00Z", pendingShares: [{ id: "already-used" }] } };
+  const currentStart = createInnerLifeSessionLifecycleService(createPorts({
+    findExistingSession: async () => cachedSession,
+    createSession: async () => { throw new Error("Must reuse the existing session"); },
+    getBriefing: async () => ({ generatedAt: "2026-10-27T00:00:00Z", pendingShares: [], pendingSharesTotal: 0 })
+  }));
+  const resumed = await currentStart.startInnerLifeSession({}, { externalSessionId: "external-1", includeBriefing: true });
+  assert.strictEqual(resumed.session.id, "same-session");
+  assert.strictEqual(resumed.briefingFresh, true);
+  assert.strictEqual(resumed.briefing.pendingSharesTotal, 0);
+  assert.strictEqual(resumed.briefing.generatedAt, "2026-10-27T00:00:00Z");
+  assert.strictEqual(cachedSession.briefing.pendingShares[0].id, "already-used", "Historical opening snapshots must not be rewritten.");
+  const unavailableStart = createInnerLifeSessionLifecycleService(createPorts({
+    findExistingSession: async () => cachedSession,
+    getBriefing: async () => { throw new Error("live briefing unavailable"); }
+  }));
+  await assert.rejects(unavailableStart.startInnerLifeSession({}, { includeBriefing: true }), /live briefing unavailable/, "A failed refresh must not replay stale context as current.");
 
   const repeatedSession = {
     id: "session-ended",
