@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       source_ref:
-        description: Source ref to build (for example v0.6.9)
+        description: Branch, tag, or commit to resolve; defaults to publish_tag or the event commit
         required: false
         type: string
       publish_tag:
@@ -17,15 +17,16 @@ on:
       - "package.json"
       - "package-lock.json"
       - "scripts/**"
-      - "core/tests/packaged-builtin-embedding-smoke.js"
+      - "core/**"
+      - "electron/**"
       - "resources/models/**"
 
 permissions:
   contents: write
 
 concurrency:
-  group: build-windows-release-${{ github.ref }}
-  cancel-in-progress: true
+  group: build-windows-release-${{ inputs.publish_tag || inputs.source_ref || github.ref }}
+  cancel-in-progress: ${{ inputs.publish_tag == '' }}
 
 jobs:
   windows:
@@ -36,16 +37,47 @@ jobs:
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
 
     steps:
-      - name: Check out source
+      - name: Check out workflow helpers
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.source_ref || github.ref }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
+
+      - name: Resolve frozen source and validate release target
+        id: source
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_REF: ${{ inputs.source_ref }}
+          PUBLISH_TAG: ${{ inputs.publish_tag }}
+          DEFAULT_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          node scripts/release-preflight-smoke.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # Keep the guard from this workflow revision when building an older tag.
+          Copy-Item scripts/release-preflight.js "$env:RUNNER_TEMP/claracore-release-preflight.cjs"
+          node "$env:RUNNER_TEMP/claracore-release-preflight.cjs" resolve
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Check out resolved source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.source.outputs.source_sha }}
+
+      - name: Verify checked-out source and package version
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLISH_TAG: ${{ inputs.publish_tag }}
+          EXPECTED_SOURCE_SHA: ${{ steps.source.outputs.source_sha }}
+        run: |
+          node "$env:RUNNER_TEMP/claracore-release-preflight.cjs" verify
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Install Windows dependencies
         run: npm ci
@@ -112,11 +144,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PUBLISH_TAG: ${{ inputs.publish_tag }}
+          EXPECTED_SOURCE_SHA: ${{ steps.source.outputs.source_sha }}
         run: |
+          node "$env:RUNNER_TEMP/claracore-release-preflight.cjs" verify
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $files = @(
             Get-ChildItem dist, dist-lite -Filter '*-Setup.exe'
             Get-Item SHA256SUMS-windows.txt
           )
-          $arguments = @('release', 'upload', $env:PUBLISH_TAG, '--clobber') + $files.FullName
+          $arguments = @('release', 'upload', $env:PUBLISH_TAG) + $files.FullName
           & gh @arguments
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

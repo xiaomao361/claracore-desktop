@@ -4,13 +4,33 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const output = path.join(root, "site-dist");
 
-async function buildWebsite() {
-  const { version } = require("../package.json");
-  const html = await fs.readFile(path.join(root, "website/index.html"), "utf8");
+function validateWebsiteRelease(html, release) {
+  const { version } = release;
+  if (!/^\d+\.\d+\.\d+$/.test(version || "")) {
+    throw new Error("website/release.json must specify a stable release version");
+  }
   const versions = [...html.matchAll(/(?:\/v|v)(\d+\.\d+\.\d+)/g)].map(match => match[1]);
   if (!versions.length || versions.some(value => value !== version)) {
-    throw new Error(`Website release links and labels must match package version ${version}`);
+    throw new Error(`Website release links and labels must match published version ${version}`);
   }
+  const base = "https://github.com/xiaomao361/claracore-desktop/releases";
+  const expected = [
+    `ClaraCore-Desktop-${version}-arm64.dmg`,
+    `ClaraCore-Desktop-${version}-x64-Setup.exe`,
+    `ClaraCore-Desktop-${version}-lite-arm64.dmg`,
+    `ClaraCore-Desktop-${version}-lite-x64-Setup.exe`
+  ].map(name => `${base}/download/v${version}/${name}`).sort();
+  const downloads = [...html.matchAll(/href="([^"]*\/releases\/download\/[^"]*)"/g)].map(match => match[1]).sort();
+  if (JSON.stringify(downloads) !== JSON.stringify(expected) || !html.includes(`href="${base}/tag/v${version}"`)) {
+    throw new Error(`Website must link all four installers and release notes for published version ${version}`);
+  }
+  return version;
+}
+
+async function buildWebsite() {
+  const html = await fs.readFile(path.join(root, "website/index.html"), "utf8");
+  const release = JSON.parse(await fs.readFile(path.join(root, "website/release.json"), "utf8"));
+  const version = validateWebsiteRelease(html, release);
   // Only replace generated output owned by this build, never source or user data.
   await fs.rm(output, { recursive: true, force: true });
   await fs.mkdir(path.join(output, "assets"), { recursive: true });
@@ -33,4 +53,4 @@ if (require.main === module) {
   buildWebsite().catch(error => { console.error(error); process.exitCode = 1; });
 }
 
-module.exports = { buildWebsite };
+module.exports = { buildWebsite, validateWebsiteRelease };

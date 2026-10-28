@@ -21,10 +21,13 @@ Append `?lang=zh` for a Chinese landing view.
 
 ## Update a release
 
-Update the version, four download links, and release link in `index.html` when
-publishing an application release. The build rejects a version that does not
-match `package.json`; assets must exist on the matching GitHub Release before
-the website is deployed.
+`release.json` records the public installer version, independently of the
+working source version in `package.json`. Update it together with the labels,
+four download links, and release link in `index.html` only after publishing the
+matching installers. The build checks their consistency, including installer
+filenames; an unreleased application version bump does not change public links.
+The offline build does not verify remote asset availability; read back the
+matching GitHub Release assets before deploying the website.
 
 ## Assets
 

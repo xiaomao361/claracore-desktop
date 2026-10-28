@@ -283,7 +283,7 @@ function sharedLineSection() {
     "- Agent-filtered catalogs and ambiguity hints use the same chronological order, independent of the global pointer. isGlobalFallback names that pointer; isCurrent is its legacy alias, never this session's selection. Another session or session_start(lineId) can move the global pointer. This does not choose a line for an identified Agent with several active lines. Catalog timestamps are timezone-explicit ISO 8601; stored history is unchanged.",
     "- A request without lineId is allowed only when your agent owns zero or one active non-default line.",
     "- shared_line_update after meaningful progress, handoff, or changed interpretation. Keep summary concise and actionable.",
-    "- Archive only when the line's own objective is complete or explicitly discontinued, after recording its final position. A missing next step alone is not completion. Archiving preserves history.",
+    "- shared_line_archive only when the line's own objective is complete or explicitly discontinued, after recording its final position. A missing next step alone is not completion. Archiving preserves history.",
     "- interpretationStatus=needs_review when the state is uncertain and the next agent should be cautious.",
     "- In core-compat/full, shared_line_handoff_create when explicitly handing work to another agent or a future session.",
     "- Agent-level state (style, preferences, boundaries, patterns) lives in shared_line_agent_state. Load it once per session, not once per line read.",

@@ -3,12 +3,22 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const vm = require("node:vm");
 const { parseHTML } = require("linkedom");
-const { buildWebsite } = require("./build-website");
+const { buildWebsite, validateWebsiteRelease } = require("./build-website");
 
 async function main() {
   await buildWebsite();
   const output = path.resolve(__dirname, "../site-dist");
   const html = await fs.readFile(path.join(output, "index.html"), "utf8");
+  const release = require("../website/release.json");
+  // Working source may be newer than the public installers. Both the current
+  // stable page and a future consistent release must validate independently.
+  assert.equal(validateWebsiteRelease(html, release), release.version);
+  const futureVersion = "99.0.0";
+  assert.equal(validateWebsiteRelease(html.replaceAll(release.version, futureVersion), { version: futureVersion }), futureVersion);
+  assert.throws(() => validateWebsiteRelease(html, { version: futureVersion }), /published version/);
+  assert.throws(() => validateWebsiteRelease(html, {}), /stable release version/);
+  assert.throws(() => validateWebsiteRelease(html.replace(`-${release.version}-arm64.dmg`, "-0.0.0-arm64.dmg"), release), /four installers/);
+  assert.throws(() => validateWebsiteRelease(html.replace(`v${release.version}`, "v0.0.0"), release), /published version/);
   const script = await fs.readFile(path.join(output, "site.js"), "utf8");
   for (const search of ["", "?lang=zh", "?lang=unsupported"]) {
     const { window, document } = parseHTML(html);
