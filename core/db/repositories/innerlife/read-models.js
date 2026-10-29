@@ -200,6 +200,7 @@ function createInnerLifeReadModelRepository(helpers) {
         thought_id: share.thought_id,
         status: share.status,
         body: String(share.body || "").slice(0, 800),
+        truncated: String(share.body || "").length > 800,
         decision_reason: String(share.decision_reason || "").slice(0, 600),
         deliveryEvidence: share.deliveryEvidence || null,
         created_at: share.created_at,
@@ -221,18 +222,21 @@ function createInnerLifeReadModelRepository(helpers) {
       const shareChecks = await this.listInnerLifeShareChecksCompact(requestedAgentId, 20);
       const history = (await this.getInnerLifeHistory(requestedAgentId, 20)).map((item) => ({
         ...item,
+        truncated: String(item.body || "").length > 800,
         body: String(item.body || "").slice(0, 800)
       }));
       const experiences = (await this.listInnerLifeExperiences(requestedAgentId, 10)).map((item) => ({
         ...item,
+        truncated: String(item.body || "").length > 800,
         body: String(item.body || "").slice(0, 800)
       }));
       const summaries = (await this.listInnerLifeSummaries(requestedAgentId, 10)).map((item) => ({
         ...item,
+        truncated: String(item.summary || "").length > 1000,
         summary: String(item.summary || "").slice(0, 1000)
       }));
       const daemon = profile
-        ? await this.ensureInnerLifeDaemonState(profile.agent_id)
+        ? await this.getInnerLifeDaemonStateReadOnly(profile.agent_id)
         : { agentId: "", status: "paused", enabled: false, lastTickAt: null, nextRunAt: null, lastResult: "", lastError: "", tickCount: 0, updatedAt: null, metadata: {} };
       return {
         profile,
@@ -272,7 +276,7 @@ function createInnerLifeReadModelRepository(helpers) {
         experiences,
         summaries,
         daemon,
-        doctor: profile ? await this.getInnerLifeDoctor(profile.agent_id) : { status: "ok", summary: "No InnerLife profiles configured.", issues: [], nextActions: [] }
+        doctor: profile ? await this.getInnerLifeDoctor(profile.agent_id, { daemon }) : { status: "ok", summary: "No InnerLife profiles configured.", issues: [], nextActions: [] }
       };
     },
 

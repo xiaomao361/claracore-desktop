@@ -4,6 +4,15 @@ const { contextBridge, ipcRenderer } = require("electron");
 // name against electron/ipc-contracts.js.
 const ipcChannel = (name) => `claracore:${name}`;
 
+function unwrapKnowledgeRead(result) {
+  if (result?.knowledgeError) {
+    const error = new Error(result.knowledgeError.message);
+    error.code = result.knowledgeError.code;
+    throw error;
+  }
+  return result;
+}
+
 contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   getRuntimeSnapshot() {
     return ipcRenderer.invoke(ipcChannel("getRuntimeSnapshot"));
@@ -20,10 +29,6 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   getImportPreview() {
     return ipcRenderer.invoke(ipcChannel("getImportPreview"));
   },
-  getJevSettings() { return ipcRenderer.invoke(ipcChannel("getJevSettings")); },
-  saveJevSettings(input) { return ipcRenderer.invoke(ipcChannel("saveJevSettings"), input); },
-  listJevModels() { return ipcRenderer.invoke(ipcChannel("listJevModels")); },
-  testJevConnection() { return ipcRenderer.invoke(ipcChannel("testJevConnection")); },
   searchKnowledge(input) { return ipcRenderer.invoke(ipcChannel("searchKnowledge"), input); },
   rebuildKnowledgeSearchIndex(input) { return ipcRenderer.invoke(ipcChannel("rebuildKnowledgeSearchIndex"), input); },
   listKnowledgeActivity(input) {
@@ -60,10 +65,10 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
     return ipcRenderer.invoke(ipcChannel("listKnowledgeDocuments"), input);
   },
   readKnowledgeDocument(reference) {
-    return ipcRenderer.invoke(ipcChannel("readKnowledgeDocument"), reference);
+    return ipcRenderer.invoke(ipcChannel("readKnowledgeDocument"), reference).then(unwrapKnowledgeRead);
   },
   readKnowledgeSection(reference) {
-    return ipcRenderer.invoke(ipcChannel("readKnowledgeSection"), reference);
+    return ipcRenderer.invoke(ipcChannel("readKnowledgeSection"), reference).then(unwrapKnowledgeRead);
   },
   getKnowledgeLinks(reference, options) {
     return ipcRenderer.invoke(ipcChannel("getKnowledgeLinks"), reference, options);
@@ -203,8 +208,17 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   createSharedLineHandoff(input) {
     return ipcRenderer.invoke(ipcChannel("createSharedLineHandoff"), input);
   },
-  getInnerLife() {
-    return ipcRenderer.invoke(ipcChannel("getInnerLife"));
+  getInnerLife(input) {
+    return ipcRenderer.invoke(ipcChannel("getInnerLife"), input);
+  },
+  getSharedLines(input) {
+    return ipcRenderer.invoke(ipcChannel("getSharedLines"), input);
+  },
+  getInnerLifeShares(input) {
+    return ipcRenderer.invoke(ipcChannel("getInnerLifeShares"), input);
+  },
+  getInnerLifeText(input) {
+    return ipcRenderer.invoke(ipcChannel("getInnerLifeText"), input);
   },
   getInnerLifeSessions(input) {
     return ipcRenderer.invoke(ipcChannel("getInnerLifeSessions"), input);
@@ -328,6 +342,13 @@ contextBridge.exposeInMainWorld("ClaraCoreDesktop", {
   },
   getShellState() {
     return ipcRenderer.invoke(ipcChannel("getShellState"));
+  },
+  onTrayNavigate(callback) {
+    if (typeof callback !== "function") return () => {};
+    const listener = (_event, view) => callback(view);
+    ipcRenderer.on(ipcChannel("trayNavigate"), listener);
+    ipcRenderer.send(ipcChannel("trayReady"));
+    return () => ipcRenderer.removeListener(ipcChannel("trayNavigate"), listener);
   },
   onRuntimeChanged(callback) {
     if (typeof callback !== "function") return () => {};

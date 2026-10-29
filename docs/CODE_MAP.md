@@ -10,6 +10,7 @@ Start with the owner of the behavior you want to change.
 | Home presence | `app/views/home.js`, `app/views/home-presence.js`, `app/views/home-vision.js` |
 | Memory behavior | `core/memoria/`, `core/db/repositories/memoria*` |
 | Shared Lines and agent state | `core/continuity/`, `core/db/repositories/continuity/` |
+| Desktop scoped catalogs and original-text reads | `core/desktop-readers.js`, `app/innerlife-actions.js`, `app/shared-line-actions.js` |
 | InnerLife behavior | `core/innerlife/`, `core/db/repositories/innerlife/` |
 | Knowledge reader and intake | `core/knowledge/`, `app/views/knowledge.js`, `app/knowledge-markdown.js` |
 | MCP tools and compatibility | `core/gateway/`, `electron/http-agent-gateway.js` |

@@ -42,8 +42,7 @@ async function main() {
       }), before.id);
 
     await page.click("[data-view='settings']");
-    await page.click("[data-settings-tab='app-data']");
-    await page.evaluate(() => { document.querySelector("#dataRecoveryDetails").open = true; });
+    await page.click("[data-settings-open='recovery']");
     await page.click("#exportBackup");
     await page.waitForSelector("[data-backup-action='restore']", { timeout: 15000 });
     const backupText = await page.textContent("#backupList");

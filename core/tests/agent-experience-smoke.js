@@ -68,6 +68,12 @@ async function main() {
       if (result.result?.isError) throw new Error(result.result.content[0].text);
       return JSON.parse(result.result.content[0].text);
     }
+    const connectionTables = ["memories", "continuity_lines", "current_positions", "innerlife_profiles", "innerlife_daemon_state", "innerlife_thoughts", "innerlife_inbox", "innerlife_shares"];
+    const connectionFingerprint = async () => JSON.stringify(await Promise.all(connectionTables.map(table => database.query(`SELECT * FROM ${table} ORDER BY rowid;`))));
+    const beforeConnection = await connectionFingerprint();
+    const connection = await call("claracore_connection_test");
+    assert.equal(connection.ok, true);
+    assert.equal(await connectionFingerprint(), beforeConnection, "Connecting must not create user content, profiles or daemon state");
     const args = { prompt: "请回忆之前确认的工程决定，本轮没有匹配记录。", domain: "memory" };
     const summary = await call("gateway_auto_context", args);
     assert.equal(summary.detail, "summary");
@@ -83,7 +89,7 @@ async function main() {
     assert.equal((await database.getMemoryControlLedgerStats()).eventCount, eventsBefore, "Inspect must not rerun recall or create a decision.");
     await assert.rejects(call(summary.diagnosticsRef.tool, summary.diagnosticsRef.arguments, "different-client"), /not found for this caller/);
     const full = await call("gateway_auto_context", { ...args, detail: "full" });
-    assert.ok(Array.isArray(full.candidates) && full.jev.route);
+    assert.ok(Array.isArray(full.candidates) && full.recallReceipt.domainStatus);
     assert.ok(Buffer.byteLength(JSON.stringify(summary)) < Buffer.byteLength(JSON.stringify(full)) * 0.8, "A quiet default response should shed diagnostic overhead.");
 
     const created = await call("shared_line_create", { title: "Agent experience fixture", makeActive: false });

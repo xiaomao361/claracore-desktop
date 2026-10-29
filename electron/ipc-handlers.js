@@ -1,9 +1,16 @@
-const { getDecisionModelSettings: getJevSettings, saveDecisionModelSettings: saveJevSettings, listDecisionModels: listJevModels, evaluateDecisionModel: evaluateJev } = require("../core/decision-model/service");
+const desktopReaders = require("../core/desktop-readers");
 const { searchKnowledge, rebuildKnowledgeSearchIndex } = require("../core/knowledge/search");
 const { ensureProductCore } = require("../core/runtime");
 const { previewKnowledgeIntake, commitKnowledgeIntake, knowledgeIndexStatus, rebuildKnowledgeIndex, listKnowledgeActivity, readKnowledgeActivity } = require("../core/knowledge/intake");
 const path = require("path");
 const { ipcChannel } = require("./ipc-contracts");
+async function knowledgeRead(read) {
+  try { return await read(); }
+  catch (error) {
+    if (!(error instanceof KnowledgeLibraryError)) throw error;
+    return { knowledgeError: { code: error.code, message: error.message } };
+  }
+}
 const {
   KnowledgeLibraryError,
   getKnowledgeLinks,
@@ -36,7 +43,6 @@ const {
   exportProductDataJson,
   exportProductMemoryArchive,
   getProductMemories,
-  getProductInnerLife,
   getProductInnerLifeDigestRuns,
   getProductImportPreview,
   getProductInnerLifeInbox,
@@ -126,10 +132,6 @@ function registerIpcHandlers({
   });
   ipcMain.handle(ipcChannel("getResourceSnapshot"), () => getResourceSnapshot());
   ipcMain.handle(ipcChannel("getImportPreview"), () => getProductImportPreview(app));
-  ipcMain.handle(ipcChannel("getJevSettings"), () => getJevSettings(app));
-  ipcMain.handle(ipcChannel("saveJevSettings"), (_event, input) => saveJevSettings(app, input));
-  ipcMain.handle(ipcChannel("listJevModels"), () => listJevModels(app));
-  ipcMain.handle(ipcChannel("testJevConnection"), () => evaluateJev(app, "Connection test", { test: true }));
   async function selectedKnowledgeRoot() {
     const preference = await getKnowledgeRootPreference(app);
     if (preference.status !== "ok" && preference.status !== "empty_corpus") {
@@ -179,8 +181,8 @@ function registerIpcHandlers({
     if (input !== undefined && !isPlainObject(input)) throw new KnowledgeLibraryError("invalid_page", "Knowledge page options are invalid.");
     return listKnowledgeDocuments(await selectedKnowledgeRoot(), input);
   });
-  ipcMain.handle(ipcChannel("readKnowledgeDocument"), async (_event, reference) => readKnowledgeDocument(await selectedKnowledgeRoot(), reference));
-  ipcMain.handle(ipcChannel("readKnowledgeSection"), async (_event, reference) => readKnowledgeSection(await selectedKnowledgeRoot(), reference));
+  ipcMain.handle(ipcChannel("readKnowledgeDocument"), (_event, reference) => knowledgeRead(async () => readKnowledgeDocument(await selectedKnowledgeRoot(), reference)));
+  ipcMain.handle(ipcChannel("readKnowledgeSection"), (_event, reference) => knowledgeRead(async () => readKnowledgeSection(await selectedKnowledgeRoot(), reference)));
   ipcMain.handle(ipcChannel("getKnowledgeLinks"), async (_event, reference, options) => {
     if (options !== undefined && !isPlainObject(options)) throw new KnowledgeLibraryError("invalid_page", "Knowledge link options are invalid.");
     return getKnowledgeLinks(await selectedKnowledgeRoot(), reference, options);
@@ -368,8 +370,21 @@ function registerIpcHandlers({
     if (input && (typeof input !== "object" || Array.isArray(input))) return false;
     return createProductSharedLineHandoff(app, input || {});
   });
-  ipcMain.handle(ipcChannel("getInnerLife"), async () => {
-    return getProductInnerLife(app);
+  ipcMain.handle(ipcChannel("getInnerLife"), async (_event, input) => {
+    const { database } = await ensureProductCore(app);
+    return desktopReaders.getInnerLife(database, input || {});
+  });
+  ipcMain.handle(ipcChannel("getSharedLines"), async (_event, input) => {
+    const { database } = await ensureProductCore(app);
+    return desktopReaders.getSharedLines(database, input || {});
+  });
+  ipcMain.handle(ipcChannel("getInnerLifeShares"), async (_event, input) => {
+    const { database } = await ensureProductCore(app);
+    return desktopReaders.getInnerLifeShares(database, input || {});
+  });
+  ipcMain.handle(ipcChannel("getInnerLifeText"), async (_event, input) => {
+    const { database } = await ensureProductCore(app);
+    return desktopReaders.getInnerLifeText(database, input || {});
   });
   ipcMain.handle(ipcChannel("getInnerLifeSessions"), async (_event, input) => {
     if (input && (typeof input !== "object" || Array.isArray(input))) return false;
@@ -588,7 +603,8 @@ function registerIpcHandlers({
   });
   ipcMain.handle(ipcChannel("openPath"), async (_event, targetPath) => {
     if (typeof targetPath !== "string" || targetPath.length === 0) return false;
-    await shell.openPath(targetPath);
+    const error = await shell.openPath(targetPath);
+    if (error) throw new Error(error);
     return true;
   });
   ipcMain.handle(ipcChannel("openExternal"), async (_event, targetUrl) => {

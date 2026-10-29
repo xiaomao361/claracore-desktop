@@ -154,7 +154,7 @@ function createClaraCoreHomeUnderstanding({ root, api, t, getSnapshot, onOpenLin
     const metadata = position.metadata || {};
     const selected = currentLines.find((line) => line.id === selectedLineId);
     const title = text(selected?.title) || text(position.lineTitle) || text(detail.lineTitle) || selectedLineId;
-    const nextStep = text(position.nextStep) || text(metadata.nextStep);
+    const nextStep = text(Object.hasOwn(position, "nextStep") ? position.nextStep : metadata.nextStep);
     const confirmedGround = text(metadata.confirmedGround);
     const provisionalRead = text(metadata.provisionalRead);
     const misreadRisks = text(metadata.misreadRisks);
@@ -167,7 +167,7 @@ function createClaraCoreHomeUnderstanding({ root, api, t, getSnapshot, onOpenLin
       <div class="understanding-main">
         <header class="understanding-topic-heading"><p class="understanding-eyebrow">${escapeHtml(t("home.understanding.currentTopic"))}</p><h2>${escapeHtml(title)}</h2></header>
         ${section("home.understanding.position", position.summary, "home.understanding.noPosition", "understanding-position")}
-        ${section("home.understanding.nextStep", nextStep, "home.understanding.noNextStep", "understanding-next-step")}
+        ${nextStep ? section("home.understanding.nextStep", nextStep, "home.understanding.noNextStep", "understanding-next-step") : ""}
         ${confirmedGround ? section("home.understanding.recordedUnderstanding", confirmedGround, "", "understanding-ground") : ""}
         ${provisionalRead || misreadRisks ? `<section class="understanding-section understanding-unresolved"><h3>${escapeHtml(t("home.understanding.unresolved"))}</h3>${provisionalRead ? prose(preview(provisionalRead)) : ""}${misreadRisks ? prose(preview(misreadRisks)) : ""}</section>` : ""}
         <footer class="understanding-actions">${fullLineAction()}${currentLines.length > CATALOG_LIMIT ? catalogAction() : ""}</footer>

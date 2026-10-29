@@ -197,15 +197,10 @@ function arbitrateAutomaticContext(input = {}) {
 function shapeAutomaticContext(result, detail = "summary") {
   if (!["summary", "full"].includes(detail)) throw new Error("Automatic context detail must be summary or full.");
   if (detail === "full") return { ...result, detail };
-  const { candidates, evidenceStates, note, suppressed, jev, recallReceipt, knowledgeObservation, ...delivery } = result;
+  const { candidates, evidenceStates, note, suppressed, recallReceipt, knowledgeObservation, ...delivery } = result;
   return {
     ...delivery,
     detail,
-    ...(jev ? { jev: {
-      status: jev.status, applied: Boolean(jev.applied), domainApplied: Boolean(jev.domainApplied),
-      ...(jev.knowledgeMode ? { knowledgeMode: { status: jev.knowledgeMode.status, applied: Boolean(jev.knowledgeMode.applied) } } : {}),
-      ...(jev.httpStatus ? { httpStatus: jev.httpStatus } : {})
-    } } : {}),
     ...(recallReceipt ? { recallReceipt: {
       decisionId: recallReceipt.decisionId,
       ...(recallReceipt.feedbackRef ? { feedbackRef: recallReceipt.feedbackRef } : {}),

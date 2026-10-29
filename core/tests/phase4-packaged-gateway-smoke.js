@@ -297,6 +297,7 @@ async function main() {
       throw new Error(`Packaged Gateway trace list did not include gateway_context: ${JSON.stringify(traceList.traces)}`);
     }
 
+    await runtime.saveProductSettings(runtimeApp, { "innerlife.llm.api_key_ref": "package-status-fixture-only" });
     const status = parseTextResult(await client.callTool("claracore_status"));
     if (status.dataRoot !== dataRoot) throw new Error(`Packaged Gateway status data root mismatch: ${status.dataRoot}`);
     if (!status.database?.initialized) throw new Error("Packaged Gateway did not initialize the product database.");

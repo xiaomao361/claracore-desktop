@@ -185,7 +185,7 @@ async function main() {
     if (
       layoutStructure.primaryCount !== 6
       || layoutStructure.readerCount < 7
-      || layoutStructure.processSteps !== 4
+      || layoutStructure.processSteps !== 0
       || !layoutStructure.agentScopeBeforeOverview
       || layoutStructure.titleLineClamp !== "2"
       || !layoutStructure.agentContextOutsideLineDetail

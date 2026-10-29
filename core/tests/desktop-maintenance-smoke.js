@@ -8,7 +8,7 @@ const runtime = require('../runtime');
 const { createGatewayTools } = require('../gateway/tools');
 const { sqlString } = require('../db/helpers');
 const { createTurnContextService } = require('../gateway/turn-context');
-const { recallReceipt } = require('../jev/recall-route');
+const { recallReceipt } = require('../gateway/recall-receipt');
 
 async function main() {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'claracore-maintenance-'));
@@ -156,7 +156,7 @@ async function main() {
     assert.deepEqual(timedOut.memoryCandidates, []);
     const collector = createTurnContextService({ runMemoryController: async () => ({ decisionId: decision.id, resultStatus: 'completed', candidates: [{ id: 'memory-test', score: 0.9 }], injectedIds: ['memory-test'], context: 'Recalled context', policyMode: 'canary' }) });
     const collected = await collector.collect({}, { prompt: 'Earlier decision', agentId: 'codex', domain: 'memory' });
-    const receipt = recallReceipt({ decision: 'deliver_one' }, { ...collected, jev: { route: {}, status: 'disabled' } });
+    const receipt = recallReceipt({ decision: 'deliver_one' }, collected);
     assert.equal(receipt.decisionId, decision.id);
     assert.equal(receipt.hostDelivery, 'unknown');
     assert.equal(receipt.used, 'unknown');

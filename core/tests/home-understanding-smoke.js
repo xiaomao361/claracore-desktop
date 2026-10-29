@@ -316,7 +316,7 @@ async function honestMissingFieldsAndSafeLongContent() {
   await missing.controller.setActive(true);
   assert.match(missing.body.textContent, /noReferences/u);
   assert.match(missing.body.textContent, /noPosition/u);
-  assert.match(missing.body.textContent, /noNextStep/u);
+  assert.equal(missing.body.querySelector(".understanding-next-step"), null, "A topic without a plan must not look like an unfinished task");
   assert(!missing.body.textContent.includes("STALE METADATA REFERENCE"), "An explicit empty factsUsed array is authoritative");
 
   const metadata = fixture(catalog(), async ({ lineId }) => packet(lineId, { factsUsed: undefined, metadata: { factsUsed: ["legacy-reference"] } }));
@@ -369,16 +369,12 @@ function actualMarkupAndReadingContracts() {
   }
   const elementsInOrder = [...document.querySelectorAll("*")];
   const before = (first, second) => elementsInOrder.indexOf(first) < elementsInOrder.indexOf(second);
-  assert.equal(document.querySelectorAll("details.reading-mechanism").length, 3);
-  for (const [viewId, contentId] of [["memoryView", "memoryList"], ["sharedLineView", "sharedLineSummary"], ["innerlifeView", "innerLifeUnsharedList"]]) {
-    const content = document.getElementById(contentId);
-    const view = document.getElementById(viewId) || content.closest(".view");
-    const mechanism = view.querySelector("details.reading-mechanism");
-    assert(mechanism, `Missing mechanism disclosure for ${viewId}`);
-    assert.equal(mechanism.hasAttribute("open"), false, "Mechanism explanations must begin collapsed");
-    assert(before(content, mechanism), `Content must precede its mechanism explanation: ${viewId}`);
-    assert(!content.closest("details.reading-mechanism"), "Primary content must not be inside the mechanism disclosure");
-  }
+  assert.equal(document.querySelectorAll("details.reading-mechanism").length, 0);
+  assert.equal(document.querySelector('[data-view="trace"]'), null);
+  assert.equal(document.querySelector('#traceView'), null);
+  assert(document.querySelector('#homeView #homeMilestoneList'));
+  assert(document.querySelector('#logsView #traceOpenDetail'));
+  assert(document.querySelector('#logsView #traceDetailDialog'));
   const disclosure = document.querySelector("#homePresenceDisclosure");
   assert.equal(disclosure.hasAttribute("open"), false);
   assert(before(disclosure, document.querySelector("#homeUnderstanding")), "Connection belongs beside the heading, above the reading surface");
@@ -426,6 +422,25 @@ function actualMarkupAndReadingContracts() {
   const sharedState = { activeSharedLineAgentFilter: "", selectedSharedLineId: "parallel", selectedSharedLinePacket: selectedPacket };
   const reader = window.createClaraCoreSharedInnerLifeView({ dom, t: translate, getSnapshot: () => snapshot, ...window.ClaraCoreUtils, state: sharedState, renderMemoryResults() {}, memoryAgentId: () => "" });
   reader.renderSharedLine();
+  assert.equal(dom.sharedLineNext.closest(".stage-next").hidden, true, "Historical handoffs must not become a current plan");
+  selectedPacket.currentPosition.metadata.nextStep = "A current recorded plan";
+  reader.renderSharedLine();
+  assert.equal(dom.sharedLineNext.closest(".stage-next").hidden, false);
+  assert(dom.sharedLineNext.textContent.includes("A current recorded plan"));
+  selectedPacket.currentPosition.nextStep = "";
+  reader.renderSharedLine();
+  assert.equal(dom.sharedLineNext.closest(".stage-next").hidden, true, "An explicit empty plan overrides older metadata");
+  sharedState.sharedLineReadStatus = "loading";
+  reader.renderSharedLine();
+  assert.equal(dom.sharedLineResume.disabled, true);
+  sharedState.sharedLineReadStatus = "error";
+  reader.renderSharedLine();
+  assert.equal(dom.sharedLineResume.disabled, true);
+  assert.equal(dom.sharedLineRetry.hidden, false);
+  sharedState.sharedLineReadStatus = "ready";
+  reader.renderSharedLine();
+  assert.equal(dom.sharedLineResume.disabled, false);
+  assert.equal(dom.sharedLineRetry.hidden, true);
   assert.equal(dom.sharedLineReferencesSection.hidden, false);
   assert.equal(dom.sharedLineReferences.querySelectorAll("li").length, 8, "All references must remain reachable in the full reader");
   assert.match(dom.sharedLineReferences.textContent, /reference-7/u);

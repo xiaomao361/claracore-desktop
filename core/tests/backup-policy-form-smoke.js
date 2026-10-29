@@ -5,8 +5,8 @@ for(const id of ids)assert.equal((html.match(new RegExp(`id="${id}"`,'g'))||[]).
 const element=()=>({children:{},raw:'',get innerHTML(){return this.raw+Object.values(this.children).map(x=>x.innerHTML).join('');},set innerHTML(v){this.raw=v;},querySelector(key){return this.children[key] ||= element();},value:'',textContent:'',disabled:false,listeners:{},addEventListener(name,fn){this.listeners[name]=fn;},classList:{toggle(){}},reportValidity:()=>true});
 const dom=new Proxy({}, {get(target,key){return target[key] ||= element();}});
 let snapshot={configuration:{backup:{enabled:true,schedule:'manual',retentionDays:7,mirrorDir:'',hour:3}},backups:[]};
-let saved,refreshFails=false,saveFails=false;
-const window={ClaraCoreDesktop:{saveSettings:async updates=>{if(saveFails)throw Error('save rejected');saved=updates;return {configuration:{}};},chooseBackupDirectory:async()=>({canceled:true,path:''})}};
+let saved,refreshFails=false,saveFails=false,afterSave=()=>{};
+const window={ClaraCoreDesktop:{saveSettings:async updates=>{if(saveFails)throw Error('save rejected');saved=updates;afterSave();return {configuration:{}};},chooseBackupDirectory:async()=>({canceled:true,path:''})}};
 const context={window,console:{error(){}},Number,String};vm.createContext(context);vm.runInContext(fs.readFileSync('app/views/data.js','utf8'),context);
 const view=window.createClaraCoreDataView({dom,t:key=>key,getSnapshot:()=>snapshot,refresh:async()=>{if(refreshFails)throw Error('refresh failed');},escapeHtml:x=>x,formatBytes:x=>x,formatLocalDateTime:x=>x,showCopyNotice:()=>{}});
 (async()=>{
@@ -44,6 +44,11 @@ const view=window.createClaraCoreDataView({dom,t:key=>key,getSnapshot:()=>snapsh
  assert.equal(saved['backup.retention_days'],14);assert.equal(saved['backup.mirror_dir'],'');assert.equal(saved['backup.schedule'],'daily');
  saveFails=true;dom.backupRetention.value='30';dom.backupPolicyForm.listeners.input();await dom.backupPolicyForm.listeners.submit({preventDefault(){}});view.renderBackups();assert.equal(dom.backupRetention.value,'30');assert.equal(dom.backupPolicyNotice.textContent,'data.backupPolicyFailed');
  saveFails=false;refreshFails=true;await dom.backupPolicyForm.listeners.submit({preventDefault(){}});assert.equal(dom.backupPolicyNotice.textContent,'data.backupPolicyRefreshFailed');
+ refreshFails=false;
+ afterSave=()=>{dom.backupRetention.value='45';dom.backupPolicyForm.listeners.input();};
+ await dom.backupPolicyForm.listeners.submit({preventDefault(){}});view.renderBackups();
+ assert.equal(dom.backupRetention.value,'45','Edits made while saving must remain unsaved');
+ assert.equal(dom.backupPolicyNotice.textContent,'settings.savedWithDraft');
  assert.equal(dom.saveBackupPolicy.disabled,false);
  console.log('Backup form: defaults, editing preservation, cancel/clear, save and distinct failure states passed (no UI automation)');
 })().catch(e=>{console.error(e);process.exitCode=1});

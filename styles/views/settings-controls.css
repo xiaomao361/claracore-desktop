@@ -18,10 +18,6 @@
   background: #fafaf7;
 }
 
-.settings-primary-panel {
-  width: min(100%, 900px);
-  margin: 0;
-}
 
 .badge.warn {
   background: var(--amber-bg);
@@ -41,46 +37,12 @@
   font-size: 13px;
 }
 
-.capability-card {
-  padding: 0;
-  overflow: hidden;
-}
 
-.capability-card > summary {
-  padding: 16px;
-  cursor: pointer;
-  list-style: none;
-}
 
-.capability-card > summary::-webkit-details-marker {
-  display: none;
-}
 
-.capability-card[open] > summary {
-  border-bottom: 1px solid var(--border);
-}
 
-.capability-provider {
-  display: block;
-  margin-top: 7px;
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 650;
-}
 
-.capability-summary-action {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 9px;
-  color: var(--green);
-  font-size: 12px;
-  font-weight: 700;
-}
 
-.capability-form {
-  padding: 14px 16px 16px;
-}
 
 .advanced-settings-list {
   display: grid;
@@ -258,70 +220,12 @@
   height: 18px;
 }
 
-.model-config-card .settings-grid {
-  gap: 10px 12px;
-  align-items: start;
-}
-
-.jev-settings-grid {
-  row-gap: 12px;
-}
-
-.jev-settings-grid .jev-observation-toggle {
-  grid-column: 1 / -1;
-  min-height: 36px;
-  margin: 0;
-}
-
-.jev-key-group {
-  display: grid;
-  gap: 8px;
-  align-content: start;
-  min-width: 0;
-}
-
-.jev-key-group .field,
-.jev-key-group .toggle-row {
-  margin: 0;
-}
-
-.jev-key-group .toggle-row {
-  min-height: 24px;
-}
-
-.jev-advanced {
-  margin-top: 14px;
-}
-
-.jev-advanced-field {
-  max-width: 320px;
-}
-
-.model-config-card .settings-grid .field {
-  grid-template-rows: 18px 36px minmax(16px, auto);
-  gap: 6px;
-  margin-top: 0;
-  align-content: start;
-}
-
-.model-config-card .settings-grid .field > input,
-.model-config-card .settings-grid .field > select,
-.model-config-card .settings-grid .field > .copy-field,
-.model-config-card .settings-grid .field > .model-picker-field {
-  grid-row: 2;
-}
-
-.model-config-card .settings-grid .field > small.quiet {
-  grid-row: 3;
-}
-
 .model-picker-field {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 72px;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
   min-width: 0;
-  height: 36px;
 }
 
 .model-picker-field input,
@@ -330,25 +234,16 @@
 }
 
 .model-picker-field .secondary {
-  width: 72px;
+  width: auto;
   min-height: 36px;
   margin: 0;
   padding-inline: 8px;
   white-space: nowrap;
 }
 
-.model-config-card .copy-field {
-  height: 36px;
-}
-
-.model-config-card .copy-field .secondary {
-  min-height: 36px;
-  margin: 0;
-}
-
 .connection-test-row {
   display: grid;
-  grid-template-columns: 150px minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 10px;
   align-items: center;
   margin-top: 2px;
@@ -375,15 +270,15 @@
   overflow-wrap: anywhere;
 }
 
-.connection-test-notice.ok {
+.connection-test-notice.is-success {
   color: var(--green);
 }
 
-.connection-test-notice.missing {
+.connection-test-notice.is-failed {
   color: var(--red);
 }
 
-.connection-test-notice.checking {
+.connection-test-notice.is-checking {
   color: var(--muted);
 }
 
@@ -490,35 +385,96 @@ summary {
   font-weight: 720;
 }
 
-.settings-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 14px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border);
+
+/* Settings shares the existing detail-dialog language with the reading pages. */
+.settings-overview { display: grid; gap: 28px; max-width: 980px; }
+.settings-overview > p { margin: 0; }
+#settingsOverviewNotice:empty { display: none; }
+.settings-overview-group { display: grid; gap: 12px; }
+.settings-overview-group > h2 { margin: 0; font-size: 16px; }
+.settings-overview-list { display: grid; gap: 10px; }
+.settings-overview-item { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 18px 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.settings-overview-item h3 { margin: 0 0 5px; font-size: 15px; }
+.settings-overview-item p { margin: 4px 0; overflow-wrap: anywhere; }
+.settings-overview-item > div { min-width: 0; }
+.settings-overview-item > button { flex: 0 0 auto; }
+.settings-overview-value { color: var(--text); font-size: 13px; font-weight: 600; }
+.settings-detail-dialog { width: min(760px, calc(100vw - 32px)); }
+.settings-detail-dialog .memory-dialog-head { position: sticky; top: 0; z-index: 1; background: var(--surface); }
+.settings-detail-dialog [data-settings-editor] > :first-child { margin-top: 0; }
+.settings-detail-dialog [data-settings-editor][hidden], .settings-detail-dialog [data-settings-save-for][hidden] { display: none; }
+.settings-dialog-footer { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--border); background: var(--surface); }
+.settings-dialog-footer > span { flex: 1 1 180px; }
+.settings-discard-prompt { margin: 0 24px 16px; padding: 16px; border: 1px solid var(--border); border-radius: 10px; }
+.settings-discard-prompt > p { margin-top: 0; }
+.settings-discard-prompt > button { margin-inline-end: 10px; }
+@media (max-width: 600px) {
+  .settings-overview-item { gap: 12px; padding: 15px; }
+  .settings-dialog-footer { padding: 14px 16px; }
 }
 
-.settings-tabs button {
-  min-height: 32px;
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--surface);
-  color: var(--muted);
+/* Short preferences read as rows; they do not share the model form grid. */
+.settings-detail-dialog:has([data-settings-editor="appearance"]:not([hidden])) { width: min(600px, calc(100vw - 32px)); }
+.settings-detail-dialog .app-preferences-grid { grid-template-columns: minmax(0, 1fr); gap: 0; }
+.settings-detail-dialog .app-preferences-grid > .field { display: grid; grid-template-columns: minmax(0, 1fr) minmax(160px, 220px); align-items: center; gap: 20px; padding-block: 14px; border-bottom: 1px solid var(--border); }
+.settings-detail-dialog .app-preference-toggle { display: flex; flex-direction: row-reverse; justify-content: space-between; align-items: center; gap: 20px; padding: 16px 0; margin: 0; border: 0; border-radius: 0; background: transparent; }
+.settings-detail-dialog .app-preference-toggle strong { font-weight: 450; }
+.settings-detail-dialog .app-preference-toggle input { flex: 0 0 auto; margin: 0; }
+.settings-detail-dialog:has([data-settings-editor="appearance"]:not([hidden])) .settings-dialog-body { padding: 8px 26px; }
+.settings-version-panel { padding-top: 22px; border-top: 1px solid var(--border); }
+.settings-version-panel .settings-section-head { justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.settings-version-panel .settings-actions { margin: 0; }
+.settings-version-panel #updateCheckStatus:empty { display: none; }
+@media (max-width: 480px) {
+  .settings-detail-dialog .app-preferences-grid > .field { grid-template-columns: minmax(0, 1fr); gap: 8px; }
 }
 
-.settings-tabs button.active {
-  border-color: var(--green);
-  background: var(--green-bg);
-  color: var(--green);
-  font-weight: 650;
+.settings-detail-dialog .app-preference-toggle small[hidden] { display: none; }
+
+.model-fields-grid { align-items: start; }
+.model-fields-grid > .field { align-content: start; margin-top: 12px; }
+.model-fields-grid .model-picker-field, .model-fields-grid .copy-field { align-self: start; }
+.model-fields-grid small:empty { display: none; }
+.settings-detail-dialog .reflection-toggle { margin-top: 18px; align-items: start; }
+.reflection-toggle > input { margin: 3px 0 0; }
+.reflection-toggle > span { min-width: 0; }
+.reflection-toggle strong, .reflection-toggle small { display: block; }
+.reflection-toggle small { margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.connection-test-row .secondary { white-space: nowrap; }
+@media (max-width: 540px) {
+  .settings-detail-dialog .model-fields-grid { grid-template-columns: minmax(0, 1fr); }
+  .connection-test-row { grid-template-columns: minmax(0, 1fr); justify-items: start; }
 }
 
-.settings-tab-panel {
-  display: none;
+.settings-detail-dialog:has(:is([data-settings-editor="controller"], [data-settings-editor="gateway"]):not([hidden])) { width: min(620px, calc(100vw - 32px)); }
+.settings-detail-dialog:has(:is([data-settings-editor="controller"], [data-settings-editor="gateway"]):not([hidden])) .settings-dialog-body { padding: 22px 26px; }
+[data-settings-editor="controller"] > .badge { display: inline-flex; justify-self: start; margin: 0 0 8px; }
+.settings-editor-meta { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+.settings-editor-meta .link-button { margin: 0; }
+.settings-detail-dialog .gateway-fields-grid { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+.gateway-fields-grid .field { align-content: start; }
+.gateway-connection-details { display: grid; gap: 14px; margin: 22px 0; }
+.gateway-connection-details > div { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 12px; align-items: baseline; }
+.gateway-connection-details dt { color: var(--muted); font-size: 12px; }
+.gateway-connection-details dd { min-width: 0; margin: 0; }
+.gateway-connection-details code { font-size: 12px; overflow-wrap: anywhere; }
+#settingsDialogTitle:focus { outline: none; }
+@media (max-width: 480px) {
+  .gateway-connection-details > div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
 }
 
-.settings-tab-panel.active {
-  display: block;
+/* External documents, application storage and recovery share one compact group. */
+.settings-data-list { gap: 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.settings-data-list > .settings-overview-item { padding: 16px 20px; border: 0; border-radius: 0; gap: 20px; }
+.settings-data-list > .settings-overview-item + .settings-overview-item { border-top: 1px solid var(--border); }
+.settings-data-list .settings-overview-item h3 { margin-bottom: 4px; font-size: 14px; }
+.settings-data-list .settings-overview-value { color: var(--muted); font-weight: 400; font-size: 12px; }
+.settings-data-list [data-settings-summary="knowledge"], .settings-data-list [data-settings-summary="storage"] { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; line-height: 1.5; }
+@media (max-width: 480px) {
+  .settings-data-list > .settings-overview-item { padding: 14px; gap: 12px; }
 }
+
+[data-settings-editor="models"] > [data-model-section] + [data-model-section] { border-top: 1px solid var(--border); margin-top: 28px; padding-top: 24px; }
+[data-model-section] > h3 { font-size: 16px; margin: 0 0 14px; }
+[data-model-section] > [data-settings-save-for] { margin-top: 12px; }
+[data-model-section] > p:first-of-type { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }

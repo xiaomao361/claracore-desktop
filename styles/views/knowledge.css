@@ -169,3 +169,13 @@
   .knowledge-semantic-summary { align-items: stretch; }
   .knowledge-search-assist-actions { width: 100%; }
 }
+
+/* One document title; body headings remain subordinate to the reading header. */
+.knowledge-page .knowledge-document-heading { margin: 0 0 18px; }
+.knowledge-page .knowledge-document-heading h2 { margin: 0 0 8px; font-size: 24px; line-height: 1.4; overflow-wrap: anywhere; }
+.knowledge-document-heading > p { margin: 0; font-size: 12px; }
+.knowledge-reader-toolbar .knowledge-path { font-size: 12px; color: var(--faint); }
+.knowledge-prose h3 { font-size: 19px; }
+.knowledge-prose h4 { font-size: 17px; }
+.knowledge-prose h5, .knowledge-prose h6 { font-size: 15px; }
+.knowledge-section:empty { margin: 0; padding: 0; border: 0; }

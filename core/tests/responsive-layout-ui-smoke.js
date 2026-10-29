@@ -158,8 +158,7 @@ async function main() {
     if (screenshotRoot) await page.screenshot({ path: path.join(screenshotRoot, "narrow-shared-line.png"), fullPage: false });
 
     await page.click("[data-view='settings']");
-    await page.click("[data-settings-tab='app-data']");
-    await page.evaluate(() => { document.querySelector("#dataRecoveryDetails").open = true; });
+    await page.click("[data-settings-open='recovery']");
     const dataGroupRects = await page.locator(".data-action-group").evaluateAll((elements) =>
       elements.map((element) => {
         const rect = element.getBoundingClientRect();

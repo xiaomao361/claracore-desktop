@@ -11,6 +11,8 @@ const { createHttpAgentGateway } = require("./http-agent-gateway");
 const { createSchedulers } = require("./schedulers");
 const { ipcChannel } = require("./ipc-contracts");
 const { registerIpcHandlers } = require("./ipc-handlers");
+const { labels: trayLabels, createTrayNavigation, buildTrayTemplate } = require("./tray-menu");
+const { getKnowledgeRootPreference } = require("../core/knowledge/preferences");
 const {
   getLoginItemPreference,
   setLoginItemPreference,
@@ -204,24 +206,6 @@ if (!hasSingleInstanceLock) {
   });
 }
 
-const trayLabels = {
-  en: {
-    status: "Status: running",
-    data: "Open data folder",
-    show: "Show ClaraCore",
-    hide: "Hide ClaraCore",
-    quit: "Quit",
-    tooltip: "ClaraCore Desktop"
-  },
-  zh: {
-    status: "状态：运行中",
-    data: "打开数据目录",
-    show: "显示 ClaraCore",
-    hide: "隐藏 ClaraCore",
-    quit: "退出",
-    tooltip: "ClaraCore 桌面"
-  }
-};
 
 async function exists(targetPath) {
   try {
@@ -497,10 +481,7 @@ async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 7000) {
 }
 
 function openAiModelsUrl(baseUrl) {
-  const url = new URL(baseUrl);
-  const pathName = url.pathname.replace(/\/+$/, "");
-  if (pathName.endsWith("/v1")) return `${baseUrl}/models`;
-  return `${baseUrl}/v1/models`;
+  return require('../core/openai-endpoint').openAiEndpoint(baseUrl, 'models');
 }
 
 function uniqueSortedModelNames(values) {
@@ -517,7 +498,8 @@ async function listConfiguredModels(input = {}) {
   const baseUrl = normalizeModelEndpoint(input.endpoint);
   if (provider === "ollama") {
     const payload = await fetchJsonWithTimeout(`${baseUrl}/api/tags`);
-    const models = Array.isArray(payload.models) ? payload.models.map((item) => item.name || item.model) : [];
+    if (!Array.isArray(payload?.models) || payload.models.some(item => typeof (item?.name || item?.model) !== "string" || !(item.name || item.model).trim())) throw new Error("The service returned an invalid model list.");
+    const models = payload.models.map((item) => item.name || item.model);
     const listedModels = uniqueSortedModelNames(models);
     return {
       provider,
@@ -531,7 +513,8 @@ async function listConfiguredModels(input = {}) {
     const apiKey = resolveApiKeyRef(input.apiKeyRef);
     const headers = apiKey ? { Authorization: `Bearer ${apiKey}` } : {};
     const payload = await fetchJsonWithTimeout(openAiModelsUrl(baseUrl), { headers });
-    const models = Array.isArray(payload.data) ? payload.data.map((item) => item.id || item.name) : [];
+    if (!Array.isArray(payload?.data) || payload.data.some(item => typeof (item?.id || item?.name) !== "string" || !(item.id || item.name).trim())) throw new Error("The service returned an invalid model list.");
+    const models = payload.data.map((item) => item.id || item.name);
     const listedModels = uniqueSortedModelNames(models);
     return {
       provider,
@@ -638,42 +621,43 @@ function toggleMainWindow() {
   }
 }
 
+const trayNavigation = createTrayNavigation({
+  show: showMainWindow,
+  send: view => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(ipcChannel("trayNavigate"), view);
+  }
+});
+ipcMain.on(ipcChannel("trayReady"), event => {
+  if (mainWindow && !mainWindow.isDestroyed() && event.sender === mainWindow.webContents) trayNavigation.ready();
+});
+
 function updateTrayMenu(language = trayLanguage) {
-  trayLanguage = trayLabels[language] ? language : "en";
+  trayLanguage = Object.prototype.hasOwnProperty.call(trayLabels, language) ? language : "en";
   if (!tray) return;
   const labels = trayLabels[trayLanguage];
   tray.setToolTip(labels.tooltip);
   if (process.platform === "darwin" && typeof tray.setTitle === "function") {
     tray.setTitle("");
   }
-  tray.setContextMenu(
-    Menu.buildFromTemplate([
-      { label: labels.status, enabled: false },
-      { type: "separator" },
-      { label: labels.show, click: showMainWindow },
-      {
-        label: labels.hide,
-        click() {
-          hideMainWindowToTray();
-        }
-      },
-      {
-        label: labels.data,
-        async click() {
-          const { dataRoot } = await ensureProductDirectories(app);
-          await shell.openPath(dataRoot);
-        }
-      },
-      { type: "separator" },
-      {
-        label: labels.quit,
-        click() {
-          isQuitting = true;
-          app.quit();
-        }
-      }
-    ])
-  );
+  tray.setContextMenu(Menu.buildFromTemplate(buildTrayTemplate({
+    language: trayLanguage, version: PRODUCT_VERSION,
+    show: showMainWindow, hide: hideMainWindowToTray,
+    navigate: view => trayNavigation.open(view),
+    openData: async () => {
+      const { dataRoot } = await ensureProductDirectories(app);
+      const error = await shell.openPath(dataRoot);
+      if (error) throw new Error(error);
+    },
+    openKnowledge: async () => {
+      const preference = await getKnowledgeRootPreference(app);
+      if (preference.status === "not_selected") return trayNavigation.open("knowledge");
+      if (!["ok", "empty_corpus"].includes(preference.status)) throw new Error(preference.message || preference.status);
+      const error = await shell.openPath(preference.root);
+      if (error) throw new Error(error);
+    },
+    quit: () => { isQuitting = true; app.quit(); },
+    onError: (title, error) => dialog.showErrorBox(title, error.message || String(error))
+  })));
 }
 
 function createTray() {
@@ -714,6 +698,7 @@ function createWindow({ show = true } = {}) {
     hideMainWindowToTray();
   });
 
+  mainWindow.webContents.on("did-start-loading", () => trayNavigation.loading());
   mainWindow.loadFile(path.join(APP_ROOT, "index.html"));
 }
 

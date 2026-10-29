@@ -220,7 +220,7 @@ async function main() {
     ) {
       throw new Error(`InnerLife read action overlaps or escapes thought content: ${JSON.stringify(thoughtCardLayout)}`);
     }
-    if (readerStructure.thoughtCards !== 3 || readerStructure.sharedRows !== 1 || readerStructure.processSteps !== 5 || !readerStructure.processBeforeThoughts || readerStructure.insightEntries !== 3 || readerStructure.nestedDetails !== 0 || !readerStructure.hasSingleReader) {
+    if (readerStructure.thoughtCards !== 3 || readerStructure.sharedRows !== 1 || readerStructure.processSteps !== 0 || readerStructure.insightEntries !== 3 || readerStructure.nestedDetails !== 0 || !readerStructure.hasSingleReader) {
       throw new Error(`InnerLife reader structure is wrong: ${JSON.stringify(readerStructure)}`);
     }
     const thoughtTrigger = page.locator(`#innerLifeUnsharedList [data-innerlife-share-id="${approved.id}"]`);
@@ -316,7 +316,7 @@ async function main() {
     });
     await page.evaluate(() => window.ClaraCoreTestHooks.refresh());
     await page.click("[data-view='settings']");
-    await page.click("[data-settings-tab='app-data']");
+    await page.click("[data-settings-open='appearance']");
     await page.selectOption("#settingsLanguage", "zh");
     await page.selectOption("#settingsTheme", "dark");
     await page.click("#saveAppearanceSettings");

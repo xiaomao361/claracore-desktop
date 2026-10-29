@@ -1,7 +1,9 @@
-function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, formatLocalDateTime, getSnapshot, refresh, showCopyNotice }) {
+function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, formatLocalDateTime, getSnapshot, refresh, showCopyNotice, onPolicySaved }) {
   let pendingRestoreBackupId = null;
   let showAllBackups = false;
   let backupPolicyDirty = false;
+  let backupPolicyRevision = 0;
+  function editBackupPolicy() { backupPolicyDirty = true; backupPolicyRevision++; }
   let operationalParts = null;
 
   function renderBackupPolicy() {
@@ -15,6 +17,8 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, formatLocalD
 
   async function saveBackupPolicy(event) {
     event.preventDefault();
+    if (dom.saveBackupPolicy.disabled) return;
+    const revision = backupPolicyRevision;
     if (!dom.backupPolicyForm.reportValidity()) return;
     dom.saveBackupPolicy.disabled = true;
     let saved = false;
@@ -28,9 +32,10 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, formatLocalD
       });
       if (!result?.configuration) throw new Error(t("data.backupPolicyFailed"));
       saved = true;
-      backupPolicyDirty = false;
+      if (revision === backupPolicyRevision) backupPolicyDirty = false;
       await refresh();
-      dom.backupPolicyNotice.textContent = t("data.backupPolicySaved");
+      dom.backupPolicyNotice.textContent = t(revision === backupPolicyRevision ? "data.backupPolicySaved" : "settings.savedWithDraft");
+      if (revision === backupPolicyRevision) onPolicySaved?.();
     } catch (error) {
       console.error(error);
       dom.backupPolicyNotice.textContent = t(saved ? "data.backupPolicyRefreshFailed" : "data.backupPolicyFailed");
@@ -230,12 +235,21 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, formatLocalD
     `;
   }
 
+  async function refreshAfterWrite(target, successKey) {
+    try { await refresh(); return true; }
+    catch (error) {
+      console.error(error);
+      showCopyNotice(`${t(successKey)}. ${t("review.refreshFailed")}`, target, { persistent: true });
+      return false;
+    }
+  }
+
   async function exportBackup() {
     dom.exportBackup.disabled = true;
     dom.backupNotice.textContent = t("common.checking");
     try {
       const backup = await window.ClaraCoreDesktop.createBackup();
-      await refresh();
+      if (!await refreshAfterWrite(dom.backupNotice, "data.backupCreated")) return;
       showCopyNotice(`${t("data.backupCreated")}: ${backup.path}`, dom.backupNotice);
     } catch (error) {
       console.error(error);
@@ -254,7 +268,7 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, formatLocalD
         dom.productJsonNotice.textContent = "";
         return;
       }
-      await refresh();
+      if (!await refreshAfterWrite(dom.productJsonNotice, "data.productJsonExported")) return;
       showCopyNotice(`${t("data.productJsonExported")}: ${exported.path}`, dom.productJsonNotice);
     } catch (error) {
       console.error(error);
@@ -274,7 +288,7 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, formatLocalD
         dom.productJsonNotice.textContent = t("data.productJsonImportCancelled");
         return;
       }
-      await refresh();
+      if (!await refreshAfterWrite(dom.productJsonNotice, "data.productJsonImportDone")) return;
       showCopyNotice(t("data.productJsonImportDone"), dom.productJsonNotice);
     } catch (error) {
       console.error(error);
@@ -319,7 +333,7 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, formatLocalD
     try {
       await window.ClaraCoreDesktop.deleteBackup(backupId);
       if (pendingRestoreBackupId === backupId) closeRestoreConfirm();
-      await refresh();
+      if (!await refreshAfterWrite(dom.backupNotice, "data.backupDeleted")) return;
       showCopyNotice(t("data.backupDeleted"), dom.backupNotice);
     } catch (error) {
       console.error(error);
@@ -341,7 +355,7 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, formatLocalD
     try {
       await window.ClaraCoreDesktop.restoreBackup(pendingRestoreBackupId);
       closeRestoreConfirm();
-      await refresh();
+      if (!await refreshAfterWrite(dom.backupNotice, "data.restoreDone")) return;
       showCopyNotice(t("data.restoreDone"), dom.backupNotice);
     } catch (error) {
       console.error(error);
@@ -352,15 +366,15 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, formatLocalD
   }
 
   function bindEvents() {
-    dom.backupPolicyForm?.addEventListener("input", () => { backupPolicyDirty = true; });
-    dom.backupPolicyForm?.addEventListener("change", () => { backupPolicyDirty = true; });
+    dom.backupPolicyForm?.addEventListener("input", editBackupPolicy);
+    dom.backupPolicyForm?.addEventListener("change", editBackupPolicy);
     dom.backupPolicyForm?.addEventListener("submit", saveBackupPolicy);
     dom.chooseBackupMirror?.addEventListener("click", async () => {
       try {
         const result = await window.ClaraCoreDesktop.chooseBackupDirectory();
         if (!result.canceled) {
           dom.backupMirror.value = result.path;
-          backupPolicyDirty = true;
+          editBackupPolicy();
         }
       } catch (error) {
         console.error(error);
@@ -369,7 +383,7 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, formatLocalD
     });
     dom.clearBackupMirror?.addEventListener("click", () => {
       dom.backupMirror.value = "";
-      backupPolicyDirty = true;
+      editBackupPolicy();
     });
     dom.exportBackup.addEventListener("click", () => exportBackup());
     dom.exportProductJson.addEventListener("click", () => exportProductJson());
@@ -377,7 +391,8 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, formatLocalD
     dom.openBackupsFolder.addEventListener("click", () => {
       const backupsDir = getSnapshot()?.data?.backupsDir;
       if (backupsDir) {
-        window.ClaraCoreDesktop.openPath(backupsDir);
+        dom.backupNotice.textContent = "";
+        window.ClaraCoreDesktop.openPath(backupsDir).then(ok => { if (!ok) throw new Error("open_failed"); }).catch(() => { dom.backupNotice.textContent = t("review.openFailed"); });
       }
     });
     dom.backupListToggle.addEventListener("click", () => {
@@ -398,6 +413,9 @@ function createClaraCoreDataView({ dom, t, escapeHtml, formatBytes, formatLocalD
   }
 
   return {
+    isDirty: () => backupPolicyDirty || Boolean(pendingRestoreBackupId),
+    isBusy: () => ["saveBackupPolicy", "exportBackup", "exportProductJson", "importProductJson", "confirmRestoreBackup"].some(name => dom[name]?.disabled) || Boolean(dom.backupList?.querySelector("button:disabled")),
+    discardDraft: () => { backupPolicyDirty = false; backupPolicyRevision++; closeRestoreConfirm(); renderBackups(); },
     bindEvents,
     renderBackups
   };

@@ -188,7 +188,7 @@ function createSnapshotRuntime({ ensureProductCore }) {
     ]);
     const [
       recentMemories, memoryStats, memoryMaintenance, memoryControllerEvidence,
-      resumePacket, activeLines, innerLifeLite, recentInnerLifeShares,
+      resumePacket, innerLifeLite, recentInnerLifeShares,
       gatewayTraces, canWriteProbe
     ] = await Promise.all([
       database.listMemories(20),
@@ -196,12 +196,12 @@ function createSnapshotRuntime({ ensureProductCore }) {
       database.getMemoryMaintenanceReport(),
       database.getMemoryControlObservationSnapshot({ limit: 3, overview: true }),
       database.getResumePacket({ lite: true }),
-      database.listContinuityLines({ limit: 30, allAgents: true, status: "active" }),
       database.getInnerLifeSnapshotLite("all"),
       database.listInnerLifeShares("all", 20, "all"),
       database.listGatewayTraces({ limit: 20 }),
       canWriteRuntimeProbe(paths)
     ]);
+    const activeLines = await database.listContinuityLines({ limit: 30, allAgents: true, status: "active", activeLineId: resumePacket.lineId });
     const sharedLine = compactSharedLinePacket(resumePacket, activeLines, []);
     const innerLife = compactInnerLifeSnapshot({
       ...innerLifeLite,
@@ -275,8 +275,12 @@ function createSnapshotRuntime({ ensureProductCore }) {
           }
         };
       }
-      case "home":
-        return { agentActivitySummary: await database.getAgentActivitySummary() };
+      case "home": {
+        const [agentActivitySummary, homeMilestones] = await Promise.all([
+          database.getAgentActivitySummary(), database.listRecentMilestones()
+        ]);
+        return { agentActivitySummary, homeMilestones };
+      }
       case "shared-line":
         return { sharedLine: await database.getResumePacket() };
       case "innerlife":
@@ -295,8 +299,10 @@ function createSnapshotRuntime({ ensureProductCore }) {
           }
         };
       }
-      case "logs":
-        return { decayAudit: await buildDecayAudit(database) };
+      case "logs": {
+        const [decayAudit, trace] = await Promise.all([buildDecayAudit(database), database.getTraceSnapshot()]);
+        return { decayAudit, trace };
+      }
       case "settings":
         return { backups: await database.listBackups(5), operationalStatus: await operationalStatus(database) };
       default:

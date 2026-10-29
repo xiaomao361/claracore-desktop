@@ -1,12 +1,9 @@
 #agentSetupView .agent-access-page {
   display: grid;
-  gap: 18px;
-}
-
-#agentSetupView .agent-access-grid {
-  grid-template-columns: minmax(520px, 1fr) minmax(300px, 0.38fr);
-  grid-template-areas: "activity invite";
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: none;
   align-items: start;
+  gap: 18px;
 }
 
 .agent-access-overview {
@@ -125,9 +122,6 @@
   line-height: 1.4;
 }
 
-.agent-access-activity {
-  grid-area: activity;
-}
 
 .agent-access-section {
   display: grid;
@@ -288,12 +282,6 @@
   color: var(--red);
 }
 
-.agent-access-side {
-  display: grid;
-  grid-area: invite;
-  gap: 24px;
-}
-
 .agent-guide-note {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -424,13 +412,8 @@
 
 @media (max-width: 1200px) {
   .agent-access-overview,
-  #agentSetupView .agent-access-grid,
   .agent-roster {
     grid-template-columns: 1fr;
-  }
-
-  #agentSetupView .agent-access-grid {
-    grid-template-areas: "invite" "activity";
   }
 
   .agent-access-process-flow {
@@ -468,4 +451,49 @@
   .gateway-activity-row > * {
     white-space: normal;
   }
+}
+
+/* Setup comes first; observations have independent, bounded scroll regions. */
+#agentSetupView .agent-access-overview { grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: center; padding-block: 0 22px; background: transparent; }
+#agentSetupView .agent-access-overview-copy h2 { font-size: 21px; margin-top: 0; }
+#agentSetupView .agent-access-overview-copy p { margin-bottom: 0; }
+#agentSetupView .agent-access-connect { display: grid; gap: 18px; padding: 22px 0; border: 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; box-shadow: none; }
+.agent-access-connect-head { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
+.agent-access-connect-head .panel-heading { margin: 0; }
+.agent-access-connect .agent-invite-action { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 0; }
+.agent-access-connect .agent-invite-action .primary { width: auto; justify-self: start; }
+.agent-access-connect .agent-invite-action .secondary { justify-self: start; }
+.agent-access-connect .agent-access-process { padding: 0; border: 0; background: transparent; box-shadow: none; }
+.agent-access-connect .agent-access-process-flow { margin: 0; gap: 14px; }
+.agent-access-connect .agent-access-process-flow article { padding: 10px 0; }
+.agent-access-connect .agent-access-process-flow::before { display: none; }
+.agent-access-connect .agent-guide-note { display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; padding: 0; border: 0; background: transparent; }
+.agent-access-connect .agent-guide-note > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.agent-access-connect .agent-guide-note p { margin: 0; }
+#agentSetupView .agent-access-activity { padding: 0; border: 0; background: transparent; box-shadow: none; min-width: 0; }
+.agent-observation-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: start; }
+.agent-observation-grid > .agent-access-section { min-width: 0; align-content: start; margin: 0; }
+.agent-access-list-viewport { min-width: 0; min-height: 0; max-height: 420px; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.agent-access-list-viewport:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.agent-observation-grid .agent-roster { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.agent-observation-grid .gateway-activity-table { min-width: 0; overflow: visible; }
+.agent-access-list-viewport .gateway-activity-header { position: sticky; top: 0; z-index: 1; }
+@media (max-width: 960px) {
+  #agentSetupView .agent-access-overview, .agent-access-connect-head, .agent-observation-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* No named placement survives the old two-column access layout. */
+#agentSetupView .agent-access-page > * { grid-area: auto; min-width: 0; }
+.agent-access-connect .agent-invite-action .primary { order: -1; }
+.agent-access-connect .agent-invite-action p { flex-basis: 100%; }
+.agent-access-connect .agent-invite-action #agentSetupNotice:empty { display: none; }
+#agentSetupView .agent-access-status-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.gateway-activity-row:is(.ok, .error, .unknown) { background: var(--surface); color: var(--text); }
+.gateway-activity-row code { background: var(--surface-soft); color: var(--muted); }
+.gateway-activity-row.ok code { background: var(--green-bg); color: var(--green); }
+.gateway-activity-row.error code { background: var(--red-bg); color: var(--red); }
+@media (max-width: 620px) {
+  #agentSetupView .agent-access-status-grid, .agent-observation-grid .agent-roster { grid-template-columns: minmax(0, 1fr); }
+  .gateway-activity-header, .gateway-activity-row { grid-template-columns: 64px minmax(72px, .7fr) minmax(120px, 1.3fr) 58px 52px; gap: 6px; padding-inline: 8px; }
+  .agent-observation-grid .gateway-activity-table { min-width: 410px; }
 }

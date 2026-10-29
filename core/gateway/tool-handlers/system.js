@@ -1,6 +1,6 @@
 const { CONTRACT, createKnowledgeContext } = require("../knowledge-context");
 const { searchKnowledge } = require("../../knowledge/search");
-const { collectWithJev, recallReceipt } = require("../../jev/recall-route");
+const { recallReceipt } = require("../recall-receipt");
 const { getGatewayContext } = require("../context");
 const { buildGatewayDocs } = require("../docs");
 const { arbitrateAutomaticContext, shapeAutomaticContext } = require("../auto-context");
@@ -68,7 +68,7 @@ async function handleSystemTool(name, args, context) {
     const agentId = currentMcpAgentId(args);
     const caller = currentCallerContext(args);
     const summary = await database.getSummary();
-    const daemonState = await database.ensureInnerLifeDaemonState(agentId);
+    const daemonState = await database.getInnerLifeDaemonStateReadOnly(agentId);
     return textResult({
       ok: true,
       agentId,
@@ -89,7 +89,7 @@ async function handleSystemTool(name, args, context) {
         innerlife: daemonState?.status || "paused"
       },
       timestamp: new Date().toISOString(),
-      next: "Call shared_line_get without lineId; retry with a returned candidate only after SHARED_LINE_ID_REQUIRED. Call gateway_docs only when you need the usage guide.",
+      next: "Read an explicitly supplied lineId exactly. Otherwise call shared_line_get without lineId; after SHARED_LINE_ID_REQUIRED choose a candidate only when it unambiguously matches the user intent, or ask the user. Never change the active line just to connect. Call gateway_docs only when needed.",
       nextCalls: ["shared_line_get"],
       afterOnboarding:
         "Tell the user what ClaraCore enables and summarize the current resumable context in the user's language."
@@ -160,16 +160,17 @@ async function handleSystemTool(name, args, context) {
 
     if (input.domain && !["none", "memory", "knowledge", "both"].includes(input.domain)) throw new Error("invalid_recall_domain");
     if (input.mode && !["exact", "semantic", "hybrid"].includes(input.mode)) throw new Error("invalid_recall_mode");
-    const collected = await collectWithJev(context.runtimeAppForGateway(),
+    const started = Date.now();
+    const collected = await turnContextService.collect(
       { ...core, handlerContext: context },
-      { prompt, agentId, domain: input.domain, mode: input.mode, query: input.query, deliveryContract: input.deliveryContract },
-      (serviceCore, routeInput) => turnContextService.collect(serviceCore, routeInput));
+      { prompt, agentId, domain: input.domain, mode: input.mode, query: input.query, deliveryContract: input.deliveryContract });
+    collected.latencyMs = Date.now() - started;
     const memoryResult = arbitrateAutomaticContext({ agentId, memoryCandidates: collected.memoryCandidates,
       shareCandidates: collected.shareCandidates, domainStatus: collected.domainStatus });
     if (input.deliveryContract === CONTRACT) {
       const result = {
         ...await createKnowledgeContext(context.runtimeAppForGateway(), memoryResult, collected.knowledgeSearch),
-        turnKind, collectionSkipped: false, jev: collected.jev, latencyMs: collected.latencyMs
+        turnKind, collectionSkipped: false, latencyMs: collected.latencyMs
       };
       return respond({ ...result, recallReceipt: recallReceipt(result, collected) });
     }
@@ -178,7 +179,6 @@ async function handleSystemTool(name, args, context) {
       turnKind,
       collectionSkipped: false,
       latencyMs: collected.latencyMs,
-      jev: collected.jev,
       recallReceipt: recallReceipt(memoryResult, collected),
       knowledgeObservation: {
         status: collected.domainStatus.knowledge || "not_collected",

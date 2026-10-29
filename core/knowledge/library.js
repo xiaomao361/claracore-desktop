@@ -166,10 +166,11 @@ function readKnowledgeDocument(rootInput, relativePath) {
   } catch (error) {
     rethrowFileError(error);
   }
-  return { path: relativePath.replace(/\\/g, "/"), text, sections: documentSections(relativePath, text) };
+  const sections = documentSections(relativePath, text);
+  return { path: relativePath.replace(/\\/g, "/"), title: sections[0]?.title || path.basename(relativePath, ".md"), modifiedAt: fs.statSync(full).mtime.toISOString(), text, sections };
 }
 
-function listKnowledgeDocuments(rootInput, { offset = 0, limit = DEFAULT_PAGE_SIZE, folder = "" } = {}) {
+function listKnowledgeDocuments(rootInput, { offset = 0, limit = DEFAULT_PAGE_SIZE, folder = "", sort = "path" } = {}) {
   const root = validateRoot(rootInput);
   if (!Number.isInteger(offset) || offset < 0 || !Number.isInteger(limit) || limit < 1 || limit > MAX_PAGE_SIZE) {
     throw new KnowledgeLibraryError("invalid_page", "Knowledge page must use a nonnegative offset and limit 1..50.");
@@ -177,14 +178,23 @@ function listKnowledgeDocuments(rootInput, { offset = 0, limit = DEFAULT_PAGE_SI
   if (!["", "notes", "topics", "inbox"].includes(folder)) {
     throw new KnowledgeLibraryError("invalid_folder", "Choose notes, topics or inbox.");
   }
+  if (!["path", "modified"].includes(sort)) throw new KnowledgeLibraryError("invalid_sort", "Choose path or modified document order.");
   const all = collectDocuments(root, folder ? [folder] : CATALOG_DIRS);
+  if (sort === "modified") {
+    const modified = new Map(all.map(file => { try { return [file, fs.statSync(safePath(root, file)).mtimeMs]; } catch { return [file, 0]; } }));
+    all.sort((left, right) => modified.get(right) - modified.get(left) || left.localeCompare(right));
+  }
   if (!all.length) return { status: "empty_corpus", total: 0, items: [], offset, limit };
   const items = all.slice(offset, offset + limit).map((relativePath) => {
-    const document = readKnowledgeDocument(root, relativePath);
-    return { path: relativePath, title: document.sections.find((section) => section.heading)?.title || path.basename(relativePath, ".md"),
-      sectionCount: document.sections.length };
+    try {
+      const document = readKnowledgeDocument(root, relativePath);
+      return { path: relativePath, title: document.sections.find((section) => section.heading)?.title || path.basename(relativePath, ".md"),
+        sectionCount: document.sections.length, modifiedAt: document.modifiedAt };
+    } catch (error) {
+      return { path: relativePath, title: path.basename(relativePath, ".md"), error: { code: error.code || "read_failed", message: error.message } };
+    }
   });
-  return { status: "ok", total: all.length, items, offset, limit, hasMore: offset + items.length < all.length };
+  return { status: items.some(item => item.error) ? "partial" : "ok", total: all.length, items, offset, limit, hasMore: offset + items.length < all.length };
 }
 
 function inspectKnowledgeRoot(rootInput) {
@@ -261,13 +271,16 @@ function getKnowledgeLinks(rootInput, reference, { incomingOffset = 0, outgoingO
   const outgoing = documentLinks(root, selected);
   const incoming = [];
   const broken = [...outgoing.broken];
+  const issues = [];
   for (const relativePath of collectDocuments(root)) {
     if (relativePath === selected.path) continue;
-    const links = documentLinks(root, readKnowledgeDocument(root, relativePath));
+    let links;
+    try { links = documentLinks(root, readKnowledgeDocument(root, relativePath)); }
+    catch (error) { issues.push({ path: relativePath, code: error.code || "read_failed" }); continue; }
     incoming.push(...links.edges.filter((edge) => edge.target === selected.path));
     broken.push(...links.broken.filter((edge) => edge.target === selected.path));
   }
-  return { status: broken.length ? "invalid_links" : "ok", path: selected.path,
+  return { status: issues.length ? "partial" : broken.length ? "invalid_links" : "ok", issues: issues.slice(0, limit), issueCount: issues.length, path: selected.path,
     outgoing: outgoing.edges.slice(outgoingOffset, outgoingOffset + limit), outgoingTotal: outgoing.edges.length,
     incoming: incoming.slice(incomingOffset, incomingOffset + limit), incomingTotal: incoming.length,
     broken: broken.slice(0, limit), brokenTotal: broken.length, externalReferences: outgoing.external.length };

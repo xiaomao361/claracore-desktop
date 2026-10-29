@@ -54,8 +54,6 @@ const {
   refreshMemoriaModels,
   testMemoriaConnection,
   memoriaConnectionNotice,
-  memoriaApiKey,
-  copyMemoriaApiKey,
   memoriaModelStatus,
   innerLifeBackend,
   innerLifeEndpoint,
@@ -66,11 +64,13 @@ const {
   innerLifeConnectionNotice,
   innerLifePollSeconds,
   innerLifeApiKey,
-  innerLifeApiKeySummary,
   copyInnerLifeApiKey,
   innerLifeModelStatus,
-  saveSettings,
-  settingsNotice,
+  saveMemorySettings,
+  saveReflectionSettings,
+  saveKnowledgeRoot,
+  memorySettingsNotice,
+  reflectionSettingsNotice,
   saveAppearanceSettings,
   appearanceSettingsNotice,
   saveDataRootSettings,
@@ -79,7 +79,6 @@ const {
   agentGatewaySettingsNotice,
   generateAgentGatewayToken,
   copyAgentGatewayToken,
-  copyAgentGatewayConfig,
   saveAgentGatewayConfig,
   settingsMemoryControllerMode,
   saveMemoryControllerMode,
@@ -172,7 +171,7 @@ let activeView = "home";
 let editingMemoryId = null;
 let knowledgeRootRequest = 0;
 let knowledgeRootBusy = false;
-const jevSettingsView = window.createJevSettings({ dom: window.ClaraCoreDom, api: window.ClaraCoreDesktop, t });
+const settingsOperations = new Set();
 const rendererState = {
   activeSharedLineAgentFilter: "",
   activeMemoryAgentFilter: "",
@@ -195,22 +194,20 @@ const viewDetailReadCounts = new Map();
 const localOnlyHydrationViews = new Set(["memory", "agent-setup", "knowledge"]);
 const viewOwnedSnapshotFields = {
   memory: ["memories", "memoryGraph", "restrictedMemoryGraph", "memoryController"],
-  home: ["agentActivitySummary"],
+  home: ["agentActivitySummary", "homeMilestones", "homeMilestonesError"],
   "shared-line": ["sharedLine"],
   innerlife: ["innerLife"],
-  trace: ["trace", "memoryController"],
-  logs: ["decayAudit", "runtimeEvents"],
+  logs: ["decayAudit", "runtimeEvents", "trace"],
   settings: ["backups", "operationalStatus"]
 };
 const runtimeScopeInvalidations = {
-  memory: ["memory", "home", "trace", "logs"],
-  "shared-line": ["shared-line", "home", "trace", "logs"],
-  innerlife: ["innerlife", "home", "trace", "logs"],
+  memory: ["memory", "home", "logs"],
+  "shared-line": ["shared-line", "home", "logs"],
+  innerlife: ["innerlife", "home", "logs"],
   logs: ["logs"],
   data: ["settings"],
   "agent-setup": [],
   home: ["home"],
-  trace: ["trace"],
   settings: ["settings"]
 };
 let snapshotGeneration = 0;
@@ -242,7 +239,9 @@ const agentSetupView = window.createClaraCoreAgentSetupView({
   dom: window.ClaraCoreDom,
   t,
   getSnapshot: () => snapshot,
-  copyValue
+  copyValue,
+  formatLocalDateTime,
+  refreshSnapshot: () => refreshRuntimeSnapshotOnly(["agent-setup"])
 });
 const dataView = window.createClaraCoreDataView({
   dom: window.ClaraCoreDom,
@@ -252,7 +251,8 @@ const dataView = window.createClaraCoreDataView({
   formatLocalDateTime,
   getSnapshot: () => snapshot,
   refresh,
-  showCopyNotice
+  showCopyNotice,
+  onPolicySaved: () => settingsDialogs.saved("recovery")
 });
 const memoriaView = window.createClaraCoreMemoriaView({
   dom: window.ClaraCoreDom,
@@ -309,9 +309,46 @@ const settingsView = window.createClaraCoreSettingsView({
   t,
   getSnapshot: () => snapshot,
   getAppearancePreferences,
-  formatMode,
-  state: rendererState
+  state: rendererState,
+  onModelsRendered: () => modelOptions.syncInputs()
 });
+const settingsDialogs = window.createClaraCoreSettingsDialogs({
+  root: document.getElementById("settingsView"), t,
+  summary: settingsSummary,
+  isDirty: scope => scope === "models" ? settingsView.isDirty("memory") || settingsView.isDirty("reflection") : scope === "recovery" ? dataView.isDirty() : settingsView.isDirty(scope),
+  isBusy: scope => (scope === "models" && (settingsOperations.has("memory") || settingsOperations.has("reflection"))) || settingsOperations.has(scope) || (scope === "knowledge" ? knowledgeRootBusy : scope === "recovery" ? dataView.isBusy() : false),
+  discard: scope => {
+    if (scope === "recovery") dataView.discardDraft();
+    else if (scope === "models") { settingsView.discardScope("memory"); settingsView.discardScope("reflection"); }
+    else settingsView.discardScope(scope);
+    renderSettings();
+    if (scope === "knowledge") renderKnowledgeRootPreference(rendererState.knowledgeRootPreference || {});
+  },
+  onOpen: scope => {
+    renderSettings();
+    if (scope === "recovery") dataView.renderBackups();
+    if (scope === "knowledge") loadKnowledgeRootPreference();
+  }
+});
+
+function settingsSummary(scope) {
+  const config = snapshot?.configuration || {};
+  const preferences = getAppearancePreferences();
+  const memoria = config.memoria || {};
+  const innerlife = config.innerlife || {};
+  switch (scope) {
+    case "models": return `${t("settings.retrievalModel")}: ${settingsSummary("memory")} · ${t("settings.generationModel")}: ${innerlife.backend === "disabled" ? t("settings.status.disabled") : innerlife.model || t("settings.provider.needsSetup")}`;
+    case "appearance": return `${preferences.language === "zh" ? "中文" : "English"} · ${t(preferences.theme === "light" ? "settings.themeLight" : preferences.theme === "dark" ? "settings.themeDark" : "settings.themeSystem")}`;
+    case "memory": return memoria.providerSupported === false ? t("settings.provider.needsSetup") : memoria.provider === "disabled" ? t("settings.status.disabled") : memoria.model || t("settings.provider.needsSetup");
+    case "reflection": return (innerlife.autonomyEnabled === true || innerlife.autonomyEnabled === "true") && innerlife.backend !== "disabled" ? innerlife.model || t("settings.provider.needsSetup") : t("settings.status.disabled");
+    case "controller": return t(config.memoryController?.configurationValid === false ? "settings.controllerInvalid" : config.memoryController?.mode === "canary" ? "settings.memoryControllerCanary" : config.memoryController?.mode === "observe" ? "settings.memoryControllerObserve" : "settings.memoryControllerOff");
+    case "gateway": { const gateway = snapshot?.connections?.httpGateway; return gateway?.error ? t("common.error") : gateway?.ok ? t("settings.status.ready") : t("common.checking"); }
+    case "knowledge": return rendererState.knowledgeRootError ? t("common.error") : rendererState.knowledgeRootPreference ? rendererState.knowledgeRootPreference.root || t("knowledge.directory.notSelected") : t("common.checking");
+    case "storage": return rendererState.dataRootPreference?.restartRequired ? t("settings.dataRootRestartRequired") : snapshot?.data?.root || "-";
+    case "recovery": return t(config.backup?.enabled !== false && config.backup?.schedule === "daily" ? "data.backupDaily" : "data.backupManual");
+    default: return "-";
+  }
+}
 const sharedInnerLifeView = window.createClaraCoreSharedInnerLifeView({
   dom: window.ClaraCoreDom,
   t,
@@ -327,7 +364,7 @@ const sharedInnerLifeView = window.createClaraCoreSharedInnerLifeView({
   renderMemoryResults,
   memoryAgentId
 });
-const traceView = window.createClaraCoreTraceView({
+const activitySummary = window.createClaraCoreActivitySummary({
   dom: window.ClaraCoreDom,
   t,
   getSnapshot: () => snapshot,
@@ -339,6 +376,7 @@ const sharedLineActions = window.createClaraCoreSharedLineActions({
   dom: window.ClaraCoreDom,
   state: rendererState,
   t,
+  copyValue,
   renderSharedLine
 });
 const innerLifeActions = window.createClaraCoreInnerLifeActions({
@@ -415,8 +453,8 @@ function getSecretInputValue(input) {
   return settingsView.getSecretInputValue(input);
 }
 
-async function loadModelOptions(kind, { silent = false } = {}) {
-  return modelOptions.loadModelOptions(kind, { silent });
+async function loadModelOptions(kind) {
+  return modelOptions.loadModelOptions(kind);
 }
 
 async function testModelConnection(kind) {
@@ -426,10 +464,11 @@ async function testModelConnection(kind) {
 function renderSettings() {
   settingsView.renderSettings();
   settingsView.renderAppearanceSettings();
+  settingsDialogs.render();
 }
 
-function collectSettingsForm() {
-  return settingsView.collectSettingsForm();
+function collectSettingsForm(scope) {
+  return settingsView.collectSettingsForm(scope);
 }
 
 function collectAppearanceSettingsForm() {
@@ -590,7 +629,6 @@ function renderPageFocus() {
 
   views.innerlife?.panel?.querySelector(":scope > .page-focus")?.remove();
 
-  views.trace?.panel?.querySelector(":scope > .page-focus")?.remove();
 
   views["agent-setup"]?.panel?.querySelector(":scope > .page-focus")?.remove();
 
@@ -622,7 +660,7 @@ function renderSnapshot() {
   renderMemoryList();
   renderSharedLine();
   renderInnerLife();
-  traceView.render();
+  activitySummary.render();
   renderBackups();
 }
 
@@ -674,6 +712,7 @@ function applyStaticTranslations() {
 function setView(viewName) {
   const nextView = views[viewName] ? viewName : "home";
   const enteringLogs = nextView === "logs" && activeView !== "logs";
+  if (nextView !== "settings") settingsDialogs.clearOverviewNotice();
   activeView = nextView;
   Object.entries(views).forEach(([name, view]) => {
     view.panel.classList.toggle("active-view", name === nextView);
@@ -685,7 +724,7 @@ function setView(viewName) {
   });
   viewTitle.textContent = t(views[nextView].titleKey);
   viewSubtitle.textContent = t(views[nextView].subtitleKey);
-  if (nextView === "settings") { loadKnowledgeRootPreference().catch(console.error); jevSettingsView.load(); }
+  if (nextView === "settings") { loadKnowledgeRootPreference().catch(console.error); }
   homeView.setActive(nextView === "home");
   homeUnderstanding.setActive(nextView === "home");
   knowledgeView.setActive(nextView === "knowledge");
@@ -700,6 +739,10 @@ function setView(viewName) {
 function renderKnowledgeRootPreference(preference) {
   const { knowledgeRootPath, knowledgeRootStatus, clearKnowledgeRoot, knowledgeRootClearHint } = window.ClaraCoreDom;
   if (!knowledgeRootPath || !knowledgeRootStatus) return;
+  rendererState.knowledgeRootError = false;
+  rendererState.knowledgeRootPreference = preference;
+  settingsDialogs.render();
+  if (settingsView.isDirty("knowledge")) return;
   knowledgeRootPath.value = preference.root || "";
   if (clearKnowledgeRoot) clearKnowledgeRoot.hidden = !preference.root;
   if (knowledgeRootClearHint) knowledgeRootClearHint.hidden = !preference.root;
@@ -721,13 +764,18 @@ async function loadKnowledgeRootPreference() {
     const preference = await window.ClaraCoreDesktop.getKnowledgeRootPreference();
     if (request === knowledgeRootRequest && !knowledgeRootBusy) renderKnowledgeRootPreference(preference);
   } catch (error) {
-    if (request === knowledgeRootRequest) window.ClaraCoreDom.knowledgeRootStatus.textContent = t("knowledge.directory.invalid");
+    if (request === knowledgeRootRequest) {
+      rendererState.knowledgeRootError = true;
+      window.ClaraCoreDom.knowledgeRootStatus.textContent = t("knowledge.directory.invalid");
+      settingsDialogs.render();
+    }
     console.error(error);
   }
 }
 
 function setKnowledgeRootBusy(busy) {
   knowledgeRootBusy = busy;
+  if (saveKnowledgeRoot) saveKnowledgeRoot.disabled = busy;
   window.ClaraCoreDom.chooseKnowledgeRoot.disabled = busy;
   window.ClaraCoreDom.clearKnowledgeRoot.disabled = busy;
 }
@@ -803,6 +851,10 @@ async function hydrateView(viewName, { force = false } = {}) {
       memoriaView.renderMemoryOverview();
       return;
     }
+    if (viewName === "innerlife") {
+      if (await innerLifeActions.loadSnapshot() && generation === snapshotGeneration) hydratedViews.add(viewName);
+      return;
+    }
     if (viewName === "shared-line") {
       let catalog = sharedLineCatalog;
       if (typeof window.ClaraCoreDesktop.getViewSnapshot === "function") {
@@ -815,6 +867,8 @@ async function hydrateView(viewName, { force = false } = {}) {
           sharedLineActions.syncSelectedLineCatalog(catalog);
         }
       }
+      catalog = await sharedLineActions.loadCatalog();
+      if (!catalog || generation !== snapshotGeneration) return;
       const packet = await sharedLineActions.hydrateSelectedLine(catalog);
       if (generation !== snapshotGeneration) return;
       if (packet) hydratedViews.add(viewName);
@@ -826,19 +880,26 @@ async function hydrateView(viewName, { force = false } = {}) {
     const detail = await window.ClaraCoreDesktop.getViewSnapshot(viewName);
     if (generation !== snapshotGeneration || !detail || typeof detail !== "object") return;
     snapshot = { ...snapshot, ...detail };
+    if (viewName === "home") delete snapshot.homeMilestonesError;
     hydratedViews.add(viewName);
     if (viewName === "innerlife") {
       renderInnerLife();
-    } else if (viewName === "trace") {
-      traceView.render();
     } else if (viewName === "logs") {
       renderLogs();
+      activitySummary.render();
     } else if (viewName === "settings") {
       renderBackups();
     } else if (viewName === "home") {
       renderHomeDashboard();
+      activitySummary.render();
     }
-  })().finally(() => {
+  })().catch(error => {
+    if (viewName === "home" && generation === snapshotGeneration) {
+      snapshot = { ...snapshot, homeMilestonesError: true };
+      activitySummary.render();
+    }
+    throw error;
+  }).finally(() => {
     if (hydratingViews.get(viewName)?.request === request) hydratingViews.delete(viewName);
   });
   hydratingViews.set(viewName, { generation, request });
@@ -931,10 +992,14 @@ async function refreshLogsSnapshot() {
   const logsSnapshot = typeof window.ClaraCoreDesktop.getLogsSnapshot === "function"
     ? await window.ClaraCoreDesktop.getLogsSnapshot()
     : await window.ClaraCoreDesktop.getRuntimeSnapshot();
+  if (!Array.isArray(logsSnapshot?.gatewayTraces) || !Array.isArray(logsSnapshot?.runtimeEvents)) {
+    throw new Error(t("logs.incompleteSnapshot"));
+  }
   snapshot = {
     ...(snapshot || {}),
-    gatewayTraces: logsSnapshot.gatewayTraces || [],
-    runtimeEvents: logsSnapshot.runtimeEvents || []
+    gatewayTraces: logsSnapshot.gatewayTraces,
+    runtimeEvents: logsSnapshot.runtimeEvents,
+    logsUpdatedAt: logsSnapshot.generatedAt || new Date().toISOString()
   };
   renderLogs();
   return logsSnapshot;
@@ -966,7 +1031,7 @@ const resourceRefreshLoop = window.createClaraCoreResourceRefreshLoop({
 // IPC notifications cannot cover writes from standalone maintenance processes.
 // Bound visible-page staleness without polling hidden windows or resetting edits.
 function canRefreshVisibleData() {
-  return Boolean(snapshot) && !document.hidden && ["home", "memory", "shared-line", "innerlife", "trace", "settings"].includes(activeView)
+  return Boolean(snapshot) && !document.hidden && ["home", "memory", "shared-line", "innerlife", "settings"].includes(activeView)
     && !document.querySelector("dialog[open]")
     && !document.activeElement?.matches("input, textarea, select, [contenteditable=true]")
     && !(activeView === "memory" && String(memorySearchInput?.value || "").trim());
@@ -979,7 +1044,7 @@ const dataRefreshLoop = window.createClaraCoreResourceRefreshLoop({
   intervalMs: 30_000,
   requestTimeoutMs: 15_000,
   canRefresh: canRefreshVisibleData,
-  fetchSnapshot: () => refreshForRuntimeScopes(["memory", "shared-line", "innerlife", "trace", "data"], { visibleOnly: true }),
+  fetchSnapshot: () => refreshForRuntimeScopes(["memory", "shared-line", "innerlife", "data"], { visibleOnly: true }),
   renderSnapshot: () => {},
   handleError: (error) => {
     runtimeRefreshRevision += 1;
@@ -999,41 +1064,6 @@ function scheduleRuntimeRefresh(scopes = ["snapshot"]) {
   }, 250);
 }
 
-const settingsTabButtons = window.ClaraCoreDom.settingsTabs || [];
-const settingsTabPanelList = window.ClaraCoreDom.settingsTabPanels || [];
-
-function setSettingsTab(tabName) {
-  const next = settingsTabPanelList.some((panel) => panel.dataset.settingsPanel === tabName) ? tabName : "capabilities";
-  settingsTabButtons.forEach((button) => {
-    const active = button.dataset.settingsTab === next;
-    button.classList.toggle("active", active);
-    button.setAttribute("aria-selected", active ? "true" : "false");
-    button.tabIndex = active ? 0 : -1;
-  });
-  settingsTabPanelList.forEach((panel) => {
-    const active = panel.dataset.settingsPanel === next;
-    panel.classList.toggle("active", active);
-    panel.hidden = !active;
-  });
-}
-
-settingsTabButtons.forEach((button) => {
-  button.addEventListener("click", () => setSettingsTab(button.dataset.settingsTab));
-  button.addEventListener("keydown", (event) => {
-    const currentIndex = settingsTabButtons.indexOf(button);
-    let nextIndex = currentIndex;
-    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % settingsTabButtons.length;
-    else if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + settingsTabButtons.length) % settingsTabButtons.length;
-    else if (event.key === "Home") nextIndex = 0;
-    else if (event.key === "End") nextIndex = settingsTabButtons.length - 1;
-    else return;
-    event.preventDefault();
-    const nextButton = settingsTabButtons[nextIndex];
-    setSettingsTab(nextButton.dataset.settingsTab);
-    nextButton.focus();
-  });
-});
-
 document.querySelectorAll("[data-view]").forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.view));
 });
@@ -1041,8 +1071,12 @@ document.querySelectorAll("[data-view]").forEach((button) => {
 document.addEventListener("click", (event) => {
   const target = event.target.closest("[data-view-target]");
   if (!target) return;
+  if (settingsDialogs.isOpen() && !settingsDialogs.requestClose()) return;
   setView(target.dataset.viewTarget);
-  if (target.dataset.settingsTarget) setSettingsTab(target.dataset.settingsTarget);
+  if (target.dataset.settingsTarget) {
+    const aliases = { capabilities: "memory", "app-data": "appearance", advanced: "controller" };
+    settingsDialogs.open(aliases[target.dataset.settingsTarget] || target.dataset.settingsTarget);
+  }
 });
 
 document.addEventListener("click", (event) => {
@@ -1096,12 +1130,14 @@ clearDemoData?.addEventListener("click", () => {
   runDemoDataAction(clearDemoData, () => window.ClaraCoreDesktop.clearDemoData(), "home.onboarding.demo.clearing");
 });
 
+window.ClaraCoreDom.refreshAgentSetup?.addEventListener("click", () => agentSetupView.refresh());
 copyAgentSetup?.addEventListener("click", () => {
   agentSetupView.copy().catch(console.error);
 });
 
 generateAgentGatewayToken?.addEventListener("click", () => {
   if (settingsAgentGatewayToken) settingsAgentGatewayToken.value = randomAgentGatewayToken();
+  settingsView.markDirty("gateway");
   if (agentGatewaySettingsNotice) agentGatewaySettingsNotice.textContent = t("settings.generatedToken");
 });
 
@@ -1109,91 +1145,90 @@ copyAgentGatewayToken?.addEventListener("click", () => {
   copyValue(settingsAgentGatewayToken?.value || "", t("settings.apiKey.copied"), agentGatewaySettingsNotice).catch(console.error);
 });
 
-copyAgentGatewayConfig?.addEventListener("click", () => {
-  copyValue(settingsView.agentGatewayCopyBlock(), t("settings.agentGatewayConfigCopied"), agentGatewaySettingsNotice).catch(console.error);
-});
-
 saveAgentGatewayConfig?.addEventListener("click", async () => {
   if (!window.confirm(t("settings.agentGatewaySaveConfirm"))) return;
+  const revision = settingsView.draftRevision("gateway");
+  settingsOperations.add("gateway");
   saveAgentGatewayConfig.disabled = true;
   if (agentGatewaySettingsNotice) agentGatewaySettingsNotice.textContent = t("common.checking");
+  let saved = false;
   try {
-    await window.ClaraCoreDesktop.updateAgentGatewayConfig(settingsView.collectAgentGatewayConfigForm());
+    const result = await window.ClaraCoreDesktop.updateAgentGatewayConfig(settingsView.collectAgentGatewayConfigForm());
+    if (!result) throw new Error("Connection settings acknowledgement unavailable");
+    saved = true;
+    settingsView.acceptSaved("gateway", revision);
     await refreshForRuntimeScopes(["snapshot", "agent-setup", "logs"]);
-    if (agentGatewaySettingsNotice) agentGatewaySettingsNotice.textContent = t("settings.agentGatewaySaved");
+    if (agentGatewaySettingsNotice) agentGatewaySettingsNotice.textContent = t(settingsView.draftRevision("gateway") === revision ? "settings.agentGatewaySaved" : "settings.savedWithDraft");
+    settingsDialogs.saved("gateway");
   } catch (error) {
-    if (agentGatewaySettingsNotice) agentGatewaySettingsNotice.textContent = t("settings.agentGatewaySaveFailed", { error: error?.message || String(error) });
+    if (agentGatewaySettingsNotice) agentGatewaySettingsNotice.textContent = t(saved ? "settings.savedRefreshFailed" : "settings.saveUnconfirmed");
   } finally {
+    settingsOperations.delete("gateway");
     saveAgentGatewayConfig.disabled = false;
   }
 });
 
 saveMemoryControllerMode?.addEventListener("click", async () => {
+  const revision = settingsView.draftRevision("controller");
+  settingsOperations.add("controller");
   saveMemoryControllerMode.disabled = true;
   if (memoryControllerSettingsNotice) memoryControllerSettingsNotice.textContent = t("common.checking");
+  let saved = false;
   try {
-    await window.ClaraCoreDesktop.saveSettings(settingsView.collectMemoryControllerSettingsForm());
-    await refreshForRuntimeScopes(["snapshot", "trace"]);
-    if (memoryControllerSettingsNotice) memoryControllerSettingsNotice.textContent = t("settings.memoryControllerSaved");
+    const result = await window.ClaraCoreDesktop.saveSettings(settingsView.collectMemoryControllerSettingsForm());
+    if (!result?.configuration) throw new Error("Recall settings acknowledgement unavailable");
+    saved = true;
+    settingsView.acceptSaved("controller", revision);
+    await refreshForRuntimeScopes(["snapshot", "memory", "logs"]);
+    if (memoryControllerSettingsNotice) memoryControllerSettingsNotice.textContent = t(settingsView.draftRevision("controller") === revision ? "settings.memoryControllerSaved" : "settings.savedWithDraft");
+    settingsDialogs.saved("controller");
   } catch (error) {
     console.error(error);
-    if (memoryControllerSettingsNotice) memoryControllerSettingsNotice.textContent = t("settings.memoryControllerSaveFailed");
+    if (memoryControllerSettingsNotice) memoryControllerSettingsNotice.textContent = t(saved ? "settings.savedRefreshFailed" : "settings.saveUnconfirmed");
   } finally {
+    settingsOperations.delete("controller");
     saveMemoryControllerMode.disabled = false;
   }
 });
 
-async function saveModelSettings(button, notice, form, { confirmEmbedding = false, successKey = "settings.saved", failureKey = "settings.saveFailed" } = {}) {
+async function saveModelSettings(button, notice, form, { scope, confirmEmbedding = false, successKey = "settings.saved", failureKey = "settings.saveUnconfirmed" } = {}) {
+  if (button.disabled) return;
   const validationError = settingsView.settingsValidationError(form);
-  if (validationError) {
-    notice.textContent = t(validationError);
-    return;
-  }
-  if (confirmEmbedding && settingsView.embeddingConfigChanged(form) && !window.confirm(t("settings.embedding.rebuildConfirm"))) {
-    return;
-  }
+  if (validationError) { notice.textContent = t(validationError); settingsView.showValidationError?.(); return; }
+  if (confirmEmbedding && settingsView.embeddingConfigChanged(form) && !window.confirm(t("settings.embedding.rebuildConfirm"))) return;
+  const revision = settingsView.draftRevision(scope);
+  settingsOperations.add(scope);
   button.disabled = true;
-  notice.textContent = t("common.checking");
+  notice.textContent = t("settings.saving");
+  let saved = false;
   try {
-    await window.ClaraCoreDesktop.saveSettings(form);
+    const result = await window.ClaraCoreDesktop.saveSettings(form);
+    if (!result?.configuration) throw new Error("Settings acknowledgement unavailable");
+    saved = true;
+    const accepted = settingsView.acceptSaved(scope, revision);
     await refresh();
-    showCopyNotice(t(successKey), notice);
+    notice.textContent = t(accepted && settingsView.draftRevision(scope) === revision ? successKey : "settings.savedWithDraft");
+    settingsDialogs.saved(scope);
   } catch (error) {
     console.error(error);
-    notice.textContent = t(failureKey);
-  } finally {
-    button.disabled = false;
-  }
+    notice.textContent = t(saved ? "settings.savedRefreshFailed" : failureKey);
+  } finally { settingsOperations.delete(scope); button.disabled = false; }
 }
 
-saveSettings.addEventListener("click", () => {
-  saveModelSettings(saveSettings, settingsNotice, collectSettingsForm(), { confirmEmbedding: true });
+saveMemorySettings.addEventListener("click", () => {
+  saveModelSettings(saveMemorySettings, memorySettingsNotice, collectSettingsForm("memory"), { scope: "memory", confirmEmbedding: true });
 });
-
-[memoriaProvider, memoriaEndpoint, memoriaModel, memoriaApiKey, innerLifeBackend, innerLifeEndpoint, innerLifeModel, innerLifeApiKey, innerLifePollSeconds]
-  .filter(Boolean)
-  .forEach((control) => {
-    control.addEventListener("change", () => {
-      settingsNotice.textContent = t("settings.capabilitiesUnsaved");
-    });
-  });
-
-copyMemoriaApiKey.addEventListener("click", () => {
-  const value = getSecretInputValue(memoriaApiKey);
-  if (!value) {
-    showCopyNotice(t("settings.apiKey.notConfigured"), settingsNotice);
-    return;
-  }
-  copyValue(value, t("settings.apiKey.copied"), settingsNotice).catch(console.error);
+saveReflectionSettings.addEventListener("click", () => {
+  saveModelSettings(saveReflectionSettings, reflectionSettingsNotice, collectSettingsForm("reflection"), { scope: "reflection" });
 });
 
 copyInnerLifeApiKey.addEventListener("click", () => {
   const value = getSecretInputValue(innerLifeApiKey);
   if (!value) {
-    showCopyNotice(t("settings.apiKey.notConfigured"), settingsNotice);
+    showCopyNotice(t("settings.apiKey.notConfigured"), reflectionSettingsNotice);
     return;
   }
-  copyValue(value, t("settings.apiKey.copied"), settingsNotice).catch(console.error);
+  copyValue(value, t("settings.apiKey.copied"), reflectionSettingsNotice).catch(console.error);
 });
 
 refreshMemoriaModels?.addEventListener("click", () => {
@@ -1212,52 +1247,50 @@ testInnerLifeConnection?.addEventListener("click", () => {
   testModelConnection("innerlife").catch(console.error);
 });
 
-memoriaEndpoint?.addEventListener("blur", () => {
-  loadModelOptions("memoria", { silent: true }).catch(console.error);
-});
-
-memoriaProvider?.addEventListener("change", () => {
-  if (memoriaModelStatus) delete memoriaModelStatus.dataset.connectionState;
-  settingsView.updateModelFieldVisibility();
-  loadModelOptions("memoria", { silent: true }).catch(console.error);
-});
-
-innerLifeEndpoint?.addEventListener("blur", () => {
-  loadModelOptions("innerlife", { silent: true }).catch(console.error);
-});
-
-innerLifeBackend?.addEventListener("change", () => {
-  if (innerLifeModelStatus) delete innerLifeModelStatus.dataset.connectionState;
-  settingsView.updateModelFieldVisibility();
-  loadModelOptions("innerlife", { silent: true }).catch(console.error);
-});
+for (const provider of [memoriaProvider, innerLifeBackend]) {
+  provider?.addEventListener("change", () => settingsView.updateModelFieldVisibility());
+}
 
 saveAppearanceSettings?.addEventListener("click", async () => {
+  const revision = settingsView.draftRevision("appearance");
+  settingsOperations.add("appearance");
   saveAppearanceSettings.disabled = true;
   appearanceSettingsNotice.textContent = t("common.checking");
+  let saved = false;
   try {
     const preferences = collectAppearanceSettingsForm();
     const savedPreferences = await window.ClaraCoreDesktop.saveUiPreferences(preferences);
+    if (!savedPreferences || typeof savedPreferences.closeBehavior !== "string") throw new Error("Application preferences acknowledgement unavailable");
     loginItemPreference = {
       launchAtLogin: Boolean(savedPreferences.launchAtLogin),
       launchAtLoginAvailable: Boolean(savedPreferences.launchAtLoginAvailable)
     };
+    saved = true;
+    settingsView.acceptSaved("appearance", revision);
     applyUiPreferences(savedPreferences);
     renderSettings();
-    showCopyNotice(t("settings.appPreferencesSaved"), appearanceSettingsNotice);
+    appearanceSettingsNotice.textContent = t(settingsView.draftRevision("appearance") === revision ? "settings.appPreferencesSaved" : "settings.savedWithDraft");
+    settingsDialogs.saved("appearance");
   } catch (error) {
     console.error(error);
-    appearanceSettingsNotice.textContent = t("settings.appPreferencesSaveFailed");
+    appearanceSettingsNotice.textContent = t(saved ? "settings.savedRefreshFailed" : "settings.appPreferencesSaveFailed");
   } finally {
+    settingsOperations.delete("appearance");
     saveAppearanceSettings.disabled = false;
   }
 });
 
 saveDataRootSettings?.addEventListener("click", async () => {
+  const revision = settingsView.draftRevision("storage");
+  settingsOperations.add("storage");
   saveDataRootSettings.disabled = true;
   storageSettingsNotice.textContent = t("common.checking");
+  let saved = false;
   try {
     const result = await window.ClaraCoreDesktop.saveDataRootPreference(window.ClaraCoreDom.settingsDataRootOverride.value);
+    if (!result || typeof result.restartRequired !== "boolean") throw new Error("Storage settings acknowledgement unavailable");
+    saved = true;
+    settingsView.acceptSaved("storage", revision);
     rendererState.dataRootPreference = result;
     settingsView.renderAppearanceSettings();
     if (result.envOverride) {
@@ -1272,64 +1305,74 @@ saveDataRootSettings?.addEventListener("click", async () => {
     } else {
       showCopyNotice(t("settings.storageSaved"), storageSettingsNotice);
     }
+    settingsDialogs.saved("storage", storageSettingsNotice.textContent, { persistent: Boolean(result.restartRequired || result.envOverride) });
   } catch (error) {
     console.error(error);
-    storageSettingsNotice.textContent = t("settings.storageSaveFailed");
+    storageSettingsNotice.textContent = t(saved ? "settings.savedRefreshFailed" : "settings.storageSaveFailed");
   } finally {
+    settingsOperations.delete("storage");
     saveDataRootSettings.disabled = false;
   }
 });
 
 window.ClaraCoreDom.chooseKnowledgeRoot?.addEventListener("click", async () => {
   if (knowledgeRootBusy) return;
-  const { knowledgeRootStatus } = window.ClaraCoreDom;
   setKnowledgeRootBusy(true);
   ++knowledgeRootRequest;
   try {
     const result = await window.ClaraCoreDesktop.chooseKnowledgeRoot();
     if (result?.canceled) return;
-    if (typeof result?.path !== "string" || !result.path) {
-      knowledgeRootStatus.textContent = t("knowledge.directory.chooseFailed");
-      return;
-    }
-    knowledgeRootStatus.textContent = t("common.checking");
-    const preference = await window.ClaraCoreDesktop.saveKnowledgeRootPreference(result.path);
-    renderKnowledgeRootPreference(preference);
+    if (typeof result?.path !== "string" || !result.path) throw new Error("No directory selected");
+    window.ClaraCoreDom.knowledgeRootPath.value = result.path;
+    window.ClaraCoreDom.clearKnowledgeRoot.hidden = false;
+    settingsView.markDirty("knowledge");
+    window.ClaraCoreDom.knowledgeRootStatus.textContent = t("settings.capabilitiesUnsaved");
   } catch (error) {
-    try { renderKnowledgeRootPreference(await window.ClaraCoreDesktop.getKnowledgeRootPreference()); } catch {}
-    knowledgeRootStatus.textContent = t("knowledge.directory.saveFailed", { error: error.message || String(error) });
-    console.error(error);
-  } finally {
-    setKnowledgeRootBusy(false);
-  }
+    window.ClaraCoreDom.knowledgeRootStatus.textContent = t("knowledge.directory.chooseFailed");
+  } finally { setKnowledgeRootBusy(false); }
 });
-
-window.ClaraCoreDom.clearKnowledgeRoot?.addEventListener("click", async () => {
+window.ClaraCoreDom.clearKnowledgeRoot?.addEventListener("click", () => {
   if (knowledgeRootBusy) return;
-  const { knowledgeRootStatus } = window.ClaraCoreDom;
+  ++knowledgeRootRequest;
+  window.ClaraCoreDom.knowledgeRootPath.value = "";
+  settingsView.markDirty("knowledge");
+  window.ClaraCoreDom.knowledgeRootStatus.textContent = t("settings.capabilitiesUnsaved");
+});
+saveKnowledgeRoot?.addEventListener("click", async () => {
+  if (knowledgeRootBusy) return;
+  const revision = settingsView.draftRevision("knowledge");
   setKnowledgeRootBusy(true);
   ++knowledgeRootRequest;
+  let saved = false;
   try {
-    const preference = await window.ClaraCoreDesktop.saveKnowledgeRootPreference("");
+    const preference = await window.ClaraCoreDesktop.saveKnowledgeRootPreference(window.ClaraCoreDom.knowledgeRootPath.value);
+    if (!preference || typeof preference.root !== "string") throw new Error("Directory acknowledgement unavailable");
+    saved = true;
+    settingsView.acceptSaved("knowledge", revision);
     renderKnowledgeRootPreference(preference);
+    settingsDialogs.saved("knowledge");
   } catch (error) {
-    try { renderKnowledgeRootPreference(await window.ClaraCoreDesktop.getKnowledgeRootPreference()); } catch {}
-    knowledgeRootStatus.textContent = t("knowledge.directory.clearFailed", { error: error.message || String(error) });
-  } finally {
-    setKnowledgeRootBusy(false);
-  }
+    window.ClaraCoreDom.knowledgeRootStatus.textContent = t(saved ? "settings.savedRefreshFailed" : "settings.saveUnconfirmed");
+  } finally { setKnowledgeRootBusy(false); }
 });
 
 window.ClaraCoreDom.chooseSettingsDataRoot?.addEventListener("click", async () => {
-  const result = await window.ClaraCoreDesktop.chooseDataRoot();
-  if (!result?.canceled && window.ClaraCoreDom.settingsDataRootOverride) {
-    window.ClaraCoreDom.settingsDataRootOverride.value = result.path || "";
-  }
+  if (settingsOperations.has("storage")) return;
+  settingsOperations.add("storage");
+  try {
+    const result = await window.ClaraCoreDesktop.chooseDataRoot();
+    if (!result?.canceled && typeof result?.path === "string" && window.ClaraCoreDom.settingsDataRootOverride) {
+      window.ClaraCoreDom.settingsDataRootOverride.value = result.path;
+      settingsView.markDirty("storage");
+    }
+  } catch (error) { storageSettingsNotice.textContent = t("settings.storageSaveFailed"); }
+  finally { settingsOperations.delete("storage"); }
 });
 
 window.ClaraCoreDom.resetSettingsDataRoot?.addEventListener("click", () => {
   if (window.ClaraCoreDom.settingsDataRootOverride) {
     window.ClaraCoreDom.settingsDataRootOverride.value = "";
+    settingsView.markDirty("storage");
   }
 });
 
@@ -1343,7 +1386,10 @@ window.ClaraCoreDom.relaunchForDataRoot?.addEventListener("click", () => {
 
 window.ClaraCoreDom.openSettingsDataRoot?.addEventListener("click", () => {
   if (snapshot?.data?.root) {
-    window.ClaraCoreDesktop.openPath(snapshot.data.root);
+    storageSettingsNotice.textContent = "";
+    window.ClaraCoreDesktop.openPath(snapshot.data.root).then(ok => {
+      if (!ok) throw new Error("open_failed");
+    }).catch(() => showCopyNotice(t("review.openFailed"), storageSettingsNotice, { persistent: true }));
   }
 });
 
@@ -1366,12 +1412,19 @@ window.ClaraCoreDom.logFilter?.addEventListener("change", (event) => {
   logsView.setFilter(event.target.value);
 });
 
-function showCopyNotice(label, target = null) {
+const noticeTimers = new WeakMap();
+function showCopyNotice(label, target = null, { persistent = false } = {}) {
   if (!target) return;
+  const previous = noticeTimers.get(target);
+  if (previous) window.clearTimeout(previous);
   target.textContent = label;
-  window.setTimeout(() => {
-    target.textContent = "";
+  if (persistent) { noticeTimers.delete(target); return; }
+  const timer = window.setTimeout(() => {
+    if (noticeTimers.get(target) !== timer) return;
+    if (target.textContent === label) target.textContent = "";
+    noticeTimers.delete(target);
   }, 1800);
+  noticeTimers.set(target, timer);
 }
 
 function randomAgentGatewayToken() {
@@ -1385,19 +1438,25 @@ function randomAgentGatewayToken() {
 async function copyValue(value, label, target = null) {
   if (!value) return false;
   const ok = await window.ClaraCoreDesktop.copyText(value);
-  if (ok) showCopyNotice(label, target);
+  if (ok && label) showCopyNotice(label, target);
   return ok;
 }
 
 openDevelopmentPlan?.addEventListener("click", () => {
   if (snapshot?.plans?.productReset) {
-    window.ClaraCoreDesktop.openPath(snapshot.plans.productReset);
+    storageSettingsNotice.textContent = "";
+    window.ClaraCoreDesktop.openPath(snapshot.plans.productReset).then(ok => {
+      if (!ok) throw new Error("open_failed");
+    }).catch(() => showCopyNotice(t("review.openFailed"), storageSettingsNotice, { persistent: true }));
   }
 });
 
 openDesignPlan?.addEventListener("click", () => {
   if (snapshot?.plans?.v02Legacy) {
-    window.ClaraCoreDesktop.openPath(snapshot.plans.v02Legacy);
+    storageSettingsNotice.textContent = "";
+    window.ClaraCoreDesktop.openPath(snapshot.plans.v02Legacy).then(ok => {
+      if (!ok) throw new Error("open_failed");
+    }).catch(() => showCopyNotice(t("review.openFailed"), storageSettingsNotice, { persistent: true }));
   }
 });
 
@@ -1451,3 +1510,9 @@ if (typeof window.ClaraCoreDesktop.onRuntimeChanged === "function") {
   });
 }
 setView("home");
+
+if (typeof window.ClaraCoreDesktop.onTrayNavigate === "function") {
+  window.ClaraCoreDesktop.onTrayNavigate(view => {
+    if (Object.prototype.hasOwnProperty.call(views, view)) setView(view);
+  });
+}

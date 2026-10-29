@@ -26,8 +26,7 @@ async function main() {
     });
     await page.waitForSelector("[data-view='settings']", { timeout: 15000 });
     await page.click("[data-view='settings']");
-    await page.click("[data-settings-tab='app-data']");
-    await page.evaluate(() => { document.querySelector("#dataRecoveryDetails").open = true; });
+    await page.click("[data-settings-open='recovery']");
     await page.waitForFunction(() => window.ClaraCoreDesktop && document.querySelector("#exportProductJson"));
 
     const dataText = await page.textContent("[data-settings-panel='app-data']");

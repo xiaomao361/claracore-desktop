@@ -41,7 +41,15 @@ async function main() {
         assert.equal(previousShape.inputSchema.properties.diagnosticsFor.maxLength, 160);
         delete previousShape.inputSchema.properties.detail;
         delete previousShape.inputSchema.properties.diagnosticsFor;
-        assert.equal(digest(previousShape), previous.sha256, "Automatic context adds only optional diagnostic arguments");
+        // Model removal changes help text only; preserve the original schema check.
+        const properties = previousShape.inputSchema.properties;
+        assert.equal(properties.domain.description, "Explicit scope wins; otherwise both. Knowledge stays observation-only for current Memory-only hosts.");
+        assert.equal(properties.query.description, "Optional bounded retrieval query; otherwise the prompt is used.");
+        assert.equal(properties.mode.description, "Explicit mode wins; otherwise semantic. Memory retains its controller gates.");
+        properties.domain.description = "Explicit scope wins; otherwise both or opted-in Jev advice. Knowledge stays observation-only for current Memory-only hosts.";
+        properties.query.description = "Optional bounded retrieval query; only this query (or bounded prompt) may reach enabled Jev.";
+        properties.mode.description = "Explicit mode wins; otherwise semantic or opted-in Jev advice. Memory retains its controller gates.";
+        assert.equal(digest(previousShape), previous.sha256, "Automatic context preserves arguments after diagnostic additions and help-text cleanup");
       }
       else if (previous.name === "shared_line_list") {
         // 1.0.4 adds only an optional query. Verify the entire old contract

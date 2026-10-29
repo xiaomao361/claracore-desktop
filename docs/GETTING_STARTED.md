@@ -4,8 +4,8 @@
 
 Download the latest installer from [Releases](https://github.com/xiaomao361/claracore-desktop/releases/latest).
 Full includes `bge-small-zh-v1.5`, a local 512-dimensional embedding model.
-Lite omits that model; select an installed local Ollama embedding model or
-disable embeddings. Core storage and explicit reads remain available without
+Lite omits that model; select an installed Ollama model, configure an
+OpenAI-compatible embedding API, or disable embeddings. Core storage and explicit reads remain available without
 an embedding model; semantic features require a working model and index.
 
 macOS packages target Apple Silicon and are signed and notarized. Windows
@@ -50,6 +50,24 @@ indexing it. See [Configuration](CONFIGURATION.md).
 
 MCP access alone does not install conversation hooks or enable automatic
 capture. A host must explicitly integrate automatic context delivery.
+
+## Read and manage your workspace
+
+Home shows current topics and evidence-qualified milestones. Memory separates
+recent records, explicit search and recall decisions. Shared Lines can be
+filtered by agent and read by exact ID; use **Continue with this line** to copy
+a pointer for your assistant. A next step is optional.
+
+InnerLife shows the selected agent's thoughts and background status. Reading a
+thought does not mark it shared or used. Open full text to read longer records,
+and use the page controls to continue. Catalogs and technical records have
+**Load more** controls where additional records exist.
+
+Settings group model access, recall, InnerLife, app preferences and data tools
+in focused dialogs. Save a section's draft before leaving it. A completed data
+operation followed by a refresh failure is reported as completed: refresh the
+page rather than repeat the operation. Logs retain the technical evidence for
+troubleshooting. See [Workflow overview](WORKFLOW_OVERVIEW.md).
 
 ## Troubleshooting
 

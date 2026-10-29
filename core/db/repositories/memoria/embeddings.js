@@ -125,7 +125,7 @@ function createMemoriaEmbeddingRepository(helpers) {
       if (!prompt) throw new Error("Embedding text is required.");
       if (provider === BUILT_IN_EMBEDDING_PROVIDER) {
         if (!HAS_BUILT_IN_EMBEDDING) {
-          throw new Error("The saved Memory embedding provider is not available in the Lite build. Switch to Ollama or Disabled.");
+          throw new Error("The saved Memory embedding provider is not available in the Lite build. Choose a supported retrieval API or disable retrieval.");
         }
         return createBuiltInEmbedding(prompt, model || BUILT_IN_EMBEDDING_MODEL);
       }
@@ -143,18 +143,16 @@ function createMemoriaEmbeddingRepository(helpers) {
         const secrets = await this.getSecretRefs();
         const apiKeyRef = secrets["memory.embedding.api_key"]?.ref || "";
         const apiKey = apiKeyRef.startsWith("env:") ? process.env[apiKeyRef.slice(4)] || "" : apiKeyRef;
-        const endpoint = baseUrl.replace(/\/+$/, "").endsWith("/v1")
-          ? `${baseUrl.replace(/\/+$/, "")}/embeddings`
-          : `${baseUrl.replace(/\/+$/, "")}/v1/embeddings`;
+        const endpoint = require('../../../openai-endpoint').openAiEndpoint(baseUrl, 'embeddings');
         const headers = apiKey ? { Authorization: `Bearer ${apiKey}` } : {};
         const response = await postJson(
           endpoint,
           { model, input: prompt },
           { headers, errorPrefix: "OpenAI-compatible embedding endpoint" }
         );
-        const vector = parseVector(response.data?.[0]?.embedding);
-        if (vector.length === 0) {
-          throw new Error("OpenAI-compatible embedding endpoint returned no embedding.");
+        const vector = response.data?.[0]?.embedding;
+        if (!Array.isArray(vector) || !vector.length || vector.length > 16384 || vector.some(value => typeof value !== "number" || !Number.isFinite(value)) || !vector.some(value => value !== 0)) {
+          throw new Error("OpenAI-compatible embedding endpoint returned an invalid embedding.");
         }
         return { provider, model, vector };
       }

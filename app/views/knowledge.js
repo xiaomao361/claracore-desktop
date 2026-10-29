@@ -1,5 +1,24 @@
 (function (scope) {
-  function createClaraCoreKnowledgeView({ dom, api, t, markdown, formatLocalDateTime }) {
+  function createClaraCoreKnowledgeView({ dom, api, t, markdown, formatLocalDateTime, readingState }) {
+    const createReadingState = scope.createClaraCoreKnowledgeReadingState || (typeof require === "function" ? require("../knowledge-reading-state").createKnowledgeReadingState : null);
+    const positions = readingState || createReadingState();
+    let selectedActivity = "";
+    function rememberPosition(flush = false) {
+      if (root && currentDocument && selected && currentDocument.path === pathOf(selected)) positions.remember(root, selected, dom.knowledgeMainPane.scrollTop || 0);
+      if (flush) positions.flush();
+    }
+    function documentHeading(document, reference = false) {
+      const title = reference ? dom.knowledgeReferenceDocumentTitle : dom.knowledgeDocumentTitle;
+      const meta = reference ? dom.knowledgeReferenceDocumentMeta : dom.knowledgeDocumentMeta;
+      if (!title) return;
+      title.textContent = document ? document.title || document.sections?.[0]?.title || document.path.split("/").pop().replace(/\.md$/i, "") : "";
+      title.parentElement.hidden = !document;
+      if (meta) {
+        const modified = document?.modifiedAt;
+        meta.textContent = modified && Number.isFinite(Date.parse(modified)) ? t("knowledge.reader.modified", { time: formatLocalDateTime(modified) }) : "";
+        meta.hidden = !meta.textContent;
+      }
+    }
     let active = false;
     let generation = 0;
     let readVersion = 0;
@@ -164,6 +183,7 @@
 
     function clearReader() {
       currentDocument = null;
+      documentHeading(null);
       updateCopyLabel();
       dom.knowledgeReaderPath.textContent = "";
       dom.knowledgeReaderBody.innerHTML = `<p>${escape(t("knowledge.page.select"))}</p>`;
@@ -193,7 +213,7 @@
       dom.knowledgePrevious.disabled = dom.knowledgeNext.disabled = true;
       dom.knowledgeCatalogList.innerHTML = "";
       try {
-        const page = await api.listKnowledgeDocuments({ offset, limit: 10, folder: dom.knowledgeFolder.value });
+        const page = await api.listKnowledgeDocuments({ offset, limit: 10, folder: dom.knowledgeFolder.value, sort: "modified" });
         if (!fresh(version) || request !== catalogVersion) return;
         const folders = new Map();
         for (const item of page.items) {
@@ -203,16 +223,19 @@
         }
         dom.knowledgeCatalogList.innerHTML = [...folders].map(([folder, items]) => {
           const label = { notes: "knowledge.page.notes", topics: "knowledge.page.topics", inbox: "knowledge.page.inbox" }[folder];
-          return `<details class="knowledge-folder-group" open><summary>${escape(label ? t(label) : folder)}</summary>${items.map(item => `<div class="knowledge-document-row">${refLink(item.path, item.title)}<small>${escape(item.path)}</small></div>`).join("")}</details>`;
+          return `<details class="knowledge-folder-group" open><summary>${escape(label ? t(label) : folder)}</summary>${items.map(item => `<div class="knowledge-document-row">${refLink(item.path, item.title) + (item.error ? `<small>${escape(t("review.documentUnavailable", { code: item.error.code }))}</small>` : "")}<small>${escape(item.path)}</small></div>`).join("")}</details>`;
         }).join("");
         status(dom.knowledgeCatalogStatus, page.total ? "knowledge.page.count" : "knowledge.page.emptyCollection", { count: page.total, start: offset + 1, end: offset + page.items.length });
+        if (page.status === "partial") dom.knowledgeCatalogStatus.textContent += ` · ${t("review.partialCatalog")}`;
         dom.knowledgePrevious.disabled = offset === 0;
         dom.knowledgeNext.disabled = !page.hasMore;
         for (const link of dom.knowledgeCatalogList.querySelectorAll("a")) {
           if (link.dataset.knowledgeRef === pathOf(selected)) link.setAttribute("aria-current", "page");
         }
+        return page;
       } catch (error) {
         if (fresh(version) && request === catalogVersion) dom.knowledgeCatalogStatus.textContent = errorText(error);
+        return null;
       }
     }
 
@@ -248,6 +271,9 @@
     }
 
     async function refresh() {
+      rememberPosition(true);
+      const previousRoot = root;
+      const previousActivity = selectedActivity;
       const version = ++generation;
       resetSearch();
       dom.knowledgeSemanticStatus.textContent = "";
@@ -275,7 +301,7 @@
         if (root !== preference.root) {
           if (capturePreview) status(dom.knowledgeCaptureNotice, "knowledge.capture.rootChanged");
           saveUncertain = false;
-          invalidateCapture(); selected = ""; history = []; offset = 0;
+          invalidateCapture(); selected = ""; selectedActivity = ""; history = []; offset = 0;
         }
         root = preference.root || "";
         dom.knowledgePageRoot.textContent = root || "";
@@ -296,8 +322,32 @@
         dom.knowledgeRebuild.disabled = false;
         dom.knowledgeSearchSubmit.disabled = false;
         dom.knowledgeSemanticBuild.disabled = building;
-        await Promise.all([loadCatalog(version), loadActivity(version), loadIndex(version)]);
-        if (fresh(version) && selected && selected === previousSelection) await openDocument(selected, false, false, previousScroll);
+        const selectionVersion = readVersion;
+        const [catalog] = await Promise.all([loadCatalog(version), loadActivity(version), loadIndex(version)]);
+        if (!fresh(version) || readVersion !== selectionVersion) return;
+        if (previousRoot === root && previousActivity && selectedActivity === previousActivity) { await openActivity(previousActivity); return; }
+        const position = selected && selected === previousSelection && root === previousRoot
+          ? { reference: selected, scrollTop: previousScroll } : positions.get(root);
+        if (position) {
+          const restoreVersion = readVersion;
+          const result = await openDocument(position.reference, false, false, position.scrollTop);
+          if (!fresh(version) || readVersion !== restoreVersion + 1) return;
+          if (result?.ok || !["missing_file", "ENOENT"].includes(result?.code)) return;
+          // Only a confirmed missing file permits replacement; access errors remain visible.
+          if (catalog) {
+            const latest = offset === 0 && !dom.knowledgeFolder.value ? catalog : await api.listKnowledgeDocuments({ offset: 0, limit: 10, folder: "", sort: "modified" });
+            if (!fresh(version) || readVersion !== restoreVersion + 1) return;
+            const readable = latest.items.find(item => !item.error);
+            if (readable) {
+              const result = await openDocument(readable.path, false, false);
+              if (result?.ok && fresh(version)) status(dom.knowledgeReaderStatus, "knowledge.reader.previousMissing");
+            }
+          }
+          return;
+        }
+        const readable = catalog?.items.find(item => !item.error);
+        if (readable) await openDocument(readable.path, false, false);
+        else status(dom.knowledgeReaderStatus, catalog ? "knowledge.page.emptyCollection" : "knowledge.reader.catalogUnavailable");
       } catch (error) {
         if (fresh(version)) {
           dom.knowledgePageRoot.textContent = "";
@@ -339,6 +389,7 @@
     function closeReference(focus = false) {
       referenceVersion += 1;
       referenceSelected = ""; referenceDocument = null; referenceHistory = [];
+      documentHeading(null, true);
       dom.knowledgeReferencePane.hidden = dom.knowledgeDivider.hidden = true;
       dom.knowledgePanes.classList.remove("has-reference");
       dom.knowledgeReferenceBody.innerHTML = "";
@@ -356,6 +407,7 @@
         referenceHistory.push(referencePosition()); referenceHistory = referenceHistory.slice(-50);
       }
       referenceSelected = reference; referenceDocument = null;
+      documentHeading(null, true);
       dom.knowledgeReferencePane.hidden = dom.knowledgeDivider.hidden = false;
       dom.knowledgePanes.classList.add("has-reference");
       dom.knowledgeReferenceBack.disabled = referenceHistory.length === 0;
@@ -369,6 +421,7 @@
         const document = await api.readKnowledgeDocument(pathOf(reference));
         if (!fresh(version) || request !== referenceVersion) return;
         referenceDocument = document;
+        documentHeading(document, true);
         dom.knowledgeReferenceBody.innerHTML = markdown.renderDocument(document, "reference");
         dom.knowledgeReferenceStatus.textContent = "";
         dom.knowledgeReferencePromote.disabled = false;
@@ -401,6 +454,7 @@
           outgoingOffset += links.outgoing.length;
         }
         status(dom.knowledgeLinksStatus, links.brokenTotal ? "knowledge.page.brokenLinks" : "knowledge.page.linkCounts", { count: links.brokenTotal, incoming: links.incomingTotal, outgoing: links.outgoingTotal });
+        if (links.issueCount) dom.knowledgeLinksStatus.textContent += ` · ${t("review.partialLinks", { count: links.issueCount })}`;
         if (links.brokenTotal) dom.knowledgeLinksStatus.textContent += ` ${links.broken.map((edge) => `${edge.target}${edge.anchor ? `#${edge.anchor}` : ""} (${edge.reason})`).join("; ")}`;
         dom.knowledgeMoreIncoming.hidden = incomingOffset >= links.incomingTotal;
         dom.knowledgeMoreOutgoing.hidden = outgoingOffset >= links.outgoingTotal;
@@ -411,7 +465,9 @@
       const version = generation;
       const request = ++readVersion;
       if (remember && selected && selected !== reference) { history.push(mainPosition()); history = history.slice(-50); }
+      rememberPosition();
       selected = reference;
+      selectedActivity = "";
       clearReader();
       dom.knowledgeBack.disabled = history.length === 0;
       dom.knowledgeReaderPath.textContent = pathOf(reference);
@@ -420,6 +476,7 @@
         const document = await api.readKnowledgeDocument(pathOf(reference));
         if (!fresh(version) || request !== readVersion) return;
         currentDocument = document;
+        documentHeading(document);
         dom.knowledgeReaderBody.innerHTML = markdown.renderDocument(document);
         dom.knowledgeCopyReference.disabled = false;
         dom.knowledgeReaderStatus.textContent = "";
@@ -432,20 +489,28 @@
         incomingOffset = outgoingOffset = 0;
         focusAnchor(reference, focus && restoredScroll === null);
         if (restoredScroll !== null) dom.knowledgeMainPane.scrollTop = restoredScroll;
+        else if (!focus) dom.knowledgeMainPane.scrollTop = 0;
         markReference();
         for (const item of dom.knowledgeCatalogList.querySelectorAll("a")) {
           if (item.dataset.knowledgeRef === document.path) item.setAttribute("aria-current", "page"); else item.removeAttribute("aria-current");
         }
+        rememberPosition(true);
         await loadLinks(version, request);
+        return { ok: fresh(version) && request === readVersion };
       } catch (error) {
         if (fresh(version) && request === readVersion) {
+          currentDocument = null;
+          documentHeading(null);
           dom.knowledgeReaderBody.innerHTML = "";
           dom.knowledgeReaderStatus.textContent = errorText(error);
+          return { ok: false, code: error.code || "read_failed" };
         }
       }
     }
 
     async function openActivity(id) {
+      rememberPosition(true);
+      selectedActivity = id;
       const version = generation;
       const request = ++readVersion;
       closeReference();
@@ -625,10 +690,12 @@
       invalidateCapture();
       status(dom.knowledgeCaptureNotice, "knowledge.capture.cancelled");
     });
+    dom.knowledgeMainPane.addEventListener("scroll", () => rememberPosition());
+    scope.addEventListener?.("beforeunload", () => rememberPosition(true));
     const now = new Date();
     dom.knowledgeCaptureDate.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     return {
-      setActive(value) { active = value; if (active) return refresh(); generation += 1; readVersion += 1; closeReference(); },
+      setActive(value) { if (!value) rememberPosition(true); active = value; if (active) return refresh(); generation += 1; readVersion += 1; closeReference(); },
       refresh, openDocument, openActivity, openReference, closeReference,
       // State contains pointers only, for automated race/flow checks.
       state: () => ({ active, selected, root, history: history.map(item => item.reference), referenceSelected, referenceHistory: referenceHistory.map(item => item.reference), capturePending: Boolean(capturePreview), saveUncertain })

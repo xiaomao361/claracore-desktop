@@ -6,7 +6,6 @@ const os = require("os");
 const { sqliteVecExtensionPath, SQLITE_VEC_VERSION } = require("../sqlite-vec-extension");
 const {
   DEFAULT_AGENT_ID,
-  DEFAULT_INNERLIFE_API_KEY,
   DEFAULT_SETTINGS,
   WRITABLE_SETTINGS,
   normalizeSettingValue,
@@ -268,7 +267,7 @@ class ProductDatabase {
       INSERT INTO secret_refs (key, provider, status, ref)
       VALUES
         ('memory.embedding.api_key', 'none', 'not-configured', NULL),
-        ('innerlife.llm.api_key', 'deepseek', 'configured', ${sqlString(DEFAULT_INNERLIFE_API_KEY)})
+        ('innerlife.llm.api_key', 'none', 'not-configured', NULL)
       ON CONFLICT(key) DO NOTHING;
     `);
   }

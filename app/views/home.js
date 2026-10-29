@@ -39,6 +39,7 @@ function createClaraCoreHomeView(context) {
   const {
     actionableGatewayErrors,
     agentActivityState,
+    traceStatus,
     formatRelativeTime,
     renderTraceFlow,
     summarizeAgentsFromTraces,
@@ -737,7 +738,7 @@ function createClaraCoreHomeView(context) {
       kind: "gateway",
       level: trace.status === "error" ? "error" : "info",
       title: trace.toolName || t("home.trace.unknownTool"),
-      detail: `${trace.agentId || t("home.trace.unknownAgent")} · ${trace.status === "error" ? t("home.trace.statusError") : t("home.trace.statusOk")} · ${trace.durationMs ?? 0}ms`,
+      detail: `${trace.agentId || t("home.trace.unknownAgent")} · ${trace.t(status === "error" ? "home.trace.statusError" : status === "ok" ? "home.trace.statusOk" : "home.trace.statusUnknown")} · ${trace.durationMs ?? 0}ms`,
       time: traceTimestamp(trace)
     }));
     const startupSignal = startupEvents[0]
@@ -827,13 +828,13 @@ function createClaraCoreHomeView(context) {
         ${traces
           .slice(0, 20)
           .map((trace) => {
-            const status = trace.status === "error" ? "error" : "ok";
+            const status = traceStatus(trace);
             return `
               <div class="gateway-activity-row ${escapeHtml(status)}">
                 <time>${escapeHtml(formatRelativeTime(traceTimestamp(trace)))}</time>
                 <strong>${escapeHtml(trace.agentId || t("home.trace.unknownAgent"))}</strong>
                 <span>${escapeHtml(trace.toolName || t("home.trace.unknownTool"))}</span>
-                <code>${escapeHtml(status === "error" ? t("home.trace.statusError") : t("home.trace.statusOk"))}</code>
+                <code>${escapeHtml(t(status === "error" ? "home.trace.statusError" : status === "ok" ? "home.trace.statusOk" : "home.trace.statusUnknown"))}</code>
                 <small>${escapeHtml(String(trace.durationMs ?? 0))}ms</small>
               </div>
             `;

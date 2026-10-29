@@ -17,7 +17,7 @@ function createClaraCoreSharedInnerLifeView(context) {
   const {
     memoryAgentFilter, memoryList, sharedLineSummary, sharedLinePast, sharedLineNext, sharedLineUpdated, sharedLineList,
     sharedLinePrimaryList, sharedLineOverflowList, sharedLineAllAction,
-    sharedLineActiveCount, sharedLineOverviewActiveCount, sharedLineOverviewArchivedCount, sharedLineProcessFlow,
+    sharedLineActiveCount, sharedLineOverviewActiveCount, sharedLineOverviewArchivedCount,
     sharedLineAgentFilter, sharedLineDetailTitle, sharedLineParticipants, sharedLineContinuityPath,
     sharedLineUnderstandingSection, sharedLineUnderstanding, sharedLineUnresolvedSection, sharedLineUnresolved,
     sharedLineReferencesSection, sharedLineReferences,
@@ -26,7 +26,7 @@ function createClaraCoreSharedInnerLifeView(context) {
     sharedLineDialogLines, sharedLineDialogAgents, sharedLineDialogEvidence, sharedLineDialogArchive,
     innerLifeAgentFilter, innerLifeFocus, innerLifeInterests,
     innerLifeUnsharedList, innerLifeAllUnsharedAction, innerLifeSharedList, innerLifeAllSharedAction,
-    innerLifeProcessFlow, innerLifeDaemonStatus, innerLifeNextRun, innerLifeLastResult,
+    innerLifeDaemonStatus, innerLifeNextRun, innerLifeLastResult,
     innerLifeDoctorStatus, innerLifeDetailDialog, innerLifeDetailBack, innerLifeDetailClose,
     innerLifeDetailKicker, innerLifeDetailTitle, innerLifeDetailMeta, innerLifeDetailBody
   } = dom;
@@ -38,6 +38,13 @@ function createClaraCoreSharedInnerLifeView(context) {
   let innerLifeDialogKind = "";
   let innerLifeDialogItemId = "";
   let innerLifeDialogBackKind = "";
+  let innerLifeTextPage = null;
+  let innerLifeTextRevision = 0;
+  function innerLifeMore(key) {
+    const page = state.innerLifeSnapshot?.[`${key}Page`];
+    return `${state.innerLifePageError === key ? `<p role="alert">${escapeHtml(t("review.pageFailed"))}</p>` : ""}${page?.hasMore ? `<button type="button" class="ghost-button" data-innerlife-more="${key}">${escapeHtml(t("review.loadMore"))}</button>` : ""}`;
+  }
+
 
 function renderTraceValue(value) {
   const items = Array.isArray(value) ? value : [];
@@ -126,7 +133,8 @@ function innerLifeDoctorMessage(issue, doctor) {
   if (code === "pending_inbox_paused") {
     return t("innerLife.doctor.pendingInboxPausedMessage", { count: String(doctor?.counts?.pendingInbox || 0) });
   }
-  return issue?.message || doctor?.summary || "";
+  const known = { daemon_retrying: "review.daemonRetry", afterthought_terminal_failure: "review.afterthoughtFailed", afterthought_retrying: "review.afterthoughtRetry", missing_model: "review.modelMissing" };
+  return known[code] ? t(known[code]) : issue?.message || doctor?.summary || t("review.unknownState");
 }
 
 function innerLifeLastResultLabel(value) {
@@ -375,10 +383,10 @@ function openSharedLineDialog(mode, trigger = null) {
     archive: sharedLineDialogArchive
   };
   const copy = {
-    lines: ["ACTIVE LINES", t("sharedLine.dialog.linesTitle"), t("sharedLine.dialog.linesMeta")],
-    agents: ["AGENT CONTEXT", t("sharedLine.agentContext"), t("sharedLine.agentContextBody")],
-    evidence: ["LINE EVIDENCE", t("sharedLine.dialog.evidenceTitle"), t("sharedLine.advanced.body")],
-    archive: ["ARCHIVE", t("sharedLine.pastLines"), t("sharedLine.reading.archiveBody")]
+    lines: [t("review.activeLines"), t("sharedLine.dialog.linesTitle"), t("sharedLine.dialog.linesMeta")],
+    agents: [t("review.agentContext"), t("sharedLine.agentContext"), t("sharedLine.agentContextBody")],
+    evidence: [t("review.lineEvidence"), t("sharedLine.dialog.evidenceTitle"), t("sharedLine.advanced.body")],
+    archive: [t("review.archive"), t("sharedLine.pastLines"), t("sharedLine.reading.archiveBody")]
   };
   const selectedCopy = copy[mode];
   if (!selectedCopy || !sections[mode]) return;
@@ -417,7 +425,7 @@ function renderMemoryList() {
 
 function renderSharedLine() {
   const snapshot = getSnapshot();
-  const overviewCatalog = snapshot?.sharedLine || {};
+  const overviewCatalog = state.sharedLineCatalog || snapshot?.sharedLine || {};
   const selectedPacket = (
     state.selectedSharedLinePacket?.lineId === state.selectedSharedLineId
     && state.selectedSharedLinePacket?.currentPosition?.lineId === state.selectedSharedLineId
@@ -425,7 +433,8 @@ function renderSharedLine() {
     ? state.selectedSharedLinePacket
     : null;
   const sharedLine = selectedPacket || (
-    overviewCatalog.lineId === state.selectedSharedLineId
+    overviewCatalog.overview !== true
+    && overviewCatalog.lineId === state.selectedSharedLineId
     && overviewCatalog.currentPosition?.lineId === state.selectedSharedLineId
       ? overviewCatalog
       : null
@@ -439,6 +448,7 @@ function renderSharedLine() {
     || {};
   const agentOptions = [
     ...new Set([
+      ...(overviewCatalog.agents || []),
       ...activeLines.map((line) => line.agentId || line.metadata?.agentId || ""),
       ...archivedLines.map((line) => line.agentId || line.metadata?.agentId || ""),
       ...(overviewCatalog.agentStates || []).map((item) => item.agentId || "")
@@ -469,19 +479,27 @@ function renderSharedLine() {
   if (sharedLineOverflowList) sharedLineOverflowList.innerHTML = renderSharedLineCards(visibleLines)
     || `<div class="endpoint-empty">${escapeHtml(t("sharedLine.linesEmpty"))}</div>`;
   if (sharedLineAllAction) {
-    sharedLineAllAction.hidden = overflowLines.length === 0;
-    sharedLineAllAction.textContent = t("sharedLine.viewAllLines", { count: String(visibleLines.length) });
+    sharedLineAllAction.hidden = overflowLines.length === 0 && !overviewCatalog.linesPage?.hasMore;
+    sharedLineAllAction.textContent = t("sharedLine.viewAllLines", { count: String(overviewCatalog.linesPage?.total ?? visibleLines.length) });
   }
-  if (sharedLineActiveCount) sharedLineActiveCount.textContent = t("sharedLine.lineCount", { count: String(visibleLines.length) });
-  if (sharedLineOverviewActiveCount) sharedLineOverviewActiveCount.textContent = String(activeLines.length);
-  if (sharedLineOverviewArchivedCount) sharedLineOverviewArchivedCount.textContent = String(archivedLines.length);
+  if (sharedLineActiveCount) sharedLineActiveCount.textContent = t("sharedLine.lineCount", { count: String(overviewCatalog.linesPage?.total ?? visibleLines.length) });
+  if (sharedLineOverviewActiveCount) sharedLineOverviewActiveCount.textContent = String(overviewCatalog.linesPage?.total ?? activeLines.length);
+  if (sharedLineOverviewArchivedCount) sharedLineOverviewArchivedCount.textContent = String(overviewCatalog.archivedLinesPage?.total ?? archivedLines.length);
   renderArchivedLines(visibleArchivedLines);
 
-  const hasSelection = Boolean(sharedLine?.lineId && current.lineId === sharedLine.lineId);
+  const hasSelection = Boolean(sharedLine?.lineId && current.lineId === sharedLine.lineId
+    && (!state.activeSharedLineAgentFilter || (current.agentId || sharedLine.agentId || selectedLine.agentId) === state.activeSharedLineAgentFilter));
+  const readFailed = state.sharedLineReadStatus === "error";
+  const readLoading = state.sharedLineReadStatus === "loading";
+  if (dom.sharedLineResume) dom.sharedLineResume.disabled = !hasSelection || state.sharedLineReadStatus !== "ready" || state.sharedLineCopying === true || !String(current.summary || "").trim();
+  if (dom.sharedLineRetry) {
+    dom.sharedLineRetry.hidden = !readFailed;
+    dom.sharedLineRetry.disabled = readLoading;
+  }
   if (sharedLineContinuityPath) sharedLineContinuityPath.hidden = !hasSelection;
   sharedLineDetailTitle.textContent = hasSelection
     ? selectedLine.title || current.lineTitle || sharedLine.lineTitle || sharedLine.lineId
-    : t("sharedLine.detail.emptyTitle");
+    : t(readLoading ? "sharedLine.detail.loadingTitle" : "sharedLine.detail.emptyTitle");
   const participants = uniqueValues([selectedLine.agentId, current.agentId, sharedLine?.agentId]);
   sharedLineParticipants.textContent = hasSelection && participants.length
     ? t("sharedLine.participants", { names: participants.join(" · ") })
@@ -493,8 +511,16 @@ function renderSharedLine() {
     "sharedLine.currentEmpty",
     false
   );
-  const handoffNext = (sharedLine?.handoffs || []).find((item) => item.nextStep)?.nextStep || "";
-  renderPrimaryValues(sharedLineNext, [current.metadata?.nextStep, current.nextStep, handoffNext], "sharedLine.nextEmpty", false);
+  // Only the selected current position defines its current plan. In particular,
+  // an explicit empty nextStep cannot resurrect an old handoff or metadata plan.
+  const nextStep = Object.hasOwn(current, "nextStep") ? current.nextStep : current.metadata?.nextStep;
+  const nextValues = typeof nextStep === "string" && nextStep.trim() ? [nextStep] : [];
+  if (sharedLineNext?.closest(".stage-next")) sharedLineNext.closest(".stage-next").hidden = !hasSelection || !nextValues.length;
+  renderPrimaryValues(sharedLineNext, nextValues, "sharedLine.nextEmpty", false);
+  if (dom.sharedLineRecordState) {
+    const statusKey = ["draft", "needs_review", "stale"].includes(current.interpretationStatus) ? current.interpretationStatus : "";
+    dom.sharedLineRecordState.textContent = hasSelection && statusKey ? t(`sharedLine.recordState.${statusKey}`) : "";
+  }
   sharedLineUpdated.textContent = hasSelection && current.updatedAt
     ? t("sharedLine.updatedAt", { time: formatLocalDateTime(current.updatedAt) })
     : "";
@@ -516,6 +542,12 @@ function renderSharedLine() {
     ? references.map((reference) => `<li>${escapeHtml(reference)}</li>`).join("")
     : "";
 
+  const catalogNotice = state.sharedLineCatalogLoading ? `<p role="status">${escapeHtml(t("runtime.loading"))}</p>`
+    : state.sharedLineCatalogError ? `<p role="alert">${escapeHtml(t("review.pageFailed"))}</p><button type="button" data-shared-line-retry-catalog>${escapeHtml(t("review.retry"))}</button>` : "";
+  if (sharedLinePrimaryList) sharedLinePrimaryList.insertAdjacentHTML("beforeend", catalogNotice);
+  if (sharedLineOverflowList) sharedLineOverflowList.insertAdjacentHTML("beforeend", catalogNotice + (overviewCatalog.linesPage?.hasMore ? `<button type="button" data-shared-line-more="active">${escapeHtml(t("review.loadMore"))}</button>` : ""));
+  if (sharedLineArchiveList) sharedLineArchiveList.insertAdjacentHTML("beforeend", catalogNotice + (overviewCatalog.archivedLinesPage?.hasMore ? `<button type="button" data-shared-line-more="archived">${escapeHtml(t("review.loadMore"))}</button>` : ""));
+
   const currentMetadata = {
     ...(current.metadata || {}),
     ...(sharedLine?.sharedReality || {}),
@@ -526,15 +558,6 @@ function renderSharedLine() {
   renderSharedLineMetadata(currentMetadata);
   renderSharedLineAgentState(overviewCatalog, state.activeSharedLineAgentFilter);
   renderSelectedHistory(sharedLine || {});
-  if (sharedLineProcessFlow) {
-    const steps = [
-      [t("sharedLine.process.progress"), (sharedLine?.history || []).length, t("sharedLine.process.progressBody")],
-      [t("sharedLine.process.understand"), understanding.length, t("sharedLine.process.understandBody")],
-      [t("sharedLine.process.position"), hasSelection ? 1 : 0, t("sharedLine.process.positionBody")],
-      [t("sharedLine.process.resume"), current.nextStep || current.metadata?.nextStep ? 1 : 0, t("sharedLine.process.resumeBody")]
-    ];
-    sharedLineProcessFlow.innerHTML = steps.map(([title, count, description], index) => `<div><span>${index + 1}</span><strong>${escapeHtml(title)}</strong><small>${escapeHtml(description)}</small><em>${escapeHtml(t("sharedLine.process.count", { count: String(count) }))}</em></div>`).join("");
-  }
   if (sharedLineDetailDialog?.open && sharedLineDialogMode) openSharedLineDialog(sharedLineDialogMode);
 }
 
@@ -607,23 +630,24 @@ function renderInnerLifeThought(share, { shared = false, compact = false } = {})
         ${timestamp ? `<time>${escapeHtml(formatLocalDateTime(timestamp))}</time>` : ""}
       </div>
       <p>${escapeHtml(previewInnerLifeText(body, 260))}</p>
-      <small class="innerlife-read-more">阅读全文 →</small>
+      <small class="innerlife-read-more">${escapeHtml(t("review.readFull"))}</small>
     </button>
   `;
 }
 
 function formatInnerLifeInterval(seconds) {
   const value = Number(seconds) || 0;
-  if (value >= 3600 && value % 3600 === 0) return `${value / 3600} 小时`;
-  if (value >= 60 && value % 60 === 0) return `${value / 60} 分钟`;
-  return `${value || 60} 秒`;
+  if (value >= 3600 && value % 3600 === 0) return t("review.hours", { count: value / 3600 });
+  if (value >= 60 && value % 60 === 0) return t("review.minutes", { count: value / 60 });
+  return t("review.seconds", { count: value || 60 });
 }
 
-function renderInnerLifeReaderList(items, { empty = "暂无记录", body = (item) => item.body || item.summary || item.reason || "", meta = (item) => item.status || item.mode || item.source || "" } = {}) {
+function renderInnerLifeReaderList(items, { empty = t("review.noRecords"), body = (item) => item.body || item.summary || item.reason || "", meta = (item) => item.status || item.mode || item.source || "" } = {}) {
   if (!items.length) return `<div class="endpoint-empty">${escapeHtml(empty)}</div>`;
   return `<div class="innerlife-reader-list">${items.map((item) => `<article>
     <div><strong>${escapeHtml(innerLifeKindLabel(meta(item)))}</strong><time>${escapeHtml(formatLocalDateTime(item.completedAt || item.createdAt || item.startedAt || item.updated_at))}</time></div>
-    <p>${escapeHtml(cleanInnerLifeThought(body(item)) || previewInnerLifeDigest(body(item)) || "-")}</p>
+    <p style="white-space: pre-wrap">${escapeHtml(body(item) || "-")}</p>
+    ${item.truncated ? `<button type="button" data-innerlife-open="record-${item.source === "digest" ? "digest" : item.shareId ? "thought" : "event"}" data-innerlife-share-id="${escapeHtml(item.id)}">${escapeHtml(t("review.readFull"))}</button>` : ""}
   </article>`).join("")}</div>`;
 }
 
@@ -631,62 +655,64 @@ function innerLifeDialogContent(kind, itemId) {
   const model = innerLifeReaderModel;
   if (!model) return null;
   const { selectedProfile, selectedState, unsharedShares, sharedShares, daemon, doctor, doctorItems, sessions, digestRuns, inboxItems, shareChecks, history, experiences, summaries, pollSeconds } = model;
-  if (kind === "thought") {
-    const share = [...unsharedShares, ...sharedShares].find((item) => String(item.id) === String(itemId));
-    if (!share) return null;
-    const shared = String(share.status || "").toLowerCase() === "used";
-    const evidence = share.deliveryEvidence || {};
-    return {
-      kicker: shared ? "ARCHIVE" : "THOUGHT",
-      title: shared ? "曾经说出口" : "一个正在形成的念头",
-      meta: [shared ? (hasVerifiedInnerLifeDelivery(share) ? "已确认送达" : "历史记录，送达未核验") : unsharedThoughtLabel(share.status), formatLocalDateTime(evidence.sharedAt || share.created_at || share.updated_at)].filter(Boolean).join(" · "),
-      body: `<article class="innerlife-full-thought"><span aria-hidden="true">“</span><p>${escapeHtml(cleanInnerLifeThought(share.body) || share.body || "-")}</p></article>${shared && hasVerifiedInnerLifeDelivery(share) ? `<section class="innerlife-evidence"><h3>送达依据</h3><p>${escapeHtml(evidence.responseExcerpt || "")}</p><small>${escapeHtml(evidence.conversationId || "")}</small></section>` : ""}`
-    };
+  if (kind === "thought" || kind.startsWith("record-")) {
+    const page = innerLifeTextPage?.agentId && innerLifeTextPage.agentId !== state.activeInnerLifeAgentFilter ? null : innerLifeTextPage;
+    const body = page?.status === "ready"
+      ? `<article class="innerlife-full-thought"><p style="white-space: pre-wrap">${escapeHtml(page.body || "-")}</p></article><div class="innerlife-text-pages">${page.offset ? `<button type="button" data-innerlife-text-offset="${Math.max(0, page.offset - 16000)}">${escapeHtml(t("review.previous"))}</button>` : ""}${page.hasMore ? `<button type="button" data-innerlife-text-offset="${page.nextOffset}">${escapeHtml(t("review.next"))}</button>` : ""}</div>`
+      : `<p role="status">${escapeHtml(t(page?.status === "error" ? "review.pageFailed" : "runtime.loading"))}</p>${page?.status === "error" ? `<button type="button" data-innerlife-text-offset="${page.offset || 0}">${escapeHtml(t("review.retry"))}</button>` : ""}`;
+    const share = [...unsharedShares, ...sharedShares].find(item => item.id === itemId);
+    const evidence = share?.deliveryEvidence;
+    return { kicker: t("review.original"), title: t("review.readFull"),
+      meta: page?.status === "ready" && (page.hasMore || page.offset) ? t("review.textRange", { from: page.offset + 1, to: page.nextOffset, total: page.total }) : t("review.original"),
+      body: body + (share && hasVerifiedInnerLifeDelivery(share) ? `<section class="innerlife-evidence"><h3>${escapeHtml(t("review.deliveryEvidence"))}</h3><p>${escapeHtml(evidence.responseExcerpt || "")}</p><small>${escapeHtml(evidence.conversationId || "")}</small></section>` : "") };
   }
   if (kind === "unshared-library" || kind === "shared-library") {
     const shared = kind === "shared-library";
     const items = shared ? sharedShares : unsharedShares;
     return {
-      kicker: shared ? "ARCHIVE" : "THOUGHT LIBRARY",
-      title: shared ? "曾经说出口的记录" : "尚未分享的念头",
-      meta: `最近载入 ${items.length} 条 · 点击任一条阅读全文`,
-      body: `<div class="innerlife-dialog-index">${items.length ? items.map((item) => renderInnerLifeThought(item, { shared, compact: true })).join("") : `<div class="endpoint-empty">暂无记录</div>`}</div>`
+      kicker: shared ? t("review.archive") : t("review.thoughtLibrary"),
+      title: shared ? t("review.sharedRecords") : t("review.unsharedRecords"),
+      meta: t("review.loaded", { count: items.length }),
+      body: `<div class="innerlife-dialog-index">${items.length ? items.map((item) => renderInnerLifeThought(item, { shared, compact: true })).join("") : `<div class="endpoint-empty">${escapeHtml(t("review.noRecords"))}</div>`}</div>${innerLifeMore(shared ? "sharedShares" : "unsharedShares")}`
     };
   }
   if (kind === "status") {
     const retrySeconds = Number.parseInt(String(daemon.metadata?.retrySeconds || 0), 10) || 0;
     const failureCount = Number.parseInt(String(daemon.metadata?.failureCount || 0), 10) || 0;
+    const needsRecovery = failureCount > 0 || Boolean(daemon.lastError) || ["error", "failed"].includes(daemon.status)
+      || (doctor.issues || []).some(issue => issue.level !== "ok" && issue.level !== "info");
+    const recovery = needsRecovery ? t("review.recoveryNeeded") : doctor.status === "ok" ? t("review.recoveryClear") : t("review.unknownState");
     return {
-      kicker: "CURRENT STATE", title: "InnerLife 现在是否正常", meta: "先看结论，需要排查时再进入技术诊断",
+      kicker: t("review.currentState"), title: t("review.statusTitle"), meta: t("review.statusIntro"),
       body: `<div class="innerlife-fact-grid">
-        <div><span>后台活动</span><strong>${escapeHtml(innerLifeStateLabel(daemon.status || (daemon.enabled ? "enabled" : "paused")) || "-")}</strong></div>
-        <div><span>下次检查</span><strong>${escapeHtml(formatLocalDateTime(daemon.nextRunAt) || "-")}</strong></div>
-        <div><span>最近结果</span><strong>${escapeHtml(innerLifeLastResultLabel(daemon.lastResult || daemon.lastError))}</strong></div>
-        <div><span>整体状态</span><strong>${escapeHtml(innerLifeStateLabel(doctor.status) || doctor.status || "-")}</strong></div>
-      </div>${failureCount ? `<p class="innerlife-callout">已经失败 ${failureCount} 次，约 ${retrySeconds} 秒后重试。</p>` : `<p class="innerlife-callout is-ok">当前没有需要处理的恢复任务。</p>`}`
+        <div><span>${escapeHtml(t("review.background"))}</span><strong>${escapeHtml(innerLifeStateLabel(daemon.status || (daemon.enabled ? "enabled" : "paused")) || "-")}</strong></div>
+        <div><span>${escapeHtml(t("review.nextCheck"))}</span><strong>${escapeHtml(formatLocalDateTime(daemon.nextRunAt) || "-")}</strong></div>
+        <div><span>${escapeHtml(t("review.lastResult"))}</span><strong>${escapeHtml(innerLifeLastResultLabel(daemon.lastResult || daemon.lastError))}</strong></div>
+        <div><span>${escapeHtml(t("review.overallStatus"))}</span><strong>${escapeHtml(innerLifeStateLabel(doctor.status) || doctor.status || "-")}</strong></div>
+      </div>${`<p class="innerlife-callout ${!needsRecovery && doctor.status === "ok" ? "is-ok" : ""}">${escapeHtml(recovery)}${failureCount && retrySeconds ? ` ${escapeHtml(t("review.retryState", { count: failureCount, seconds: retrySeconds }))}` : ""}</p>`}`
     };
   }
   if (kind === "profile") {
     const policy = selectedProfile?.profile?.share_policy || {};
-    const mode = policy.default_mode === "never" ? "默认留在内在活动" : policy.default_mode === "always" ? "符合条件时优先分享" : "与当前对话相关时分享";
+    const mode = policy.default_mode === "never" ? t("review.neverShare") : policy.default_mode === "always" ? t("review.alwaysShare") : t("review.relevantShare");
     return {
-      kicker: "SHARING LOGIC", title: "它怎样决定是否说出口", meta: "参数如何影响实际行为",
+      kicker: t("review.sharingLogic"), title: t("review.shareTitle"), meta: t("review.shareIntro"),
       body: `<div class="innerlife-rule-list">
-        <section><span>多久醒来检查一次</span><strong>${escapeHtml(formatInnerLifeInterval(pollSeconds))}</strong><p>检查是否有材料等待消化。</p></section>
-        <section><span>什么情况下会分享</span><strong>${escapeHtml(mode)}</strong><p>没有合适语境时，念头会继续留在这里。</p></section>
-        <section><span>说过以后多久不重复</span><strong>${escapeHtml(`${Number(policy.repeat_cooldown_hours ?? 4)} 小时`)}</strong><p>避免同一类念头反复打断对话。</p></section>
-        <section><span>一天最多主动分享</span><strong>${escapeHtml(`${Number(policy.max_proactive_per_day ?? 3)} 次`)}</strong><p>每日主动分享上限。</p></section>
-      </div><button type="button" class="innerlife-raw-action" data-innerlife-open="raw-profile">查看原始配置与状态 →</button>`
+        <section><span>${escapeHtml(t("review.wakeFrequency"))}</span><strong>${escapeHtml(formatInnerLifeInterval(pollSeconds))}</strong><p>${escapeHtml(t("review.wakeDescription"))}</p></section>
+        <section><span>${escapeHtml(t("review.shareConditions"))}</span><strong>${escapeHtml(mode)}</strong><p>${escapeHtml(t("review.shareDescription"))}</p></section>
+        <section><span>${escapeHtml(t("review.repeatCooldown"))}</span><strong>${escapeHtml(t("review.hours", { count: Number(policy.repeat_cooldown_hours ?? 4) }))}</strong><p>${escapeHtml(t("review.repeatDescription"))}</p></section>
+        <section><span>${escapeHtml(t("review.dailyLimit"))}</span><strong>${escapeHtml(t("review.times", { count: Number(policy.max_proactive_per_day ?? 3) }))}</strong><p>${escapeHtml(t("review.dailyDescription"))}</p></section>
+      </div><button type="button" class="innerlife-raw-action" data-innerlife-open="raw-profile">${escapeHtml(t("review.rawAction"))}</button>`
     };
   }
   if (kind === "raw-profile") {
-    return { kicker: "AUDIT", title: "原始配置与状态", meta: "仅用于核对真实数据；完整内容在同一阅读层中展示", body: `<section class="innerlife-raw-section"><h3>Profile JSON</h3><pre>${escapeHtml(JSON.stringify(selectedProfile?.profile || {}, null, 2))}</pre></section><section class="innerlife-raw-section"><h3>State JSON</h3><pre>${escapeHtml(JSON.stringify(selectedState || {}, null, 2))}</pre></section>` };
+    return { kicker: t("review.audit"), title: t("review.rawTitle"), meta: t("review.rawIntro"), body: `<section class="innerlife-raw-section"><h3>Profile JSON</h3><pre>${escapeHtml(JSON.stringify(selectedProfile?.profile || {}, null, 2))}</pre></section><section class="innerlife-raw-section"><h3>State JSON</h3><pre>${escapeHtml(JSON.stringify(selectedState || {}, null, 2))}</pre></section>` };
   }
   if (kind === "activity") {
-    return { kicker: "DIGEST", title: "它最近消化出了什么", meta: "变化、经历与稳定认识，按时间自然阅读", body: `<h3>变化</h3>${renderInnerLifeReaderList(history, { empty: "暂无变化" })}<h3>经历</h3>${renderInnerLifeReaderList(experiences, { empty: "暂无经历" })}<h3>稳定认识</h3>${renderInnerLifeReaderList(summaries, { empty: "暂无总结" })}` };
+    return { kicker: t("review.digest"), title: t("review.activityTitle"), meta: t("review.recentActivity"), body: `<h3>${escapeHtml(t("review.changes"))}</h3>${renderInnerLifeReaderList(history, { empty: t("review.noChanges") })}<h3>${escapeHtml(t("review.experiences"))}</h3>${renderInnerLifeReaderList(experiences, { empty: t("review.noExperiences") })}<h3>${escapeHtml(t("review.summaries"))}</h3>${renderInnerLifeReaderList(summaries, { empty: t("review.noSummaries") })}` };
   }
   if (kind === "technical") {
-    return { kicker: "DIAGNOSTICS", title: "技术诊断记录", meta: "按时间连续查看全部记录", body: `<h3>状态说明</h3>${renderInnerLifeReaderList(doctorItems, { body: (item) => innerLifeDoctorMessage(item, doctor), meta: (item) => item.level || item.code })}<h3>会话</h3>${renderInnerLifeReaderList(sessions)}<h3>消化任务</h3>${renderInnerLifeReaderList(digestRuns)}<h3>最近输入</h3>${renderInnerLifeReaderList(inboxItems)}<h3>分享时机判断</h3>${renderInnerLifeReaderList(shareChecks)}` };
+    return { kicker: t("review.diagnosticKicker"), title: t("review.technicalTitle"), meta: t("review.recentTechnical"), body: `<h3>${escapeHtml(t("review.statusDetails"))}</h3>${renderInnerLifeReaderList(doctorItems, { body: (item) => [innerLifeDoctorMessage(item, doctor), item.action].filter(Boolean).join("\n"), meta: (item) => item.level || item.code })}<h3>${escapeHtml(t("review.sessions"))}</h3>${renderInnerLifeReaderList(sessions)}${innerLifeMore("sessions")}<h3>${escapeHtml(t("review.digests"))}</h3>${renderInnerLifeReaderList(digestRuns)}${innerLifeMore("digestRuns")}<h3>${escapeHtml(t("review.inputs"))}</h3>${renderInnerLifeReaderList(inboxItems)}${innerLifeMore("inbox")}<h3>${escapeHtml(t("review.timingChecks"))}</h3>${renderInnerLifeReaderList(shareChecks)}` };
   }
   return null;
 }
@@ -701,19 +727,42 @@ function openInnerLifeDetail(kind, itemId = "", { trigger = null, backKind = "" 
   innerLifeDetailKicker.textContent = content.kicker;
   innerLifeDetailTitle.textContent = content.title;
   innerLifeDetailMeta.textContent = content.meta;
-  innerLifeDetailBody.innerHTML = content.body;
+  if (innerLifeDetailBody.innerHTML !== content.body) innerLifeDetailBody.innerHTML = content.body;
   innerLifeDetailBack.hidden = !backKind;
   if (!innerLifeDetailDialog.open) innerLifeDetailDialog.showModal();
 }
 
+async function readInnerLifeText(kind, itemId, offset = 0) {
+  const request = ++innerLifeTextRevision;
+  const agentId = state.activeInnerLifeAgentFilter;
+  innerLifeTextPage = { status: "loading", offset };
+  openInnerLifeDetail(kind, itemId, { backKind: innerLifeDialogBackKind });
+  try {
+    const page = await window.ClaraCoreDesktop.getInnerLifeText({ id: itemId, agentId, kind: kind === "thought" ? "share" : kind.slice(7), offset });
+    if (request !== innerLifeTextRevision || agentId !== state.activeInnerLifeAgentFilter || kind !== innerLifeDialogKind || itemId !== innerLifeDialogItemId) return;
+    if (page.id !== itemId || page.agentId !== agentId) throw new Error("InnerLife text scope mismatch.");
+    innerLifeTextPage = { ...page, status: "ready" };
+  } catch (error) {
+    if (request !== innerLifeTextRevision || agentId !== state.activeInnerLifeAgentFilter || kind !== innerLifeDialogKind || itemId !== innerLifeDialogItemId) return;
+    console.error(error);
+    innerLifeTextPage = { status: "error", offset };
+  }
+  openInnerLifeDetail(kind, itemId, { backKind: innerLifeDialogBackKind });
+}
+
 function bindInnerLifeReader() {
   const handleOpen = (event) => {
+    const page = event.target.closest("[data-innerlife-text-offset]");
+    if (page) { readInnerLifeText(innerLifeDialogKind, innerLifeDialogItemId, Number(page.dataset.innerlifeTextOffset)); return; }
     const action = event.target.closest("[data-innerlife-open]");
     if (!action) return;
     const kind = action.dataset.innerlifeOpen;
     const libraryKind = ["unshared-library", "shared-library"].includes(innerLifeDialogKind) ? innerLifeDialogKind : "";
     const backKind = kind === "raw-profile" ? "profile" : kind === "thought" ? libraryKind : "";
+    innerLifeTextRevision += 1;
+    innerLifeTextPage = null;
     openInnerLifeDetail(kind, action.dataset.innerlifeShareId || "", { trigger: action, backKind });
+    if (kind === "thought" || kind.startsWith("record-")) readInnerLifeText(kind, action.dataset.innerlifeShareId);
   };
   document.querySelector("#innerlifeView .innerlife-reader")?.addEventListener("click", handleOpen);
   innerLifeDetailDialog?.addEventListener("click", handleOpen);
@@ -722,6 +771,8 @@ function bindInnerLifeReader() {
   innerLifeDetailDialog?.addEventListener("close", () => {
     const trigger = innerLifeDialogTrigger;
     innerLifeDialogTrigger = null;
+    innerLifeTextRevision += 1;
+    innerLifeTextPage = null;
     innerLifeDialogKind = "";
     innerLifeDialogBackKind = "";
     requestAnimationFrame(() => {
@@ -732,9 +783,12 @@ function bindInnerLifeReader() {
 
 function renderInnerLife() {
   const snapshot = getSnapshot();
-  const innerLife = snapshot?.innerLife || {};
+  const source = state.innerLifeSnapshot || snapshot?.innerLife || {};
+  let innerLife = state.innerLifeLoadStatus === "loading" || state.innerLifeLoadStatus === "error"
+    ? { profiles: source.profiles || [] } : source;
   const profiles = Array.isArray(innerLife.profiles) ? innerLife.profiles : [];
   const selectedAgentId = renderInnerLifeAgentSelector(profiles);
+  if (innerLife.agentId !== selectedAgentId && innerLife.daemon?.agentId !== selectedAgentId) innerLife = { profiles };
   const selectedProfile = profiles.find((profile) => profile.agentId === selectedAgentId) || null;
   const selectedState = selectedProfile?.state || {};
   const interests = Array.isArray(selectedState.current_interests)
@@ -773,9 +827,12 @@ function renderInnerLife() {
       ? unsharedShares.slice(0, 3).map((share) => renderInnerLifeThought(share)).join("")
       : `<div class="endpoint-empty">${escapeHtml(selectedProfile ? t("innerLife.unsharedEmpty") : t("innerLife.noProfiles"))}</div>`;
   }
+  if (state.innerLifeLoadStatus === "loading" || state.innerLifeLoadStatus === "error") {
+    innerLifeUnsharedList.innerHTML = `<p role="status">${escapeHtml(t(state.innerLifeLoadStatus === "error" ? "review.pageFailed" : "runtime.loading"))}</p>${state.innerLifeLoadStatus === "error" ? `<button type="button" data-innerlife-retry>${escapeHtml(t("review.retry"))}</button>` : ""}`;
+  }
   if (innerLifeAllUnsharedAction) {
-    innerLifeAllUnsharedAction.hidden = unsharedShares.length <= 3;
-    innerLifeAllUnsharedAction.textContent = `查看全部 ${unsharedShares.length} 条尚未分享的念头 →`;
+    innerLifeAllUnsharedAction.hidden = unsharedShares.length <= 3 && !innerLife.unsharedSharesPage?.hasMore;
+    innerLifeAllUnsharedAction.textContent = t("review.unsharedCount", { count: innerLife.unsharedSharesPage?.total ?? unsharedShares.length });
   }
   if (innerLifeSharedList) {
     innerLifeSharedList.innerHTML = sharedShares.length
@@ -783,19 +840,20 @@ function renderInnerLife() {
       : `<div class="endpoint-empty">${escapeHtml(t("innerLife.sharedEmpty"))}</div>`;
   }
   if (innerLifeAllSharedAction) {
-    innerLifeAllSharedAction.hidden = sharedShares.length <= 5;
-    innerLifeAllSharedAction.textContent = `查看最近载入的 ${sharedShares.length} 条分享记录 →`;
+    innerLifeAllSharedAction.hidden = sharedShares.length <= 5 && !innerLife.sharedSharesPage?.hasMore;
+    innerLifeAllSharedAction.textContent = t("review.sharedCount", { count: innerLife.sharedSharesPage?.total ?? sharedShares.length });
   }
 
-  const daemon = innerLife.daemon || {};
-  if (innerLifeDaemonStatus) innerLifeDaemonStatus.textContent = innerLifeStateLabel(daemon.status || (daemon.enabled ? "enabled" : "paused")) || "-";
+  const scopeMatches = innerLife.agentId === selectedAgentId || innerLife.daemon?.agentId === selectedAgentId;
+  const daemon = scopeMatches ? innerLife.daemon || {} : {};
+  if (innerLifeDaemonStatus) innerLifeDaemonStatus.textContent = scopeMatches ? innerLifeStateLabel(daemon.status || (daemon.enabled ? "enabled" : "paused")) || "-" : t("review.unknownState");
   if (innerLifeNextRun) innerLifeNextRun.textContent = formatLocalDateTime(daemon.nextRunAt) || "-";
   if (innerLifeLastResult) innerLifeLastResult.textContent = innerLifeLastResultLabel(daemon.lastResult || daemon.lastError);
-  const doctor = innerLife.doctor || {};
+  const doctor = scopeMatches ? innerLife.doctor || {} : {};
   if (innerLifeDoctorStatus) innerLifeDoctorStatus.textContent = innerLifeStateLabel(doctor.status) || doctor.status || "-";
   const doctorItems = Array.isArray(doctor.issues) && doctor.issues.length
     ? doctor.issues
-    : [{ level: "ok", code: "healthy", message: doctor.summary || t("innerLife.doctorEmpty") }];
+    : doctor.status === "ok" ? [{ level: "ok", code: "healthy", message: doctor.summary || t("innerLife.doctorEmpty") }] : [{ level: "unknown", code: "unknown", message: t("review.unknownState") }];
   const sessions = filterByAgent(innerLife.sessions || [], selectedAgentId);
   const digestRuns = filterByAgent(innerLife.digestRuns || [], selectedAgentId);
   const inboxItems = filterByAgent(innerLife.inbox || [], selectedAgentId);
@@ -806,16 +864,6 @@ function renderInnerLife() {
   const pollSeconds = snapshot?.configuration?.innerlife?.pollSeconds || 60;
   innerLifeReaderModel = { selectedProfile, selectedState, unsharedShares, sharedShares, daemon, doctor, doctorItems, sessions, digestRuns, inboxItems, shareChecks, history, experiences, summaries, pollSeconds };
 
-  if (innerLifeProcessFlow) {
-    const steps = [
-      ["输入进入", inboxItems.length, "最近收到的材料", "technical"],
-      ["后台消化", digestRuns.length, "整理经历和变化", "activity"],
-      ["形成念头", unsharedShares.length, "先留在心里", "unshared-library"],
-      ["判断场合", shareChecks.length, "检查当下是否合适", "technical"],
-      ["带入对话", sharedShares.length, "有依据的分享记录", "shared-library"]
-    ];
-    innerLifeProcessFlow.innerHTML = steps.map(([title, count, description, target], index) => `<button type="button" data-innerlife-open="${target}"><span>${index + 1}</span><strong>${title}</strong><small>${description}</small><em>最近 ${count} 条</em></button>`).join("");
-  }
   if (innerLifeDetailDialog?.open && innerLifeDialogKind) openInnerLifeDetail(innerLifeDialogKind, innerLifeDialogItemId, { backKind: innerLifeDialogBackKind });
 }
 

@@ -35,7 +35,7 @@ async function main() {
     await page.waitForFunction(() => !document.querySelector("#copyAgentSetup")?.disabled, null, { timeout: 15000 });
 
     const hierarchy = await page.evaluate(() => {
-      const side = document.querySelector("#agentSetupView .agent-access-side");
+      const side = document.querySelector("#agentSetupView .agent-access-connect");
       return {
         visibleActions: [...side.querySelectorAll("button")].filter((button) => !button.hidden).map((button) => button.id),
         connectedAgentsPresent: Boolean(document.querySelector("#gatewayHandshakeList")),
@@ -68,7 +68,7 @@ async function main() {
       };
     });
     if (
-      JSON.stringify(hierarchy.visibleActions) !== JSON.stringify(["copyAgentSetup"]) ||
+      JSON.stringify(hierarchy.visibleActions) !== JSON.stringify(["copyAgentSetup", "refreshAgentSetup"]) ||
       !hierarchy.connectedAgentsPresent ||
       !hierarchy.recentActivityPresent ||
       hierarchy.removedControlsPresent ||
@@ -78,7 +78,6 @@ async function main() {
       !hierarchy.httpStatus ||
       !hierarchy.guideStatus ||
       !hierarchy.guideVersion.includes(`v${PRODUCT_VERSION}`) ||
-      hierarchy.guideLayout.versionTop < hierarchy.guideLayout.copyBottom ||
       hierarchy.guideLayout.versionLeft < hierarchy.guideLayout.noteLeft ||
       hierarchy.guideLayout.versionRight > hierarchy.guideLayout.noteRight ||
       hierarchy.processSteps !== 4
@@ -127,7 +126,7 @@ async function main() {
     }
 
     await page.click("[data-view='settings']");
-    await page.click("[data-settings-tab='app-data']");
+    await page.click("[data-settings-open='appearance']");
     await page.selectOption("#settingsLanguage", "en");
     await page.selectOption("#settingsTheme", "dark");
     await page.click("#saveAppearanceSettings");
@@ -140,12 +139,12 @@ async function main() {
     await page.click("[data-view='agent-setup']");
     const responsive = await page.evaluate(() => ({
       horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
-      actionCount: document.querySelectorAll("#agentSetupView .agent-access-side button").length,
+      actionCount: document.querySelectorAll("#agentSetupView .agent-access-connect button").length,
       title: document.querySelector("#agentSetupView [data-i18n='agentSetup.inviteTitle']")?.textContent || "",
       theme: document.body.dataset.themePreference,
       language: document.documentElement.lang
     }));
-    if (responsive.horizontalOverflow || responsive.actionCount !== 1 || responsive.theme !== "dark" || responsive.language !== "en") {
+    if (responsive.horizontalOverflow || responsive.actionCount !== 2 || responsive.theme !== "dark" || responsive.language !== "en") {
       throw new Error(`Agent Access responsive/theme contract failed: ${JSON.stringify(responsive)}`);
     }
     if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {

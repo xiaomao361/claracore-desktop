@@ -268,7 +268,7 @@ async function main() {
     await page.click("[data-view='home']");
     await page.waitForFunction(() => document.querySelector("#homeView")?.classList.contains("active-view"));
     await page.click("#homeRecentActivityAction");
-    await page.waitForFunction(() => document.querySelector("#traceView")?.classList.contains("active-view"));
+    await page.waitForFunction(() => document.querySelector("#agentSetupView")?.classList.contains("active-view"));
     await page.click("[data-view='home']");
     await page.waitForFunction(() => document.querySelector("#homeView")?.classList.contains("active-view"));
 

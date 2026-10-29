@@ -228,8 +228,8 @@ function createContinuityLineRepository(helpers) {
     },
 
     async listContinuityLines(input = 20) {
-      const activeLineId = await this.getActiveContinuityLineIdReadOnly();
       const options = typeof input === "object" && input !== null ? input : { limit: input };
+      const activeLineId = Object.hasOwn(options, "activeLineId") ? options.activeLineId : await this.getActiveContinuityLineIdReadOnly();
       const safeLimit = Math.max(1, Math.min(Number.parseInt(String(options.limit || 20), 10) || 20, 100));
       const agentId = String(options.agentId || options.agent_id || "").trim();
       const status = String(options.status || "").trim();

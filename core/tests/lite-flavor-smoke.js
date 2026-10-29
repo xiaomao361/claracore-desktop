@@ -15,7 +15,7 @@ const runtime = require("../runtime");
 async function main() {
   assert.equal(BUILD_FLAVOR, "lite");
   assert.equal(HAS_BUILT_IN_EMBEDDING, false);
-  assert.deepEqual(MEMORY_EMBEDDING_PROVIDERS, ["ollama", "disabled"]);
+  assert.deepEqual(MEMORY_EMBEDDING_PROVIDERS, ["ollama", "openai-compatible", "disabled"]);
 
   const dataRoot = await fs.mkdtemp(path.join(os.tmpdir(), "claracore-lite-flavor-"));
   process.env.CLARACORE_DESKTOP_DATA_DIR = dataRoot;
@@ -34,7 +34,7 @@ async function main() {
   assert.equal(snapshot.build.flavor, "lite");
   assert.equal(snapshot.build.hasBuiltInEmbedding, false);
   assert.equal(snapshot.configuration.memoria.providerSupported, true);
-  assert.deepEqual(snapshot.configuration.memoria.availableProviders, ["ollama", "disabled"]);
+  assert.deepEqual(snapshot.configuration.memoria.availableProviders, ["ollama", "openai-compatible", "disabled"]);
 
   await assert.rejects(
     database.updateSettings({ "memory.embedding.provider": "claracore-built-in" }),

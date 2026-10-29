@@ -92,7 +92,7 @@ function createSystemRepository(helpers) {
           `
         )
         .join("\n");
-      await this.exec(`${sql}\n${secretUpdates}`);
+      await this.execAtomic(`${sql}\n${secretUpdates}`);
       return this.getSettings();
     },
 
@@ -342,9 +342,7 @@ function createSystemRepository(helpers) {
         return text;
       }
       if (provider === "openai-compatible") {
-        const endpoint = baseUrl.endsWith("/v1")
-          ? `${baseUrl}/chat/completions`
-          : `${baseUrl}/v1/chat/completions`;
+        const endpoint = require('../../openai-endpoint').openAiEndpoint(baseUrl, 'chat/completions');
         const headers = apiKey ? { Authorization: `Bearer ${apiKey}` } : {};
         const response = await postJson(
           endpoint,
@@ -379,6 +377,36 @@ function createSystemRepository(helpers) {
         prompt: input.prompt,
         timeoutMs: input.timeoutMs
       });
+    },
+
+    async listRecentMilestones() {
+      const milestoneRows = await this.query(`
+        SELECT
+          m.id,
+          COALESCE(NULLIF(m.title, ''), substr(m.body, 1, 120)) AS title,
+          m.created_at,
+          m.updated_at,
+          group_concat(DISTINCT l.label) AS labels
+        FROM memories m
+        JOIN memory_labels marker ON marker.memory_id = m.id
+        LEFT JOIN memory_labels l ON l.memory_id = m.id
+        WHERE m.status = 'active'
+          AND (
+            lower(marker.label) IN ('milestone', 'release', 'product-decision', 'design-decision')
+            OR lower(marker.label) LIKE 'release:%'
+            OR marker.label IN ('里程碑', '发布', '项目进展', '产品决定', '设计决定')
+          )
+        GROUP BY m.id
+        ORDER BY datetime(m.updated_at) DESC, datetime(m.created_at) DESC, m.id DESC
+        LIMIT 5;
+      `);
+      return milestoneRows.map((row) => ({
+        id: row.id,
+        title: row.title || row.id,
+        labels: String(row.labels || "").split(",").filter(Boolean),
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }));
     },
 
     async getTraceSnapshot() {
@@ -449,26 +477,7 @@ function createSystemRepository(helpers) {
             (SELECT COUNT(*) FROM continuity_lines WHERE status = 'archived') AS archived_lines_count,
             (SELECT COUNT(*) FROM continuity_handoffs) AS handoffs_count;
         `),
-        this.query(`
-          SELECT
-            m.id,
-            COALESCE(NULLIF(m.title, ''), substr(m.body, 1, 120)) AS title,
-            m.created_at,
-            m.updated_at,
-            group_concat(DISTINCT l.label) AS labels
-          FROM memories m
-          JOIN memory_labels marker ON marker.memory_id = m.id
-          LEFT JOIN memory_labels l ON l.memory_id = m.id
-          WHERE m.status = 'active'
-            AND (
-              lower(marker.label) IN ('milestone', 'release', 'product-decision', 'design-decision')
-              OR lower(marker.label) LIKE 'release:%'
-              OR marker.label IN ('里程碑', '发布', '项目进展', '产品决定', '设计决定')
-            )
-          GROUP BY m.id
-          ORDER BY datetime(m.updated_at) DESC, datetime(m.created_at) DESC, m.id DESC
-          LIMIT 5;
-        `),
+        this.listRecentMilestones(),
         Promise.all([
           this.query(`
             SELECT m.id AS item_id, l.label AS agent_label, 'memory' AS kind
@@ -540,13 +549,7 @@ function createSystemRepository(helpers) {
           reusedMemories: Number(semantic.reused_memories_count || 0),
           verifiedShares: Number(semantic.verified_shares_count || 0)
         },
-        milestones: milestoneRows.map((row) => ({
-          id: row.id,
-          title: row.title || row.id,
-          labels: String(row.labels || "").split(",").filter(Boolean),
-          createdAt: row.created_at,
-          updatedAt: row.updated_at
-        })),
+        milestones: milestoneRows,
         participants: Array.from(participantMap.values())
           .map((participant) => ({
             agentId: participant.agentId,

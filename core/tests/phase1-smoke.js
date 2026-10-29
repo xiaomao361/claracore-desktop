@@ -62,10 +62,10 @@ async function main() {
     "memory.embedding.model": "Xenova/bge-small-zh-v1.5",
     "memory.embedding.dimension": 512,
     "memory.embedding.max_chars": 2000,
-    "innerlife.enabled": true,
-    "innerlife.provider": "openai-compatible",
-    "innerlife.base_url": "https://api.deepseek.com",
-    "innerlife.model": "deepseek-v4-flash",
+    "innerlife.enabled": false,
+    "innerlife.provider": "disabled",
+    "innerlife.base_url": "",
+    "innerlife.model": "",
     "innerlife.loop_seconds": 3600,
     "gateway.enabled": true,
     "gateway.transport": "streamable-http",
@@ -81,11 +81,11 @@ async function main() {
 
   const secrets = await database.getSecretRefs();
   if (
-    secrets["innerlife.llm.api_key"]?.provider !== "deepseek" ||
-    secrets["innerlife.llm.api_key"]?.status !== "configured" ||
-    !secrets["innerlife.llm.api_key"]?.ref
+    secrets["innerlife.llm.api_key"]?.provider !== "none" ||
+    secrets["innerlife.llm.api_key"]?.status !== "not-configured" ||
+    Boolean(secrets["innerlife.llm.api_key"]?.ref)
   ) {
-    throw new Error("InnerLife default DeepSeek secret reference is missing.");
+    throw new Error("Fresh InnerLife must not contain a shared credential.");
   }
 
   await runtime.saveProductSettings(app, {

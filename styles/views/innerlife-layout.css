@@ -1,3 +1,4 @@
+.innerlife-thought:focus-visible, .innerlife-archive-row:focus-visible, .innerlife-insight-grid button:focus-visible, .innerlife-collection-action:focus-visible, .innerlife-raw-action:focus-visible { outline: 3px solid rgba(67, 124, 94, .32); outline-offset: 3px; }
 .innerlife-shell { display: grid; gap: 18px; }
 .innerlife-page-heading { display: flex; justify-content: flex-end; }
 .innerlife-readonly-badge { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 680; }
@@ -8,7 +9,6 @@
 .innerlife-focus { max-width: 760px; margin: 10px 0 0; color: var(--text); font-size: clamp(20px, 2.7vw, 29px); font-weight: 610; letter-spacing: -.025em; line-height: 1.28; }
 .innerlife-interests { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 17px; }
 .innerlife-interests span { padding: 5px 9px; border-radius: 999px; background: var(--surface-soft); color: var(--muted); font-size: 12px; }
-.innerlife-primary-section, .innerlife-archive-section, .innerlife-process-section, .innerlife-insight-section { padding: 30px 0 10px; border-top: 1px solid var(--border); }
 .innerlife-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 18px; }
 .innerlife-section-heading h2 { margin: 5px 0 0; font-size: 21px; letter-spacing: -.015em; }
 .innerlife-section-heading p { max-width: 390px; margin: 0; color: var(--faint); font-size: 12px; line-height: 1.45; text-align: right; }
@@ -18,7 +18,6 @@
 .innerlife-thought:first-child { grid-row: span 2; min-height: 432px; }
 .innerlife-thought:first-child::before { content: "“"; display: block; height: 58px; color: rgba(67, 124, 94, .24); font-family: Georgia, serif; font-size: 76px; line-height: 1; }
 .innerlife-thought:hover { border-color: rgba(67, 124, 94, .46); transform: translateY(-1px); }
-.innerlife-thought:focus-visible, .innerlife-archive-row:focus-visible, .innerlife-process-flow button:focus-visible, .innerlife-insight-grid button:focus-visible, .innerlife-collection-action:focus-visible, .innerlife-raw-action:focus-visible { outline: 3px solid rgba(67, 124, 94, .32); outline-offset: 3px; }
 .innerlife-thought-meta { display: flex; justify-content: space-between; gap: 14px; color: var(--faint); font-size: 11px; }
 .innerlife-thought-meta span { color: var(--green); font-weight: 720; }
 .innerlife-thought p { display: -webkit-box; margin: 16px 0 0; overflow: hidden; color: var(--text); font-size: 15px; line-height: 1.72; overflow-wrap: anywhere; white-space: pre-wrap; -webkit-box-orient: vertical; -webkit-line-clamp: 5; }
@@ -34,15 +33,6 @@
 .innerlife-archive-copy strong { overflow: hidden; color: var(--text); font-size: 13px; font-weight: 620; text-overflow: ellipsis; white-space: nowrap; }
 .innerlife-archive-copy small { color: var(--faint); font-size: 11px; }
 
-.innerlife-process-flow { position: relative; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-.innerlife-process-flow::before { content: ""; position: absolute; top: 27px; right: 8%; left: 8%; height: 1px; background: linear-gradient(90deg, var(--border), rgba(67,124,94,.6), var(--border)); }
-.innerlife-process-flow button { position: relative; display: grid; justify-items: center; gap: 5px; min-width: 0; padding: 7px 6px 13px; border: 0; background: transparent; color: var(--text); text-align: center; cursor: pointer; }
-.innerlife-process-flow button > span { z-index: 1; display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--border); border-radius: 50%; background: var(--surface); color: var(--green); font-size: 12px; font-weight: 760; }
-.innerlife-process-flow button:hover > span { border-color: var(--green); background: var(--surface-soft); }
-.innerlife-process-flow strong { margin-top: 5px; font-size: 13px; }
-.innerlife-process-flow small { color: var(--muted); font-size: 11px; line-height: 1.35; }
-.innerlife-process-flow em { color: var(--faint); font-size: 10px; font-style: normal; }
-
 .innerlife-insight-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .innerlife-insight-grid button { display: grid; gap: 7px; min-width: 0; padding: 17px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-soft); color: var(--text); text-align: left; cursor: pointer; }
 .innerlife-insight-grid button:hover { border-color: rgba(67, 124, 94, .42); }
@@ -52,8 +42,11 @@
 
 .innerlife-detail-dialog { width: min(860px, calc(100vw - 48px)); max-height: 86vh; padding: 0; overflow: auto; overscroll-behavior: contain; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); color: var(--text); box-shadow: 0 28px 90px rgba(20, 28, 23, .28); }
 .innerlife-detail-dialog::backdrop { background: rgba(22, 28, 24, .38); backdrop-filter: blur(3px); }
-.innerlife-dialog-head { position: sticky; z-index: 2; top: 0; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: start; padding: 24px 26px 20px; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(12px); }
-.innerlife-dialog-head:has(> .innerlife-dialog-back[hidden]) { grid-template-columns: minmax(0, 1fr) auto; }
+.innerlife-dialog-head { position: sticky; z-index: 2; top: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: start; padding: 24px 26px 20px; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(12px); }
+.innerlife-dialog-head:has(> .innerlife-dialog-back:not([hidden])) { grid-template-columns: auto minmax(0, 1fr) auto; }
+.innerlife-dialog-back[hidden] { display: none; }
+.innerlife-dialog-close { grid-column: -2 / -1; justify-self: end; }
+.innerlife-dialog-head > div { min-width: 0; }
 .innerlife-dialog-head h2 { margin: 5px 0 0; font-size: 24px; }
 .innerlife-dialog-head p { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
 .innerlife-dialog-back, .innerlife-dialog-close { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 1px solid var(--border); border-radius: 50%; background: var(--surface); color: var(--text); font-size: 19px; cursor: pointer; }
@@ -89,10 +82,6 @@
 @media (max-width: 860px) {
   .innerlife-thought-gallery, .innerlife-insight-grid { grid-template-columns: 1fr; }
   .innerlife-thought:first-child { grid-row: auto; min-height: 260px; }
-  .innerlife-process-flow { grid-template-columns: 1fr; }
-  .innerlife-process-flow::before { top: 20px; bottom: 20px; left: 25px; width: 1px; height: auto; }
-  .innerlife-process-flow button { grid-template-columns: 40px 110px minmax(0, 1fr) auto; justify-items: start; align-items: center; text-align: left; }
-  .innerlife-process-flow strong { margin: 0; }
   .innerlife-rule-list section { grid-template-columns: 1fr; gap: 6px; }
 }
 
@@ -104,6 +93,4 @@
   .innerlife-dialog-head { padding: 18px; }
   .innerlife-detail-body { padding: 22px 20px 32px; }
   .innerlife-fact-grid { grid-template-columns: 1fr; }
-  .innerlife-process-flow button { grid-template-columns: 40px minmax(90px, auto) 1fr; }
-  .innerlife-process-flow button em { display: none; }
 }

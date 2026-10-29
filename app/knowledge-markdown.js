@@ -90,7 +90,9 @@
       if (!line.trim()) { flush(); continue; }
       const heading = /^(#{1,6})\s+(.+)$/u.exec(line);
       if (heading) {
-        flush(); const level = Math.min(6, heading[1].length + (options.reading ? 3 : 1));
+        flush();
+        if (options.omitTitle && heading[1].length === 1 && heading[2].trim() === options.omitTitle) { options.omitTitle = ""; continue; }
+        const level = Math.max(options.documentBody ? 3 : 1, Math.min(6, heading[1].length + (options.reading ? 3 : 1)));
         blocks.push(`<h${level}>${format(heading[2])}</h${level}>`); continue;
       }
       if (options.reading && /^【[^】\n]{1,30}】\s*$/u.test(line)) { flush(); blocks.push(`<h4>${escape(line.trim())}</h4>`); continue; }
@@ -120,7 +122,13 @@
   }
 
   function renderDocument(document, pane = "main") {
-    return document.sections.map((section, index) => `<section class="knowledge-section" tabindex="-1" data-knowledge-anchor="${escape(section.anchor)}" id="knowledge-${escape(pane)}-section-${index}">${render(section.text, document.path)}</section>`).join("");
+    const title = document.title || document.sections[0]?.title || document.path.split('/').pop().replace(/\.md$/i, '');
+    let omitted = false;
+    return document.sections.map((section, index) => {
+      const omitTitle = !omitted && section.text.split(/\r?\n/).some(line => line.trim() === `# ${title}`) ? title : '';
+      if (omitTitle) omitted = true;
+      return `<section class="knowledge-section" tabindex="-1" data-knowledge-anchor="${escape(section.anchor)}" id="knowledge-${escape(pane)}-section-${index}">${render(section.text, document.path, { documentBody: true, omitTitle })}</section>`;
+    }).join('');
   }
   const api = { escape, resolveLink, inline, render, renderDocument };
   if (typeof module !== "undefined" && module.exports) module.exports = api;

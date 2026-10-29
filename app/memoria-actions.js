@@ -10,11 +10,10 @@ function createClaraCoreMemoriaActions({
   renderMemoryTabs,
   loadMemoryTabData
 }) {
-  let searchPending = false;
+  let searchRevision = 0;
 
   async function search() {
-    if (searchPending) return;
-    searchPending = true;
+    const revision = ++searchRevision;
     if (dom.searchMemory) {
       dom.searchMemory.disabled = true;
       dom.searchMemory.textContent = t("memory.search.loading");
@@ -24,7 +23,9 @@ function createClaraCoreMemoriaActions({
     state.activeMemoryAgentFilter = selectedAgentId;
     memoriaView.setActiveAgentFilter(selectedAgentId);
     const query = String(dom.memorySearchInput.value || "").trim();
+    const current = () => revision === searchRevision && query === String(dom.memorySearchInput.value || "").trim() && selectedAgentId === (dom.memoryAgentFilter?.value || "");
     memoriaView.setSearchActive(Boolean(query));
+    renderMemoryResults([], dom.memoryList, { emptyMessage: t("memory.search.loading") });
     try {
       if (!query) {
         await loadMemoryTabData("search", { force: true });
@@ -34,17 +35,18 @@ function createClaraCoreMemoriaActions({
         query,
         agentId: selectedAgentId
       });
+      if (!current()) return;
       const results = Array.isArray(response) ? response : response?.results || [];
       renderMemoryResults(results, dom.memoryList, {
         emptyMessage: t("memory.search.noReliable", { query })
       });
-      if (response?.error) showCopyNotice(t("memory.search.fallback"));
+      if (response?.error) showCopyNotice(t("memory.search.fallback"), dom.memoryAllHint, { persistent: true });
     } catch (error) {
-      memoriaView.setSearchActive(false);
-      showCopyNotice(t("memory.search.failed"));
+      if (!current()) return;
+      showCopyNotice(t("memory.search.failed"), dom.memoryAllHint, { persistent: true });
       throw error;
     } finally {
-      searchPending = false;
+      if (revision !== searchRevision) return;
       dom.memorySearchInput?.removeAttribute("aria-busy");
       if (dom.searchMemory) {
         dom.searchMemory.disabled = false;
@@ -67,7 +69,7 @@ function createClaraCoreMemoriaActions({
       await loadMemoryTabData(nextTab);
     } catch (error) {
       console.error(error);
-      showCopyNotice(t("runtime.unavailable"));
+      showCopyNotice(t("runtime.unavailable"), dom.memoryAllHint, { persistent: true });
     }
   }
 
@@ -94,7 +96,7 @@ function createClaraCoreMemoriaActions({
       if (layerButton) {
         memoriaView.setMemoryGraphLayer(layerButton.dataset.graphLayer || "primary").catch((error) => {
           console.error(error);
-          showCopyNotice(t("runtime.unavailable"));
+          showCopyNotice(t("runtime.unavailable"), dom.memoryAllHint, { persistent: true });
         });
         return;
       }
@@ -135,6 +137,17 @@ function createClaraCoreMemoriaActions({
   function bindEvents() {
     dom.searchMemory?.addEventListener("click", () => search().catch(console.error));
     dom.memoryAgentFilter?.addEventListener("change", () => changeAgentFilter().catch(console.error));
+    dom.memorySearchInput?.addEventListener("input", () => {
+      searchRevision += 1;
+      memoriaView.setSearchActive(Boolean(dom.memorySearchInput.value.trim()));
+      if (dom.searchMemory) {
+        dom.searchMemory.disabled = false;
+        dom.searchMemory.textContent = t("actions.search");
+      }
+      dom.memorySearchInput.removeAttribute("aria-busy");
+      renderMemoryResults([], dom.memoryList, { emptyMessage: t("memory.search.ready") });
+      if (dom.memoryAllHint) dom.memoryAllHint.textContent = t("memory.search.ready");
+    });
     dom.memorySearchInput?.addEventListener("keydown", (event) => {
       if (event.key === "Enter") search().catch(console.error);
     });

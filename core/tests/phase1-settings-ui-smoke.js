@@ -88,381 +88,64 @@ async function main() {
     page.on("dialog", (dialog) => dialog.accept().catch(() => {}));
     await page.waitForSelector("[data-view='settings']", { timeout: 15000 });
     await page.click("[data-view='settings']");
-    await page.waitForFunction(() => document.querySelector(".settings-tab-panel.active")?.dataset.settingsPanel === "capabilities");
-    const settingsHierarchy = await page.evaluate(() => ({
-      activePanel: document.querySelector(".settings-tab-panel.active")?.dataset.settingsPanel,
-      hasMotionSetting: Boolean(document.querySelector("#settingsMotion")),
-      hasTimeZoneNote: Boolean(document.querySelector("#settingsTimeZone")),
-      tabNames: [...document.querySelectorAll("[data-settings-tab]")].map((node) => node.dataset.settingsTab),
-      hasCommonTab: Boolean(document.querySelector("[data-settings-tab='common']")),
-      tabsLeft: document.querySelector(".settings-tabs")?.getBoundingClientRect().left,
-      panelLeft: document.querySelector(".settings-tab-panel.active .settings-primary-panel")?.getBoundingClientRect().left
-    }));
-    if (settingsHierarchy.activePanel !== "capabilities" || settingsHierarchy.hasMotionSetting || settingsHierarchy.hasTimeZoneNote || settingsHierarchy.hasCommonTab || settingsHierarchy.tabNames.join(",") !== "capabilities,app-data,advanced" || Math.abs(settingsHierarchy.tabsLeft - settingsHierarchy.panelLeft) > 1) {
-      throw new Error(`Settings hierarchy is wrong: ${JSON.stringify(settingsHierarchy)}`);
+    await page.waitForSelector("[data-settings-open='models']");
+    const assert = require("node:assert/strict");
+    assert.equal(await page.locator("[data-settings-open]").count(), 7);
+    assert.equal(await page.locator("[data-settings-tab]").count(), 0);
+    for (const scope of ["appearance", "models", "controller", "gateway", "knowledge", "storage", "recovery"]) {
+      await page.click(`[data-settings-open='${scope}']`);
+      await page.waitForFunction(() => document.querySelector("#settingsDetailDialog").open);
+      assert.equal(await page.locator("[data-settings-editor]:visible").count(), 1);
+      assert.equal(await page.locator(`[data-settings-editor='${scope}']`).isVisible(), true);
+      await page.keyboard.press("Escape");
+      await page.waitForFunction(() => !document.querySelector("#settingsDetailDialog").open);
+      assert.equal(await page.locator(`[data-settings-open='${scope}']`).evaluate(node => node === document.activeElement), true);
     }
-    const tabSemantics = await page.evaluate(() => ({
-      roles: [...document.querySelectorAll("[data-settings-tab]")].map((node) => node.getAttribute("role")),
-      selected: [...document.querySelectorAll("[data-settings-tab]")].map((node) => node.getAttribute("aria-selected")),
-      tabIndexes: [...document.querySelectorAll("[data-settings-tab]")].map((node) => node.tabIndex),
-      panelRoles: [...document.querySelectorAll("[data-settings-panel]")].map((node) => node.getAttribute("role")),
-      visiblePanels: [...document.querySelectorAll("[data-settings-panel]")].filter((node) => !node.hidden).map((node) => node.dataset.settingsPanel)
-    }));
-    if (tabSemantics.roles.some((role) => role !== "tab") || tabSemantics.selected.join(",") !== "true,false,false" || tabSemantics.tabIndexes.join(",") !== "0,-1,-1" || tabSemantics.panelRoles.some((role) => role !== "tabpanel") || tabSemantics.visiblePanels.join(",") !== "capabilities") {
-      throw new Error(`Settings tab semantics are wrong: ${JSON.stringify(tabSemantics)}`);
-    }
-    await page.locator("[data-settings-tab='capabilities']").focus();
-    await page.keyboard.press("ArrowRight");
-    await page.waitForFunction(() => document.querySelector(".settings-tab-panel.active")?.dataset.settingsPanel === "app-data");
-    if ((await page.evaluate(() => document.activeElement?.dataset?.settingsTab)) !== "app-data") {
-      throw new Error("Settings arrow-key navigation did not move focus with the active tab.");
-    }
-    await page.keyboard.press("ArrowLeft");
-    await page.waitForFunction(() => document.querySelector(".settings-tab-panel.active")?.dataset.settingsPanel === "capabilities");
-    if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
-      await stabilizeScreenshot(page);
-      await page.screenshot({ path: process.env.CLARACORE_UI_SCREENSHOT_PATH });
-    }
-    await page.click("[data-settings-tab='capabilities']");
-    const collapsedCapabilities = await page.evaluate(() => ({
-      memoryOpen: document.querySelector("#memoriaCapabilityDetails").open,
-      innerLifeOpen: document.querySelector("#innerLifeCapabilityDetails").open,
-      runtimeInsideCapabilities: Boolean(document.querySelector("[data-settings-panel='capabilities'] #innerLifePollSeconds"))
-    }));
-    if (collapsedCapabilities.memoryOpen || collapsedCapabilities.innerLifeOpen || !collapsedCapabilities.runtimeInsideCapabilities) {
-      throw new Error(`Capabilities should start collapsed and keep InnerLife settings together: ${JSON.stringify(collapsedCapabilities)}`);
-    }
-    if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
-      await stabilizeScreenshot(page);
-      await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "capabilities") });
-    }
-    await page.evaluate(() => {
-      document.querySelector("#memoriaCapabilityDetails").open = true;
-      document.querySelector("#innerLifeCapabilityDetails").open = true;
-    });
-    await page.waitForFunction(() => document.querySelector("#memoriaEndpoint")?.value, null, { timeout: 15000 });
-    if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
-      await stabilizeScreenshot(page);
-      await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "capabilities-open") });
-    }
-
-    const defaults = await page.evaluate(() => ({
-      provider: document.querySelector("#memoriaProvider").value,
-      endpoint: document.querySelector("#memoriaEndpoint").value,
-      model: document.querySelector("#memoriaModel").value,
-      innerlifeBackend: document.querySelector("#innerLifeBackend").value,
-      innerlifeEndpoint: document.querySelector("#innerLifeEndpoint").value,
-      innerlifeApiKeyReadonly: document.querySelector("#innerLifeApiKey").hasAttribute("readonly"),
-      innerlifeLoop: document.querySelector("#innerLifePollSeconds").value,
-      innerlifeStatus: document.querySelector("#innerLifeModelStatus").textContent,
-      memoriaOptions: [...document.querySelectorAll("#memoriaProvider option")].map((option) => option.value),
-      innerlifeOptions: [...document.querySelectorAll("#innerLifeBackend option")].map((option) => option.value),
-      memoriaEndpointHidden: document.querySelector("#memoriaEndpointField").hidden,
-      memoriaModelHidden: document.querySelector("#memoriaModelField").hidden,
-      memoriaApiKeyHidden: document.querySelector("#memoriaApiKeyField").hidden,
-      memoriaConnectionHidden: document.querySelector("#memoriaConnectionRow").hidden,
-      memoriaEndpointDisplay: getComputedStyle(document.querySelector("#memoriaEndpointField")).display,
-      memoriaModelDisplay: getComputedStyle(document.querySelector("#memoriaModelField")).display,
-      memoriaApiKeyDisplay: getComputedStyle(document.querySelector("#memoriaApiKeyField")).display,
-      memoriaConnectionDisplay: getComputedStyle(document.querySelector("#memoriaConnectionRow")).display,
-      innerlifeApiKeyHidden: document.querySelector("#innerLifeApiKeyField").hidden,
-      hasDimensionField: Boolean(document.querySelector("#memoriaDimension")),
-      hasMemoriaSourceField: Boolean(document.querySelector("#memoriaSource")),
-      hasInnerLifeSourceField: Boolean(document.querySelector("#innerLifeSource"))
-    }));
-    if (defaults.provider !== "claracore-built-in") throw new Error(`Unexpected provider: ${defaults.provider}`);
-    if (defaults.endpoint !== "http://127.0.0.1:11434") throw new Error(`Unexpected endpoint: ${defaults.endpoint}`);
-    if (defaults.model !== "Xenova/bge-small-zh-v1.5") throw new Error(`Unexpected model: ${defaults.model}`);
-    if (defaults.innerlifeBackend !== "openai-compatible") throw new Error(`Unexpected InnerLife backend: ${defaults.innerlifeBackend}`);
-    if (defaults.innerlifeEndpoint !== "https://api.deepseek.com") throw new Error(`Unexpected InnerLife endpoint: ${defaults.innerlifeEndpoint}`);
-    if (defaults.innerlifeApiKeyReadonly) throw new Error("InnerLife API key reference should be editable.");
-    if (defaults.innerlifeLoop !== "60") throw new Error(`Unexpected InnerLife loop minutes: ${defaults.innerlifeLoop}`);
-    if (!["configured", "已配置"].some((label) => defaults.innerlifeStatus.toLowerCase().includes(label))) {
-      throw new Error(`Unexpected InnerLife status: ${defaults.innerlifeStatus}`);
-    }
-    if (defaults.memoriaOptions.join(",") !== "claracore-built-in,ollama,disabled") {
-      throw new Error(`Unexpected Memoria provider options: ${defaults.memoriaOptions.join(",")}`);
-    }
-    if (defaults.innerlifeOptions.join(",") !== "disabled,ollama,openai-compatible") {
-      throw new Error(`Unexpected InnerLife provider options: ${defaults.innerlifeOptions.join(",")}`);
-    }
-    if (!defaults.memoriaEndpointHidden || !defaults.memoriaModelHidden || !defaults.memoriaApiKeyHidden || !defaults.memoriaConnectionHidden) {
-      throw new Error(`Built-in Memoria fields should be hidden: ${JSON.stringify(defaults)}`);
-    }
-    if ([defaults.memoriaEndpointDisplay, defaults.memoriaModelDisplay, defaults.memoriaApiKeyDisplay, defaults.memoriaConnectionDisplay].some((display) => display !== "none")) {
-      throw new Error(`Built-in Memoria fields should not be rendered: ${JSON.stringify(defaults)}`);
-    }
-    if (defaults.innerlifeApiKeyHidden) {
-      throw new Error("OpenAI-compatible InnerLife API key field should be visible.");
-    }
-    if (defaults.hasDimensionField || defaults.hasMemoriaSourceField || defaults.hasInnerLifeSourceField) {
-      throw new Error(`Settings page should not expose internal dimension/source fields: ${JSON.stringify(defaults)}`);
-    }
-
-    await page.selectOption("#memoriaProvider", "ollama");
-    await page.waitForFunction(() => !document.querySelector("#memoriaEndpointField")?.hidden && !document.querySelector("#memoriaConnectionRow")?.hidden);
-    await fillExact(page, "#memoriaEndpoint", "http://127.0.0.1:11437");
-    await fillExact(page, "#memoriaModel", "bge-m3");
-    await page.click("#testMemoriaConnection");
-    await page.waitForFunction(
-      () => document.querySelector("#memoriaConnectionNotice")?.textContent.includes("bge-m3:latest")
-        && document.querySelector("#memoriaConnectionNotice")?.classList.contains("ok"),
-      null,
-      { timeout: 10000 }
-    );
-    await page.click("#refreshMemoriaModels");
-    await page.waitForFunction(
-      () => document.querySelector("#memoriaModel")?.value === "bge-m3:latest"
-        && /save|保存/i.test(document.querySelector("#memoriaModelNotice")?.textContent || ""),
-      null,
-      { timeout: 10000 }
-    );
-    await fillExact(page, "#memoriaModel", "bge-m3-ui-smoke");
-    await fillExact(page, "#innerLifeEndpoint", "https://models.example.test");
+    await page.click("[data-settings-open='models']");
+    await page.selectOption("#innerLifeBackend", "openai-compatible");
+    await fillExact(page, "#innerLifeEndpoint", "https://models.example.test/v1");
+    await fillExact(page, "#innerLifeModel", "typed-model");
+    await fillExact(page, "#innerLifePollSeconds", "1.5");
     await page.click("#refreshInnerLifeModels");
-    await page.waitForFunction(
-      () => [...document.querySelectorAll("#innerLifeModel option")].filter((option) => option.value).length === 2,
-      null,
-      { timeout: 10000 }
-    );
-    await page.selectOption("#innerLifeModel", "ui-model-b");
-    await fillExact(page, "#innerLifePollSeconds", "44");
-    const modelFormBeforeSave = await page.evaluate(() => ({
-      memoriaProvider: document.querySelector("#memoriaProvider").value,
-      memoriaEndpoint: document.querySelector("#memoriaEndpoint").value,
-      memoriaModel: document.querySelector("#memoriaModel").value,
-      innerLifeBackend: document.querySelector("#innerLifeBackend").value,
-      innerLifeEndpoint: document.querySelector("#innerLifeEndpoint").value,
-      innerLifeModel: document.querySelector("#innerLifeModel").value,
-      innerLifeModelOptions: [...document.querySelectorAll("#innerLifeModel option")].map((option) => option.value).filter(Boolean),
-      innerLifePollSeconds: document.querySelector("#innerLifePollSeconds").value,
-      activePanel: document.querySelector(".settings-tab-panel.active")?.dataset.settingsPanel
-    }));
-    if (
-      modelFormBeforeSave.memoriaProvider !== "ollama"
-      || modelFormBeforeSave.memoriaEndpoint !== "http://127.0.0.1:11437"
-      || modelFormBeforeSave.memoriaModel !== "bge-m3-ui-smoke"
-      || modelFormBeforeSave.innerLifeBackend !== "openai-compatible"
-      || modelFormBeforeSave.innerLifeEndpoint !== "https://models.example.test"
-      || modelFormBeforeSave.innerLifeModel !== "ui-model-b"
-      || modelFormBeforeSave.innerLifeModelOptions.join(",") !== "ui-model-a,ui-model-b"
-      || modelFormBeforeSave.innerLifePollSeconds !== "44"
-      || modelFormBeforeSave.activePanel !== "capabilities"
-    ) {
-      throw new Error(`Settings model form was not ready before save: ${JSON.stringify(modelFormBeforeSave)}`);
-    }
-    await page.click("#saveSettings");
-    await page.waitForTimeout(500);
-    const modelSaveState = await page.evaluate(() => ({
-      notice: document.querySelector("#settingsNotice").textContent,
-      disabled: document.querySelector("#saveSettings").disabled
-    }));
-    if (/failed|失败/i.test(modelSaveState.notice)) {
-      throw new Error(`Settings model save failed in UI: ${JSON.stringify(modelSaveState)}`);
-    }
-    await waitForRuntimeSnapshot(
-      page,
-      (snapshot) => (
-        snapshot.configuration.memoria.provider === "ollama"
-        && snapshot.configuration.memoria.endpoint === "http://127.0.0.1:11437"
-        && snapshot.configuration.innerlife.pollSeconds === "2640"
-      )
-    );
-
-    await page.click("[data-settings-tab='app-data']");
-    const appDataHierarchy = await page.evaluate(() => ({
-      preferenceCards: document.querySelectorAll("[data-settings-panel='app-data'] .settings-section-card").length,
-      dataGroups: document.querySelectorAll("#appDataSettingsGroups > details").length,
-      hasLanguage: Boolean(document.querySelector("[data-settings-panel='app-data'] #settingsLanguage")),
-      hasBackup: Boolean(document.querySelector("[data-settings-panel='app-data'] #dataRecoveryDetails")),
-      hasStorage: Boolean(document.querySelector("[data-settings-panel='app-data'] #storageDetails")),
-      hasGateway: Boolean(document.querySelector("[data-settings-panel='app-data'] #settingsAgentGatewayPort"))
-    }));
-    if (appDataHierarchy.preferenceCards !== 2 || appDataHierarchy.dataGroups !== 2 || !appDataHierarchy.hasLanguage || !appDataHierarchy.hasBackup || !appDataHierarchy.hasStorage || appDataHierarchy.hasGateway) {
-      throw new Error(`App and data settings hierarchy is wrong: ${JSON.stringify(appDataHierarchy)}`);
-    }
-    if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
-      await stabilizeScreenshot(page);
-      await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "app-data") });
-    }
-
-    await page.click("[data-settings-tab='advanced']");
-    const advancedHierarchy = await page.evaluate(() => ({
-      groups: document.querySelectorAll("[data-settings-panel='advanced'] > .settings-primary-panel > .advanced-settings-list > details").length,
-      openGroups: document.querySelectorAll("[data-settings-panel='advanced'] > .settings-primary-panel > .advanced-settings-list > details[open]").length,
-      memoryControllerGroups: document.querySelectorAll("#advancedMemoryControllerDetails").length,
-      modelInputs: document.querySelectorAll("[data-settings-panel='advanced'] #innerLifeModel").length,
-      copiedAgentConfigPresent: Boolean(document.querySelector("#copyAgentGatewayConfig")),
-      duplicateDataRoot: document.querySelectorAll("#dataRootPath").length
-    }));
-    if (advancedHierarchy.groups !== 3 || advancedHierarchy.openGroups !== 0 || advancedHierarchy.memoryControllerGroups !== 1 || advancedHierarchy.modelInputs !== 0 || advancedHierarchy.copiedAgentConfigPresent || advancedHierarchy.duplicateDataRoot !== 1) {
-      throw new Error(`Advanced settings hierarchy is wrong: ${JSON.stringify(advancedHierarchy)}`);
-    }
-    if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
-      await stabilizeScreenshot(page);
-      await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "advanced") });
-    }
-
-    const snapshot = await page.evaluate(() => window.ClaraCoreDesktop.getRuntimeSnapshot());
-    if (!snapshot.data.databasePath.startsWith(dataRoot)) {
-      throw new Error(`Settings UI wrote outside product data root: ${snapshot.data.databasePath}`);
-    }
-    if (snapshot.configuration.memoria.provider !== "ollama") {
-      throw new Error(`Settings UI did not persist Ollama Memory provider: ${JSON.stringify(snapshot.configuration.memoria)}`);
-    }
-    if (snapshot.configuration.memoria.endpoint !== "http://127.0.0.1:11437") {
-      throw new Error("Settings UI did not persist Memoria endpoint.");
-    }
-    if (snapshot.configuration.memoria.model !== "bge-m3-ui-smoke") {
-      throw new Error(`Settings UI did not persist Memoria model: ${JSON.stringify(snapshot.configuration.memoria)}`);
-    }
-    if (snapshot.configuration.innerlife.backend !== "openai-compatible") {
-      throw new Error("Settings UI did not persist the OpenAI-compatible InnerLife backend.");
-    }
-    if (snapshot.configuration.innerlife.baseUrl !== "https://models.example.test") {
-      throw new Error("Settings UI did not persist InnerLife endpoint.");
-    }
-    if (snapshot.configuration.innerlife.model !== "ui-model-b") {
-      throw new Error("Settings UI did not persist the selected InnerLife model.");
-    }
-    if (snapshot.configuration.innerlife.pollSeconds !== "2640") {
-      throw new Error("Settings UI did not persist InnerLife loop minutes as seconds.");
-    }
-    if (snapshot.configuration.innerlife.apiKeyStatus !== "configured" || !snapshot.configuration.innerlife.apiKeyRef) {
-      throw new Error("Settings UI cleared the default InnerLife API key reference.");
-    }
-
-    await app.evaluate(() => {
-      globalThis.fetch = async () => { throw new Error("visual QA connection failure"); };
-    });
-    await page.click("[data-settings-tab='capabilities']");
-    await page.click("#testInnerLifeConnection");
-    await page.waitForFunction(
-      () => document.querySelector("#innerLifeModelStatus")?.dataset.connectionState === "failed",
-      null,
-      { timeout: 10000 }
-    );
-    if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
-      await stabilizeScreenshot(page);
-      await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "capabilities-error") });
-    }
-
-    await page.click("[data-settings-tab='advanced']");
-    await page.evaluate(() => {
-      const details = document.querySelector(".settings-gateway-details");
-      if (details) details.open = true;
-    });
-    await page.waitForFunction(() => document.querySelector("#settingsAgentGatewayPort")?.value, null, { timeout: 15000 });
-    const gatewayDefaults = await page.evaluate(() => ({
-      port: document.querySelector("#settingsAgentGatewayPort").value,
-      token: document.querySelector("#settingsAgentGatewayToken").value,
-      tokenType: document.querySelector("#settingsAgentGatewayToken").type,
-      endpoint: document.querySelector("#settingsAgentGatewayEndpoint").textContent,
-      tokenFile: document.querySelector("#settingsAgentGatewayTokenFile").textContent,
-      status: document.querySelector("#settingsAgentGatewayStatus").textContent
-    }));
-    if (!Number(gatewayDefaults.port)) throw new Error(`Agent Gateway port was not rendered: ${JSON.stringify(gatewayDefaults)}`);
-    if (gatewayDefaults.token.length < 32) throw new Error("Agent Gateway token was not rendered.");
-    if (gatewayDefaults.tokenType !== "password") throw new Error("Agent Gateway token should be masked by default.");
-    if (!gatewayDefaults.endpoint.includes(`:${gatewayDefaults.port}/mcp`)) {
-      throw new Error(`Agent Gateway endpoint did not match rendered port: ${JSON.stringify(gatewayDefaults)}`);
-    }
-    if (!gatewayDefaults.tokenFile.includes("agent-gateway.json")) {
-      throw new Error(`Agent Gateway token file was not rendered: ${gatewayDefaults.tokenFile}`);
-    }
-
-    await page.click("#generateAgentGatewayToken");
-    const generatedToken = await page.locator("#settingsAgentGatewayToken").inputValue();
-    if (generatedToken === gatewayDefaults.token || generatedToken.length !== 64) {
-      throw new Error("Agent Gateway random token generation did not update the token field.");
-    }
-    const generatedNotice = await page.locator("#agentGatewaySettingsNotice").textContent();
-    if (!generatedNotice?.trim()) throw new Error("Agent Gateway token generation did not provide an adjacent status message.");
-    await page.click("#saveAgentGatewayConfig");
-    await waitForRuntimeSnapshot(
-      page,
-      (updatedSnapshot) => updatedSnapshot.connections.httpGateway.token === generatedToken
-    );
-    const gatewaySnapshot = await page.evaluate(() => window.ClaraCoreDesktop.getRuntimeSnapshot().then((currentSnapshot) => currentSnapshot.connections.httpGateway));
-    if (gatewaySnapshot.endpoint !== `http://127.0.0.1:${gatewaySnapshot.port}/mcp`) {
-      throw new Error(`Agent Gateway endpoint did not refresh after save: got ${gatewaySnapshot.endpoint}, snapshot ${JSON.stringify(gatewaySnapshot)}`);
-    }
-    const renderedGateway = await page.evaluate(() => ({
-      port: document.querySelector("#settingsAgentGatewayPort").value,
-      token: document.querySelector("#settingsAgentGatewayToken").value,
-      endpoint: document.querySelector("#settingsAgentGatewayEndpoint").textContent
-    }));
-    if (renderedGateway.token !== generatedToken || renderedGateway.endpoint !== gatewaySnapshot.endpoint) {
-      throw new Error(`Agent Gateway settings fields did not refresh after save: ${JSON.stringify(renderedGateway)}`);
-    }
-    const savedGatewayNotice = await page.locator("#agentGatewaySettingsNotice").textContent();
-    if (!savedGatewayNotice?.trim()) throw new Error("Agent Gateway save did not provide an adjacent status message.");
-
-    await page.setViewportSize({ width: 820, height: 720 });
-    await page.click("[data-settings-tab='app-data']");
-    const narrowLayout = await page.evaluate(() => ({
-      horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
-      activePanel: document.querySelector(".settings-tab-panel.active")?.dataset.settingsPanel
-    }));
-    if (narrowLayout.horizontalOverflow || narrowLayout.activePanel !== "app-data") {
-      throw new Error(`Narrow Settings layout regressed: ${JSON.stringify(narrowLayout)}`);
-    }
-    const unexpectedRendererErrors = rendererErrors.filter((message) => !message.includes("visual QA connection failure"));
-    if (unexpectedRendererErrors.length) {
-      throw new Error(`Unexpected renderer console errors: ${JSON.stringify(unexpectedRendererErrors)}`);
-    }
-    if (process.env.CLARACORE_UI_SCREENSHOT_PATH) {
-      await stabilizeScreenshot(page);
-      await page.screenshot({ path: screenshotVariant(process.env.CLARACORE_UI_SCREENSHOT_PATH, "narrow") });
-    }
-
-    await app.close();
-    app = await electron.launch({
-      executablePath: electronPath,
-      args: ["."],
-      cwd: path.resolve(__dirname, "..", ".."),
-      env: {
-        ...process.env,
-        CLARACORE_DESKTOP_DATA_DIR: dataRoot,
-        CLARACORE_DESKTOP_USER_DATA_DIR: userDataRoot,
-        CLARACORE_DESKTOP_TEST_INSTANCE: "1"
-      }
-    });
-    const restartedPage = await app.firstWindow();
-    const restartedSnapshot = await waitForRuntimeSnapshot(
-      restartedPage,
-      (currentSnapshot) => currentSnapshot?.configuration?.memoria?.model === "bge-m3-ui-smoke"
-    );
-    if (
-      restartedSnapshot.configuration.memoria.provider !== "ollama"
-      || restartedSnapshot.configuration.memoria.endpoint !== "http://127.0.0.1:11437"
-    ) {
-      throw new Error(`Saved Memoria configuration did not survive restart: ${JSON.stringify(restartedSnapshot.configuration.memoria)}`);
-    }
-    await app.close();
-    app = null;
-    console.log(
-      JSON.stringify(
-        {
-          ok: true,
-          dataRoot,
-          databasePath: snapshot.data.databasePath,
-          endpoint: snapshot.configuration.memoria.endpoint,
-          model: snapshot.configuration.memoria.model,
-          persistedAfterRestart: restartedSnapshot.configuration.memoria.model,
-          innerlifeBackend: snapshot.configuration.innerlife.backend
-        },
-        null,
-        2
-      )
-    );
-  } catch (error) {
+    await page.waitForFunction(() => document.querySelector("#innerLifeModelOptions").children.length === 2);
+    assert.equal(await page.locator("#innerLifeModel").inputValue(), "typed-model");
+    await page.keyboard.press("Escape");
+    assert.equal(await page.locator("#settingsDiscardPrompt").isVisible(), true);
+    await page.click("#settingsKeepEditing");
+    await page.click("#saveReflectionSettings");
+    await page.waitForFunction(() => !document.querySelector("#settingsDetailDialog").open);
+    const snapshot = await waitForRuntimeSnapshot(page, state => state.configuration.innerlife.model === "typed-model");
+    assert.equal(snapshot.configuration.innerlife.pollSeconds, "90");
+    assert.equal(snapshot.configuration.innerlife.autonomyEnabled, "false");
+    assert.equal(snapshot.configuration.memoria.model, "", "Saving reflection must not configure retrieval");
+    await page.click("[data-settings-open='models']");
+    await fillExact(page, "#innerLifeModel", "discard-this");
+    await page.click("#settingsDialogClose");
+    await page.click("#settingsDiscardChanges");
+    await page.click("[data-settings-open='models']");
+    assert.equal(await page.locator("#innerLifeModel").inputValue(), "typed-model");
+    await page.click("#settingsDialogClose");
+    await page.click("[data-settings-open='models']");
+    await page.selectOption("#memoriaProvider", "ollama");
+    await page.click("#saveMemorySettings");
+    assert.equal(await page.locator("#settingsDetailDialog").evaluate(node => node.open), true);
+    await page.click("#refreshMemoriaModels");
+    await page.waitForFunction(() => document.querySelector("#memoriaModelOptions").children.length === 1);
+    await fillExact(page, "#memoriaModel", "bge-m3:latest");
+    await page.click("#saveMemorySettings");
+    await page.waitForFunction(() => !document.querySelector("#settingsDetailDialog").open);
+    await waitForRuntimeSnapshot(page, state => state.configuration.memoria.model === "bge-m3:latest");
+    await page.click("[data-settings-open='appearance']");
+    await page.selectOption("#settingsLanguage", "zh");
+    await page.selectOption("#settingsTheme", "dark");
+    await page.click("#saveAppearanceSettings");
+    await page.waitForFunction(() => !document.querySelector("#settingsDetailDialog").open && document.documentElement.lang === "zh-CN");
+    assert.deepEqual(rendererErrors, []);
+    await app.close(); app = null;
+    console.log(JSON.stringify({ ok: true, settings: "overview-and-independent-dialogs", dataRoot }));
+  } finally {
     if (app) await app.close().catch(() => {});
-    throw error;
+    await fs.rm(dataRoot, { recursive: true, force: true });
   }
 }
-
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+main().catch(error => { console.error(error); process.exitCode = 1; });

@@ -5,6 +5,7 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
   let activeFilter = "all";
   let activeEntries = [];
   let lastDetailTrigger = null;
+  let refreshError = "";
   const liveLines = [];
   const html = typeof escapeHtml === "function"
     ? escapeHtml
@@ -24,28 +25,61 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
     }
   }
 
+  const toolActions = {
+    claracore_connection_test: "connection", gateway_docs: "guide",
+    gateway_context: "context", gateway_auto_context: "context", gateway_turn_context: "context",
+    memoria_search: "searchMemory", memoria_recall: "searchMemory", memoria_get: "readMemory",
+    memoria_create: "saveMemory", memory_context_feedback: "feedback",
+    shared_line_get: "readLine", shared_line_list: "listLines", shared_line_update: "updateLine",
+    knowledge_search: "searchSources", knowledge_read: "readSources",
+    innerlife_share_check: "checkShare"
+  };
+  const knownStatuses = new Set(["ok", "error", "info", "warn", "running", "pending", "partial", "disabled", "cancelled", "skipped"]);
+
+  function statusLabel(status) {
+    return t(`logs.status.${knownStatuses.has(status) ? status : "unknown"}`);
+  }
+
+  function gatewayEntry(trace, index) {
+    let status = trace.error ? "error" : trace.status || "unknown";
+    // The stored preview can be truncated. Never repair it or infer payload/use
+    // from transport success, text fragments, tool name, or response length.
+    let payload;
+    try { payload = JSON.parse(trace.responseSummary); } catch (_) { /* bounded or legacy preview */ }
+    if (status === "ok" && trace.toolName === "memoria_get" && payload?.error) status = "error";
+    if (status === "ok" && trace.toolName === "memoria_search" && (payload?.degraded === true || payload?.error)) status = "partial";
+    let summary = t(`logs.result.${status === "ok" ? "completed" : status === "error" ? "failed" : "unknown"}`);
+    if (status === "partial" && trace.toolName === "memoria_search") summary = t("logs.result.degraded");
+    if (status === "ok" && trace.toolName === "memoria_search" && Array.isArray(payload?.results)) {
+      summary = payload.results.length ? t("logs.result.matches", { count: String(payload.results.length) }) : t("logs.result.noMatches");
+    }
+    if (status === "ok" && trace.toolName === "gateway_auto_context") {
+      if (payload?.decision === "abstain") summary = t("logs.result.abstain");
+      else if (payload?.decision === "deliver_one" && typeof payload.block?.body === "string" && payload.block.body) summary = t("logs.result.prepared");
+      else if (payload?.decision === "deliver_context" && Array.isArray(payload.blocks) && payload.blocks.some(block => typeof block?.body === "string" && block.body)) summary = t("logs.result.prepared");
+    }
+    return {
+      id: `gateway:${trace.id || trace.createdAt || index}`,
+      createdAt: trace.createdAt || "", kind: "gateway", status,
+      source: t("logs.source.gateway"),
+      title: t(`logs.action.${Object.hasOwn(toolActions, trace.toolName) ? toolActions[trace.toolName] : "request"}`), summary,
+      meta: `${trace.durationMs == null ? "" : `${trace.durationMs}ms`}${trace.agentId ? ` · ${trace.agentId}` : ""}`,
+      raw: trace
+    };
+  }
+
   function buildLogEntries(snapshot) {
     const runtimeEntries = (snapshot?.runtimeEvents || []).map((event, index) => ({
       id: `runtime:${event.id || event.createdAt || index}`,
       createdAt: event.createdAt || "",
       kind: "runtime",
-      status: event.level || "info",
+      status: event.level || "unknown",
       source: event.source || t("logs.source.runtime"),
       title: event.source || t("logs.source.runtime"),
       summary: event.message || "",
       raw: event
     }));
-    const gatewayEntries = (snapshot?.gatewayTraces || []).map((trace, index) => ({
-      id: `gateway:${trace.id || trace.createdAt || index}`,
-      createdAt: trace.createdAt || "",
-      kind: "gateway",
-      status: trace.status || "ok",
-      source: t("logs.source.gateway"),
-      title: trace.toolName || "unknown",
-      summary: trace.error || trace.responseSummary || "",
-      meta: `${String(trace.durationMs ?? 0)}ms${trace.agentId ? ` · ${trace.agentId}` : ""}`,
-      raw: trace
-    }));
+    const gatewayEntries = (snapshot?.gatewayTraces || []).map(gatewayEntry);
     return [...runtimeEntries, ...gatewayEntries, ...liveLines]
       .sort((left, right) => String(left.createdAt).localeCompare(String(right.createdAt)));
   }
@@ -55,7 +89,7 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
     const runtimeSource = snapshot?.runtimeEvents || [];
     const gatewaySource = snapshot?.gatewayTraces || [];
     const timeFlow = buildTimeFlow(snapshot);
-    const decayAudit = snapshot?.decayAudit || {};
+    const decayAudit = snapshot?.decayAudit;
     activeEntries = buildLogEntries(snapshot);
     const visibleEntries = activeEntries
       .filter(matchesFilter)
@@ -65,12 +99,13 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
     renderIssueSummary(activeEntries);
     renderStatus(snapshot, runtimeSource, gatewaySource);
     if (dom.logDecayIssueCount) {
-      dom.logDecayIssueCount.textContent = decayAudit.counts?.issues
-        ? t("logs.decayIssueCount", { count: String(decayAudit.counts.issues) })
-        : t("logs.decayClear");
+      dom.logDecayIssueCount.textContent = Array.isArray(decayAudit?.issues)
+        ? decayAudit.issues.length ? t("logs.decayIssueCount", { count: String(decayAudit.issues.length) }) : t("logs.decayClear")
+        : t("logs.decayUnavailable");
     }
     if (dom.logLastRefresh) {
-      dom.logLastRefresh.textContent = t("logs.lastRefreshAt", { time: new Date().toLocaleTimeString() });
+      const updatedAt = snapshot?.logsUpdatedAt || snapshot?.generatedAt;
+      dom.logLastRefresh.textContent = updatedAt ? t("logs.lastRefreshAt", { time: formatLocalDateTime(updatedAt) }) : "";
     }
     if (dom.logFilter) dom.logFilter.value = activeFilter;
     dom.toggleLogFollow.classList.toggle("active", followEnabled);
@@ -85,19 +120,20 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
     if (!dom.logStatusSummary) return;
     const statusLine = dom.logStatusSummary.closest(".log-status-line");
     statusLine?.classList.remove("ok", "error", "unavailable");
-    if (!snapshot) {
-      dom.logStatusSummary.textContent = t("logs.statusUnavailable");
+    if (!snapshot || !Array.isArray(snapshot.runtimeEvents) || !Array.isArray(snapshot.gatewayTraces)) {
+      dom.logStatusSummary.textContent = t(refreshError ? "logs.refreshStale" : "logs.statusUnavailable");
       if (dom.logLoadedRange) dom.logLoadedRange.textContent = "";
-      if (dom.logShowErrors) dom.logShowErrors.hidden = true;
+      if (dom.logShowErrors) dom.logShowErrors.hidden = !activeEntries.some(entry => entry.status === "error");
       statusLine?.classList.add("unavailable");
       return;
     }
-    const errorCount = runtimeEvents.filter((event) => event.level === "error").length
-      + gatewayTraces.filter((trace) => trace.status === "error").length;
-    dom.logStatusSummary.textContent = errorCount
-      ? t("logs.statusErrors", { count: String(errorCount) })
-      : t("logs.statusOk");
-    statusLine?.classList.add(errorCount ? "error" : "ok");
+    const errorCount = activeEntries.filter(entry => entry.status === "error").length;
+    const unknownCount = activeEntries.filter(entry => !knownStatuses.has(entry.status)).length;
+    const partialCount = activeEntries.filter(entry => entry.status === "partial").length;
+    dom.logStatusSummary.textContent = refreshError ? t("logs.refreshStale") : unknownCount || partialCount
+      ? t("logs.statusIncomplete", { count: String(unknownCount), errors: String(errorCount), partial: String(partialCount) })
+      : errorCount ? t("logs.statusErrors", { count: String(errorCount) }) : t("logs.statusOk");
+    statusLine?.classList.add(refreshError || errorCount ? "error" : unknownCount || partialCount ? "unavailable" : "ok");
     if (dom.logLoadedRange) {
       dom.logLoadedRange.textContent = t("logs.loadedRange", {
         runtime: String(runtimeEvents.length),
@@ -117,7 +153,7 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
           <strong>${html(entry.title)}</strong>
           <span>${html(detail)}</span>
         </span>
-        <span class="log-event-status">${html(entry.status)}</span>
+        <span class="log-event-status">${html(statusLabel(entry.status))}</span>
       </button>
     `;
   }
@@ -137,16 +173,20 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
     dom.logIssueList.innerHTML = issues.map((entry) => eventRow(entry, true)).join("");
   }
 
-  function renderDecayAudit(decayAudit = {}) {
+  function renderDecayAudit(decayAudit) {
     if (!dom.logDecayList) return;
-    const issues = Array.isArray(decayAudit.issues) ? decayAudit.issues : [];
+    if (!decayAudit || !Array.isArray(decayAudit.issues)) {
+      dom.logDecayList.innerHTML = `<div class="endpoint-empty">${html(t("logs.decayUnavailable"))}</div>`;
+      return;
+    }
+    const issues = decayAudit.issues;
     if (!issues.length) {
       dom.logDecayList.innerHTML = `
         <article class="decay-audit-item ok">
           <span class="time-flow-dot"></span>
           <div>
             <strong>${html(t("logs.decayClear"))}</strong>
-            <p>${html(decayAudit.summary || t("logs.decayClearBody"))}</p>
+            <p>${html(t("logs.decayClearBody"))}</p>
           </div>
         </article>
       `;
@@ -160,17 +200,18 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
           .map((entry) => entry.title || entry.summary || entry.id || entry.agentId || "")
           .filter(Boolean)
           .join(" · ");
+        const known = ["memory_dormant", "shared_line_review", "innerlife_old_shares", "innerlife_old_inbox", "innerlife_daemon_error"].includes(item.code);
         return `
           <article class="decay-audit-item ${html(item.level || "info")}">
             <span class="time-flow-dot"></span>
             <div>
               <div>
-                <strong>${html(t(`logs.decay.${item.code}`) || item.code || "")}</strong>
-                <span>${html(item.level || "info")} · ${html(String(item.count ?? 0))}</span>
+                <strong>${html(t(known ? `logs.decay.${item.code}` : "logs.decay.unknown"))}</strong>
+                <span>${html(statusLabel(item.level || "unknown"))} · ${html(item.count == null ? t("logs.countUnknown") : String(item.count))}</span>
               </div>
-              <p>${html(item.message || "")}</p>
+              <p>${html(t(known ? `logs.decayBody.${item.code}` : "logs.decayBody.unknown"))}</p>
               ${examples ? `<small>${html(examples)}</small>` : ""}
-              ${item.action ? `<small>${html(item.action)}</small>` : ""}
+              <details><summary>${html(t("logs.event.raw"))}</summary><pre>${html(safeJson(item))}</pre></details>
             </div>
           </article>
         `;
@@ -290,23 +331,15 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
         occurredAt: item.updated_at || item.updatedAt || item.created_at || item.createdAt
       });
     });
-    (snapshot?.gatewayTraces || []).forEach((trace) => {
-      pushTimeItem(items, {
-        type: "gateway",
-        source: t("logs.source.gateway"),
-        status: trace.status || "ok",
-        title: trace.toolName || "unknown",
-        summary: trace.error || trace.responseSummary || "",
-        ref: trace.id,
-        agentId: trace.agentId || "",
-        occurredAt: trace.createdAt
-      });
+    (snapshot?.gatewayTraces || []).forEach((trace, index) => {
+      const entry = gatewayEntry(trace, index);
+      pushTimeItem(items, { ...entry, type: "gateway", ref: trace.id, agentId: trace.agentId || "", occurredAt: trace.createdAt });
     });
     (snapshot?.runtimeEvents || []).forEach((event) => {
       pushTimeItem(items, {
         type: "runtime",
         source: t("logs.source.runtime"),
-        status: event.level || "info",
+        status: event.level || "unknown",
         title: event.source || "runtime",
         summary: event.message || "",
         ref: event.id,
@@ -336,7 +369,7 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
             <div class="time-flow-body">
               <div>
                 <strong>${html(item.title || item.source)}</strong>
-                <span>${html(item.source)} · ${html(item.status || "")}</span>
+                <span>${html(item.source)} · ${html(item.type === "gateway" || item.type === "runtime" ? statusLabel(item.status) : item.status || "")}</span>
               </div>
               <p>${html(preview(item.summary) || t("logs.sequenceNoDetail"))}</p>
               <small>${html(formatLocalDateTime(item.occurredAt))}${meta ? ` · ${html(meta)}` : ""}</small>
@@ -347,17 +380,17 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
       .join("");
   }
 
-  function appendLiveLine(source, message) {
+  function appendLiveLine(source, message, status = "info") {
     const createdAt = new Date().toISOString();
     liveLines.push({
       id: `ui:${Date.now()}:${liveLines.length}`,
       createdAt,
       kind: "ui",
-      status: "info",
+      status,
       source: source || t("logs.source.ui"),
       title: source || t("logs.source.ui"),
       summary: message,
-      raw: { createdAt, source, message }
+      raw: { createdAt, source, message, status }
     });
     while (liveLines.length > 80) liveLines.shift();
     render();
@@ -374,8 +407,10 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
       refreshInFlight = true;
       try {
         await refreshSnapshot();
+        refreshError = "";
+        render();
       } catch (error) {
-        console.error(error);
+        recordRefreshFailure(error);
       } finally {
         refreshInFlight = false;
       }
@@ -413,7 +448,7 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
     setDetailPane("event");
     dom.logDetailKicker.textContent = t("logs.event.kicker");
     dom.logDetailTitle.textContent = entry.title;
-    dom.logDetailMeta.textContent = [entry.source, entry.status, formatLocalDateTime(entry.createdAt), entry.meta]
+    dom.logDetailMeta.textContent = [entry.source, statusLabel(entry.status), formatLocalDateTime(entry.createdAt), entry.meta]
       .filter(Boolean)
       .join(" · ");
     dom.logEventDetail.innerHTML = `
@@ -445,20 +480,29 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
     closeDetail();
   }
 
-  function refreshNow() {
+  function recordRefreshFailure(error) {
+    const wasFailed = Boolean(refreshError);
+    refreshError = error?.message || String(error);
+    // Following can fail repeatedly. Keep one visible error per failure episode.
+    if (!wasFailed) appendLiveLine(t("logs.source.ui"), `${t("logs.refreshFailed")}: ${refreshError}`, "error");
+    else render();
+  }
+
+  async function refreshNow() {
+    if (refreshInFlight) return;
+    refreshInFlight = true;
     dom.refreshLogs.disabled = true;
-    appendLiveLine("logs", t("logs.refreshing"));
-    refreshSnapshot()
-      .then(() => {
-        appendLiveLine("logs", t("logs.refreshed"));
-      })
-      .catch((error) => {
-        console.error(error);
-        appendLiveLine("logs", `${t("logs.refreshFailed")}: ${error.message || String(error)}`);
-      })
-      .finally(() => {
-        dom.refreshLogs.disabled = false;
-      });
+    appendLiveLine(t("logs.source.ui"), t("logs.refreshing"));
+    try {
+      await refreshSnapshot();
+      refreshError = "";
+      appendLiveLine(t("logs.source.ui"), t("logs.refreshed"));
+    } catch (error) {
+      recordRefreshFailure(error);
+    } finally {
+      refreshInFlight = false;
+      dom.refreshLogs.disabled = false;
+    }
   }
 
   function bindEventRowContainer(container) {

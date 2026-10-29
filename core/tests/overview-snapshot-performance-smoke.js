@@ -21,7 +21,8 @@ async function main() {
   const database = await initializeProductDatabase(paths.databasePath);
   try {
     await database.updateInnerLifeProfile({ agentId: "overview-agent", displayName: "Overview Agent" });
-    for (let index = 0; index < 20; index += 1) {
+    const fixtureMemoryCount = Math.max(20, Math.min(1000, Number(process.env.CLARACORE_OVERVIEW_FIXTURE_COUNT) || 20));
+    for (let index = 0; index < fixtureMemoryCount; index += 1) {
       await database.createMemory({
         title: `Overview payload memory ${index}`,
         body: `payload-${String(index).padStart(2, "0")}-`.padEnd(4000, "x"),
@@ -63,8 +64,15 @@ async function main() {
       shareQueries.push(status);
       return listInnerLifeShares(status, ...args);
     };
+    const listSummaries = database.listInnerLifeShareSummariesPage.bind(database);
+    database.listInnerLifeShareSummariesPage = async input => {
+      shareQueries.push(input.status);
+      return listSummaries(input);
+    };
     const runtime = createSnapshotRuntime({ ensureProductCore: async () => ({ database, paths }) });
+    const startedAt = performance.now();
     const snapshot = await runtime.buildProductOverviewSnapshot({ isPackaged: false });
+    const durationMs = Math.round((performance.now() - startedAt) * 100) / 100;
     const payloadBytes = Buffer.byteLength(JSON.stringify(snapshot));
 
     assert(queryCalls <= 30, `Overview exceeded 30 SQL reads: ${queryCalls}`);
@@ -84,6 +92,8 @@ async function main() {
     process.stdout.write(`${JSON.stringify({
       suite: "overview-snapshot-performance-smoke",
       snapshotQueryCalls: queryCalls,
+      fixtureMemoryCount,
+      durationMs,
       payloadBytes,
       thresholdBytes: 135 * 1024
     }, null, 2)}\n`);

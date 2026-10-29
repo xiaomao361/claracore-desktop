@@ -28,7 +28,7 @@ const FULL_SECTION_DOCS_BYTES = 22 * 1024;
 const SEARCH_DOCS_BYTES = 6144;
 
 const STARTUP_SEQUENCE =
-  "claracore_connection_test -> shared_line_get(no lineId) -> retry with one candidate lineId only after SHARED_LINE_ID_REQUIRED";
+  "claracore_connection_test -> shared_line_get(explicit user lineId, otherwise no lineId) -> resolve SHARED_LINE_ID_REQUIRED from user intent before retrying";
 
 function normalizeSection(value) {
   const section = String(value || "").trim().toLowerCase();
@@ -135,8 +135,8 @@ function startSection({ launch, toolProfile }) {
     "## First Connection",
     "",
     "1. Call claracore_connection_test once after installing or changing MCP config.",
-    "2. Call shared_line_get with no lineId.",
-    "3. If it returns SHARED_LINE_ID_REQUIRED, choose one returned candidate and retry with that lineId.",
+    "2. Read an explicitly requested Shared Line ID exactly; otherwise call shared_line_get with no lineId.",
+    "3. If it returns SHARED_LINE_ID_REQUIRED, use a returned candidate only when the user intent identifies it; otherwise ask which topic they mean. Do not select an unrelated line or activate it.",
     "4. Tell the user, in their language, what ClaraCore enables and what resumable context you found.",
     "",
     "## Tool catalogs",
@@ -275,11 +275,11 @@ function sharedLineSection() {
     "",
     "- Shared Line is the current resumable working position, not long-term fact storage.",
     "- Rename/archive/restore acknowledgements return the exact target line, never the global current line. Explicit archived-line reads preserve history; writes still require an active line.",
-    "- shared_line_get returns a resume packet: line, summary, interpretation status, facts used, next step, and at most one recent handoff. Use detail=context for relevant Shared Reality and detail=full for history, snapshots, arcs, and agent state.",
+    "- shared_line_get returns a resume packet: line, summary, interpretation status, facts used, an optional next step, and at most one recent handoff. An ongoing topic does not require an action plan; a historical handoff is not automatically its current plan. Use detail=context for relevant Shared Reality and detail=full for history, snapshots, arcs, and agent state.",
     "- truncatedFields identifies clipped fields; detailRef reads the complete stored line. shared_line_update returns persisted=true plus receipt.lineId/positionId/readBack only after saving. Invalid detail is rejected before writing. After a timeout or lost response, read the exact target before retrying; these receipts do not make writes idempotent.",
     "- Start resume reads with shared_line_get and no lineId. core-compat/full also offer gateway_context; omitted detail defaults to brief. shared_line_list is a bounded catalog and shared_line_get expands one selected line. In the catalog, status is lifecycle and isCurrent is only the globally selected fallback; an Agent-filtered page may have no current row.",
     "- To find a known objective, shared_line_list accepts query (up to 200 characters): literal substring in title, latest position or next step, ASCII case-insensitive. It does not search history. Agent/status filters still apply; page.total is the matching count. A match does not select or activate a line.",
-    "- SHARED_LINE_ID_REQUIRED is a safe refusal: nothing was read or written. Pick a candidate and retry with lineId.",
+    "- SHARED_LINE_ID_REQUIRED is a safe refusal: nothing was read or written. Resolve a candidate from explicit user intent, or ask which topic they mean, then retry with lineId. Do not activate a line merely to read it.",
     "- Agent-filtered catalogs and ambiguity hints use the same chronological order, independent of the global pointer. isGlobalFallback names that pointer; isCurrent is its legacy alias, never this session's selection. Another session or session_start(lineId) can move the global pointer. This does not choose a line for an identified Agent with several active lines. Catalog timestamps are timezone-explicit ISO 8601; stored history is unchanged.",
     "- A request without lineId is allowed only when your agent owns zero or one active non-default line.",
     "- shared_line_update after meaningful progress, handoff, or changed interpretation. Keep summary concise and actionable.",
@@ -333,7 +333,7 @@ function diagnosticsSection({ launch, paths }) {
     "- Every final tool response is capped. GATEWAY_RESPONSE_TOO_LARGE means narrow a page, select one object, or request an artifact.",
     "- gateway_auto_context collects Memory and local Knowledge (domain/mode/query selectable), returns the existing bounded Memory block or abstains, and reports Knowledge pointers in knowledgeObservation (applied=false). Knowledge-aware hosts can request deliveryContract=memory-knowledge-v1 to receive deliver_context/blocks under one serialized budget; old hosts keep the Memory contract. Set turnKind=goal_continuation only for a host-generated continuation without a new human message; that explicit label skips collection. It never marks delivery or use, and it never delivers InnerLife shares.",
     "",
-    "- Decision model settings: off/shadow/apply. Apply requires the negotiated dual-domain contract; explicit choices win, low confidence/failure retains baseline. The decision receipt reports routes, references, bytes and unknown host delivery/use; applied means adoption, not retrieval success.",
+    "- Retrieval defaults to both domains and semantic Knowledge search; explicit domain/mode choices win. Recall receipts preserve references, bytes and unknown host delivery/use; selection does not prove use.",
     "",
     "- Keep tool calls bounded. Never mutate SQLite directly.",
     "- Do not read local source files as the normal workflow; packaged Desktop runs from app.asar.",

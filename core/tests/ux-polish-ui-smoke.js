@@ -69,7 +69,7 @@ async function main() {
     }
 
     await page.click("[data-view='settings']");
-    await page.click("[data-settings-tab='app-data']");
+    await page.click("[data-settings-open='appearance']");
     const loginItemState = await page.evaluate(async () => {
       const input = document.querySelector("#settingsLaunchAtLogin");
       const label = input?.closest("label");
@@ -85,7 +85,7 @@ async function main() {
     if (!loginItemState.disabled || loginItemState.preferences.launchAtLoginAvailable) {
       throw new Error(`Development mode should expose login items as unavailable: ${JSON.stringify(loginItemState)}`);
     }
-    if (!loginItemState.label || !loginItemState.hint || loginItemState.describedBy !== "settingsLaunchAtLoginHint" || loginItemState.rowHeight < 44) {
+    if (!loginItemState.label || loginItemState.describedBy !== "settingsLaunchAtLoginHint" || loginItemState.rowHeight < 44) {
       throw new Error(`Login item control should have a label, hint, and 44px target: ${JSON.stringify(loginItemState)}`);
     }
     await page.selectOption("#settingsLanguage", "zh");

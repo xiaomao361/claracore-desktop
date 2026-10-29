@@ -538,7 +538,7 @@ async function main() {
       `The bounded repository read path ${methodName} must remain installed.`
     );
   }
-  assert.strictEqual(installed.length, 191, "The repository API includes candidate maintenance.");
+  assert.strictEqual(installed.length, 192, "The repository API includes candidate maintenance and bounded milestone reads.");
   assert(installed.some((entry) => entry.name === "invalidateMemoryEmbeddings" && entry.owner === "memoria"));
   assert.strictEqual(
     installed.filter((entry) => entry.owner === "innerlife").length,

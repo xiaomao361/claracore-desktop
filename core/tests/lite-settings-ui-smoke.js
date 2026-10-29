@@ -21,8 +21,7 @@ async function launch(electron, executablePath, dataRoot, userDataRoot, flavor, 
 async function openModels(page) {
   await page.waitForSelector("[data-view='settings']", { timeout: 15000 });
   await page.click("[data-view='settings']");
-  await page.click("[data-settings-tab='capabilities']");
-  await page.evaluate(() => { document.querySelector("#memoriaCapabilityDetails").open = true; });
+  await page.click("[data-settings-open='models']");
 }
 
 async function main() {
@@ -67,14 +66,15 @@ async function main() {
     if (fresh.flavor !== "Lite" || fresh.provider !== "ollama" || fresh.model !== "") {
       throw new Error(`Fresh Lite defaults are wrong: ${JSON.stringify(fresh)}`);
     }
-    if (fresh.builtInVisible || fresh.providers.join(",") !== "ollama,disabled") {
+    if (fresh.builtInVisible || fresh.providers.join(",") !== "ollama,disabled,openai-compatible") {
       throw new Error(`Lite exposed the built-in provider: ${JSON.stringify(fresh)}`);
     }
-    await page.click("#saveSettings");
-    await page.waitForFunction(() => /model|模型/i.test(document.querySelector("#settingsNotice")?.textContent || ""));
+    await page.click("#saveMemorySettings");
+    await page.waitForFunction(() => /model|模型/i.test(document.querySelector("#memorySettingsNotice")?.textContent || ""));
     await page.click("#refreshMemoriaModels");
-    await page.waitForFunction(() => document.querySelector("#memoriaModel")?.value === "bge-m3:latest");
-    await page.click("#saveSettings");
+    await page.waitForFunction(() => document.querySelector("#memoriaModelOptions")?.children.length > 0);
+    await page.fill("#memoriaModel", "bge-m3:latest");
+    await page.click("#saveMemorySettings");
     await page.waitForFunction(async () => {
       const snapshot = await window.ClaraCoreDesktop.getRuntimeSnapshot();
       return snapshot.configuration.memoria.model === "bge-m3:latest";

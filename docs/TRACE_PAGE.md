@@ -1,30 +1,14 @@
-# Trace Page
+# Milestones and lifecycle evidence
 
-## Product Contract
+The standalone Trace page has been retired. Home shows up to five recent
+confirmed milestones after the current Shared Line. Ordinary activity does not
+become a milestone. Empty results hide the section; pending or failed reads are
+shown distinctly. Connection details lead to Agent Access.
 
-Trace / 痕迹 is a separate read-only page for what has accumulated inside this
-ClaraCore. It is not a work dashboard, usage streak, leaderboard, or claim that
-ClaraCore is a living entity. It combines durable data statistics with the
-distinctive history formed through one or more Agents using the same core.
-
-The page reads in this order:
-
-1. a human conclusion about evidence already left in the shared world;
-2. the real aggregation path from domain records through explicit evidence
-   boundaries to a bounded read model;
-3. four completed-state semantic statements, up to five recent confirmed
-   milestones, and non-ranked Agent participation;
-4. one unified detail layer for Memoria, Shared Line, and InnerLife composition
-   plus lower-level lifecycle counts.
-
-Semantic statements describe evidence that is already confirmed. They are not
-an approval queue and must not use copy such as “worth keeping” that sounds like
-the user still needs to decide. Mutation remains in the owning module.
-
-The detail cards reuse the same module icon grammar as primary navigation. A
-module must not gain an unrelated letter badge or second visual identity here.
-
-Empty states stay quiet and truthful. The page contains no mutation controls.
+Logs retains the read-only composition/lifecycle dialog. Source records and
+historical data remain in their owning domains. The legacy trace snapshot read
+is retained for compatibility; normal Home hydration queries only milestones
+and activity, not the complete cross-domain aggregation.
 
 ## Maintained Definitions
 
@@ -58,18 +42,12 @@ Memory Controller events are Memoria recall evidence rather than Trace content.
 They remain available in Memoria and settings instead of being repeated inside
 the Trace detail layer.
 
-## Implementation Boundary
+## Implementation boundary
 
-- `core/db/repositories/system.js` owns the bounded cross-domain query.
-- `core/runtime/snapshot.js` includes it in the existing product snapshot.
-- `app/views/trace.js` renders the page without issuing another poll.
-- `styles/views/trace.css` owns the page layout and responsive behavior.
-- `core/tests/trace-ui-smoke.js` seeds isolated evidence and validates the
-  rendered semantics, read-only boundary, advanced disclosure, and wide/narrow
-  overflow.
+- `core/db/repositories/system.js`: shared milestone query and trace aggregation.
+- `core/runtime/snapshot.js`: bounded Home hydration and Logs diagnostics.
+- `app/views/activity-summary.js`: Home list and Logs composition dialog.
+- `core/tests/activity-summary-smoke.js`: data boundaries and DOM regression.
 
-Validate focused page changes with the isolated UI suite (opens Electron):
-
-```bash
-npm run test:trace
-```
+The mechanism explanations formerly repeated in Memoria, Shared Line, and
+InnerLife are available in [Workflow overview](WORKFLOW_OVERVIEW.md).

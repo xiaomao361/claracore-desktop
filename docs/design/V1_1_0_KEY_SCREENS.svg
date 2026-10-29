@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1400" viewBox="0 0 1440 1400" role="img" aria-labelledby="title desc"><title id="title">ClaraCore 1.1.0 紫色书页关键界面设计提案</title><desc id="desc">三个静态设计面：首页以具体话题为主，共同线不强制下一步，日志区分请求完成与实际使用。所有示例虚构，尚未实现。</desc><defs><style>text{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Noto Sans CJK SC',sans-serif;fill:#443256}.muted{fill:#746c7f}.small{font-size:13px}.body{font-size:16px}.title{font-size:27px;font-weight:600}.label{font-size:14px;font-weight:600}</style></defs>
+<rect x="0" y="0" width="1440" height="1400" rx="0" fill="#efedf3" />
+<text x="40" y="43" font-size="26" font-weight="600" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">ClaraCore 1.1.0  /  紫色书页</text>
+<text x="40" y="73" font-size="14" fill="#746c7f" style="fill:#746c7f" font-family="Hiragino Sans GB, PingFang SC, sans-serif">静态设计提案 · 虚构示例 · 尚未实现 · 2026-10-29</text>
+<text x="40" y="112" font-size="19" font-weight="600" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">01  首页：先看见自己的内容</text>
+<rect x="40" y="134" width="1360" height="570" rx="16" fill="#fff" />
+<rect x="40" y="134" width="178" height="570" rx="16" fill="#f6f3fc" />
+<text x="104" y="190" font-size="17" font-weight="600" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">ClaraCore</text>
+<rect x="54" y="216" width="150" height="37" rx="8" fill="#e8e0f3" />
+<text x="78" y="240" font-size="15" font-weight="600" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">首页</text>
+<text x="78" y="287" font-size="15" font-weight="400" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">共同线</text>
+<text x="78" y="334" font-size="15" font-weight="400" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">记忆</text>
+<text x="78" y="381" font-size="15" font-weight="400" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">资料</text>
+<text x="78" y="428" font-size="15" font-weight="400" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">想法</text>
+<text x="78" y="578" font-size="14" fill="#746c7f" style="fill:#746c7f" font-family="Hiragino Sans GB, PingFang SC, sans-serif">连接助手</text>
+<text x="78" y="618" font-size="14" fill="#746c7f" style="fill:#746c7f" font-family="Hiragino Sans GB, PingFang SC, sans-serif">日志</text>
+<text x="78" y="658" font-size="14" fill="#746c7f" style="fill:#746c7f" font-family="Hiragino Sans GB, PingFang SC, sans-serif">设置</text>
+<text x="255" y="183" font-size="13" fill="#746c7f" style="fill:#746c7f" font-family="Hiragino Sans GB, PingFang SC, sans-serif">首页</text>
+<text x="255" y="226" font-size="32" font-weight="600" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">上次聊到哪里</text>
+<text x="255" y="257" font-size="15" fill="#746c7f" style="fill:#746c7f" font-family="Hiragino Sans GB, PingFang SC, sans-serif">在常用助手里交流，在这里查看留下的内容。</text>
+<text x="255" y="303" font-size="13" fill="#746c7f" style="fill:#746c7f" font-family="Hiragino Sans GB, PingFang SC, sans-serif">最近更新的共同线</text>
+<rect x="255" y="320" width="734" height="240" rx="12" fill="#fbf9fe" />
+<path d="M279 345V519" stroke="#b7a1d2" stroke-width="2" style="stroke:#b7a1d2;stroke-width:2" /><circle cx="279" cy="350" r="4" fill="#6088b0" style="fill:#6088b0" />
+<text x="304" y="360" font-size="26" font-weight="600" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">阳台上的植物</text>
+<text x="304" y="390" font-size="13" fill="#746c7f" style="fill:#746c7f" font-family="Hiragino Sans GB, PingFang SC, sans-serif">上次留下的记录</text>
+<text x="304" y="426" font-size="18" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">靠窗的薄荷恢复了。最近想试试少打扰，</text>
+<text x="304" y="457" font-size="18" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">先观察光照和浇水，不急着增加新的安排。</text>
+<text x="304" y="490" font-size="13" fill="#746c7f" style="fill:#746c7f" font-family="Hiragino Sans GB, PingFang SC, sans-serif">最近记录：昨天 18:20  ·  来自已保存的共同线</text>
+<rect x="304" y="506" width="174" height="36" rx="8" fill="#795bac" />
+<text x="318" y="530" font-size="14" fill="#ffffff" style="fill:#ffffff" font-weight="500" font-family="Hiragino Sans GB, PingFang SC, sans-serif">查看这条共同线</text>
+<text x="255" y="603" font-size="17" font-weight="600" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">还想回看什么？</text>
+<rect x="255" y="626" width="166" height="36" rx="8" fill="#f6f3fc" />
+<text x="269" y="650" font-size="14" fill="#443256" style="fill:#443256" font-weight="500" font-family="Hiragino Sans GB, PingFang SC, sans-serif">记忆中的信息 →</text>
+<rect x="435" y="626" width="166" height="36" rx="8" fill="#f6f3fc" />
+<text x="449" y="650" font-size="14" fill="#443256" style="fill:#443256" font-weight="500" font-family="Hiragino Sans GB, PingFang SC, sans-serif">资料与出处 →</text>
+<rect x="615" y="626" width="166" height="36" rx="8" fill="#f6f3fc" />
+<text x="629" y="650" font-size="14" fill="#443256" style="fill:#443256" font-weight="500" font-family="Hiragino Sans GB, PingFang SC, sans-serif">全部共同线 →</text>
+<path d="M1021 300L1021 661" stroke="#e8e2ef" style="stroke:#e8e2ef" />
+<text x="1052" y="327" font-size="13" fill="#746c7f" style="fill:#746c7f" font-family="Hiragino Sans GB, PingFang SC, sans-serif">另一条共同线</text>
+<text x="1052" y="365" font-size="20" font-weight="600" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">准备团队分享</text>
+<text x="1052" y="396" font-size="14" fill="#746c7f" style="fill:#746c7f" font-family="Hiragino Sans GB, PingFang SC, sans-serif">上次讨论了开场的两个例子。</text>
+<text x="1052" y="430" font-size="14" fill="#795bac" style="fill:#795bac" font-family="Hiragino Sans GB, PingFang SC, sans-serif">查看记录 →</text>
+<path d="M1052 464H1364" stroke="#e8e2ef" style="stroke:#e8e2ef" />
+<text x="1052" y="501" font-size="17" font-weight="600" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">连接助手</text>
+<text x="1052" y="532" font-size="14" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">本机服务已就绪</text>
+<text x="1052" y="557" font-size="14" fill="#746c7f" style="fill:#746c7f" font-family="Hiragino Sans GB, PingFang SC, sans-serif">尚未观察到助手请求</text>
+<rect x="1052" y="586" width="158" height="36" rx="8" fill="#f6f3fc" />
+<text x="1066" y="610" font-size="14" fill="#443256" style="fill:#443256" font-weight="500" font-family="Hiragino Sans GB, PingFang SC, sans-serif">查看接入说明</text>
+<text x="40" y="747" font-size="19" font-weight="600" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">02  共同线：没有下一步，也是一条完整记录</text>
+<text x="742" y="747" font-size="19" font-weight="600" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">03  日志：先解释结果，再展开技术信息</text>
+<rect x="40" y="768" width="660" height="490" rx="14" fill="#fff" />
+<text x="68" y="806" font-size="13" fill="#746c7f" style="fill:#746c7f" font-family="Hiragino Sans GB, PingFang SC, sans-serif">共同线  /  阳台上的植物</text>
+<text x="68" y="847" font-size="27" font-weight="600" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">阳台上的植物</text>
+<text x="68" y="879" font-size="13" fill="#746c7f" style="fill:#746c7f" font-family="Hiragino Sans GB, PingFang SC, sans-serif">最近记录：昨天 18:20</text>
+<path d="M68 901H670" stroke="#e8e2ef" style="stroke:#e8e2ef" />
+<text x="68" y="935" font-size="16" font-weight="600" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">最近的观察</text>
+<text x="68" y="968" font-size="17" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">薄荷移到靠窗处后恢复了。我们想先看看</text>
+<text x="68" y="998" font-size="17" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">现在的养护方式是否适合，不急着改变。</text>
+<text x="68" y="1044" font-size="16" font-weight="600" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">记录里提到的偏好</text>
+<text x="68" y="1076" font-size="16" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">照料植物时，更喜欢简单、低维护的方法。</text>
+<text x="68" y="1120" font-size="14" fill="#795bac" style="fill:#795bac" font-family="Hiragino Sans GB, PingFang SC, sans-serif">引用 1  ·  养护观察记录</text>
+<rect x="68" y="1150" width="194" height="36" rx="8" fill="#795bac" />
+<text x="82" y="1174" font-size="14" fill="#ffffff" style="fill:#ffffff" font-weight="500" font-family="Hiragino Sans GB, PingFang SC, sans-serif">复制继续讨论的提示</text>
+<rect x="278" y="1150" width="150" height="36" rx="8" fill="#f6f3fc" />
+<text x="292" y="1174" font-size="14" fill="#443256" style="fill:#443256" font-weight="500" font-family="Hiragino Sans GB, PingFang SC, sans-serif">查看记录变化</text>
+<text x="68" y="1225" font-size="13" fill="#746c7f" style="fill:#746c7f" font-family="Hiragino Sans GB, PingFang SC, sans-serif">阅读页保持只读。复制提示后，到自己的助手里继续。</text>
+<rect x="740" y="768" width="660" height="490" rx="14" fill="#fff" />
+<text x="768" y="807" font-size="27" font-weight="600" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">日志</text>
+<text x="768" y="839" font-size="13" fill="#746c7f" style="fill:#746c7f" font-family="Hiragino Sans GB, PingFang SC, sans-serif">当前加载范围：最近 20 次助手请求</text>
+<rect x="768" y="858" width="48" height="25" rx="6" fill="#f0ecf7" />
+<text x="778" y="876" font-size="12" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">全部</text>
+<rect x="838" y="858" width="48" height="25" rx="6" fill="#f0ecf7" />
+<text x="848" y="876" font-size="12" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">失败</text>
+<rect x="908" y="858" width="76" height="25" rx="6" fill="#f0ecf7" />
+<text x="918" y="876" font-size="12" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">助手请求</text>
+<rect x="1034" y="858" width="76" height="25" rx="6" fill="#f0ecf7" />
+<text x="1044" y="876" font-size="12" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">后台运行</text>
+<path d="M768 901H1370" stroke="#e8e2ef" style="stroke:#e8e2ef" />
+<text x="768" y="929" font-size="13" fill="#746c7f" style="fill:#746c7f" font-family="Hiragino Sans GB, PingFang SC, sans-serif">10:32</text>
+<text x="835" y="929" font-size="17" font-weight="600" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">查找记忆</text>
+<rect x="1236" y="909" width="76" height="25" rx="6" fill="#f0ecf7" />
+<text x="1246" y="927" font-size="12" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">请求完成</text>
+<text x="835" y="958" font-size="14" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">检索返回了内容；助手是否使用尚未确认。</text>
+<text x="835" y="985" font-size="13" fill="#795bac" style="fill:#795bac" font-family="Hiragino Sans GB, PingFang SC, sans-serif">查看详情 →</text>
+<path d="M768 1006H1370" stroke="#e8e2ef" style="stroke:#e8e2ef" />
+<text x="768" y="1037" font-size="13" fill="#746c7f" style="fill:#746c7f" font-family="Hiragino Sans GB, PingFang SC, sans-serif">10:30</text>
+<text x="835" y="1037" font-size="17" font-weight="600" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">读取资料</text>
+<rect x="1236" y="1017" width="76" height="25" rx="6" fill="#f9ecef" />
+<text x="1246" y="1035" font-size="12" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">请求失败</text>
+<text x="835" y="1066" font-size="14" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">本次未能读取资料。查看错误详情后再决定如何处理。</text>
+<text x="835" y="1093" font-size="13" fill="#795bac" style="fill:#795bac" font-family="Hiragino Sans GB, PingFang SC, sans-serif">查看详情 →</text>
+<rect x="768" y="1125" width="602" height="104" rx="10" fill="#f6f3fc" />
+<text x="787" y="1154" font-size="14" font-weight="600" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">技术详情中保留</text>
+<text x="787" y="1181" font-size="13" fill="#746c7f" style="fill:#746c7f" font-family="Hiragino Sans GB, PingFang SC, sans-serif">工具名 / 原始状态 / 时间 / ID / 现有脱敏后的错误信息</text>
+<text x="787" y="1209" font-size="13" fill="#795bac" style="fill:#795bac" font-family="Hiragino Sans GB, PingFang SC, sans-serif">记录与后台检查 →</text>
+<text x="40" y="1303" font-size="16" font-family="Hiragino Sans GB, PingFang SC, sans-serif" fill="#443256">保留：开口 C、紫色与冰蓝端点、领域与数据。   重做：首页顺序、主题阅读、接入路径、日志表达。</text>
+<text x="40" y="1336" font-size="15" fill="#746c7f" style="fill:#746c7f" font-family="Hiragino Sans GB, PingFang SC, sans-serif">不强制任务或下一步；不从调用完成推断记忆命中、客户端接收或助手使用。</text>
+<text x="40" y="1370" font-size="13" fill="#746c7f" style="fill:#746c7f" font-family="Hiragino Sans GB, PingFang SC, sans-serif">设计稿只比较方向。完整空态、失败态、深色、窄窗口与键盘验收见配套提案，尚待后续实现与观察。</text>
+<g transform="translate(61 163) scale(0.042)"><path d="M657 246C609 210 551 192 492 196c-139 9-249 124-249 265 0 149 121 270 270 270 65 0 126-23 174-63" fill="none" stroke="#443256" stroke-width="112" stroke-linecap="round" />
+  <path d="M316 646c80-95 153-141 219-139 58 2 94 40 146 39 42 0 77-23 109-69" fill="none" stroke="#795bac" stroke-width="54" stroke-linecap="round" />
+  <circle cx="658" cy="512" r="72" fill="#f6f3fc" stroke="#443256" stroke-width="34" />
+  <circle cx="658" cy="512" r="26" fill="#795bac" />
+</g></svg>

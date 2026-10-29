@@ -138,7 +138,7 @@ async function main() {
       { timeout: 15000 }
     );
     await page.click("[data-view='settings']");
-    await page.click("[data-settings-tab='app-data']");
+    await page.click("[data-settings-open='appearance']");
     await page.selectOption("#settingsLanguage", "en");
     await page.selectOption("#settingsTheme", "light");
     await page.click("#saveAppearanceSettings");
@@ -305,7 +305,7 @@ async function main() {
     await page.click("#logDetailClose");
     await page.waitForFunction(() => !document.querySelector("#logDetailDialog")?.open);
     await page.click("[data-view='settings']");
-    await page.click("[data-settings-tab='app-data']");
+    await page.click("[data-settings-open='appearance']");
     await page.selectOption("#settingsLanguage", "zh");
     await page.selectOption("#settingsTheme", "dark");
     await page.click("#saveAppearanceSettings");

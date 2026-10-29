@@ -24,11 +24,6 @@ window.ClaraCoreViews = {
     subtitleKey: "view.innerLife.subtitle",
     panel: document.querySelector("#innerlifeView")
   },
-  trace: {
-    titleKey: "view.trace.title",
-    subtitleKey: "view.trace.subtitle",
-    panel: document.querySelector("#traceView")
-  },
   logs: {
     titleKey: "logs.title",
     subtitleKey: "logs.body",

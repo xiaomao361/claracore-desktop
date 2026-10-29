@@ -1,8 +1,10 @@
-# Agent experience: 1.0.6 local test baseline
+# Agent experience: historical 1.0.6 local test baseline
+
+> This records the October 27 test, not the final public package. See the
+> [1.0.6 release record](RELEASE_1.0.6.md) for current delivery status.
 
 2026-10-27: implementation is paused for field testing. This is an unsigned,
-unnotarized macOS Apple Silicon Lite build, not a public release. Public stable
-remains 1.0.3. Sign and notarize the final release after acceptance.
+unnotarized macOS Apple Silicon Lite build, not a public release. At that test checkpoint, public stable was 1.0.3. Sign and notarize the final release after acceptance.
 
 ## Delivered artifact
 

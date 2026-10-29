@@ -56,7 +56,7 @@ speaker 限 user/agent/source，sourceRef 必填；二者是调用方对证据�
 
 服务端复用既有 `database.innerLifeGenerate` 的聊天配置做语义提取和路由，
 不在 InnerLife 中保存或代写念头。只有 allowModel=true 才调用该配置，未允许时
-零模型请求；不默认启用 Jev、新 provider 或付费服务。模型负责语义判断，Agent
+零模型请求；不默认启用新 provider 或付费服务。模型负责语义判断，Agent
 负责提交真实变化；不存在依赖关键词的“用户确认”判定。
 
 模型必须对每个事件的四域逐项给 planned/none/pending、理由和操作索引；

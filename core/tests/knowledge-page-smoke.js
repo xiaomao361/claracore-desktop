@@ -68,7 +68,7 @@ async function main() {
   const view = createClaraCoreKnowledgeView({ dom, api, t, markdown, formatLocalDateTime: (value) => value });
   try {
     await view.setActive(true);
-    assert.match(dom.knowledgePageStatus.textContent, /尚未选择/u);
+    assert.match(dom.knowledgePageStatus.textContent, /未连接知识库/u);
     assert.equal(dom.knowledgeCapturePreview.disabled, true);
     await preferences.saveKnowledgeRootPreference(app, root);
     fs.mkdirSync(path.join(root, "notes"));

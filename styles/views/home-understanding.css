@@ -226,21 +226,6 @@
   font-size: 12px;
 }
 
-.reading-mechanism {
-  padding: 16px 0;
-  border-top: 1px solid var(--border);
-  color: var(--muted);
-}
-
-.reading-mechanism > summary {
-  cursor: pointer;
-  padding: 8px 0;
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.reading-mechanism > section { margin-top: 16px; }
-
 #homeView > .home-presence-issue {
   margin: 20px 0;
   padding: 14px 18px;

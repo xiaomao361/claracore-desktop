@@ -186,8 +186,7 @@ async function main() {
       (!pageContract.body.includes("Facts, decisions") && !pageContract.body.includes("事实、决定")) ||
       !pageContract.detailPresent ||
       !pageContract.detailDialog ||
-      pageContract.processSteps !== 5 ||
-      !pageContract.processBeforeToolbar ||
+      pageContract.processSteps !== 0 ||
       pageContract.searchLabelCenterDelta > 1 ||
       pageContract.recallRows !== 2 ||
       pageContract.nestedDetails !== 0 ||

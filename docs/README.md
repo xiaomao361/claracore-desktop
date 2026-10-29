@@ -10,6 +10,7 @@
 | [Configuration](CONFIGURATION.md) | Models, local data, backup, and optional capabilities. |
 | [Privacy and data](PRIVACY.md) | What stays local and what configured clients/providers receive. |
 | [Maintenance](DESKTOP_MAINTENANCE.md) | Audit results, pending work, and recovery boundaries. |
+| [Workflow overview](WORKFLOW_OVERVIEW.md) | How Memory, Shared Lines, and InnerLife work. |
 | [Knowledge reader](KNOWLEDGE_PAGE.md) | Browse sources, follow links, and search Markdown. |
 
 ## Connect an agent
@@ -19,7 +20,7 @@
 - [MCP compatibility](MCP_COMPATIBILITY.md): profiles and legacy adapters.
 - [HTTP migration](HTTP_MCP_MIGRATION.md): replacing retired stdio configurations.
 - [Context delivery](CONTEXT_DELIVERY.md): projections, pagination, and response budgets.
-- [Agent experience test baseline](AGENT_EXPERIENCE_TESTING.md): local 1.0.6 delivery and pending field checks.
+- [Agent experience test baseline](AGENT_EXPERIENCE_TESTING.md): historical local builds and field-check boundaries.
 - [Knowledge context](KNOWLEDGE_CONTEXT.md): explicit host negotiation.
 - [Understanding contract](UNDERSTANDING_CONTRACT.md) and [host integration](UNDERSTANDING_HOST.md): optional evidence-based planning and recovery.
 
@@ -30,8 +31,8 @@
 - [Architecture](ARCHITECTURE.md) and [code map](CODE_MAP.md)
 - [Runtime memory policy](RUNTIME_MEMORY_POLICY.md)
 - [Knowledge intake](KNOWLEDGE_INTAKE.md) and [search](KNOWLEDGE_SEARCH.md)
-- [Decision models](DECISION_MODELS.md)
-- [Design language](UI_DESIGN_LANGUAGE.md) and [Trace definitions](TRACE_PAGE.md)
+- [Design language](UI_DESIGN_LANGUAGE.md) and [Milestones and lifecycle evidence](TRACE_PAGE.md)
+- [1.0.6 release record](RELEASE_1.0.6.md): scope, artifacts and verification.
 - [Packaging](mac-packaging.md) and [release process](VERSION_BRANCHING.md)
 - [Website development](../website/README.md)
 

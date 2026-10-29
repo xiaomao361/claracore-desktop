@@ -25,8 +25,8 @@ expanding `app.js`.
 - `views/memoria.js`: read-only Memoria tabs, search, detail, labels, and graph.
 - `views/memoria-list.js`: Memory list, label overview, and Agent-filter helpers.
 - `views/shared-innerlife.js`: read-only Shared Line and InnerLife rendering.
-- `views/trace.js`: read-only Trace narrative, milestones, Agent participation,
-  domain counts, and advanced statistics.
+- `views/activity-summary.js`: bounded Home milestones and composition/lifecycle
+  diagnostics opened from Logs.
 - `views/data.js`: SQLite backups, restore confirmation, and full product JSON import/export.
 - `views/knowledge.js`: selected-directory catalog and reader, section/backlink navigation,
   intake activity and source capture through the shared intake service.
@@ -38,3 +38,5 @@ expanding `app.js`.
 Event handlers still live mostly in `app.js`. Move them only when the target
 view module can own the whole interaction without adding hidden cross-view
 coupling.
+
+`settings-dialogs.js` 管理设置概览与单层原生编辑弹窗的开启、关闭、未保存提示和焦点返回。各配置范围独立收集、校验和保存；资料目录先编辑后保存。

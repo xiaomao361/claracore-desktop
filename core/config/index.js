@@ -10,11 +10,6 @@ const {
 
 const DEFAULT_AGENT_ID = "codex";
 
-// Shared DeepSeek key shipped as the out-of-box default so fresh installs get a
-// working InnerLife without any setup. It lives in the client bundle, so treat
-// it as public: rotate/disable it from the DeepSeek console if abused.
-const DEFAULT_INNERLIFE_API_KEY = "sk-31a59c1d9fdc421194c876972241290f";
-
 const DEFAULT_SETTINGS = {
   "memory.embedding.provider": HAS_BUILT_IN_EMBEDDING ? "claracore-built-in" : "ollama",
   "memory.embedding.base_url": "http://127.0.0.1:11434",
@@ -28,12 +23,12 @@ const DEFAULT_SETTINGS = {
   // observe-only evidence from a test package.
   "memory.controller.mode": "off",
   "memory.controller.canary_agent_ids": [...DEFAULT_CANARY_AGENT_IDS],
-  // Fresh installs start with InnerLife available through the shared DeepSeek
-  // default so the agent loop works without extra model setup.
-  "innerlife.enabled": true,
-  "innerlife.provider": "openai-compatible",
-  "innerlife.base_url": "https://api.deepseek.com",
-  "innerlife.model": "deepseek-v4-flash",
+  // New installations require an explicit provider and opt-in. seedDefaults
+  // only inserts missing keys, so existing user settings remain unchanged.
+  "innerlife.enabled": false,
+  "innerlife.provider": "disabled",
+  "innerlife.base_url": "",
+  "innerlife.model": "",
   "innerlife.loop_seconds": 3600,
   "gateway.enabled": true,
   "gateway.transport": "streamable-http",
@@ -121,15 +116,15 @@ function normalizeSettingValue(key, value) {
     return model;
   }
   if (key === "memory.embedding.dimension" || key === "memory.embedding.max_chars" || key === "innerlife.loop_seconds") {
-    const number = Number.parseInt(String(value), 10);
-    if (!Number.isFinite(number) || number <= 0) {
+    const number = Number(value);
+    if (!Number.isSafeInteger(number) || number <= 0) {
       throw new Error(`${key} must be a positive number.`);
     }
     return number;
   }
   if (key === "memory.maintenance.hour") {
-    const number = Number.parseInt(String(value), 10);
-    if (!Number.isFinite(number) || number < 0 || number > 23) {
+    const number = Number(value);
+    if (!Number.isInteger(number) || number < 0 || number > 23) {
       throw new Error("memory.maintenance.hour must be between 0 and 23.");
     }
     return number;
@@ -148,14 +143,22 @@ function normalizeSettingValue(key, value) {
   }
   if (key === "innerlife.provider") {
     const provider = String(value || "").trim().toLowerCase();
-    return provider || "disabled";
+    if (!["disabled", "ollama", "openai-compatible"].includes(provider)) throw new Error("Unsupported reflection provider.");
+    return provider;
+  }
+  if (key === "innerlife.base_url") {
+    const endpoint = String(value || "").trim();
+    if (!endpoint) return "";
+    let url;
+    try { url = new URL(endpoint); } catch (_) { throw new Error("Model endpoint must be an http or https URL."); }
+    if (!["http:", "https:"].includes(url.protocol)) throw new Error("Model endpoint must use http or https.");
+    return endpoint.replace(/\/$/, "");
   }
   return String(value || "").trim();
 }
 
 module.exports = {
   DEFAULT_AGENT_ID,
-  DEFAULT_INNERLIFE_API_KEY,
   DEFAULT_SETTINGS,
   WRITABLE_SETTINGS,
   normalizeSettingValue,

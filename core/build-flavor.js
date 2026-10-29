@@ -15,8 +15,8 @@ const BUILD_FLAVOR = packagedFlavor === LITE_BUILD_FLAVOR
   : normalizeBuildFlavor(process.env.CLARACORE_DESKTOP_BUILD_FLAVOR);
 const HAS_BUILT_IN_EMBEDDING = BUILD_FLAVOR === FULL_BUILD_FLAVOR;
 const MEMORY_EMBEDDING_PROVIDERS = HAS_BUILT_IN_EMBEDDING
-  ? ["claracore-built-in", "ollama", "disabled"]
-  : ["ollama", "disabled"];
+  ? ["claracore-built-in", "ollama", "openai-compatible", "disabled"]
+  : ["ollama", "openai-compatible", "disabled"];
 
 function buildFlavorInfo() {
   return {

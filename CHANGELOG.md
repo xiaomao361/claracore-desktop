@@ -3,7 +3,30 @@
 User-facing release highlights are recorded here. Installers and checksums are
 published in [GitHub Releases](https://github.com/xiaomao361/claracore-desktop/releases).
 
-## 1.0.6 — Local unsigned test build, 2026-10-27 (not publicly released)
+## 1.0.6 — 2026-10-29
+
+- Simplifies everyday reading across Home, Memory, Knowledge, Shared Lines,
+  InnerLife, Agent Access, Logs, and Settings. Milestones live on Home and in
+  Logs instead of a separate Trace page. Settings use focused sections with
+  draft/save handling, and the tray links to the main destinations.
+- Memory search and InnerLife switching ignore stale responses from another
+  query or agent. Shared Line catalogs and share histories have scoped paging.
+- InnerLife reads original text by exact record and agent, with bounded text
+  pages. Recovery status preserves terminal failures and unconfirmed states.
+- Backup, export, import, deletion and restore distinguish a completed operation
+  from a failed page refresh. Persistent errors remain visible.
+- Knowledge retains readable documents when another document cannot be read,
+  reports partial backlinks, restores reading position and supports reference
+  reading in a second pane. Source text stays unchanged.
+- Both Full and Lite can configure Ollama or OpenAI-compatible Memory embeddings
+  and reflection models. The experimental Jev controls and requests are removed;
+  existing legacy files are left untouched. Knowledge semantic search remains local.
+- Clarifies recall, connection and usage evidence; improves Chinese/English copy
+  and accessible names. Overview stays within its 30-query budget.
+- Includes the continuity fixes tested in the local builds below. Personal host
+  hook changes described in those historical records are not installed by Desktop.
+
+### 1.0.6 local test history — 2026-10-27
 
 - Repeated session starts return a current briefing while retaining the same
   session and its original historical opening snapshot.

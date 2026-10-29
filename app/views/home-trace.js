@@ -1,4 +1,8 @@
 function createClaraCoreHomeTrace({ t, escapeHtml, safeJsonObject, getSnapshot }) {
+  function traceStatus(trace) {
+    return trace?.error || trace?.status === "error" ? "error" : trace?.status === "ok" ? "ok" : "unknown";
+  }
+
   function truncateTraceText(value, maxLength = 150) {
     const text = String(value || "").replace(/\s+/g, " ").trim();
     if (!text) return "";
@@ -44,8 +48,8 @@ function createClaraCoreHomeTrace({ t, escapeHtml, safeJsonObject, getSnapshot }
   }
 
   function renderTraceFlow(trace) {
-    const status = trace.status === "error" ? "error" : "ok";
-    const statusText = status === "error" ? t("home.trace.statusError") : t("home.trace.statusOk");
+    const status = traceStatus(trace);
+    const statusText = t(status === "error" ? "home.trace.statusError" : status === "ok" ? "home.trace.statusOk" : "home.trace.statusUnknown");
     const agentId = trace.agentId || t("home.trace.unknownAgent");
     const toolName = trace.toolName || t("home.trace.unknownTool");
     const responseText = traceResponseText(trace) || (status === "error" ? t("home.trace.resultError") : t("home.trace.resultOk"));
@@ -180,8 +184,8 @@ function createClaraCoreHomeTrace({ t, escapeHtml, safeJsonObject, getSnapshot }
   }
 
   function traceCompactRow(trace) {
-    const status = trace.status === "error" ? "error" : "ok";
-    const statusText = status === "error" ? t("home.trace.statusError") : t("home.trace.statusOk");
+    const status = traceStatus(trace);
+    const statusText = t(status === "error" ? "home.trace.statusError" : status === "ok" ? "home.trace.statusOk" : "home.trace.statusUnknown");
     return `
       <article class="trace-compact-row ${escapeHtml(status)}">
         <span class="trace-compact-dot"></span>
@@ -196,7 +200,8 @@ function createClaraCoreHomeTrace({ t, escapeHtml, safeJsonObject, getSnapshot }
 
   function agentActivityState(trace) {
     if (!trace) return { className: "idle", label: t("connections.agentRecorded") };
-    if (trace.status === "error") return { className: "error", label: t("home.trace.statusError") };
+    if (traceStatus(trace) === "error") return { className: "error", label: t("home.trace.statusError") };
+    if (traceStatus(trace) === "unknown") return { className: "idle", label: t("home.trace.statusUnknown") };
     const age = Date.now() - traceTimestamp(trace);
     if (age <= 5 * 60 * 1000) return { className: "active", label: t("connections.agentJustCalled") };
     if (age <= 60 * 60 * 1000) return { className: "recent", label: t("connections.agentRecentlyCalled") };
@@ -225,6 +230,7 @@ function createClaraCoreHomeTrace({ t, escapeHtml, safeJsonObject, getSnapshot }
   return {
     actionableGatewayErrors,
     agentActivityState,
+    traceStatus,
     formatRelativeTime,
     renderTraceFlow,
     summarizeAgentsFromTraces,

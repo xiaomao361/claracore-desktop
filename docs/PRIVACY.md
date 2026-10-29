@@ -22,7 +22,6 @@ computer depends on the clients and model providers you choose to connect.
 | A remote Memory embedding provider | Text being embedded for Memory. |
 | An enabled InnerLife model provider | The bounded material and context used for the selected generation task. |
 | An explicitly allowed understanding planner | Submitted evidence and relevant recalled context needed to plan operations. |
-| An optional decision model | Its bounded classification request; see [Decision models](DECISION_MODELS.md). |
 
 Knowledge semantic computation is restricted to supported local models. Source
 links are not automatically crawled; opening an external link is a separate
