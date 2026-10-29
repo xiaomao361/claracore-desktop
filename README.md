@@ -41,17 +41,28 @@ specific memory, line, or source section when they need more detail.
 
 ## Download
 
-The current release is **1.0.3**. Choose **Full** for an included local embedding
-model, or **Lite** to use a local Ollama model or work without embeddings.
+The current release is **1.0.6**. Choose **Full** for an included local embedding
+model, or **Lite** to configure Ollama or an OpenAI-compatible Memory embedding
+API, or work without embeddings. Knowledge semantic search stays local.
 
 | Build | macOS Apple Silicon | Windows x64 |
 | --- | --- | --- |
-| Full | [Download DMG](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.3/ClaraCore-Desktop-1.0.3-arm64.dmg) | [Download installer](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.3/ClaraCore-Desktop-1.0.3-x64-Setup.exe) |
-| Lite | [Download DMG](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.3/ClaraCore-Desktop-1.0.3-lite-arm64.dmg) | [Download installer](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.3/ClaraCore-Desktop-1.0.3-lite-x64-Setup.exe) |
+| Full | [Download DMG](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.6/ClaraCore-Desktop-1.0.6-arm64.dmg) | [Download installer](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.6/ClaraCore-Desktop-1.0.6-x64-Setup.exe) |
+| Lite | [Download DMG](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.6/ClaraCore-Desktop-1.0.6-lite-arm64.dmg) | [Download installer](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.6/ClaraCore-Desktop-1.0.6-lite-x64-Setup.exe) |
 
 macOS packages are signed and notarized. Windows installers are unsigned.
-Checksums and changes are available on the [release page](https://github.com/xiaomao361/claracore-desktop/releases/tag/v1.0.3).
+Checksums and changes are available on the [release page](https://github.com/xiaomao361/claracore-desktop/releases/tag/v1.0.6).
 Prebuilt Linux and Intel Mac installers are not currently provided.
+
+## In 1.0.6
+
+- Read focused pages and settings, with clearer connection and recall evidence.
+- Search and switch agents without stale results; page through Shared Lines and
+  share history, and read original InnerLife text by record.
+- Keep operation success distinct from refresh failure, and retain readable
+  Knowledge entries when another document fails.
+
+See the [changelog](CHANGELOG.md) and [release record](docs/RELEASE_1.0.6.md).
 
 ## Get started
 

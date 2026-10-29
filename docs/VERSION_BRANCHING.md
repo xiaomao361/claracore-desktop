@@ -2,13 +2,15 @@
 
 `package.json` is the application version source. Stable releases use a matching
 `vX.Y.Z` tag and a GitHub Release with platform/flavor installers and checksums.
-The current stable release is [1.0.3](https://github.com/xiaomao361/claracore-desktop/releases/tag/v1.0.3).
-The working source is 1.0.6 (unreleased); a source version bump does not publish
-installers or change the stable release.
-The 1.0.4 and unsigned 1.0.5/1.0.6 Lite local test builds were delivered on 2026-10-27;
-they are not public releases and are separate from the later working source.
-The [1.0.6 test baseline](AGENT_EXPERIENCE_TESTING.md) records the delivered
-artifact, verified behavior, separate hook checkpoint, and pending user checks.
+The current stable release is [1.0.6](https://github.com/xiaomao361/claracore-desktop/releases/tag/v1.0.6).
+It ships Full and Lite for macOS Apple Silicon and Windows x64. macOS packages
+are signed and notarized; Windows installers are unsigned. The release tag
+freezes packaged application source. Later documentation and website commits
+do not move that tag. See the [1.0.6 release record](RELEASE_1.0.6.md).
+
+The 1.0.4/1.0.5 and earlier unsigned 1.0.6 local test builds are historical test
+artifacts, distinct from this public 1.0.6. The [test baseline](AGENT_EXPERIENCE_TESTING.md)
+retains their scope and acceptance limits.
 
 ## Source and branch policy
 

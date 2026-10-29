@@ -49,7 +49,7 @@ and staple the appropriate artifacts. Verify code signature, notarization,
 Gatekeeper assessment, DMG integrity, and checksums for the actual release.
 
 Ordinary local `dist:mac` output is not equivalent to a signed, notarized release.
-Published 1.0.3 macOS packages are signed and notarized. Its Windows installers
+Published 1.0.6 macOS packages are signed and notarized. Its Windows installers
 are unsigned; do not label a successful Windows build as signed.
 
 ## Freeze and publish

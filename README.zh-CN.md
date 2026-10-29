@@ -26,17 +26,25 @@ ClaraCore Desktop 是供 AI 智能体使用的本地记忆与连续性工作区�
 
 ## 下载安装
 
-当前版本为 **1.0.3**。Full 内置本地向量模型；Lite 不附带模型，
-可以使用本机 Ollama，或者关闭向量能力。
+当前版本为 **1.0.6**。Full 内置本地向量模型；Lite 不附带模型，
+可以配置 Ollama 或 OpenAI-compatible 记忆向量接口，也可关闭向量能力。知识库语义检索仍限定本机。
 
 | 版本 | macOS Apple Silicon | Windows x64 |
 | --- | --- | --- |
-| Full | [下载 DMG](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.3/ClaraCore-Desktop-1.0.3-arm64.dmg) | [下载安装程序](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.3/ClaraCore-Desktop-1.0.3-x64-Setup.exe) |
-| Lite | [下载 DMG](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.3/ClaraCore-Desktop-1.0.3-lite-arm64.dmg) | [下载安装程序](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.3/ClaraCore-Desktop-1.0.3-lite-x64-Setup.exe) |
+| Full | [下载 DMG](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.6/ClaraCore-Desktop-1.0.6-arm64.dmg) | [下载安装程序](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.6/ClaraCore-Desktop-1.0.6-x64-Setup.exe) |
+| Lite | [下载 DMG](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.6/ClaraCore-Desktop-1.0.6-lite-arm64.dmg) | [下载安装程序](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.6/ClaraCore-Desktop-1.0.6-lite-x64-Setup.exe) |
 
 macOS 安装包已签名并公证，Windows 安装程序暂未签名。
-校验清单和版本说明见 [Release](https://github.com/xiaomao361/claracore-desktop/releases/tag/v1.0.3)。
+校验清单和版本说明见 [Release](https://github.com/xiaomao361/claracore-desktop/releases/tag/v1.0.6)。
 目前没有提供 Linux 和 Intel Mac 的预编译安装包。
+
+## 1.0.6 的改进
+
+- 精简阅读页面与设置分区，明确接入、回召和使用证据。
+- 修复搜索及智能体切换的旧响应错配；共同线、分享历史可继续翻页，内在活动按记录读取原文。
+- 数据操作成功与页面刷新失败分开提示；单篇知识文档读取失败不阻断其他资料。
+
+详见[更新记录](CHANGELOG.md)和[发布记录](docs/RELEASE_1.0.6.md)。
 
 ## 三步接入
 
