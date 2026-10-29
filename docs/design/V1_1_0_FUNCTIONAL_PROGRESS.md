@@ -57,8 +57,8 @@
 
 2026-10-29 已生成本地未签名、未公证的 macOS arm64 Lite 测试包，应用版本仍为 1.0.6，构建标识 `test-1.0.6-continuation-unsigned-20261029100529`。它包含此前精简、日志、助手接入与共同线接续改动，不是 1.1.0 正式发布。
 
-- [安装包](../../dist-lite/test-1.0.6-continuation-unsigned-20261029100529/ClaraCore-Desktop-1.0.6-lite-arm64.dmg)，127,058,428 字节（约 121 MiB）。
-- [测试说明](../../dist-lite/test-1.0.6-continuation-unsigned-20261029100529/TEST-BUILD.txt)、[源码清单](../../dist-lite/test-1.0.6-continuation-unsigned-20261029100529/SOURCE-MANIFEST.json)、[包内验证](../../dist-lite/test-1.0.6-continuation-unsigned-20261029100529/PACKAGE-VERIFICATION.json)、[DMG 内容验证](../../dist-lite/test-1.0.6-continuation-unsigned-20261029100529/DMG-VERIFICATION.json)。
+- 安装包（本地历史文件 `dist-lite/test-1.0.6-continuation-unsigned-20261029100529/ClaraCore-Desktop-1.0.6-lite-arm64.dmg`），127,058,428 字节（约 121 MiB）。
+- 测试说明（本地历史文件 `dist-lite/test-1.0.6-continuation-unsigned-20261029100529/TEST-BUILD.txt`）、源码清单（本地历史文件 `dist-lite/test-1.0.6-continuation-unsigned-20261029100529/SOURCE-MANIFEST.json`）、包内验证（本地历史文件 `dist-lite/test-1.0.6-continuation-unsigned-20261029100529/PACKAGE-VERIFICATION.json`）、DMG 内容验证（本地历史文件 `dist-lite/test-1.0.6-continuation-unsigned-20261029100529/DMG-VERIFICATION.json`）。
 - SHA-256：`8df202fb888615180f50ced4544f66c1fa428cea6c5ec6f0eceafa36c669fba7`。
 
 重新执行常规 check 与 diff 检查通过；231 个产品源码文件与包内内容一致，Lite 应用约 294.5 MiB。包内可执行程序以 Node 模式运行隔离 Gateway，验证连接、准确共同线读回、可选下一步和缺失 ID 的失败结果；没有打开 GUI 或调用外部模型。DMG 校验通过，挂载后对其中应用的 280 项文件及符号链接逐项比对一致，随后卸载。未安装、重启日常应用、提交、推送或发布。之前“未打包”的陈述为此前阶段记录；当前新增测试包，真实体验仍待用户测试。

@@ -28,6 +28,8 @@ function checkPublicDocs() {
       if (!relative) continue;
       const absolute = path.resolve(root, path.dirname(file), relative);
       assert(absolute.startsWith(`${root}${path.sep}`), `Link escapes repository in ${file}: ${target}`);
+      const top = path.relative(root, absolute).split(path.sep)[0];
+      assert(!["dist", "dist-lite", "site-dist"].includes(top), `Public link targets local build output in ${file}: ${target}`);
       assert(fs.existsSync(absolute), `Broken link in ${file}: ${target}`);
       links += 1;
     }

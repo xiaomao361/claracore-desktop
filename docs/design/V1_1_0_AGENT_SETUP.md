@@ -24,7 +24,7 @@
 
 ## 当前测试包
 
-2026-10-29 应用户要求打包：[macOS arm64 Lite 安装包](../../dist-lite/test-1.0.6-agent-access-unsigned-20261029142257/ClaraCore-Desktop-1.0.6-lite-arm64.dmg) · [观察说明](../../dist-lite/test-1.0.6-agent-access-unsigned-20261029142257/TEST-BUILD.txt)。1.0.6，未签名、未公证，127,055,846 字节（约 121 MiB）。包含全局智能体称谓、连接页排版与有界活动区、普通保存提示 3 秒自动清理，以及此前模型/API/设置改动。先前「未打包」描述为当时状态。
+2026-10-29 应用户要求打包：macOS arm64 Lite 安装包（本地历史文件 `dist-lite/test-1.0.6-agent-access-unsigned-20261029142257/ClaraCore-Desktop-1.0.6-lite-arm64.dmg`） · 观察说明（本地历史文件 `dist-lite/test-1.0.6-agent-access-unsigned-20261029142257/TEST-BUILD.txt`）。1.0.6，未签名、未公证，127,055,846 字节（约 121 MiB）。包含全局智能体称谓、连接页排版与有界活动区、普通保存提示 3 秒自动清理，以及此前模型/API/设置改动。先前「未打包」描述为当时状态。
 
 常规 check/diff 通过，233 产品源码与包内一致。直接从包内读取客户端代码运行 Settings 提示生命周期和接入/接续 DOM 回归通过，另断言智能体称谓及活动高度样式已进入包内，见 `AGENT-ACCESS-DELIVERY.json`。Lite 应用约 294.8 MiB；包内隔离 Gateway/共同线/新安装默认值与包内兼容 API 本地模拟通过。DMG 校验和只读挂载后 280 项文件/链接比对通过，并已卸载。
 
@@ -39,4 +39,4 @@ SHA-256：`8a4eb0f32307c301b56c4674eeaac26126c4dc45e69897f17f12384867443681`。�
 
 新增 CSSOM 解析回归，针对实际 HTML 节点检查600/900/1400规则集下外层单列、直属区域自动放置、调用区整行，并纳入 continuation 常规检查。这是样式契约测试，不计算浏览器几何，不等同实际渲染。常规check/diff、包内233源码一致、包内DOM和CSS契约、Lite资源、隔离Gateway/共同线/默认值、DMG校验及挂载280文件/链接比对通过。镜像已卸载、测试服务已停止。
 
-已直接生成替换包：[安装包](../../dist-lite/test-1.0.6-agent-layout-fix-unsigned-20261029142748/ClaraCore-Desktop-1.0.6-lite-arm64.dmg) · [说明](../../dist-lite/test-1.0.6-agent-layout-fix-unsigned-20261029142748/TEST-BUILD.txt)。1.0.6 Lite macOS arm64，未签名未公证，127,056,481字节，SHA-256 `33352111784ab575f2a94d08795504f99c801523a0857786affdf70a84aa1c4f`。保留此前全部设置/API与3秒提示修复；未启动GUI或安装/改变用户配置、提交推送正式发布。实际纠正效果仍待用户观察。
+已直接生成替换包：安装包（本地历史文件 `dist-lite/test-1.0.6-agent-layout-fix-unsigned-20261029142748/ClaraCore-Desktop-1.0.6-lite-arm64.dmg`） · 说明（本地历史文件 `dist-lite/test-1.0.6-agent-layout-fix-unsigned-20261029142748/TEST-BUILD.txt`）。1.0.6 Lite macOS arm64，未签名未公证，127,056,481字节，SHA-256 `33352111784ab575f2a94d08795504f99c801523a0857786affdf70a84aa1c4f`。保留此前全部设置/API与3秒提示修复；未启动GUI或安装/改变用户配置、提交推送正式发布。实际纠正效果仍待用户观察。

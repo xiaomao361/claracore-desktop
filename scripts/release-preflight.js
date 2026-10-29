@@ -26,6 +26,23 @@ function windowsAssets(version) {
   ];
 }
 
+// GitHub's tag endpoint omits drafts, even for authenticated callers.
+// Only a real 404 permits the authenticated release-list fallback.
+function readRelease(repository, tag, api) {
+  try { return api(`repos/${repository}/releases/tags/${encodeURIComponent(tag)}`); }
+  catch (error) {
+    if (error.status !== 404 && !/HTTP 404|"status":\s*"?404/.test(String(error.message))) throw error;
+    for (let page = 1; page <= 100; page += 1) {
+      const releases = api(`repos/${repository}/releases?per_page=100&page=${page}`);
+      assert(Array.isArray(releases), "Release inventory is unavailable");
+      const release = releases.find(item => item.tag_name === tag);
+      if (release) return release;
+      if (releases.length < 100) throw new Error(`Existing GitHub Release is required: ${tag}`);
+    }
+    throw new Error("Release inventory exceeds the bounded lookup limit");
+  }
+}
+
 function validatePublication({ repository, sourceSha, version, publishTag }, api = githubJson) {
   if (!publishTag) return;
   checkRepository(repository);
@@ -34,7 +51,7 @@ function validatePublication({ repository, sourceSha, version, publishTag }, api
   assert.equal(publishTag, `v${version}`, "Release tag and checked-out package version differ");
   const target = api(`repos/${repository}/commits/${encodeURIComponent(`refs/tags/${publishTag}`)}`);
   assert.equal(checkSha(target.sha), sourceSha, "Release tag and build source point to different commits");
-  const release = api(`repos/${repository}/releases/tags/${encodeURIComponent(publishTag)}`);
+  const release = readRelease(repository, publishTag, api);
   assert.equal(release.tag_name, publishTag, "Existing GitHub Release is required");
   assert(Array.isArray(release.assets), "GitHub Release asset inventory is unavailable");
   const collisions = release.assets.filter(asset => windowsAssets(version).includes(asset.name));

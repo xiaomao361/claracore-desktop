@@ -47,6 +47,18 @@ assert.doesNotThrow(() => validatePublication(publication, endpoint => endpoint.
 assert.throws(() => verifyCheckout({ ...publication, expectedSha: otherSha }, api), /resolved build source/);
 assert.doesNotThrow(() => verifyCheckout({ ...publication, expectedSha: sourceSha }, api));
 assert.doesNotThrow(() => verifyCheckout({ sourceSha, expectedSha: sourceSha }, () => { throw new Error("No publication requested"); }));
+const draftApi = endpoint => {
+  if (endpoint.includes("/commits/")) return { sha: sourceSha };
+  if (endpoint.includes("/releases/tags/")) throw Object.assign(new Error("HTTP 404"), { status: 404 });
+  if (endpoint.endsWith("page=1")) return Array.from({ length: 100 }, (_, n) => ({ tag_name: `old-${n}`, assets: [] }));
+  if (endpoint.endsWith("page=2")) return [{ tag_name: publishTag, draft: true, assets: [] }];
+  throw new Error(`Unexpected endpoint ${endpoint}`);
+};
+assert.doesNotThrow(() => validatePublication(publication, draftApi));
+assert.throws(() => validatePublication(publication, endpoint => endpoint.includes("/commits/") ? { sha: sourceSha }
+  : endpoint.includes("/releases/tags/") ? (() => { throw new Error("HTTP 404"); })() : []), /Existing GitHub Release/);
+assert.throws(() => validatePublication(publication, endpoint => endpoint.includes("/commits/") ? { sha: sourceSha }
+  : endpoint.includes("/releases/tags/") ? (() => { throw new Error("HTTP 403"); })() : []), /HTTP 403/);
 const failedCli = spawnSync(process.execPath, [path.join(__dirname, "release-preflight.js"), "verify"], {
   encoding: "utf8", timeout: 5000,
   cwd: path.resolve(__dirname, ".."),

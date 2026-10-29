@@ -13,6 +13,6 @@
 
 ## 测试包
 
-[安装包](../../dist-lite/test-1.0.6-module-layout-unsigned-20261029143515/ClaraCore-Desktop-1.0.6-lite-arm64.dmg) · [观察说明](../../dist-lite/test-1.0.6-module-layout-unsigned-20261029143515/TEST-BUILD.txt)。1.0.6 Lite macOS arm64，未签名未公证，127,056,677字节。SHA-256 `8c10f4f42bca4e4ce634c1fed041080f5270858790438edb0ef976647476e73d`。
+安装包（本地历史文件 `dist-lite/test-1.0.6-module-layout-unsigned-20261029143515/ClaraCore-Desktop-1.0.6-lite-arm64.dmg`） · 观察说明（本地历史文件 `dist-lite/test-1.0.6-module-layout-unsigned-20261029143515/TEST-BUILD.txt`）。1.0.6 Lite macOS arm64，未签名未公证，127,056,677字节。SHA-256 `8c10f4f42bca4e4ce634c1fed041080f5270858790438edb0ef976647476e73d`。
 
 `npm run check`、diff通过；233产品源码包内一致。包内四页结构契约、Settings提示/接入接续DOM、Lite资源294.5MiB、隔离Gateway/共同线/默认值、DMG及挂载280文件/链接检查通过。镜像已卸载、测试服务停止。未GUI验收、安装或改变日常配置、提交推送正式发布。此前连接页隐式列和提示清理修复均包含。

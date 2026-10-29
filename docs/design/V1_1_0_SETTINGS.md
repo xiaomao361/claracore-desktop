@@ -66,7 +66,7 @@
 
 ## 设置页测试包
 
-[安装包](../../dist-lite/test-1.0.6-settings-unsigned-20261029104155/ClaraCore-Desktop-1.0.6-lite-arm64.dmg) · [测试说明](../../dist-lite/test-1.0.6-settings-unsigned-20261029104155/TEST-BUILD.txt)。应用版本 1.0.6 Lite / macOS arm64，未签名、未公证，大小 127,057,633 字节（约 121 MiB）。
+安装包（本地历史文件 `dist-lite/test-1.0.6-settings-unsigned-20261029104155/ClaraCore-Desktop-1.0.6-lite-arm64.dmg`） · 测试说明（本地历史文件 `dist-lite/test-1.0.6-settings-unsigned-20261029104155/TEST-BUILD.txt`）。应用版本 1.0.6 Lite / macOS arm64，未签名、未公证，大小 127,057,633 字节（约 121 MiB）。
 
 231 个产品源码文件与包内一致；Lite 资源、包内隔离 HTTP 连接及共同线读回、新安装无凭据且生成关闭、DMG 校验均通过。挂载后的应用 280 项文件及符号链接与已验证输出一致，随后已卸载。包内验证未打开 UI 或调用真实外部模型，测试 Gateway 已停止。
 
@@ -75,7 +75,7 @@ SHA-256：`e51a74a0ae4c930c30efbacc1755a3819555a03a7245a80670353bdb3002efba`。�
 
 ## 弹窗结构测试包（当前）
 
-[安装包](../../dist-lite/test-1.0.6-settings-modal-unsigned-20261029113356/ClaraCore-Desktop-1.0.6-lite-arm64.dmg) · [测试说明](../../dist-lite/test-1.0.6-settings-modal-unsigned-20261029113356/TEST-BUILD.txt)。1.0.6 Lite / macOS arm64，未签名、未公证，127,058,630 字节（约 121 MiB）。本包取代旧设置包用于本轮结构观察，旧包保留。
+安装包（本地历史文件 `dist-lite/test-1.0.6-settings-modal-unsigned-20261029113356/ClaraCore-Desktop-1.0.6-lite-arm64.dmg`） · 测试说明（本地历史文件 `dist-lite/test-1.0.6-settings-modal-unsigned-20261029113356/TEST-BUILD.txt`）。1.0.6 Lite / macOS arm64，未签名、未公证，127,058,630 字节（约 121 MiB）。本包取代旧设置包用于本轮结构观察，旧包保留。
 
 常规 `npm run check` 通过；最终语法、Settings 专项、`git diff --check` 通过。232 个产品源码文件与包内一致，Lite 资源检查及包内隔离连接/共同线/新安装默认值验证通过。DMG 校验通过，挂载后应用 280 项文件及符号链接一致并已卸载。测试服务已停止，没有启动 GUI、安装或替换日常应用。
 
@@ -94,7 +94,7 @@ SHA-256：`e0160dfbf9587f37ce806a3ee1ba252dc55404aed45afd6c14bcafa81de6d95a`。�
 常规 `npm run check` 与 `git diff --check` 通过。没有启动 GUI 或做窗口操作；实际关闭位置、窄宽排版与观感仍待用户在本轮替换包观察。上述原因为源码和用户截图共同支持，不能把 DOM 模拟当成渲染验证。
 
 
-本轮替换包：[安装包](../../dist-lite/test-1.0.6-settings-fix-unsigned-20261029114350/ClaraCore-Desktop-1.0.6-lite-arm64.dmg) · [说明](../../dist-lite/test-1.0.6-settings-fix-unsigned-20261029114350/TEST-BUILD.txt)。1.0.6 Lite macOS arm64，未签名、未公证；127,059,139 字节。232 个产品源码与包内一致，Lite 资源和包内隔离 Gateway/共同线验证通过；DMG 校验及挂载后 280 项文件/链接比对通过并已卸载。SHA-256：`b56abb42e7b97adcaa4895542d46bb2fe4c2488caf73db971c168463701e63b0`。无 GUI 验收、安装、提交推送或正式发布。
+本轮替换包：安装包（本地历史文件 `dist-lite/test-1.0.6-settings-fix-unsigned-20261029114350/ClaraCore-Desktop-1.0.6-lite-arm64.dmg`） · 说明（本地历史文件 `dist-lite/test-1.0.6-settings-fix-unsigned-20261029114350/TEST-BUILD.txt`）。1.0.6 Lite macOS arm64，未签名、未公证；127,059,139 字节。232 个产品源码与包内一致，Lite 资源和包内隔离 Gateway/共同线验证通过；DMG 校验及挂载后 280 项文件/链接比对通过并已卸载。SHA-256：`b56abb42e7b97adcaa4895542d46bb2fe4c2488caf73db971c168463701e63b0`。无 GUI 验收、安装、提交推送或正式发布。
 
 
 ## 移除运行信息
@@ -137,7 +137,7 @@ SHA-256：`e0160dfbf9587f37ce806a3ee1ba252dc55404aed45afd6c14bcafa81de6d95a`。�
 
 ## 设置页整体体验包（当前交付）
 
-2026-10-29 用户要求将最近几轮改动一起打包。已生成 [macOS arm64 Lite 测试包](../../dist-lite/test-1.0.6-settings-review-unsigned-20261029133609/ClaraCore-Desktop-1.0.6-lite-arm64.dmg) 与[整体观察说明](../../dist-lite/test-1.0.6-settings-review-unsigned-20261029133609/TEST-BUILD.txt)，版本仍为 1.0.6，未签名、未公证，127,058,267 字节（约 121 MiB）。此前几段「尚未打包」为当时记录，本包已包含运行信息删除、模型弹窗修复、回召记忆与 MCP 配置、外部知识库与数据区整合。
+2026-10-29 用户要求将最近几轮改动一起打包。已生成 macOS arm64 Lite 测试包（本地历史文件 `dist-lite/test-1.0.6-settings-review-unsigned-20261029133609/ClaraCore-Desktop-1.0.6-lite-arm64.dmg`） 与整体观察说明（本地历史文件 `dist-lite/test-1.0.6-settings-review-unsigned-20261029133609/TEST-BUILD.txt`），版本仍为 1.0.6，未签名、未公证，127,058,267 字节（约 121 MiB）。此前几段「尚未打包」为当时记录，本包已包含运行信息删除、模型弹窗修复、回召记忆与 MCP 配置、外部知识库与数据区整合。
 
 重新执行 `npm run check`、`git diff --check` 通过；232 产品源码逐项与包内一致。额外从包内断言八个编辑入口、无运行信息与关于编辑器、版本更新在主页、知识库/回召/MCP名称、三行数据区与新模型字段样式，见 `SETTINGS-DELIVERY.json`，并非 GUI 验收。Lite 资源（应用约 294.5 MiB）、包内隔离 Gateway/共同线/新安装默认值检查通过。DMG 校验及只读挂载后 280 项文件/链接比对通过，镜像已卸载，测试服务已停止。
 
@@ -157,7 +157,7 @@ SHA-256：`a403d337091a4228195475704127b0e76e90574a4dcd2db50e8fd094fd904363`。�
 
 ## 模型配置测试包（当前交付）
 
-2026-10-29 按用户要求打包本次合并与 API 兼容改动：[macOS arm64 Lite 安装包](../../dist-lite/test-1.0.6-model-settings-unsigned-20261029135500/ClaraCore-Desktop-1.0.6-lite-arm64.dmg) · [说明](../../dist-lite/test-1.0.6-model-settings-unsigned-20261029135500/TEST-BUILD.txt)。版本仍为 1.0.6，未签名、未公证，127,060,549 字节（约 121 MiB）。包含上一整体包全部设置改动，以及新的单入口/双模型分区、记忆兼容 API/密钥、自定义前缀处理。此前本轮「未打包」为历史状态。
+2026-10-29 按用户要求打包本次合并与 API 兼容改动：macOS arm64 Lite 安装包（本地历史文件 `dist-lite/test-1.0.6-model-settings-unsigned-20261029135500/ClaraCore-Desktop-1.0.6-lite-arm64.dmg`） · 说明（本地历史文件 `dist-lite/test-1.0.6-model-settings-unsigned-20261029135500/TEST-BUILD.txt`）。版本仍为 1.0.6，未签名、未公证，127,060,549 字节（约 121 MiB）。包含上一整体包全部设置改动，以及新的单入口/双模型分区、记忆兼容 API/密钥、自定义前缀处理。此前本轮「未打包」为历史状态。
 
 常规 `npm run check` 与 `git diff --check` 通过；233 产品源码与包内一致。`SETTINGS-DELIVERY.json` 确认七个编辑入口、一个 models 入口内双分区/独立保存、兼容接口与密钥控件及此前数据区等内容。Lite 资源约 294.5 MiB、包内隔离 Gateway/共同线与新安装默认值检查通过。另使用包内 Electron 的 Node 模式、包内数据库及模型模块跑本地 HTTP fixture，验证列表/embedding/chat 请求、前缀、密钥、HTTP 拒绝和畸形向量，未调用真实外部服务。初次 fixture 因 VM 跨 realm 数组原型比较误报，改为同 realm 执行测试后通过，未改产品代码。DMG 校验及只读挂载后 280 文件/链接比对通过并卸载。
 
