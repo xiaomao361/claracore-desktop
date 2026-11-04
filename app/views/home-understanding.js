@@ -1,11 +1,14 @@
-function createClaraCoreHomeUnderstanding({ root, api, t, getSnapshot, onOpenLine }) {
+function createClaraCoreHomeUnderstanding({ root, api, t, getSnapshot, onOpenLine, formatTime = (value) => String(value ?? "") }) {
   const select = root.querySelector("#homeTopicSelect");
   const notice = root.querySelector("#homeTopicNotice");
   const body = root.querySelector("#homeUnderstandingBody");
   const markdown = typeof module !== "undefined" && module.exports ? require("../knowledge-markdown") : window.ClaraCoreKnowledgeMarkdown;
+  const ribbon = typeof module !== "undefined" && module.exports ? require("./shared-line-ribbon") : window.ClaraCoreSharedLineRibbon;
   const CATALOG_LIMIT = 10;
   const REFERENCE_LIMIT = 6;
   const PREVIEW_LIMIT = 420;
+  const OTHER_LINE_LIMIT = 3;
+  const OTHER_LINE_PREVIEW_LIMIT = 80;
   let active = false;
   let selectedLineId = "";
   let selectionWasRemoved = false;
@@ -64,8 +67,8 @@ function createClaraCoreHomeUnderstanding({ root, api, t, getSnapshot, onOpenLin
     notice.hidden = !message;
   }
 
-  function setBody(markup) {
-    markup = renderFusion() + markup;
+  function setBody(lead, trail = "") {
+    const markup = lead + renderFusion() + trail;
     if (markup === bodyMarkup) return;
     body.innerHTML = markup;
     bodyMarkup = markup;
@@ -82,7 +85,7 @@ function createClaraCoreHomeUnderstanding({ root, api, t, getSnapshot, onOpenLin
       innerlife: unique.filter(value => /^inner_share_[a-zA-Z0-9_-]+$/u.test(value)).length
     };
     const domains = ["memory", "knowledge", "shared-line", "innerlife"];
-    return `<div class="understanding-fusion"><nav class="understanding-sources" aria-label="${escapeHtml(t("home.fusion.label"))}">${domains.map(domain => {
+    return `<div class="understanding-fusion"><svg class="understanding-streams" viewBox="0 0 1000 18" preserveAspectRatio="none" aria-hidden="true" focusable="false">${domains.map((domain, index) => `<path data-domain="${domain}" data-linked="${ready && (domain === "shared-line" || counts[domain] > 0)}" d="M${125 + index * 250} 0 V18"/>`).join("")}</svg><nav class="understanding-sources" aria-label="${escapeHtml(t("home.fusion.label"))}">${domains.map(domain => {
       const linked = ready && (domain === "shared-line" || counts[domain] > 0);
       const action = domain === "shared-line" && ready
         ? `data-understanding-action="open-line" data-shared-line-id="${escapeHtml(selectedLineId)}"`
@@ -91,7 +94,7 @@ function createClaraCoreHomeUnderstanding({ root, api, t, getSnapshot, onOpenLin
         : domain === "shared-line" ? t("home.fusion.currentPosition")
           : counts[domain] ? t("home.fusion.references", { count: String(counts[domain]) }) : t("home.fusion.noReference");
       return `<button type="button" class="understanding-source" data-domain="${domain}" data-linked="${linked}" ${action}><span class="understanding-source-heading"><span class="nav-icon nav-icon-${domain}" aria-hidden="true"></span><strong>${escapeHtml(t(`home.fusion.${domain}`))}</strong></span><span class="understanding-source-role">${escapeHtml(t(`home.fusion.${domain}Role`))}</span><span class="understanding-source-status">${escapeHtml(status)}</span></button>`;
-    }).join("")}</nav><svg class="understanding-streams" viewBox="0 0 1000 68" preserveAspectRatio="none" aria-hidden="true" focusable="false">${domains.map((domain, index) => `<path data-domain="${domain}" data-linked="${ready && (domain === "shared-line" || counts[domain] > 0)}" d="M${125 + index * 250} 0 C${125 + index * 250} 44 500 18 500 66"/>`).join("")}<circle cx="500" cy="64" r="3"/></svg><p class="understanding-fusion-center">${escapeHtml(t("home.fusion.center"))}</p><p class="understanding-fusion-note">${escapeHtml(t("home.fusion.note"))}</p></div>`;
+    }).join("")}</nav><p class="understanding-fusion-note">${escapeHtml(t("home.fusion.note"))}</p></div>`;
   }
 
   function catalogAction() {
@@ -109,6 +112,39 @@ function createClaraCoreHomeUnderstanding({ root, api, t, getSnapshot, onOpenLin
 
   function prose(value, empty = false) {
     return `<div class="understanding-prose reading-prose${empty ? " understanding-empty-copy" : ""}">${markdown.render(value, "", { reading: true, linkMode: "text" })}</div>`;
+  }
+
+  function pastPositionLabels(position) {
+    const history = Array.isArray(detail?.history) ? detail.history : [];
+    return history
+      .filter((item) => text(item?.summary) && item.summary !== position.summary && text(item?.createdAt))
+      .slice(0, 3)
+      .map((item) => ribbon.shortDate(item.createdAt))
+      .reverse();
+  }
+
+  function renderRibbon(position, nextStep) {
+    const pastLabels = pastPositionLabels(position);
+    const currentLabel = ribbon.shortDate(position.updatedAt, true);
+    return ribbon.render({
+      preset: "hero",
+      idPrefix: "homeRibbon",
+      ariaLabel: t("sharedLine.ribbonLabel", { positions: [...pastLabels, currentLabel].filter(Boolean).join("、") }),
+      pastLabels,
+      currentLabel,
+      nextLabel: nextStep ? t("home.understanding.nextStep") : ""
+    });
+  }
+
+  function renderOtherLines() {
+    const others = currentLines.filter((line) => line.id !== selectedLineId).slice(0, OTHER_LINE_LIMIT);
+    if (!others.length) return "";
+    return `<section class="understanding-others"><h3>${escapeHtml(t("home.understanding.otherLines"))}</h3><div class="understanding-other-list">${others.map((line) => {
+      const summary = Array.from(text(line.summary));
+      const shortSummary = summary.length > OTHER_LINE_PREVIEW_LIMIT ? `${summary.slice(0, OTHER_LINE_PREVIEW_LIMIT).join("")}…` : summary.join("");
+      const updatedAt = formatTime(line.positionUpdatedAt || line.updatedAt);
+      return `<button type="button" class="understanding-other" data-understanding-action="select-line" data-shared-line-id="${escapeHtml(line.id)}"><strong>${escapeHtml(text(line.title) || line.id)}</strong>${shortSummary ? `<span>${escapeHtml(shortSummary)}</span>` : ""}${updatedAt ? `<time>${escapeHtml(updatedAt)}</time>` : ""}</button>`;
+    }).join("")}</div></section>`;
   }
 
   function renderSelector() {
@@ -162,21 +198,23 @@ function createClaraCoreHomeUnderstanding({ root, api, t, getSnapshot, onOpenLin
       ? position.factsUsed
       : Array.isArray(metadata.factsUsed) ? metadata.factsUsed : [];
     references = recordedReferences.filter((reference) => typeof reference === "string" && reference.trim());
+    const updatedAt = formatTime(position.updatedAt);
+    const updatedMeta = [updatedAt ? t("sharedLine.updatedAt", { time: updatedAt }) : "", text(position.agentId)].filter(Boolean).join(" · ");
     setStatus("ready");
     setBody(`<div class="understanding-layout" data-has-references="${references.length > 0}">
       <div class="understanding-main">
-        <header class="understanding-topic-heading"><p class="understanding-eyebrow">${escapeHtml(t("home.understanding.currentTopic"))}</p><h2>${escapeHtml(title)}</h2></header>
+        <header class="understanding-topic-heading"><p class="understanding-eyebrow">${escapeHtml(t("home.understanding.currentTopic"))}</p><h2>${escapeHtml(title)}</h2>${updatedMeta ? `<p class="understanding-meta">${escapeHtml(updatedMeta)}</p>` : ""}</header>
         ${section("home.understanding.position", position.summary, "home.understanding.noPosition", "understanding-position")}
         ${nextStep ? section("home.understanding.nextStep", nextStep, "home.understanding.noNextStep", "understanding-next-step") : ""}
         ${confirmedGround ? section("home.understanding.recordedUnderstanding", confirmedGround, "", "understanding-ground") : ""}
         ${provisionalRead || misreadRisks ? `<section class="understanding-section understanding-unresolved"><h3>${escapeHtml(t("home.understanding.unresolved"))}</h3>${provisionalRead ? prose(preview(provisionalRead)) : ""}${misreadRisks ? prose(preview(misreadRisks)) : ""}</section>` : ""}
         <footer class="understanding-actions">${fullLineAction()}${currentLines.length > CATALOG_LIMIT ? catalogAction() : ""}</footer>
       </div>
-      <aside class="understanding-evidence"><h3>${escapeHtml(t("home.understanding.evidence"))}</h3>${references.length ? `<p class="understanding-evidence-note">${escapeHtml(t("home.understanding.evidenceNote"))}</p>` : ""}
+      <div class="understanding-visual">${renderRibbon(position, nextStep)}</div>
+    </div>`, `<aside class="understanding-evidence"><h3>${escapeHtml(t("home.understanding.evidence"))}</h3>${references.length ? `<p class="understanding-evidence-note">${escapeHtml(t("home.understanding.evidenceNote"))}</p>` : ""}
         ${references.length ? `<ul class="understanding-reference-list">${references.slice(0, REFERENCE_LIMIT).map((reference, index) => `<li><code class="understanding-reference">${escapeHtml(reference)}</code><button type="button" class="text-button understanding-copy" data-understanding-action="copy-reference" data-reference-index="${index}" aria-label="${escapeHtml(t("home.understanding.copyReferenceNumber", { number: String(index + 1) }))}">${escapeHtml(t("home.understanding.copyReference"))}</button></li>`).join("")}</ul>` : `<p class="understanding-empty-copy">${escapeHtml(t("home.understanding.noReferences"))}</p>`}
         ${references.length > REFERENCE_LIMIT ? fullLineAction("home.understanding.allReferences") : ""}
-      </aside>
-    </div>`);
+      </aside>${renderOtherLines()}`);
   }
 
   function stampFor(catalog, lineId) {
@@ -280,16 +318,19 @@ function createClaraCoreHomeUnderstanding({ root, api, t, getSnapshot, onOpenLin
     setBody(`<div class="understanding-empty"><p>${escapeHtml(t("home.understanding.catalogFailedBody"))}</p><button type="button" class="secondary-button" data-home-action="retry">${escapeHtml(t("home.understanding.retry"))}</button></div>`);
   }
 
-  select.addEventListener("change", () => {
-    if (!active) return;
-    const lineId = select.value || "";
-    if (lineId && !currentLines.some((line) => line.id === lineId)) return;
+  function selectLine(lineId) {
+    if (lineId && !currentLines.some((line) => line.id === lineId)) return Promise.resolve();
     invalidate();
     selectedLineId = lineId;
     selectionWasRemoved = !lineId;
     detail = null;
     attemptedStamp = "";
-    render();
+    return render();
+  }
+
+  select.addEventListener("change", () => {
+    if (!active) return;
+    selectLine(select.value || "");
   });
 
   root.addEventListener("click", async (event) => {
@@ -299,6 +340,10 @@ function createClaraCoreHomeUnderstanding({ root, api, t, getSnapshot, onOpenLin
     if (action === "retry") {
       attemptedStamp = "";
       await render();
+      return;
+    }
+    if (action === "select-line") {
+      await selectLine(button.dataset.sharedLineId || "");
       return;
     }
     if (action === "open-line") {

@@ -1,0 +1,214 @@
+/* Direction two: the current topic and its ribbon are the first focal point.
+   The four domains stay beneath it, linked only where a reference is recorded. */
+.workspace:has(#homeView.active-view) > .topbar > div:first-child {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.workspace:has(#homeView.active-view) { padding-block-start: 18px; }
+.workspace:has(#homeView.active-view) > .topbar { margin-bottom: 4px; }
+
+.home-world-heading {
+  align-items: center;
+  gap: 8px 24px;
+  margin-bottom: 14px;
+}
+
+.home-world-intro .understanding-eyebrow {
+  margin: 0;
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.home-topic-bar { gap: 8px 14px; margin-bottom: 12px; }
+.home-topic-bar label { font-size: 13px; }
+.home-topic-bar select {
+  flex: 0 1 300px;
+  min-height: 34px;
+  padding-block: 4px;
+  border-color: var(--accent-border);
+  border-radius: var(--radius-control);
+  background-color: transparent;
+}
+
+.understanding-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+  align-items: stretch;
+  gap: 0;
+  margin-top: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-hero);
+  background: linear-gradient(120deg, var(--surface) 0%, var(--surface) 46%, var(--hero-tint) 78%, var(--hero-tint-end) 100%);
+  box-shadow: var(--shadow-hero);
+}
+
+.understanding-layout[data-has-references="false"] { grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr); }
+
+.understanding-layout .understanding-main { padding: clamp(22px, 2.6vw, 32px); }
+
+.understanding-visual {
+  display: flex;
+  align-items: flex-end;
+  min-width: 0;
+}
+
+.understanding-topic-heading .understanding-eyebrow { margin-bottom: 6px; }
+
+.understanding-topic-heading h2 {
+  color: var(--title);
+  font-size: clamp(26px, 2.8vw, 34px);
+  line-height: 1.25;
+}
+
+.understanding-meta {
+  margin: 6px 0 0;
+  color: var(--faint);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.understanding-section { margin-top: 18px; }
+.understanding-section h3 { margin-bottom: 4px; font-size: 12.5px; font-weight: 600; }
+.understanding-position h3 { color: var(--endpoint); }
+.understanding-position .understanding-prose { font-size: 16.5px; line-height: 1.75; }
+
+.understanding-next-step { padding: 0; border-radius: 0; background: transparent; }
+.understanding-next-step h3 { color: var(--accent-strong); }
+.understanding-next-step .understanding-prose { color: var(--muted); }
+
+.understanding-actions { gap: 8px; margin-top: 20px; }
+.home-understanding button { border-radius: var(--radius-control); }
+
+.home-understanding .understanding-read-action {
+  min-height: 40px;
+  padding: 8px 18px;
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.home-understanding .understanding-read-action:hover {
+  background: var(--accent-strong);
+  opacity: 0.9;
+}
+
+/* Vertical links from the reading card to each domain. */
+.understanding-fusion { margin-top: 0; }
+.understanding-streams { height: 18px; }
+.understanding-streams circle { display: none; }
+
+.understanding-sources { gap: 14px; }
+
+.home-understanding .understanding-source {
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  text-align: start;
+}
+
+.home-understanding .understanding-source[data-linked="false"] {
+  border-style: dashed;
+  border-color: var(--border-strong);
+  background: transparent;
+}
+
+.understanding-source-heading { justify-content: flex-start; }
+.understanding-source-heading strong { color: var(--title); font-size: 15px; }
+.understanding-source-role { font-size: 13px; }
+.understanding-source-status { font-size: 12px; color: var(--faint); }
+
+.understanding-fusion-note {
+  margin: 10px 0 0;
+  max-width: none;
+  color: var(--faint);
+  font-size: 12.5px;
+  text-align: start;
+}
+
+.home-understanding > #homeUnderstandingBody > .understanding-evidence {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.understanding-evidence::before,
+.understanding-evidence:has(.understanding-reference-list)::before { display: none; }
+
+.understanding-evidence h3 { margin-bottom: 4px; color: var(--title); font-size: 13.5px; font-weight: 600; }
+.understanding-evidence-note { margin: 0; }
+.understanding-reference-list { margin: 8px 0 0; }
+.understanding-reference-list li { align-items: center; margin: 0; padding: 8px 0; }
+.understanding-reference-list li:last-child { padding-bottom: 0; border-bottom: 0; }
+
+.understanding-others { margin-top: 22px; }
+.understanding-others h3 { margin: 0 0 10px; color: var(--title); font-size: 13.5px; font-weight: 600; }
+.understanding-other-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 14px; }
+
+.home-understanding .understanding-other {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: var(--radius-card);
+  background: var(--surface-soft);
+  color: var(--text);
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+
+.home-understanding .understanding-other:hover { background: var(--accent-bg); }
+.understanding-other strong { font-weight: 600; }
+.understanding-other span { color: var(--muted); font-size: 13px; }
+.understanding-other time { color: var(--faint); font-size: 12px; }
+
+@media (max-width: 900px) {
+  .understanding-layout,
+  .understanding-layout[data-has-references="false"] { grid-template-columns: minmax(0, 1fr); }
+  .understanding-sources { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .understanding-streams { display: none; }
+  .understanding-fusion { margin-top: 14px; }
+}
+
+@media (max-width: 560px) {
+  .understanding-sources { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .understanding-source-status { display: block; }
+  .understanding-source-role { font-size: 12px; }
+  .understanding-source-heading { flex-direction: row; }
+  .understanding-layout { padding: 0; }
+}
+
+/* Shared ribbon. Fill stops read theme tokens so both appearances stay in step. */
+.shared-line-ribbon { display: block; width: 100%; height: auto; }
+.ribbon-back-start { stop-color: var(--ribbon-a); stop-opacity: 0.04; }
+.ribbon-back-mid { stop-color: var(--ribbon-a); stop-opacity: 0.42; }
+.ribbon-back-end { stop-color: var(--ribbon-b); stop-opacity: 0.34; }
+.ribbon-front-start { stop-color: var(--ribbon-b); stop-opacity: 0.06; }
+.ribbon-front-mid { stop-color: var(--ribbon-b); stop-opacity: 0.58; }
+.ribbon-front-end { stop-color: var(--endpoint); stop-opacity: 0.42; }
+.ribbon-orb-light { stop-color: #ffffff; }
+.ribbon-orb-soft { stop-color: #bcd6ec; }
+.ribbon-orb-base { stop-color: #6088b0; }
+.ribbon-orb-deep { stop-color: #456c94; }
+.ribbon-edge { fill: none; stroke: var(--ribbon-a); stroke-width: 1.5; stroke-opacity: 0.85; }
+.ribbon-link { fill: none; stroke: var(--ribbon-a); stroke-width: 1.5; stroke-dasharray: 4 5; }
+.ribbon-past { fill: var(--surface); stroke: var(--ribbon-a); stroke-width: 2; }
+.ribbon-next { fill: var(--surface); fill-opacity: 0.6; stroke: var(--ribbon-a); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.ribbon-halo { fill: var(--endpoint); fill-opacity: 0.15; }
+.ribbon-glint { fill: #ffffff; fill-opacity: 0.9; }
+.ribbon-label { fill: var(--muted); font-size: 12px; }
+.ribbon-label-current { fill: var(--endpoint); font-size: 12.5px; font-weight: 600; }

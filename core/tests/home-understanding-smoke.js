@@ -291,7 +291,7 @@ async function honestMissingFieldsAndSafeLongContent() {
     metadata: { currentInterpretation: "UNRELATED METADATA INTERPRETATION", nextStep: "Current recorded next step" }
   }));
   await f.controller.setActive(true);
-  assert.equal(f.body.querySelectorAll("script, img, svg:not(.understanding-streams), a").length, 0, "All stored content must be rendered as text");
+  assert.equal(f.body.querySelectorAll("script, img, svg:not(.understanding-streams, .shared-line-ribbon), a").length, 0, "All stored content must be rendered as text");
   assert.match(f.body.textContent, /SUMMARY IS A POSITION/u);
   assert.equal(f.body.querySelectorAll(".understanding-ground").length, 0, "Confirmed interpretation status does not establish shared understanding");
   assert(!f.body.textContent.includes("UNRELATED METADATA INTERPRETATION"));
@@ -627,6 +627,28 @@ function concurrentAgentIdentityAndActivity() {
   connection.setActive(false);
 }
 
+async function ribbonAndOtherLines() {
+  const summary = "Current recorded summary";
+  const f = fixture(catalog([line("current"), line("parallel"), line("third"), line("fourth"), line("fifth")]), async ({ lineId }) => ({
+    ...packet(lineId, { summary, nextStep: lineId === "current" ? "Recorded next" : "" }),
+    history: lineId === "current"
+      ? [{ summary, createdAt: "2026-10-19 01:00:00" }, { summary: "<b>Earlier</b>", createdAt: "2026-10-10 01:00:00" }]
+      : []
+  }));
+  await f.controller.setActive(true);
+  assert.equal(f.body.querySelectorAll(".shared-line-ribbon .ribbon-past").length, 1, "Only recorded earlier positions become ribbon nodes");
+  assert.equal(f.body.querySelectorAll(".shared-line-ribbon .ribbon-next").length, 1);
+  assert(!f.body.textContent.includes("Earlier"), "Home reads position dates from history, not its summaries");
+  assert.equal(f.body.querySelectorAll(".understanding-other").length, 3, "Other topics stay bounded");
+  assert(![...f.body.querySelectorAll(".understanding-other")].some((button) => button.dataset.sharedLineId === "current"));
+  f.body.querySelector('.understanding-other[data-shared-line-id="parallel"]').click();
+  await settle();
+  await settle();
+  assert.deepEqual(f.reads.at(-1), { lineId: "parallel" });
+  assert.equal(f.body.querySelectorAll(".shared-line-ribbon .ribbon-past").length, 0, "A line without history draws no earlier node");
+  assert.equal(f.body.querySelectorAll(".shared-line-ribbon .ribbon-next").length, 0, "An explicit empty next step draws no next node");
+}
+
 async function main() {
   browserExport();
   await selectedReadAndSemanticBoundaries();
@@ -635,6 +657,7 @@ async function main() {
   await failureAndRecovery();
   await honestMissingFieldsAndSafeLongContent();
   await fusionReferenceBoundaries();
+  await ribbonAndOtherLines();
   await structuredReadingAndSafeMarkup();
   concurrentAgentIdentityAndActivity();
   connectionTruthAndLifecycle();

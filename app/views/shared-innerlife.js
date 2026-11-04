@@ -326,6 +326,30 @@ function primaryPast(sharedLine = {}, current = {}) {
     : priorPosition || "";
 }
 
+function renderSharedLineRibbon(hasSelection, sharedLine, current) {
+  const slot = document.querySelector("#sharedLineRibbon");
+  if (!slot) return;
+  if (!hasSelection || !window.ClaraCoreSharedLineRibbon) {
+    slot.innerHTML = "";
+    return;
+  }
+  const pastLabels = (Array.isArray(sharedLine.history) ? sharedLine.history : [])
+    .filter((item) => item?.summary && item.summary !== current.summary && item.createdAt)
+    .slice(0, 3)
+    .map((item) => window.ClaraCoreSharedLineRibbon.shortDate(item.createdAt))
+    .reverse();
+  const currentLabel = window.ClaraCoreSharedLineRibbon.shortDate(current.updatedAt, true);
+  const nextStep = Object.hasOwn(current, "nextStep") ? current.nextStep : current.metadata?.nextStep;
+  slot.innerHTML = window.ClaraCoreSharedLineRibbon.render({
+    preset: "wide",
+    idPrefix: "sharedLineRibbonShape",
+    ariaLabel: t("sharedLine.ribbonLabel", { positions: [...pastLabels, currentLabel].filter(Boolean).join("、") }),
+    pastLabels,
+    currentLabel,
+    nextLabel: typeof nextStep === "string" && nextStep.trim() ? t("sharedLine.next") : ""
+  });
+}
+
 function renderPrimaryValues(target, values, emptyKey, decorated = true) {
   if (!target) return;
   const items = uniqueValues(values);
@@ -504,6 +528,7 @@ function renderSharedLine() {
   sharedLineParticipants.textContent = hasSelection && participants.length
     ? t("sharedLine.participants", { names: participants.join(" · ") })
     : hasSelection ? t("sharedLine.participantsEmpty") : t("sharedLine.detail.emptyBody");
+  renderSharedLineRibbon(hasSelection, sharedLine || {}, current);
   renderPrimaryValues(sharedLinePast, [primaryPast(sharedLine || {}, current)], "sharedLine.pastEmpty", false);
   renderPrimaryValues(
     sharedLineSummary,

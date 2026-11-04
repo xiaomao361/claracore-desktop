@@ -9,3 +9,5 @@
 @import "./styles/views/home-understanding.css";
 
 @import url("./styles/views/home-world.css");
+@import "./styles/views/shared-world-home.css";
+@import "./styles/views/shared-world-line.css";

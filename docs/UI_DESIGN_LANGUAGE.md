@@ -7,12 +7,14 @@ Use the source assets in [`assets/brand/`](../assets/brand/).
 
 | Role | Color |
 | --- | --- |
-| Primary ink | `#443256` |
+| Title ink | `#443256` |
+| Body text | `#2d2838` |
 | Shared line | `#795bac` |
-| Endpoint accent | `#6088b0` |
-| Light surface | `#f6f3fc` |
-| Dark surface | `#282333` |
-| Dark text | `#e5dcf3` |
+| Endpoint accent | `#4f79a3` |
+| Light background | `#f6f5fb` |
+| Dark background | `#16151f` |
+| Dark surface | `#211f2e` |
+| Dark text | `#f0edf7` |
 
 Color supports structure; it must not be the sole indicator of state. Keep
 focus visible, controls labeled, reading order predictable, and reduced motion
