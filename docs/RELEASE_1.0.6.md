@@ -16,7 +16,8 @@ ships in 1.0.6 without adopting rejected visual directions.
 ## Artifacts and publication
 
 [1.0.6 is published](https://github.com/xiaomao361/claracore-desktop/releases/tag/v1.0.6)
-and is the latest stable release. Its immutable tag resolves to
+and was the latest stable release at publication. See the
+[1.1.0 release record](RELEASE_1.1.0.md) for the current release. Its immutable tag resolves to
 `c098f27616a4fa552421bff8a031bd516474e8d6`. macOS application source and assets
 match that commit (431 files per flavor). Windows built that exact source
 using the draft-aware workflow guard from `6c5d55b`.
