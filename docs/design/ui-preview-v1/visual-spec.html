@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>视觉规范</title>
+<style>
+body{margin:0}
+</style>
+</head>
+<body>
+<div style="min-height: 920px; box-sizing: border-box; padding: 44px 40px 56px; background: #fbfbfd; color: #25242c; font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', sans-serif; font-size: 14px; line-height: 1.55; display: flex; flex-direction: column; gap: 32px">
+  <h1 style="margin: 0; font-size: 26px; line-height: 1.3; font-weight: 600">ClaraCore 视觉规范</h1>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 32px 48px">
+    <section style="display: flex; flex-direction: column; gap: 12px">
+      <h2 style="margin: 0; font-size: 13px; font-weight: 600; color: #565562">共同线</h2>
+      <div style="display: flex; gap: 14px; align-items: center"><span aria-hidden="true" style="flex: none; width: 12px; height: 12px; border-radius: 50%; background: #4a7aa5; box-shadow: 0 0 0 3px #dfeaf4"></span><span>当前位置：冰蓝实心点，页面唯一焦点</span></div>
+      <div style="display: flex; gap: 14px; align-items: center"><span aria-hidden="true" style="flex: none; width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; border: 1.5px dashed #6f54a3"></span><span>接下来：紫色虚线圈，尚未发生，可以没有</span></div>
+      <div style="display: flex; gap: 14px; align-items: center"><span aria-hidden="true" style="flex: none; width: 12px; display: flex; justify-content: center"><span style="width: 6px; height: 6px; border-radius: 50%; background: #6f54a3"></span></span><span>历史位置：紫色小点，默认折叠</span></div>
+    </section>
+    <section style="display: flex; flex-direction: column; gap: 12px">
+      <h2 style="margin: 0; font-size: 13px; font-weight: 600; color: #565562">内容来源</h2>
+      <div style="display: flex; gap: 14px; align-items: center"><span aria-hidden="true" style="flex: none; width: 12px; display: flex; justify-content: center"><span style="width: 8px; height: 8px; border-radius: 50%; background: #565562"></span></span><span>已确认：实心圆，正常文字</span></div>
+      <div style="display: flex; gap: 14px; align-items: center"><span aria-hidden="true" style="flex: none; width: 12px; display: flex; justify-content: center"><span style="width: 8px; height: 8px; box-sizing: border-box; border-radius: 50%; border: 1.5px dashed #565562"></span></span><span>生成内容：虚线圆，容器用虚线框</span></div>
+      <div style="display: flex; gap: 14px; align-items: center"><span aria-hidden="true" style="flex: none; width: 12px; display: flex; justify-content: center"><span style="width: 8px; height: 8px; box-sizing: border-box; border-radius: 2px; border: 1.5px solid #565562"></span></span><span>来源资料：方框，附文件路径</span></div>
+    </section>
+    <section style="display: flex; flex-direction: column; gap: 12px">
+      <h2 style="margin: 0; font-size: 13px; font-weight: 600; color: #565562">结果状态</h2>
+      <p style="margin: 0; color: #27705a; font-weight: 500">✓ 请求完成</p>
+      <p style="margin: 0; color: #a23f35; font-weight: 500">× 请求失败</p>
+      <p style="margin: 0; color: #85601f; font-weight: 500">? 结果未确认</p>
+    </section>
+    <section style="display: flex; flex-direction: column; gap: 10px">
+      <h2 style="margin: 0; font-size: 13px; font-weight: 600; color: #565562">字号</h2>
+      <p style="margin: 0; font-size: 26px; line-height: 1.3; font-weight: 600">26 页面标题</p>
+      <p style="margin: 0; font-size: 17px; line-height: 1.75">17 当前位置</p>
+      <p style="margin: 0; font-size: 15.5px; line-height: 1.8">15.5 长文正文，行高 1.8</p>
+      <p style="margin: 0">14 界面文字</p>
+      <p style="margin: 0; font-size: 12px; color: #6c6b78">12 元信息</p>
+    </section>
+    <section style="display: flex; flex-direction: column; gap: 10px">
+      <h2 style="margin: 0; font-size: 13px; font-weight: 600; color: #565562">控件</h2>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px">
+        <button type="button" style="min-height: 36px; padding: 4px 14px; border: 1px solid #6f54a3; border-radius: 6px; background: #6f54a3; color: #ffffff; font: inherit; font-weight: 500">主操作</button>
+        <button type="button" style="min-height: 36px; padding: 4px 14px; border: 1px solid #cdcdd7; border-radius: 6px; background: none; color: #25242c; font: inherit; font-weight: 500">次操作</button>
+      </div>
+      <p style="margin: 0; color: #565562">控件圆角 6，分组容器圆角 8。</p>
+      <p style="margin: 0; color: #565562">每屏最多一个主操作。</p>
+      <p style="margin: 0; color: #565562">间距：4、8、12、16、24、32。</p>
+    </section>
+    <section style="display: flex; flex-direction: column; gap: 10px">
+      <h2 style="margin: 0; font-size: 13px; font-weight: 600; color: #565562">字体</h2>
+      <p style="margin: 0">界面和正文使用系统字体。</p>
+      <p style="margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px">路径、工具名和引用使用等宽字体</p>
+    </section>
+  </div>
+  <section style="display: flex; flex-direction: column; gap: 10px">
+    <h2 style="margin: 0; font-size: 13px; font-weight: 600; color: #565562">颜色 · 浅色</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px">
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px"><span aria-hidden="true" style="height: 40px; border-radius: 6px; border: 1px solid #cdcdd7; background: #fbfbfd"></span><span>内容背景</span><code style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #6c6b78">#fbfbfd</code></div>
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px"><span aria-hidden="true" style="height: 40px; border-radius: 6px; border: 1px solid #cdcdd7; background: #f2f2f6"></span><span>侧栏</span><code style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #6c6b78">#f2f2f6</code></div>
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px"><span aria-hidden="true" style="height: 40px; border-radius: 6px; border: 1px solid #cdcdd7; background: #e8e8ef"></span><span>选中</span><code style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #6c6b78">#e8e8ef</code></div>
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px"><span aria-hidden="true" style="height: 40px; border-radius: 6px; border: 1px solid #cdcdd7; background: #e6e6ec"></span><span>分割线</span><code style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #6c6b78">#e6e6ec</code></div>
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px"><span aria-hidden="true" style="height: 40px; border-radius: 6px; border: 1px solid #cdcdd7; background: #25242c"></span><span>主文字</span><code style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #6c6b78">#25242c</code></div>
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px"><span aria-hidden="true" style="height: 40px; border-radius: 6px; border: 1px solid #cdcdd7; background: #565562"></span><span>次文字</span><code style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #6c6b78">#565562</code></div>
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px"><span aria-hidden="true" style="height: 40px; border-radius: 6px; border: 1px solid #cdcdd7; background: #6f54a3"></span><span>共同线</span><code style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #6c6b78">#6f54a3</code></div>
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px"><span aria-hidden="true" style="height: 40px; border-radius: 6px; border: 1px solid #cdcdd7; background: #4a7aa5"></span><span>当前位置</span><code style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #6c6b78">#4a7aa5</code></div>
+    </div>
+  </section>
+  <section style="display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 8px; background: #1b1b20; color: #ecebf1">
+    <h2 style="margin: 0; font-size: 13px; font-weight: 600; color: #b4b3bf">颜色 · 深色</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px">
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px"><span aria-hidden="true" style="height: 40px; border-radius: 6px; border: 1px solid #45454f; background: #1b1b20"></span><span>内容背景</span><code style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #b4b3bf">#1b1b20</code></div>
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px"><span aria-hidden="true" style="height: 40px; border-radius: 6px; border: 1px solid #45454f; background: #17171b"></span><span>侧栏</span><code style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #b4b3bf">#17171b</code></div>
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px"><span aria-hidden="true" style="height: 40px; border-radius: 6px; border: 1px solid #45454f; background: #2c2c34"></span><span>选中</span><code style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #b4b3bf">#2c2c34</code></div>
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px"><span aria-hidden="true" style="height: 40px; border-radius: 6px; border: 1px solid #45454f; background: #2d2d35"></span><span>分割线</span><code style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #b4b3bf">#2d2d35</code></div>
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px"><span aria-hidden="true" style="height: 40px; border-radius: 6px; border: 1px solid #45454f; background: #ecebf1"></span><span>主文字</span><code style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #b4b3bf">#ecebf1</code></div>
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px"><span aria-hidden="true" style="height: 40px; border-radius: 6px; border: 1px solid #45454f; background: #b4b3bf"></span><span>次文字</span><code style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #b4b3bf">#b4b3bf</code></div>
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px"><span aria-hidden="true" style="height: 40px; border-radius: 6px; border: 1px solid #45454f; background: #b7a0e4"></span><span>共同线</span><code style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #b4b3bf">#b7a0e4</code></div>
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px"><span aria-hidden="true" style="height: 40px; border-radius: 6px; border: 1px solid #45454f; background: #8fb8dc"></span><span>当前位置</span><code style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #b4b3bf">#8fb8dc</code></div>
+    </div>
+  </section>
+</div>
+</body>
+</html>
