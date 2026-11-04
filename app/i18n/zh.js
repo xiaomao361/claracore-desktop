@@ -2008,5 +2008,6 @@ window.ClaraCoreTranslationsZh = {
   "knowledge.directory.saveFailed": "知识库切换未完成：{error}",
   "knowledge.directory.clearFailed": "无法确认知识库是否已断开：{error}",
   "settings.runtimeInfoBody": "排查问题时可查看这些信息。",
-  "monitor.localTime": "本地时间"
+  "monitor.localTime": "本地时间",
+  "home.understanding.otherLines": "其他共同线"
 };

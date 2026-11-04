@@ -627,6 +627,18 @@ function concurrentAgentIdentityAndActivity() {
   connection.setActive(false);
 }
 
+async function otherLinesStayBounded() {
+  const f = fixture(catalog([line("current"), line("parallel"), line("third"), line("fourth"), line("fifth")]));
+  await f.controller.setActive(true);
+  assert.equal(f.body.querySelectorAll(".understanding-other").length, 3, "Other topics stay bounded");
+  assert(![...f.body.querySelectorAll(".understanding-other")].some((button) => button.dataset.sharedLineId === "current"));
+  f.body.querySelector('.understanding-other[data-shared-line-id="parallel"]').click();
+  await settle();
+  await settle();
+  assert.deepEqual(f.reads.at(-1), { lineId: "parallel" });
+  assert.match(f.body.textContent, /Position for parallel/u);
+}
+
 async function main() {
   browserExport();
   await selectedReadAndSemanticBoundaries();
@@ -635,6 +647,7 @@ async function main() {
   await failureAndRecovery();
   await honestMissingFieldsAndSafeLongContent();
   await fusionReferenceBoundaries();
+  await otherLinesStayBounded();
   await structuredReadingAndSafeMarkup();
   concurrentAgentIdentityAndActivity();
   connectionTruthAndLifecycle();

@@ -292,6 +292,7 @@ const homeUnderstanding = window.createClaraCoreHomeUnderstanding({
   root: document.querySelector("#homeUnderstanding"),
   api: window.ClaraCoreDesktop,
   t,
+  formatTime: formatLocalDateTime,
   getSnapshot: () => snapshot,
   onOpenLine: async (button, { isCurrent }) => {
     await sharedLineActions.selectLine(button);

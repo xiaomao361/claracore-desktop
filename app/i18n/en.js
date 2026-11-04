@@ -2008,5 +2008,6 @@ window.ClaraCoreTranslationsEn = {
   "knowledge.directory.saveFailed": "Could not complete the knowledge directory change. Check the current directory: {error}",
   "knowledge.directory.clearFailed": "Could not confirm whether the directory setting was removed. Check the current directory: {error}",
   "settings.runtimeInfoBody": "Use these details when investigating a problem.",
-  "monitor.localTime": "Local time"
+  "monitor.localTime": "Local time",
+  "home.understanding.otherLines": "Other Shared Lines"
 };

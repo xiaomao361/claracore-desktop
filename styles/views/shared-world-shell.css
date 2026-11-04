@@ -2,9 +2,7 @@
    replace this shared top navigation. Content views retain their own layout. */
 body {
   display: block;
-  background:
-    radial-gradient(ellipse at 72% 0, color-mix(in srgb, var(--accent-bg) 58%, transparent), transparent 58%),
-    var(--bg);
+  background: var(--bg);
 }
 
 .sidebar.app-navigation {
