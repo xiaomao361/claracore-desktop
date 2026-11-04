@@ -201,7 +201,7 @@ body[data-theme="dark"] .gateway-activity-row {
 body[data-theme="dark"] .shared-line-card:hover,
 body[data-theme="dark"] .shared-line-card.active-line {
   border-color: var(--border);
-  background: #1f3b31 !important;
+  background: var(--accent-bg);
   color: var(--text);
 }
 

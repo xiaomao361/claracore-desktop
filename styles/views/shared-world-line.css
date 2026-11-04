@@ -72,25 +72,41 @@
 
 .shared-line-continuity-path { padding: 12px 0 6px; }
 
-.shared-line-continuity-path::before {
-  background: var(--ribbon-a);
-  opacity: 0.6;
+/* Each segment is drawn only when a later stage is recorded. */
+.shared-line-continuity-path::before { display: none; }
+.shared-line-stage { min-height: 0; }
+
+.shared-line-stage:has(+ .shared-line-stage:not([hidden]))::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 13px;
+  top: 22px;
+  bottom: -4px;
+  border-inline-start: 1.5px solid var(--ribbon-a);
+  opacity: 0.7;
 }
 
-.stage-past .shared-line-stage-node {
+.stage-now:has(+ .shared-line-stage:not([hidden]))::before { border-inline-start-style: dashed; }
+
+body .stage-past .shared-line-stage-node,
+body[data-theme="dark"] .stage-past .shared-line-stage-node {
   border-color: var(--ribbon-a);
   background: var(--surface);
+  box-shadow: none;
 }
 
-.stage-now .shared-line-stage-node {
+body .stage-now .shared-line-stage-node,
+body[data-theme="dark"] .stage-now .shared-line-stage-node {
   border-color: var(--endpoint);
   background: var(--endpoint);
   box-shadow: 0 0 0 3px var(--endpoint-soft);
 }
 
-.stage-next .shared-line-stage-node {
+body .stage-next .shared-line-stage-node,
+body[data-theme="dark"] .stage-next .shared-line-stage-node {
   border: 1.5px dashed var(--ribbon-a);
   background: var(--surface);
+  box-shadow: none;
 }
 
 .stage-now .shared-line-stage-label { color: var(--endpoint); font-weight: 600; }
