@@ -41,28 +41,27 @@ specific memory, line, or source section when they need more detail.
 
 ## Download
 
-The current release is **1.0.6**. Choose **Full** for an included local embedding
+The current release is **1.1.0**. Choose **Full** for an included local embedding
 model, or **Lite** to configure Ollama or an OpenAI-compatible Memory embedding
 API, or work without embeddings. Knowledge semantic search stays local.
 
 | Build | macOS Apple Silicon | Windows x64 |
 | --- | --- | --- |
-| Full | [Download DMG](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.6/ClaraCore-Desktop-1.0.6-arm64.dmg) | [Download installer](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.6/ClaraCore-Desktop-1.0.6-x64-Setup.exe) |
-| Lite | [Download DMG](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.6/ClaraCore-Desktop-1.0.6-lite-arm64.dmg) | [Download installer](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.0.6/ClaraCore-Desktop-1.0.6-lite-x64-Setup.exe) |
+| Full | [Download DMG](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.1.0/ClaraCore-Desktop-1.1.0-arm64.dmg) | [Download installer](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.1.0/ClaraCore-Desktop-1.1.0-x64-Setup.exe) |
+| Lite | [Download DMG](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.1.0/ClaraCore-Desktop-1.1.0-lite-arm64.dmg) | [Download installer](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.1.0/ClaraCore-Desktop-1.1.0-lite-x64-Setup.exe) |
 
 macOS packages are signed and notarized. Windows installers are unsigned.
-Checksums and changes are available on the [release page](https://github.com/xiaomao361/claracore-desktop/releases/tag/v1.0.6).
+Checksums and changes are available on the [release page](https://github.com/xiaomao361/claracore-desktop/releases/tag/v1.1.0).
 Prebuilt Linux and Intel Mac installers are not currently provided.
 
-## In 1.0.6
+## In 1.1.0
 
-- Read focused pages and settings, with clearer connection and recall evidence.
-- Search and switch agents without stale results; page through Shared Lines and
-  share history, and read original InnerLife text by record.
-- Keep operation success distinct from refresh failure, and retain readable
-  Knowledge entries when another document fails.
+- Follow the current topic and Shared Line from the shared-world Home view.
+- Read recorded, current and next positions in a Shared Line ribbon, with
+  aligned stage labels and clearer dark-theme selections.
+- Includes the 1.0.6 reliability work and subsequent release-pipeline fixes.
 
-See the [changelog](CHANGELOG.md) and [release record](docs/RELEASE_1.0.6.md).
+See the [changelog](CHANGELOG.md) and [release record](docs/RELEASE_1.1.0.md).
 
 ## Get started
 

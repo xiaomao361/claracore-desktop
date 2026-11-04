@@ -3,6 +3,19 @@
 User-facing release highlights are recorded here. Installers and checksums are
 published in [GitHub Releases](https://github.com/xiaomao361/claracore-desktop/releases).
 
+## 1.1.0 — 2026-11-04
+
+- Adopts the shared-world UI direction contributed by @jaredchao in PR #6.
+  Home highlights the current topic and Shared Line while retaining the four
+  existing modules and top navigation. Other pages inherit the new colors.
+- Adds the Shared Line ribbon for recorded, current and next positions, aligns
+  stage labels, and improves selected colors in the dark theme.
+- Includes the 1.0.6 reliability fixes, plus the subsequent draft-release lookup
+  and portable documentation-link fixes. Release builds retain exact-source,
+  version and existing-asset guards.
+- Keeps the alternative document-workspace direction from PR #5 on its own
+  branch; it is not part of this release.
+
 ## 1.0.6 — 2026-10-29
 
 - Simplifies everyday reading across Home, Memory, Knowledge, Shared Lines,
