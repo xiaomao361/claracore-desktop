@@ -363,7 +363,8 @@ const sharedInnerLifeView = window.createClaraCoreSharedInnerLifeView({
   renderAgentFilter: sharedRenderAgentFilter,
   state: rendererState,
   renderMemoryResults,
-  memoryAgentId
+  memoryAgentId,
+  copyValue
 });
 const activitySummary = window.createClaraCoreActivitySummary({
   dom: window.ClaraCoreDom,

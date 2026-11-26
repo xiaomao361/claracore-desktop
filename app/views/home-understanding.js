@@ -36,9 +36,16 @@ function createClaraCoreHomeUnderstanding({ root, api, t, getSnapshot, onOpenLin
 
   function preview(value) {
     const characters = Array.from(text(value));
-    return characters.length > PREVIEW_LIMIT
-      ? `${characters.slice(0, PREVIEW_LIMIT).join("")}…`
-      : characters.join("");
+    if (characters.length <= PREVIEW_LIMIT) return characters.join("");
+    const cut = characters.slice(0, PREVIEW_LIMIT).join("").trimEnd();
+    const lastLineStart = cut.lastIndexOf("\n") + 1;
+    let tail = cut.slice(lastLineStart);
+    for (const marker of ["`", "**", "~~"]) {
+      if (tail.split(marker).length % 2 !== 0) continue;
+      const lastMarker = tail.lastIndexOf(marker);
+      tail = tail.slice(0, lastMarker) + tail.slice(lastMarker + marker.length);
+    }
+    return `${(cut.slice(0, lastLineStart) + tail).trimEnd()}…`;
   }
 
   function catalogLines(catalog) {

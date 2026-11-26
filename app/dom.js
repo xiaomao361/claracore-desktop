@@ -1,6 +1,7 @@
 window.ClaraCoreDom = {
   sharedLineReferencesSection: document.querySelector("#sharedLineReferencesSection"),
   sharedLineReferences: document.querySelector("#sharedLineReferences"),
+  sharedLineReferenceCopyStatus: document.querySelector("#sharedLineReferenceCopyStatus"),
 
   moduleGrid: document.querySelector("#moduleGrid"),
   brandVersion: document.querySelector("#brandVersion"),

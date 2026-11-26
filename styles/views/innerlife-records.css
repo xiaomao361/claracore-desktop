@@ -3,10 +3,10 @@
   gap: 7px;
   min-width: 0;
   padding: 11px 12px;
-  border: 1px solid rgba(43, 61, 52, 0.1);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: linear-gradient(180deg, #fffefa 0%, #fbfaf5 100%);
-  box-shadow: 0 6px 16px rgba(45, 36, 24, 0.04);
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
 .innerlife-record-meta {
@@ -26,7 +26,7 @@
 }
 
 .innerlife-record-meta strong {
-  color: #24392f;
+  color: var(--text);
   font-size: 12px;
   font-weight: 780;
 }
@@ -64,12 +64,10 @@
   display: grid;
   gap: 11px;
   padding: 14px 14px 14px 18px;
-  border: 1px solid rgba(40, 116, 90, 0.16);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background:
-    linear-gradient(180deg, rgba(255, 254, 250, 0.98), rgba(247, 251, 247, 0.96)),
-    #fffefa;
-  box-shadow: 0 10px 24px rgba(45, 36, 24, 0.05);
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
 .innerlife-share::before {
@@ -80,12 +78,12 @@
   bottom: 12px;
   width: 3px;
   border-radius: 0 999px 999px 0;
-  background: rgba(40, 116, 90, 0.48);
+  background: var(--green);
 }
 
 .innerlife-share.approved {
-  border-color: rgba(40, 116, 90, 0.28);
-  background: #f2f8f3;
+  border-color: var(--green);
+  background: var(--green-bg);
 }
 
 .innerlife-share > div:first-child {
@@ -93,7 +91,7 @@
   justify-content: space-between;
   gap: 10px;
   min-width: 0;
-  color: #647169;
+  color: var(--muted);
   font-size: 12px;
   font-weight: 650;
 }
@@ -101,7 +99,7 @@
 .innerlife-share > div:first-child strong {
   min-width: 0;
   overflow: hidden;
-  color: #23382f;
+  color: var(--text);
   text-overflow: ellipsis;
   white-space: nowrap;
 }

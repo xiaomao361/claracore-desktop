@@ -574,6 +574,16 @@ async function structuredReadingAndSafeMarkup() {
   assert(markdown.inline("【https://example.com】", "notes/example.md").includes("<a "), "Knowledge's default URL handling remains active inside brackets");
   const numbered = parseHTML(markdown.render("10. First\n12. Original numbering", "", { reading: true, linkMode: "text" })).document;
   assert.deepEqual([...numbered.querySelectorAll("li")].map(node => node.getAttribute("value")), ["10", "12"]);
+
+  const longText = "材料🙂".repeat(160);
+  const long = fixture(catalog(), async ({ lineId }) => packet(lineId, {
+    summary: `**${longText}**`, nextStep: `\`${longText}\``
+  }));
+  await long.controller.setActive(true);
+  for (const section of [".understanding-position", ".understanding-next-step"]) {
+    const preview = long.body.querySelector(`${section} .reading-prose`).textContent;
+    assert(preview.startsWith("材料🙂材料🙂") && preview.endsWith("…"), "Truncating a long formatted line preserves its visible prefix");
+  }
 }
 
 function concurrentAgentIdentityAndActivity() {

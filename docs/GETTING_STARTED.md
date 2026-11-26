@@ -4,9 +4,10 @@
 
 Download the latest installer from [Releases](https://github.com/xiaomao361/claracore-desktop/releases/latest).
 Full includes `bge-small-zh-v1.5`, a local 512-dimensional embedding model.
-Lite omits that model; select an installed Ollama model, configure an
-OpenAI-compatible embedding API, or disable embeddings. Core storage and explicit reads remain available without
-an embedding model; semantic features require a working model and index.
+Lite omits that model. For Memoria, select an installed Ollama model, configure
+an OpenAI-compatible embedding API, or disable embeddings. Knowledge semantic
+search requires a local model and a prepared index. Exact search and explicit
+reads remain available without an embedding model.
 
 macOS packages target Apple Silicon and are signed and notarized. Windows
 packages target x64 and are unsigned. Linux and Intel Mac prebuilt installers
@@ -55,8 +56,12 @@ capture. A host must explicitly integrate automatic context delivery.
 
 Home shows current topics and evidence-qualified milestones. Memory separates
 recent records, explicit search and recall decisions. Shared Lines can be
-filtered by agent and read by exact ID; use **Continue with this line** to copy
-a pointer for your assistant. A next step is optional.
+filtered by agent and read by exact ID. Use **Copy continuation prompt** to
+take the selected line to your assistant, or use **Copy** beside a recorded
+reference to check its source. A next step is optional.
+
+In Knowledge, press `Cmd/Ctrl+K` to open search, follow a result to its section,
+or open a linked document alongside the current one. See the [Knowledge reader](KNOWLEDGE_PAGE.md).
 
 InnerLife shows the selected agent's thoughts and background status. Reading a
 thought does not mark it shared or used. Open full text to read longer records,

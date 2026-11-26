@@ -1,5 +1,6 @@
 function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getSnapshot, refreshSnapshot }) {
   let followEnabled = true;
+  let userPausedScroll = false;
   let refreshTimer = null;
   let refreshInFlight = false;
   let activeFilter = "all";
@@ -111,7 +112,7 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
     dom.toggleLogFollow.classList.toggle("active", followEnabled);
     renderDecayAudit(decayAudit);
     renderTimeFlow(timeFlow);
-    if (followEnabled) {
+    if (followEnabled && !userPausedScroll && dom.logTerminal) {
       dom.logTerminal.scrollTop = dom.logTerminal.scrollHeight;
     }
   }
@@ -419,6 +420,7 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
 
   function toggleFollow(activeView) {
     followEnabled = !followEnabled;
+    if (followEnabled) userPausedScroll = false;
     dom.toggleLogFollow.classList.toggle("active", followEnabled);
     syncRefreshTimer(activeView);
     render();
@@ -513,6 +515,12 @@ function createClaraCoreLogsView({ dom, t, escapeHtml, formatLocalDateTime, getS
   }
 
   bindEventRowContainer(dom.logTerminal);
+  dom.logTerminal?.addEventListener("scroll", () => {
+    if (!followEnabled || !dom.logTerminal) return;
+    const { scrollHeight = 0, scrollTop = 0, clientHeight = 0 } = dom.logTerminal;
+    if (clientHeight <= 0) return;
+    userPausedScroll = scrollHeight - scrollTop - clientHeight > 36;
+  });
   bindEventRowContainer(dom.logIssueList);
   document.querySelectorAll("[data-log-detail]").forEach((trigger) => {
     trigger.addEventListener("click", () => openDiagnosticDetail(trigger.dataset.logDetail, trigger));

@@ -32,8 +32,11 @@
 - [Runtime memory policy](RUNTIME_MEMORY_POLICY.md)
 - [Knowledge intake](KNOWLEDGE_INTAKE.md) and [search](KNOWLEDGE_SEARCH.md)
 - [Design language](UI_DESIGN_LANGUAGE.md) and [Milestones and lifecycle evidence](TRACE_PAGE.md)
-- [1.0.6 release record](RELEASE_1.0.6.md): scope, artifacts and verification.
 - [Packaging](mac-packaging.md) and [release process](VERSION_BRANCHING.md)
 - [Website development](../website/README.md)
+
+## Release records
+
+- [1.1.0](RELEASE_1.1.0.md) · [1.0.6](RELEASE_1.0.6.md)
 
 [Changelog](../CHANGELOG.md) · [Releases](https://github.com/xiaomao361/claracore-desktop/releases) · [Security](../SECURITY.md)

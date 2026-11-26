@@ -73,12 +73,11 @@ function splitReadableText(value) {
     .split(/\n+|(?<=[。！？!?；;])\s*/u)
     .map((item) => item.trim())
     .filter(Boolean);
-  if (normalized.length > 1) return normalized.slice(0, 12);
+  if (normalized.length > 1) return normalized;
   return text
     .split(/(?<=，|,)\s*/u)
     .map((item) => item.trim())
-    .filter(Boolean)
-    .slice(0, 8);
+    .filter(Boolean);
 }
 
 function renderReadableText(value, icon = "•") {
@@ -87,18 +86,22 @@ function renderReadableText(value, icon = "•") {
   return parts.map((part) => `<span class="readable-line"><i>${escapeHtml(icon)}</i>${escapeHtml(part)}</span>`).join("");
 }
 
-function renderMarkdownInline(value) {
-  let html = escapeHtml(value);
-  html = html.replace(/`([^`]+)`/gu, "<code>$1</code>");
-  html = html.replace(/\*\*([^*]+)\*\*/gu, "<strong>$1</strong>");
-  html = html.replace(/__([^_]+)__/gu, "<strong>$1</strong>");
-  html = html.replace(/(^|[^*])\*([^*\n]+)\*/gu, "$1<em>$2</em>");
-  html = html.replace(/(^|[^_])_([^_\n]+)_/gu, "$1<em>$2</em>");
-  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gu, (_match, label, url) => {
-    const safeUrl = escapeHtml(url);
-    return `<a href="${safeUrl}" target="_blank" rel="noreferrer">${label}</a>`;
-  });
-  return html;
+function renderMarkdownInline(value, depth = 0) {
+  const text = String(value ?? "");
+  const nested = (inner) => (depth < 3 ? renderMarkdownInline(inner, depth + 1) : escapeHtml(inner));
+  const pattern = /(`+)([^\n]*?)\1|\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)|\*\*([^*\n]+)\*\*|__([^_\n]+)__|~~([^~\n]+)~~|\*([^*\n]+)\*|(?<![\p{L}\p{N}_])_([^_\n]+)_(?![\p{L}\p{N}_])/gu;
+  let html = "";
+  let end = 0;
+  for (const match of text.matchAll(pattern)) {
+    html += escapeHtml(text.slice(end, match.index));
+    if (match[1]) html += `<code>${escapeHtml(match[2])}</code>`;
+    else if (match[3]) html += `<a href="${escapeHtml(match[4])}" target="_blank" rel="noreferrer">${nested(match[3])}</a>`;
+    else if (match[5] || match[6]) html += `<strong>${nested(match[5] || match[6])}</strong>`;
+    else if (match[7]) html += `<del>${nested(match[7])}</del>`;
+    else html += `<em>${nested(match[8] || match[9])}</em>`;
+    end = match.index + match[0].length;
+  }
+  return html + escapeHtml(text.slice(end));
 }
 
 function renderMarkdownPreview(value) {
@@ -113,7 +116,7 @@ function renderMarkdownPreview(value) {
 
   const flushParagraph = () => {
     if (paragraph.length === 0) return;
-    blocks.push(`<p>${paragraph.map(renderMarkdownInline).join("<br />")}</p>`);
+    blocks.push(`<p>${paragraph.map((line) => renderMarkdownInline(line)).join("<br />")}</p>`);
     paragraph = [];
   };
   const flushList = () => {
@@ -123,7 +126,7 @@ function renderMarkdownPreview(value) {
   };
   const flushQuote = () => {
     if (quote.length === 0) return;
-    blocks.push(`<blockquote>${quote.map(renderMarkdownInline).join("<br />")}</blockquote>`);
+    blocks.push(`<blockquote>${quote.map((line) => renderMarkdownInline(line)).join("<br />")}</blockquote>`);
     quote = [];
   };
   const flushCode = () => {

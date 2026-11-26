@@ -49,7 +49,52 @@
     const pathOf = (reference) => reference.split("#")[0];
     const anchorOf = (reference) => reference.includes("#") ? reference.slice(reference.indexOf("#") + 1) : "";
     const refLink = (reference, label) => `<a href="#knowledge:${encodeURIComponent(reference)}" data-knowledge-ref="${escape(reference)}">${escape(label)}</a>`;
+    const tocLinks = (document) => document.sections.filter((section) => section.anchor)
+      .map((section) => `<a href="#knowledge:${encodeURIComponent(`${document.path}#${section.anchor}`)}" data-knowledge-ref="${escape(`${document.path}#${section.anchor}`)}" data-level="${Math.max(1, Math.min(6, Number(section.level) || 2))}">${escape(section.heading)}</a>`)
+      .join("");
     const updateCopyLabel = () => status(dom.knowledgeCopyReference, anchorOf(selected) ? "knowledge.page.copy" : "knowledge.page.copyDocument");
+    function clearHighlights(container) {
+      if (!container) return;
+      for (const mark of [...container.querySelectorAll("mark.knowledge-search-hit")]) {
+        const parent = mark.parentNode;
+        if (!parent) continue;
+        parent.replaceChild(container.ownerDocument.createTextNode(mark.textContent || ""), mark);
+        parent.normalize?.();
+      }
+    }
+    function highlightTerms(container, query) {
+      clearHighlights(container);
+      if (!container || !query) return;
+      const terms = [...new Set(String(query).trim().split(/\s+/u).filter((term) => term.length >= 2 || /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u.test(term)))].slice(0, 8);
+      if (!terms.length) return;
+      const pattern = new RegExp(terms.map((term) => term.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")).join("|"), "giu");
+      const doc = container.ownerDocument;
+      const walk = (node) => {
+        if (node.nodeType === 3) {
+          const text = node.nodeValue || "";
+          pattern.lastIndex = 0;
+          if (!pattern.test(text)) return;
+          pattern.lastIndex = 0;
+          const fragment = doc.createDocumentFragment();
+          let last = 0;
+          for (const match of text.matchAll(pattern)) {
+            if (match.index > last) fragment.appendChild(doc.createTextNode(text.slice(last, match.index)));
+            const mark = doc.createElement("mark");
+            mark.className = "knowledge-search-hit";
+            mark.textContent = match[0];
+            fragment.appendChild(mark);
+            last = match.index + match[0].length;
+          }
+          if (last < text.length) fragment.appendChild(doc.createTextNode(text.slice(last)));
+          node.parentNode?.replaceChild(fragment, node);
+          return;
+        }
+        if (node.nodeType === 1 && !["SCRIPT", "STYLE", "MARK"].includes(node.tagName)) {
+          for (const child of [...node.childNodes]) walk(child);
+        }
+      };
+      walk(container);
+    }
 
     let searchVersion = 0;
     let searchOffset = 0;
@@ -362,21 +407,29 @@
       const body = referencePane ? dom.knowledgeReferenceBody : dom.knowledgeReaderBody;
       const pane = referencePane ? dom.knowledgeReferencePane : dom.knowledgeMainPane;
       const message = referencePane ? dom.knowledgeReferenceStatus : dom.knowledgeReaderStatus;
+      const toc = referencePane ? dom.knowledgeReferenceContentsList : dom.knowledgeContentsList;
       const anchor = anchorOf(reference);
       const section = [...body.querySelectorAll("[data-knowledge-anchor]")].find((node) => node.dataset.knowledgeAnchor === anchor);
       for (const item of body.querySelectorAll(".knowledge-section")) item.classList.toggle("knowledge-section-current", Boolean(anchor) && item === section);
+      if (toc) {
+        for (const link of toc.querySelectorAll("[data-knowledge-ref]")) {
+          if (anchor && link.dataset.knowledgeRef === reference) link.setAttribute("aria-current", "location");
+          else link.removeAttribute("aria-current");
+        }
+      }
       if (anchor && !section) {
         status(message, "knowledge.page.missingAnchor", { anchor });
         pane.scrollTop = 0;
-        return;
+        return null;
       }
       if (focus) {
         const target = section || body;
         target.focus({ preventScroll: true });
         // Scroll only this pane; scrollIntoView would also move the page/main reader.
         pane.scrollTop = section && target.getBoundingClientRect
-          ? (pane.scrollTop || 0) + target.getBoundingClientRect().top - pane.getBoundingClientRect().top - 24 : 0;
+          ? Math.max(0, (pane.scrollTop || 0) + target.getBoundingClientRect().top - pane.getBoundingClientRect().top - 76) : 0;
       }
+      return section || null;
     }
 
     function markReference() {
@@ -425,8 +478,7 @@
         dom.knowledgeReferenceBody.innerHTML = markdown.renderDocument(document, "reference");
         dom.knowledgeReferenceStatus.textContent = "";
         dom.knowledgeReferencePromote.disabled = false;
-        dom.knowledgeReferenceContentsList.innerHTML = document.sections.filter(section => section.anchor)
-          .map(section => refLink(`${document.path}#${section.anchor}`, section.heading)).join("");
+        dom.knowledgeReferenceContentsList.innerHTML = tocLinks(document);
         dom.knowledgeReferenceContents.hidden = !document.sections.some(section => section.anchor);
         focusAnchor(reference, restoredScroll === null, true);
         if (restoredScroll !== null) dom.knowledgeReferencePane.scrollTop = restoredScroll;
@@ -461,7 +513,7 @@
       } catch (error) { if (fresh(version) && request === readVersion) dom.knowledgeLinksStatus.textContent = errorText(error); }
     }
 
-    async function openDocument(reference, remember = true, focus = true, restoredScroll = null) {
+    async function openDocument(reference, remember = true, focus = true, restoredScroll = null, highlightQuery = "") {
       const version = generation;
       const request = ++readVersion;
       if (remember && selected && selected !== reference) { history.push(mainPosition()); history = history.slice(-50); }
@@ -480,16 +532,20 @@
         dom.knowledgeReaderBody.innerHTML = markdown.renderDocument(document);
         dom.knowledgeCopyReference.disabled = false;
         dom.knowledgeReaderStatus.textContent = "";
-        dom.knowledgeContentsList.innerHTML = document.sections.filter((section) => section.anchor).map((section) => refLink(`${document.path}#${section.anchor}`, section.heading)).join("");
+        dom.knowledgeContentsList.innerHTML = tocLinks(document);
         dom.knowledgeContents.hidden = !document.sections.some((section) => section.anchor);
         dom.knowledgeRelations.hidden = false;
         dom.knowledgeIncoming.innerHTML = dom.knowledgeOutgoing.innerHTML = "";
         dom.knowledgeMoreIncoming.hidden = dom.knowledgeMoreOutgoing.hidden = true;
         status(dom.knowledgeLinksStatus, "knowledge.page.loading");
         incomingOffset = outgoingOffset = 0;
-        focusAnchor(reference, focus && restoredScroll === null);
-        if (restoredScroll !== null) dom.knowledgeMainPane.scrollTop = restoredScroll;
+        const savedScroll = restoredScroll === null && !anchorOf(reference) && typeof positions.getDocument === "function"
+          ? positions.getDocument(root, document.path) : null;
+        const effectiveScroll = restoredScroll !== null ? restoredScroll : savedScroll;
+        const targetSection = focusAnchor(reference, focus && effectiveScroll === null);
+        if (effectiveScroll !== null) dom.knowledgeMainPane.scrollTop = effectiveScroll;
         else if (!focus) dom.knowledgeMainPane.scrollTop = 0;
+        if (highlightQuery) highlightTerms(targetSection || dom.knowledgeReaderBody, highlightQuery);
         markReference();
         for (const item of dom.knowledgeCatalogList.querySelectorAll("a")) {
           if (item.dataset.knowledgeRef === document.path) item.setAttribute("aria-current", "page"); else item.removeAttribute("aria-current");
@@ -662,19 +718,83 @@
       if (internal) {
         event.preventDefault();
         const reference = internal.dataset.knowledgeRef;
+        const forceReference = Boolean(event.altKey || event.metaKey || event.ctrlKey || event.shiftKey);
         if (dom.knowledgeContentsList.contains(internal)) {
+          clearHighlights(dom.knowledgeReaderBody);
           selected = reference; updateCopyLabel(); dom.knowledgeReaderStatus.textContent = ""; focusAnchor(reference);
         } else if (dom.knowledgeReferenceContentsList.contains(internal)) {
           referenceSelected = reference; dom.knowledgeReferenceStatus.textContent = ""; focusAnchor(reference, true, true); markReference();
-        } else if (dom.knowledgeReaderBody.contains(internal) || dom.knowledgeRelations.contains(internal) || dom.knowledgeReferenceBody.contains(internal)) {
+        } else if (dom.knowledgeReaderBody.contains(internal)) {
+          if (!forceReference && currentDocument && pathOf(reference) === currentDocument.path) {
+            if (selected && selected !== reference) {
+              clearHighlights(dom.knowledgeReaderBody);
+              history.push(mainPosition()); history = history.slice(-50);
+            }
+            selected = reference;
+            dom.knowledgeBack.disabled = history.length === 0;
+            updateCopyLabel();
+            dom.knowledgeReaderStatus.textContent = "";
+            focusAnchor(reference);
+            rememberPosition(true);
+          } else {
+            await openReference(reference);
+          }
+        } else if (dom.knowledgeReferenceBody.contains(internal)) {
+          if (!forceReference && referenceDocument && pathOf(reference) === referenceDocument.path) {
+            if (referenceSelected && referenceSelected !== reference) { referenceHistory.push(referencePosition()); referenceHistory = referenceHistory.slice(-50); }
+            referenceSelected = reference;
+            dom.knowledgeReferenceBack.disabled = referenceHistory.length === 0;
+            dom.knowledgeReferenceStatus.textContent = "";
+            focusAnchor(reference, true, true);
+            markReference();
+          } else {
+            await openReference(reference);
+          }
+        } else if (dom.knowledgeRelations.contains(internal)) {
           await openReference(reference);
-        } else { closeReference(); await openDocument(reference); }
+        } else {
+          const highlightQuery = dom.knowledgeSearchResults.contains(internal) ? (searchInput?.query || "") : "";
+          closeReference();
+          await openDocument(reference, true, true, null, highlightQuery);
+        }
       }
       else if (external) {
         event.preventDefault();
         try { if (!await api.openKnowledgeSource(external.dataset.knowledgeExternal)) throw new Error(t("knowledge.page.sourceBlocked")); }
         catch (error) { (dom.knowledgeReferencePane.contains(external) ? dom.knowledgeReferenceStatus : dom.knowledgeReaderStatus).textContent = errorText(error); }
       } else if (activity) await openActivity(activity.dataset.knowledgeActivity);
+    });
+    const ownerDoc = dom.knowledgeView.ownerDocument;
+    ownerDoc?.addEventListener("keydown", (event) => {
+      if (!active) return;
+      if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && String(event.key).toLowerCase() === "k") {
+        if (dom.knowledgeToggleSearch.disabled) return;
+        event.preventDefault();
+        dom.knowledgeSearchPanel.hidden = false;
+        dom.knowledgeToggleSearch.setAttribute("aria-expanded", "true");
+        dom.knowledgeTools.hidden = true;
+        dom.knowledgeToggleTools.setAttribute("aria-expanded", "false");
+        dom.knowledgeSearchQuery.focus();
+        dom.knowledgeSearchQuery.select?.();
+        if (!building) loadIndex();
+        return;
+      }
+      if (event.key === "Escape") {
+        if (!dom.knowledgeReferencePane.hidden) {
+          event.preventDefault();
+          closeReference(true);
+        } else if (!dom.knowledgeSearchPanel.hidden) {
+          event.preventDefault();
+          dom.knowledgeSearchPanel.hidden = true;
+          dom.knowledgeToggleSearch.setAttribute("aria-expanded", "false");
+          dom.knowledgeToggleSearch.focus();
+        } else if (!dom.knowledgeTools.hidden) {
+          event.preventDefault();
+          dom.knowledgeTools.hidden = true;
+          dom.knowledgeToggleTools.setAttribute("aria-expanded", "false");
+          dom.knowledgeToggleTools.focus();
+        }
+      }
     });
     dom.knowledgeCaptureForm.addEventListener("submit", previewMaterial);
     dom.knowledgeCaptureForm.addEventListener("input", () => {

@@ -101,7 +101,10 @@ async function main() {
     assert.match(dom.knowledgeSearchResults.textContent, /来源：example.org/u);
     assert(!dom.knowledgeSearchResults.textContent.includes("小节日期"));
     dom.knowledgeSearchResults.querySelector("a").click();
-    await until(() => view.state().selected === "notes/a.md#first");
+    await until(() => view.state().selected === "notes/a.md#first" && dom.knowledgeReaderBody.querySelector("mark.knowledge-search-hit"));
+    assert.equal(dom.knowledgeReaderBody.querySelector("mark.knowledge-search-hit")?.textContent, "完整小节", "Jumping from search highlights matching terms in the target section");
+    assert.equal(dom.knowledgeContentsList.querySelector('[data-knowledge-ref="notes/a.md#first"]')?.getAttribute("data-level"), "2");
+    assert.equal(dom.knowledgeContentsList.querySelector('[data-knowledge-ref="notes/a.md#first"]')?.getAttribute("aria-current"), "location");
     dom.knowledgeSearchMode.querySelector('[value="hybrid"]').selected = true;
     dom.knowledgeSearchMode.dispatchEvent(new window.Event("change", { bubbles: true }));
     assert.equal(dom.knowledgeSemanticOptions.hidden, false, "Semantic controls appear only for semantic modes");
@@ -363,10 +366,63 @@ async function main() {
     const hostile = markdown.render('[run](javascript:alert) <img src=x onerror=run()> `https://private.invalid`\n\n````md\n```\n[not a link](./a.md#first)\n````', "notes/x.md");
     const safe = parseHTML(`<div>${hostile}</div>`).document;
     assert.equal(safe.querySelectorAll("script, img, [onerror], a").length, 0);
+    const rich = markdown.render('> 第一行引用\n> 第二行引用\n\n- [x] 已完成 **含 `code`**\n- [ ] 待办 ~~旧写法~~\n  - 子项\n\n```js\nconst x = 1;\n```\n\n```text\nraw excerpt\n```', "notes/x.md");
+    const richDoc = parseHTML(`<div>${rich}</div>`).document;
+    assert.equal(richDoc.querySelectorAll("blockquote").length, 1, "Consecutive quote lines merge into one blockquote");
+    assert.equal(richDoc.querySelectorAll("li.knowledge-task-item.is-checked").length, 1);
+    assert.equal(richDoc.querySelectorAll("li.knowledge-task-item").length, 2);
+    const taskStates = [...richDoc.querySelectorAll('li > label > input[type="checkbox"]')]
+      .map(box => ({ checked: box.hasAttribute("checked"), disabled: box.hasAttribute("disabled") }));
+    assert.deepEqual(taskStates, [{ checked: true, disabled: true }, { checked: false, disabled: true }],
+      "Read-only tasks expose checked and unchecked states with their labels");
+    assert.equal(richDoc.querySelectorAll("li > ul > li").length, 1, "Indented list items nest inside parent list item");
+    assert.equal(richDoc.querySelector("strong > code")?.textContent, "code");
+    assert.equal(richDoc.querySelector("del")?.textContent, "旧写法");
+    assert.equal(richDoc.querySelector('pre[data-lang="js"] code')?.textContent, "const x = 1;");
+    assert.equal(richDoc.querySelector('pre[data-lang="text"] code')?.textContent, "raw excerpt");
     assert.equal(markdown.resolveLink("notes/a.md", "../../outside.md#x"), null);
     assert.equal(markdown.resolveLink("notes/a.md", "https://user:password@example.org"), null);
     assert.deepEqual(markdown.resolveLink("notes/a.md", "../topics/map.md#topic"), { reference: "topics/map.md#topic" });
     assert.deepEqual(markdown.resolveLink("notes/a.md", "#first"), { reference: "notes/a.md#first" });
+    // Same-document anchor stays in main pane; keyboard shortcuts toggle search/reference.
+    fs.writeFileSync(path.join(root, "notes/anchors.md"), '# 锚点测试\n\n<a id="top"></a>\n## 顶部\n跳到[底部](#bottom)。\n\n<a id="bottom"></a>\n### 底部\n内容。\n');
+    await preferences.saveKnowledgeRootPreference(app, root);
+    await view.refresh();
+    await view.openDocument("notes/anchors.md#top");
+    assert.equal(dom.knowledgeContentsList.querySelector('[data-knowledge-ref="notes/anchors.md#bottom"]')?.getAttribute("data-level"), "3");
+    dom.knowledgeReaderBody.querySelector('[data-knowledge-ref="notes/anchors.md#bottom"]').click();
+    assert.equal(view.state().selected, "notes/anchors.md#bottom", "Same-document anchor navigates in the main pane");
+    assert.equal(dom.knowledgeReferencePane.hidden, true, "Same-document anchor does not force dual-pane reference");
+    await view.openReference("notes/b.md#target");
+    assert.equal(dom.knowledgeReferencePane.hidden, false);
+    const pressKey = (props) => document.dispatchEvent(Object.assign(new window.Event("keydown", { bubbles: true, cancelable: true }), props));
+    pressKey({ key: "Escape" });
+    assert.equal(dom.knowledgeReferencePane.hidden, true, "Escape closes the reference pane first");
+    pressKey({ key: "k", metaKey: true });
+    assert.equal(dom.knowledgeSearchPanel.hidden, false, "Cmd/Ctrl+K opens knowledge search");
+    pressKey({ key: "Escape" });
+    assert.equal(dom.knowledgeSearchPanel.hidden, true, "Escape closes the expanded search panel");
+
+    await view.openDocument("notes/a.md#first");
+    const previousSearch = api.searchKnowledge;
+    const previousRead = api.readKnowledgeDocument;
+    api.searchKnowledge = async () => ({ total: 1, items: [{ reference: "notes/b.md#target", heading: "Fixture" }] });
+    api.readKnowledgeDocument = async (reference) => {
+      if (reference === "notes/b.md") throw new Error("fixture read failed");
+      return previousRead(reference);
+    };
+    dom.knowledgeSearchQuery.value = "完整小节";
+    dom.knowledgeSearchForm.dispatchEvent(new window.Event("submit", { cancelable: true }));
+    await until(() => dom.knowledgeSearchResults.querySelector('[data-knowledge-ref="notes/b.md#target"]'));
+    dom.knowledgeSearchResults.querySelector("a").click();
+    await until(() => dom.knowledgeReaderStatus.textContent.includes("fixture read failed"));
+    dom.knowledgeBack.click();
+    await until(() => view.state().selected === "notes/a.md#first" && dom.knowledgeReaderBody.textContent.includes("完整小节"));
+    assert(!dom.knowledgeReaderBody.querySelector("mark.knowledge-search-hit"),
+      "Returning after a failed result read must not highlight the old document");
+    api.searchKnowledge = previousSearch;
+    api.readKnowledgeDocument = previousRead;
+
     const handlers = new Map();
     const externalCalls = [];
     registerIpcHandlers({ app, ipcMain: { handle: (channel, callback) => handlers.set(channel, callback) },

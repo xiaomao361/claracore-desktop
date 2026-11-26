@@ -210,6 +210,8 @@ function openMemoryDialog(mode, options = {}) {
     loadMemoryTabData(mode).catch(console.error);
   }
   if (!memoryDetailDialog.open) memoryDetailDialog.showModal();
+  memoryDetailDialog.scrollTop = 0;
+  if (memoryDetail) memoryDetail.scrollTop = 0;
 }
 
 function renderMemoryResults(memories, target = memoryList, options = {}) {
@@ -1748,6 +1750,10 @@ function renderMemoryGraph() {
       openMemoryDialog(action.dataset.memoryOpen || "library", { trigger: action });
     });
     memoryDetailDialog?.addEventListener("click", (event) => {
+      if (event.target === memoryDetailDialog) {
+        memoryDetailDialog.close();
+        return;
+      }
       const item = event.target.closest("[data-memory-id]");
       if (!item) return;
       selectMemory(item.dataset.memoryId || "", { trigger: item, backMode: "library" });

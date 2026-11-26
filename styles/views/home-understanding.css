@@ -209,15 +209,33 @@
 }
 
 .shared-line-references {
-  padding-inline-start: 20px;
+  list-style: none;
+  padding-inline-start: 0;
   font-size: 13px;
   line-height: 1.8;
 }
 
 .shared-line-references li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
   margin-block: 10px;
+}
+
+.shared-line-references code {
+  min-width: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
+.shared-line-copy-ref {
+  flex: none;
+  padding: 4px 8px;
+  min-height: 28px;
+  font-size: 12px;
 }
 
 .home-understanding .understanding-copy {

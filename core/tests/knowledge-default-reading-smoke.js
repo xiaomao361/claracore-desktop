@@ -25,6 +25,41 @@ function create() {
  const view=createClaraCoreKnowledgeView({dom,api,t,markdown,formatLocalDateTime:value=>value,readingState:createKnowledgeReadingState(storage)});
  return {view,dom,api};
 }
+function checkReadingHistoryBudget() {
+  let raw = '';
+  const historyStorage = { getItem: () => raw, setItem: (_key, value) => { raw = value; } };
+  const roots = Array.from({ length: 5 }, (_, index) => `/fixtures/library-${index}`);
+  const nested = Array.from({ length: 8 }, (_, index) => `folder-${index}-`.padEnd(84, 'a')).join('/');
+  const documents = Array.from({ length: 20 }, (_, index) => ({ path: `notes/${nested}/document-${index}.md`, scrollTop: 100 + index }));
+  const newest = documents.at(-1);
+  const saved = roots.map(root => ({ root, reference: `${newest.path}#section`, scrollTop: newest.scrollTop, documents }));
+  raw = JSON.stringify({ version: 1, entries: saved });
+
+  const history = createKnowledgeReadingState(historyStorage);
+  const fromTestBuild = history.get(roots[0]);
+  for (const { root, reference } of saved) {
+    for (const doc of documents.slice(0, -1)) history.remember(root, doc.path, doc.scrollTop);
+    history.remember(root, reference, newest.scrollTop);
+  }
+  history.flush();
+  const restored = createKnowledgeReadingState(historyStorage);
+  const expected = { reference: saved[0].reference, scrollTop: newest.scrollTop };
+  assert.deepEqual({
+    fromTestBuild,
+    withinBudget: raw.length <= 65536,
+    currentPositions: roots.map(root => restored.get(root)),
+    recentDocument: restored.getDocument(roots.at(-1), documents.at(-2).path)
+  }, {
+    fromTestBuild: expected,
+    withinBudget: true,
+    currentPositions: roots.map(() => expected),
+    recentDocument: documents.at(-2).scrollTop
+  }, 'Large document histories must retain resumable positions across reloads');
+
+  raw = JSON.stringify({ version: 1, entries: [{ root: roots[0], ...expected }] });
+  assert.equal(createKnowledgeReadingState(historyStorage).getDocument(roots[0], newest.path), newest.scrollTop,
+    'The single-document format can restore that document when selected from the catalog');
+}
 async function main(){
  const a=makeRoot('A'),b=makeRoot('B'),empty=makeRoot('empty');
  write(a,'a-old','2026-01-01');write(a,'z-new','2026-02-01');write(b,'b-only','2026-03-01');currentRoot=a;
@@ -34,7 +69,11 @@ async function main(){
  assert(dom.knowledgeReaderBody.querySelector('h3'));assert(dom.knowledgeDocumentMeta.textContent.includes('2026-02-01'));
  assert.equal(dom.knowledgeDocumentTitle.parentElement.hidden,false);
  await view.openDocument('notes/a-old.md',false,false);dom.knowledgeMainPane.scrollTop=137;await view.refresh();
- assert.equal(view.state().selected,'notes/a-old.md');assert.equal(dom.knowledgeMainPane.scrollTop,137);view.setActive(false);
+ assert.equal(view.state().selected,'notes/a-old.md');assert.equal(dom.knowledgeMainPane.scrollTop,137);
+ await view.openDocument('notes/z-new.md',false,false);dom.knowledgeMainPane.scrollTop=240;
+ await view.openDocument('notes/a-old.md',false,false);assert.equal(dom.knowledgeMainPane.scrollTop,137,'Switching back restores the previous document scroll position');
+ await view.openDocument('notes/z-new.md',false,false);assert.equal(dom.knowledgeMainPane.scrollTop,240,'Recent per-document positions persist across document switches');
+ await view.openDocument('notes/a-old.md',false,false);view.setActive(false);
  ({view,dom}=create());await view.setActive(true);assert.equal(view.state().selected,'notes/a-old.md');assert.equal(dom.knowledgeMainPane.scrollTop,137,'A new view restores the persisted per-library position');
  currentRoot=b;await view.refresh();assert.equal(view.state().selected,'notes/b-only.md');assert.equal(dom.knowledgeMainPane.scrollTop,0);
  currentRoot=a;await view.refresh();assert.equal(view.state().selected,'notes/a-old.md');assert.equal(dom.knowledgeMainPane.scrollTop,137,'Another library must not overwrite this library position');
@@ -45,6 +84,7 @@ async function main(){
  currentRoot=empty;await view.refresh();assert.equal(dom.knowledgeReaderBody.querySelectorAll('[data-knowledge-anchor]').length,0);assert.match(dom.knowledgeReaderStatus.textContent,/no documents|no .*documents|empty/i);
  view.setActive(false);
  const unavailable=createKnowledgeReadingState({getItem(){throw Error('blocked');},setItem(){throw Error('blocked');}});unavailable.remember(a,'notes/z-new.md',50);unavailable.flush();assert.equal(unavailable.get(a).scrollTop,50);
+ checkReadingHistoryBudget();
  console.log('Knowledge default reading passed: recent-file selection, per-library durable position, title hierarchy, empty/missing/denied states and refresh selection races; synthetic files only.');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>fs.rmSync(fixture,{recursive:true,force:true}));

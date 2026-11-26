@@ -48,9 +48,10 @@ credentials locally; never put them in source. The scripts sign, notarize,
 and staple the appropriate artifacts. Verify code signature, notarization,
 Gatekeeper assessment, DMG integrity, and checksums for the actual release.
 
-Ordinary local `dist:mac` output is not equivalent to a signed, notarized release.
-Published 1.0.6 macOS packages are signed and notarized. Its Windows installers
-are unsigned; do not label a successful Windows build as signed.
+`release:mac` and `release:mac:lite` produce the signed, notarized macOS
+installers. The Windows workflow produces unsigned installers and a separate
+SHA-256 manifest. The [release records](README.md#release-records) list the files
+and checks for each published version.
 
 ## Freeze and publish
 

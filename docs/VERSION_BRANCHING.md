@@ -2,14 +2,14 @@
 
 `package.json` is the application version source. Stable releases use a matching
 `vX.Y.Z` tag and a GitHub Release with platform/flavor installers and checksums.
-The current stable release is [1.0.6](https://github.com/xiaomao361/claracore-desktop/releases/tag/v1.0.6).
-It ships Full and Lite for macOS Apple Silicon and Windows x64. macOS packages
-are signed and notarized; Windows installers are unsigned. The release tag
+The [latest stable release](https://github.com/xiaomao361/claracore-desktop/releases/latest)
+ships Full and Lite for macOS Apple Silicon and Windows x64. macOS packages
+are signed and notarized. Windows installers are unsigned. The release tag
 freezes packaged application source. Later documentation and website commits
-do not move that tag. See the [1.0.6 release record](RELEASE_1.0.6.md).
+do not move that tag. See the [release records](README.md#release-records).
 
 The 1.0.4/1.0.5 and earlier unsigned 1.0.6 local test builds are historical test
-artifacts, distinct from this public 1.0.6. The [test baseline](AGENT_EXPERIENCE_TESTING.md)
+artifacts. The [test baseline](AGENT_EXPERIENCE_TESTING.md)
 retains their scope and acceptance limits.
 
 ## Source and branch policy
@@ -23,12 +23,12 @@ an application version bump.
 
 1. Review the final scope and update version, changelog, and user-facing notes.
 2. Run source, relevant domain, and platform checks against the frozen commit.
-3. Build Full/Lite installers; verify package contents, signatures where
-   supported, runtime boundaries, and checksums.
-4. Tag the exact source commit. Publish installers, SHA-256 manifests, and
-   concise release notes describing behavior and material platform limitations.
-5. Read back the public release, tag, and asset metadata; verify downloads
-   against the published checksums.
+3. Push the source commit and tag it. Create a draft at that tag for the
+   Windows workflow and attach the verified platform installers and manifests.
+4. Verify all four installers, including their package contents, runtime checks,
+   macOS signatures, and checksums. Publish with concise release notes.
+5. Read back the public release, tag, and asset metadata. Check the downloaded
+   installers against the published SHA-256 manifests.
 
 Keep previously published tags immutable. A later documentation commit need
 not equal the packaged-source tag. Build success, installation, visual

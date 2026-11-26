@@ -12,7 +12,8 @@ function createClaraCoreSharedInnerLifeView(context) {
     renderAgentFilter,
     state,
     renderMemoryResults,
-    memoryAgentId
+    memoryAgentId,
+    copyValue
   } = context;
   const {
     memoryAgentFilter, memoryList, sharedLineSummary, sharedLinePast, sharedLineNext, sharedLineUpdated, sharedLineList,
@@ -20,7 +21,7 @@ function createClaraCoreSharedInnerLifeView(context) {
     sharedLineActiveCount, sharedLineOverviewActiveCount, sharedLineOverviewArchivedCount,
     sharedLineAgentFilter, sharedLineDetailTitle, sharedLineParticipants, sharedLineContinuityPath,
     sharedLineUnderstandingSection, sharedLineUnderstanding, sharedLineUnresolvedSection, sharedLineUnresolved,
-    sharedLineReferencesSection, sharedLineReferences,
+    sharedLineReferencesSection, sharedLineReferences, sharedLineReferenceCopyStatus,
     sharedLineAgentStatePanel, sharedLineMetadataPanel, sharedLineHistoryList, sharedLineSnapshotList, sharedLineArchiveList,
     sharedLineDetailDialog, sharedLineDialogClose, sharedLineDialogKicker, sharedLineDialogTitle, sharedLineDialogMeta,
     sharedLineDialogLines, sharedLineDialogAgents, sharedLineDialogEvidence, sharedLineDialogArchive,
@@ -33,6 +34,8 @@ function createClaraCoreSharedInnerLifeView(context) {
   const SHARED_LINE_PREVIEW_LIMIT = 6;
   let sharedLineDialogTrigger = null;
   let sharedLineDialogMode = "";
+  let sharedLineReferenceCopyRevision = 0;
+  let sharedLineReferenceMarkup = "";
   let innerLifeReaderModel = null;
   let innerLifeDialogTrigger = null;
   let innerLifeDialogKind = "";
@@ -414,6 +417,7 @@ function openSharedLineDialog(mode, trigger = null) {
   };
   const selectedCopy = copy[mode];
   if (!selectedCopy || !sections[mode]) return;
+  const resetScroll = !sharedLineDetailDialog.open || mode !== sharedLineDialogMode;
   if (!sharedLineDetailDialog.open && trigger) sharedLineDialogTrigger = trigger;
   sharedLineDialogMode = mode;
   Object.entries(sections).forEach(([key, section]) => { if (section) section.hidden = key !== mode; });
@@ -421,15 +425,31 @@ function openSharedLineDialog(mode, trigger = null) {
   sharedLineDialogTitle.textContent = selectedCopy[1];
   sharedLineDialogMeta.textContent = selectedCopy[2];
   if (!sharedLineDetailDialog.open) sharedLineDetailDialog.showModal();
+  if (resetScroll) sharedLineDetailDialog.scrollTop = 0;
 }
 
 function bindSharedLineReader() {
   if (!sharedLineDetailDialog || sharedLineDetailDialog.dataset.bound === "true") return;
   sharedLineDetailDialog.dataset.bound = "true";
-  document.querySelector("#sharedLineView")?.addEventListener("click", (event) => {
+  document.querySelector("#sharedLineView")?.addEventListener("click", async (event) => {
+    const copyButton = event.target.closest("[data-shared-line-copy-ref]");
+    if (copyButton) {
+      const value = copyButton.dataset.sharedLineCopyRef || "";
+      if (!value) return;
+      const request = ++sharedLineReferenceCopyRevision;
+      let copied = false;
+      try { copied = await copyValue?.(value); } catch { /* The status below reports the failure. */ }
+      if (sharedLineReferenceCopyStatus && copyButton.isConnected && request === sharedLineReferenceCopyRevision) {
+        sharedLineReferenceCopyStatus.textContent = t(copied ? "home.understanding.referenceCopied" : "home.understanding.copyFailed");
+      }
+      return;
+    }
     const action = event.target.closest("[data-shared-line-open]");
     if (!action) return;
     openSharedLineDialog(action.dataset.sharedLineOpen, action);
+  });
+  sharedLineDetailDialog.addEventListener("click", (event) => {
+    if (event.target === sharedLineDetailDialog) sharedLineDetailDialog.close();
   });
   sharedLineDialogClose?.addEventListener("click", () => sharedLineDetailDialog.close());
   sharedLineDetailDialog.addEventListener("close", () => {
@@ -563,9 +583,18 @@ function renderSharedLine() {
     : Array.isArray(current.metadata?.factsUsed) ? current.metadata.factsUsed : [])
     .filter((reference) => typeof reference === "string" && reference.trim());
   if (sharedLineReferencesSection) sharedLineReferencesSection.hidden = !hasSelection || !references.length;
-  if (sharedLineReferences) sharedLineReferences.innerHTML = hasSelection
-    ? references.map((reference) => `<li>${escapeHtml(reference)}</li>`).join("")
-    : "";
+  if (sharedLineReferences) {
+    const lineId = hasSelection ? current.lineId : "";
+    const items = hasSelection
+      ? references.map((reference, index) => `<li><code>${escapeHtml(reference)}</code><button type="button" class="text-button shared-line-copy-ref" data-shared-line-copy-ref="${escapeHtml(reference)}" aria-label="${escapeHtml(t("home.understanding.copyReferenceNumber", { number: String(index + 1) }))}">${escapeHtml(t("home.understanding.copyReference"))}</button></li>`).join("")
+      : "";
+    if (sharedLineReferences.dataset.lineId !== lineId || sharedLineReferenceMarkup !== items) {
+      sharedLineReferences.dataset.lineId = lineId;
+      sharedLineReferenceMarkup = items;
+      sharedLineReferences.innerHTML = items;
+      if (sharedLineReferenceCopyStatus) sharedLineReferenceCopyStatus.textContent = "";
+    }
+  }
 
   const catalogNotice = state.sharedLineCatalogLoading ? `<p role="status">${escapeHtml(t("runtime.loading"))}</p>`
     : state.sharedLineCatalogError ? `<p role="alert">${escapeHtml(t("review.pageFailed"))}</p><button type="button" data-shared-line-retry-catalog>${escapeHtml(t("review.retry"))}</button>` : "";
@@ -667,11 +696,20 @@ function formatInnerLifeInterval(seconds) {
   return t("review.seconds", { count: value || 60 });
 }
 
+function renderInnerLifeProse(text) {
+  const value = String(text || "").trim();
+  if (!value) return `<p>-</p>`;
+  if (window.ClaraCoreKnowledgeMarkdown?.render) {
+    return `<div class="reading-prose">${window.ClaraCoreKnowledgeMarkdown.render(value, "", { reading: true, linkMode: "text" })}</div>`;
+  }
+  return `<p style="white-space: pre-wrap">${escapeHtml(value)}</p>`;
+}
+
 function renderInnerLifeReaderList(items, { empty = t("review.noRecords"), body = (item) => item.body || item.summary || item.reason || "", meta = (item) => item.status || item.mode || item.source || "" } = {}) {
   if (!items.length) return `<div class="endpoint-empty">${escapeHtml(empty)}</div>`;
   return `<div class="innerlife-reader-list">${items.map((item) => `<article>
     <div><strong>${escapeHtml(innerLifeKindLabel(meta(item)))}</strong><time>${escapeHtml(formatLocalDateTime(item.completedAt || item.createdAt || item.startedAt || item.updated_at))}</time></div>
-    <p style="white-space: pre-wrap">${escapeHtml(body(item) || "-")}</p>
+    ${renderInnerLifeProse(body(item))}
     ${item.truncated ? `<button type="button" data-innerlife-open="record-${item.source === "digest" ? "digest" : item.shareId ? "thought" : "event"}" data-innerlife-share-id="${escapeHtml(item.id)}">${escapeHtml(t("review.readFull"))}</button>` : ""}
   </article>`).join("")}</div>`;
 }
@@ -742,9 +780,10 @@ function innerLifeDialogContent(kind, itemId) {
   return null;
 }
 
-function openInnerLifeDetail(kind, itemId = "", { trigger = null, backKind = "" } = {}) {
+function openInnerLifeDetail(kind, itemId = "", { trigger = null, backKind = "", resetScroll = false } = {}) {
   const content = innerLifeDialogContent(kind, itemId);
   if (!content || !innerLifeDetailDialog) return;
+  const startAtTop = resetScroll || !innerLifeDetailDialog.open || kind !== innerLifeDialogKind || itemId !== innerLifeDialogItemId;
   if (!innerLifeDetailDialog.open && trigger) innerLifeDialogTrigger = trigger;
   innerLifeDialogKind = kind;
   innerLifeDialogItemId = itemId;
@@ -755,13 +794,14 @@ function openInnerLifeDetail(kind, itemId = "", { trigger = null, backKind = "" 
   if (innerLifeDetailBody.innerHTML !== content.body) innerLifeDetailBody.innerHTML = content.body;
   innerLifeDetailBack.hidden = !backKind;
   if (!innerLifeDetailDialog.open) innerLifeDetailDialog.showModal();
+  if (startAtTop) innerLifeDetailDialog.scrollTop = 0;
 }
 
 async function readInnerLifeText(kind, itemId, offset = 0) {
   const request = ++innerLifeTextRevision;
   const agentId = state.activeInnerLifeAgentFilter;
   innerLifeTextPage = { status: "loading", offset };
-  openInnerLifeDetail(kind, itemId, { backKind: innerLifeDialogBackKind });
+  openInnerLifeDetail(kind, itemId, { backKind: innerLifeDialogBackKind, resetScroll: true });
   try {
     const page = await window.ClaraCoreDesktop.getInnerLifeText({ id: itemId, agentId, kind: kind === "thought" ? "share" : kind.slice(7), offset });
     if (request !== innerLifeTextRevision || agentId !== state.activeInnerLifeAgentFilter || kind !== innerLifeDialogKind || itemId !== innerLifeDialogItemId) return;
@@ -790,7 +830,13 @@ function bindInnerLifeReader() {
     if (kind === "thought" || kind.startsWith("record-")) readInnerLifeText(kind, action.dataset.innerlifeShareId);
   };
   document.querySelector("#innerlifeView .innerlife-reader")?.addEventListener("click", handleOpen);
-  innerLifeDetailDialog?.addEventListener("click", handleOpen);
+  innerLifeDetailDialog?.addEventListener("click", (event) => {
+    if (event.target === innerLifeDetailDialog) {
+      innerLifeDetailDialog.close();
+      return;
+    }
+    handleOpen(event);
+  });
   innerLifeDetailClose?.addEventListener("click", () => innerLifeDetailDialog.close());
   innerLifeDetailBack?.addEventListener("click", () => openInnerLifeDetail(innerLifeDialogBackKind));
   innerLifeDetailDialog?.addEventListener("close", () => {

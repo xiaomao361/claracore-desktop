@@ -3,6 +3,26 @@
 User-facing release highlights are recorded here. Installers and checksums are
 published in [GitHub Releases](https://github.com/xiaomao361/claracore-desktop/releases).
 
+## 1.1.1 — 2026-11-26
+
+- Knowledge aligns the document title, section list, and body in one reading
+  column. Toolbars stay visible while scrolling, and the section list shows
+  heading levels and the selected section.
+- The Markdown reader groups consecutive quote lines, displays nested lists,
+  read-only task markers, and strikethrough. Code blocks scroll horizontally,
+  while `text` excerpts wrap.
+- Links to a section in the current document stay in the same pane. Hold a
+  modifier key on a link in the body to open it in the reference pane. Recent
+  documents retain their scroll positions, and search jumps highlight matching
+  terms. `Cmd/Ctrl+K` opens search and `Esc` closes the reference pane, search,
+  or management panel.
+- Shared Lines show the full readable text and provide copy buttons for recorded
+  references. Memoria keeps inline code and identifiers readable. InnerLife
+  formats activity lists and keeps original text in the full reader. Shared Line
+  and InnerLife dialogs retain their scroll position during refreshes.
+- Home previews trim incomplete inline Markdown at the cutoff, and Logs suspends
+  automatic scrolling while you read earlier entries.
+
 ## 1.1.0 — 2026-11-04
 
 - Adopts the shared-world UI direction contributed by @jaredchao in PR #6.

@@ -148,6 +148,7 @@ function documentSections(relativePath, text) {
     path: relativePath,
     anchor: item.anchor,
     heading: item.heading,
+    level: item.level,
     title,
     line: item.line,
     endLine: index + 1 < headings.length ? headings[index + 1].start - 1 : lines.length,

@@ -65,6 +65,8 @@ function dom(){const {window,document}=parseHTML(read('index.html'));const conte
  }
  await checkPagedReaders();
  await checkRendererPaging();
+ await checkReaderRefreshAndCopy();
+ checkMultilineMarkdownPreview();
  await checkRecallAndTranslations();
  console.log(JSON.stringify({suite:'full-review-regression',results},null,2));
 })().catch(e=>{console.error(e);process.exitCode=1;});
@@ -143,6 +145,88 @@ async function checkRendererPaging() {
   const lines=context.createClaraCoreSharedLineActions({desktop:{getSharedLines:async input=>{linesCalls++;return {items:[{id:input.offset?'later':'first',agentId:'b',title:'fixture',status:input.status}],agents:['a','b'],offset:input.offset,limit:10,total:11,hasMore:!input.offset};}},dom:d,state,t,copyValue:async()=>true,renderSharedLine:()=>{}});
   await lines.loadCatalog();await lines.loadMoreCatalog('active');assert.equal(state.sharedLineCatalog.lines.length,2);assert.equal(linesCalls,3);
   results.push({probe:'renderer-boundaries',agentRace:true,pageRetry:true,textRetry:true,textPages:true,technicalMore:true,linePages:true});
+}
+
+async function checkReaderRefreshAndCopy() {
+  const { window, document, context, d, t } = dom();
+  for (const select of document.querySelectorAll('select')) Object.defineProperty(select, 'value', { writable: true, value: '' });
+  for (const dialog of [d.sharedLineDetailDialog, d.innerLifeDetailDialog]) {
+    dialog.showModal = () => { dialog.open = true; };
+  }
+  vm.runInContext(read('app/knowledge-markdown.js'), context);
+  vm.runInContext(read('app/utils.js'), context);
+  vm.runInContext(read('app/views/shared-innerlife.js'), context);
+  const reference = "notes/A's notes.md#source";
+  const state = { activeInnerLifeAgentFilter: 'a', activeSharedLineAgentFilter: '', selectedSharedLineId: 'fixture' };
+  const snapshot = {
+    sharedLine: {
+      lineId: 'fixture',
+      lines: [{ id: 'fixture', title: 'Fixture', agentId: 'a', status: 'active' }],
+      currentPosition: { lineId: 'fixture', agentId: 'a', summary: 'Current position', factsUsed: [reference] }
+    },
+    innerLife: { agentId: 'a', profiles: [{ agentId: 'a' }], daemon: { agentId: 'a', status: 'enabled' }, doctor: { status: 'ok' } }
+  };
+  let clipboard = '';
+  let allowCopy = true;
+  const view = context.createClaraCoreSharedInnerLifeView({
+    dom: d, t, getSnapshot: () => snapshot, state, escapeHtml: window.ClaraCoreUtils.escapeHtml, formatLocalDateTime: String,
+    filterByAgent: (items, id) => items.filter(item => (item.agentId || item.agent_id) === id),
+    formatSharedLineMetaValue: String, renderReadableText: String, itemAgentId: item => item.agent_id || item.agentId,
+    copyValue: async (value, label, target) => {
+      if (!allowCopy) return false;
+      clipboard = value;
+      if (target) target.textContent = label;
+      return true;
+    }
+  });
+  view.renderSharedLine();
+  view.renderInnerLife();
+  document.querySelector('[data-shared-line-open="evidence"]').click();
+  document.querySelector('[data-innerlife-open="technical"]').click();
+  assert(d.sharedLineDetailDialog.open && d.innerLifeDetailDialog.open);
+  d.sharedLineDetailDialog.scrollTop = 340;
+  d.innerLifeDetailDialog.scrollTop = 280;
+  view.renderSharedLine();
+  view.renderInnerLife();
+
+  const copy = d.sharedLineReferences.querySelector('button');
+  const notice = d.sharedLineReferencesSection.querySelector('[role="status"]');
+  copy.click();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual({
+    sharedScroll: d.sharedLineDetailDialog.scrollTop,
+    innerLifeScroll: d.innerLifeDetailDialog.scrollTop,
+    copyLabel: copy.textContent,
+    copyNotice: notice?.textContent,
+    clipboard
+  }, {
+    sharedScroll: 340,
+    innerLifeScroll: 280,
+    copyLabel: t('home.understanding.copyReference'),
+    copyNotice: t('home.understanding.referenceCopied'),
+    clipboard: reference
+  }, 'Refreshing the same readers preserves scroll, and copy feedback leaves the button label intact');
+  view.renderSharedLine();
+  assert(d.sharedLineReferences.querySelector('button') === copy, 'Unchanged references retain their buttons on refresh');
+  assert.equal(notice.textContent, t('home.understanding.referenceCopied'));
+
+  allowCopy = false;
+  copy.click();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(notice.textContent, t('home.understanding.copyFailed'));
+  document.querySelector('[data-innerlife-open="status"]').click();
+  assert.equal(d.innerLifeDetailDialog.scrollTop, 0, 'Switching readers starts at the top');
+  results.push({ probe: 'reader-refresh-and-copy', scrollPreserved: true, copyFailureVisible: true });
+}
+
+function checkMultilineMarkdownPreview() {
+  const { context, window } = dom();
+  vm.runInContext(read('app/utils.js'), context);
+  const lines = ['First', 'Second', 'Third', '**`command`**'];
+  for (const source of [lines.join('\n'), lines.map(line => `> ${line}`).join('\n')]) {
+    const html = window.ClaraCoreUtils.renderMarkdownPreview(source);
+    assert.match(html, /<strong><code>command<\/code><\/strong>/, 'Nested inline formatting also works on later lines');
+  }
 }
 
 async function checkRecallAndTranslations() {
