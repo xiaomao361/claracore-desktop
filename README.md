@@ -41,27 +41,26 @@ specific memory, line, or source section when they need more detail.
 
 ## Download
 
-The current release is **1.1.0**. Choose **Full** for an included local embedding
+The current release is **1.1.1**. Choose **Full** for an included local embedding
 model, or **Lite** to configure Ollama or an OpenAI-compatible Memory embedding
 API, or work without embeddings. Knowledge semantic search stays local.
 
 | Build | macOS Apple Silicon | Windows x64 |
 | --- | --- | --- |
-| Full | [Download DMG](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.1.0/ClaraCore-Desktop-1.1.0-arm64.dmg) | [Download installer](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.1.0/ClaraCore-Desktop-1.1.0-x64-Setup.exe) |
-| Lite | [Download DMG](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.1.0/ClaraCore-Desktop-1.1.0-lite-arm64.dmg) | [Download installer](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.1.0/ClaraCore-Desktop-1.1.0-lite-x64-Setup.exe) |
+| Full | [Download DMG](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.1.1/ClaraCore-Desktop-1.1.1-arm64.dmg) | [Download installer](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.1.1/ClaraCore-Desktop-1.1.1-x64-Setup.exe) |
+| Lite | [Download DMG](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.1.1/ClaraCore-Desktop-1.1.1-lite-arm64.dmg) | [Download installer](https://github.com/xiaomao361/claracore-desktop/releases/download/v1.1.1/ClaraCore-Desktop-1.1.1-lite-x64-Setup.exe) |
 
 macOS packages are signed and notarized. Windows installers are unsigned.
-Checksums and changes are available on the [release page](https://github.com/xiaomao361/claracore-desktop/releases/tag/v1.1.0).
+Checksums and changes are available on the [release page](https://github.com/xiaomao361/claracore-desktop/releases/tag/v1.1.1).
 Prebuilt Linux and Intel Mac installers are not currently provided.
 
-## In 1.1.0
+## In 1.1.1
 
-- Follow the current topic and Shared Line from the shared-world Home view.
-- Read recorded, current and next positions in a Shared Line ribbon, with
-  aligned stage labels and clearer dark-theme selections.
-- Includes the 1.0.6 reliability work and subsequent release-pipeline fixes.
+- Read Knowledge documents with sticky toolbars and a section list organized by heading level.
+- Jump within the current document, highlight search matches, and resume recent reading positions.
+- Copy Shared Line references and keep your place in open dialogs during refreshes.
 
-See the [changelog](CHANGELOG.md) and [release record](docs/RELEASE_1.1.0.md).
+See the [changelog](CHANGELOG.md) and [release record](docs/RELEASE_1.1.1.md).
 
 ## Get started
 

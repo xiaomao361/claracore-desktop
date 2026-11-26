@@ -37,6 +37,6 @@
 
 ## Release records
 
-- [1.1.0](RELEASE_1.1.0.md) · [1.0.6](RELEASE_1.0.6.md)
+- [1.1.1](RELEASE_1.1.1.md) · [1.1.0](RELEASE_1.1.0.md) · [1.0.6](RELEASE_1.0.6.md)
 
 [Changelog](../CHANGELOG.md) · [Releases](https://github.com/xiaomao361/claracore-desktop/releases) · [Security](../SECURITY.md)
